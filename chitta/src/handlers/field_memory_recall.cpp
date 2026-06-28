@@ -285,11 +285,16 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
         for (auto& [id, score] : rrf_scores) ranked.emplace_back(score, id);
         std::sort(ranked.begin(), ranked.end(), std::greater<>());
 
+        // Normalize RRF scores to [0,1] so display_pct shows meaningful percentages.
+        // Raw RRF values are ~1/(60+rank) ≈ 0.016 — meaningless as relevance.
+        float max_rrf = ranked.empty() ? 1.0f : ranked[0].first;
+        if (max_rrf < 1e-6f) max_rrf = 1.0f;
+
         for (auto& [score, id] : ranked) {
             if (hits.size() >= fetch_limit) break;
             auto& h = best_hit[id];
             if (!h.content.empty()) {
-                h.score = score; // overwrite with RRF rank score for downstream sort
+                h.score = score / max_rrf;
                 hits.push_back(std::move(h));
             }
         }
