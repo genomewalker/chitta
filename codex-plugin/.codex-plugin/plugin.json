@@ -1,6 +1,6 @@
 {
   "name": "cc-soul",
-  "version": "5.62.1",
+  "version": "5.62.2",
   "description": "Persistent memory and code intelligence for Codex. Learns preferences, remembers codebases, anticipates needs. 150+ tools. Local-first.",
   "author": {
     "name": "Antonio Fernandez-Guerra",

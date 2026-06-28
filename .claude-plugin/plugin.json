@@ -1,7 +1,7 @@
 {
   "name": "cc-soul",
   "description": "Persistent memory and code intelligence for Claude Code. Claude learns your preferences, remembers your codebase, anticipates your needs, and gets smarter over time. 150+ tools. Local-first. Zero configuration.",
-  "version": "5.62.1",
+  "version": "5.62.2",
   "author": {
     "name": "Antonio Fernandez-Guerra",
     "url": "https://github.com/genomewalker"

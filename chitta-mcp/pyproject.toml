@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "chitta-mcp"
-version = "5.62.1"
+version = "5.62.2"
 description = "MCP server for chitta soul memory daemon"
 readme = "README.md"
 requires-python = ">=3.10"
