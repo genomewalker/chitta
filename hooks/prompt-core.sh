@@ -217,23 +217,28 @@ else
     # Run structured recall + hybrid recall in parallel, then merge.
     # Hybrid (BM25 + semantic + graph) catches literal tokens (filenames, IDs, paths)
     # that pure semantic recall misses when they have low cosine similarity.
-    _sem_out=$(timeout "$MAX_WAIT" "$CHITTA_BIN" structured_recall --query "$QUERY" --limit 8 --realm "$REALM" --include-global true 2>/dev/null || \
-               timeout "$MAX_WAIT" "$CHITTA_BIN" smart_recall --query "$QUERY" --limit 6 --realm "$REALM" --include-global true 2>/dev/null || true) &
+    # Each lane runs in a backgrounded subshell writing to a file. `var=$(cmd) &`
+    # captures the output inside the subshell and loses it — wait collects exit
+    # status, not variables — so lanes must hand results back through the filesystem.
+    _ld=$(mktemp -d "${TMPDIR:-/tmp}/ccsoul-lanes.XXXXXX")
+    ( timeout "$MAX_WAIT" "$CHITTA_BIN" smart_recall --query "$QUERY" --limit 6 --realm "$REALM" --include-global true >"$_ld/sem" 2>/dev/null || true ) &
     _sem_pid=$!
-    _hyb_out=$(timeout "$MAX_WAIT" "$CHITTA_BIN" recall --query "$QUERY" --strategy hybrid --limit 5 --realm "$REALM" --include-global true 2>/dev/null || true) &
+    ( timeout "$MAX_WAIT" "$CHITTA_BIN" recall --query "$QUERY" --strategy hybrid --limit 5 --realm "$REALM" --include-global true >"$_ld/hyb" 2>/dev/null || true ) &
     _hyb_pid=$!
     # Pure keyword lane: BM25 only, surfaces exact tokens (filenames, IDs, paths)
     # regardless of semantic similarity. Use --toon for consistent parseable output.
-    _kw_out=$(timeout "$MAX_WAIT" "$CHITTA_BIN" recall --query "$QUERY" --strategy keyword \
-              --limit 3 --toon --realm "$REALM" --include-global true 2>/dev/null || true) &
+    ( timeout "$MAX_WAIT" "$CHITTA_BIN" recall --query "$QUERY" --strategy keyword \
+              --limit 3 --toon --realm "$REALM" --include-global true >"$_ld/kw" 2>/dev/null || true ) &
     _kw_pid=$!
-    _corr_out=$(timeout "$MAX_WAIT" "$CHITTA_BIN" recall --query "$QUERY" --tag "correction" --limit 3 --include-global true 2>/dev/null || true) &
+    ( timeout "$MAX_WAIT" "$CHITTA_BIN" recall --query "$QUERY" --tag "correction" --limit 3 --include-global true >"$_ld/corr" 2>/dev/null || true ) &
     _corr_pid=$!
     wait "$_sem_pid" "$_hyb_pid" "$_kw_pid" "$_corr_pid" 2>/dev/null || true
+    _sem_out=$(<"$_ld/sem"); _hyb_out=$(<"$_ld/hyb"); _kw_out=$(<"$_ld/kw"); _corr_out=$(<"$_ld/corr")
+    rm -rf "$_ld"
 
     # Keyword lane TOON format: results[N]{...}: id,realm,relevance,similarity,text,type
     # Extract text field and reformat as [hyb][50%] [type] text
-    _kw_fmt=$(printf '%s\n' "$_kw_out" | grep -v '^\(realm:\|results\[' | \
+    _kw_fmt=$(printf '%s\n' "$_kw_out" | grep -vE '^(realm:|results\[)' | \
               sed 's/^ [0-9]*,[0-9]*,[^,]*,[^,]*,[^,]*,"\(.*\)",\([a-z]*\)$/[hyb][50%] [\2] \1/' | \
               grep '^\[hyb\]' | grep -v '\[thought\]' || true)
 
