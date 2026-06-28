@@ -243,16 +243,28 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
     auto startup_binary_mtime = std::filesystem::last_write_time("/proc/self/exe");
 #endif
 
+    // compact_wal runs on its own dedicated thread; declared here so the maintenance
+    // lambda can check it and pause sync_foreign while compaction is in progress.
+    std::atomic<bool> compact_wal_inflight{false};
+
     // Maintenance thread - sync and apply decay periodically
     std::atomic<size_t> cycle_count{0};
+    auto maintenance_start = std::chrono::steady_clock::now();
     std::thread maintenance([&]() {
         auto interval_secs = std::chrono::seconds(interval);
         auto last_sync = std::chrono::steady_clock::now();
         auto last_embedding_flush = std::chrono::steady_clock::now();
-        auto last_foreign_sync = std::chrono::steady_clock::now();
+        // Defer first sync_foreign by 60s (startup grace period).
+        // sync_foreign holds ~40 Rust write guards; firing every 5s during the
+        // restart-storm (many MCP sessions reconnecting with backlogged WAL ops)
+        // blocks all pool workers for 4-5s per call → pool deadlock.
+        // After 60s the backlog is drained and batches shrink to <1ms.
+        auto last_foreign_sync = std::chrono::steady_clock::now() + std::chrono::seconds(55);
         auto last_binary_check = std::chrono::steady_clock::now();
         auto embedding_flush_interval = std::chrono::seconds(5);   // Flush queued embeddings every 5s
-        auto foreign_sync_interval   = std::chrono::seconds(5);   // Ingest peer segment files every 5s
+        auto foreign_sync_interval   = std::chrono::seconds(30);  // Ingest peer segment files every 30s
+        // ceiling: 5s interval + 4-5s sync duration (148-segment WAL backlog) → 80% pool blockage
+        // upgrade: adaptive interval (measure sync duration, scale next gap proportionally)
         auto binary_check_interval   = std::chrono::seconds(60);  // Check for updated binary every 60s
 
 #ifdef __linux__
@@ -301,8 +313,17 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
                 if (len > 0) seg_event = true;
             }
 #endif
-            if (seg_event || (now_time - last_foreign_sync >= foreign_sync_interval)) {
-                last_foreign_sync = now_time;
+            // ceiling: inotify fires sync_foreign every 100ms loop tick during WAL floods
+            // (restart storms: 5+ MCP sessions reconnecting). Each sync_foreign holds
+            // ~40 Rust write guards → pool workers never get read access → deadlock.
+            // Rate-limit inotify-triggered syncs to ≥1s; 5s timer path unchanged.
+            // Skip sync_foreign entirely while compact_wal is running: with 150+ WAL
+            // segments each sync takes 4-5s and blocks all pool workers via rpc_mutex_.
+            // After compact_wal completes, segment count drops to ~1 and syncs are fast.
+            auto inotify_min_interval = foreign_sync_interval;
+            bool inotify_ready = seg_event && (now_time - last_foreign_sync >= inotify_min_interval);
+            if (!compact_wal_inflight.load(std::memory_order_relaxed) &&
+                (inotify_ready || (now_time - last_foreign_sync >= foreign_sync_interval))) {
                 try {
                     // EXCLUSIVE rpc lock, not shared: sync_foreign acquires
                     // ~40 Rust write guards in canonical order, which makes it
@@ -322,6 +343,10 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
                 } catch (const std::exception& e) {
                     std::cerr << "[maint] sync_foreign failed: " << e.what() << "\n";
                 }
+                // Timestamp AFTER sync completes so the next fire is foreign_sync_interval
+                // after this one FINISHES — pool workers always get a free window between syncs.
+                // (Formerly set before sync; with 4s syncs every 5s, pool was blocked 80%.)
+                last_foreign_sync = std::chrono::steady_clock::now();
             }
 
 #ifdef __linux__
@@ -449,8 +474,19 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
                             // Backfill runs at nice(10) so this 30s wait never blocks RPCs.
                             auto emb = embed_queue->query(text,
                                                           std::chrono::milliseconds(30000));
-                            if (emb.size() == EMBED_DIM)
+                            if (emb.size() == EMBED_DIM) {
+                                // MUST hold acquire_lock() here: backfill_embedding()
+                                // calls hnsw.upsert() which acquires semantic_idx.write().
+                                // Without the C++ lock, this races with pool workers
+                                // holding rpc_mutex_.rdlock() while waiting for
+                                // semantic_idx.read() → ABBA deadlock with sync_foreign
+                                // (which holds semantic_idx.write() and waits for
+                                // rpc_mutex_.wrlock()). Serialising via acquire_lock()
+                                // breaks the cycle: no pool worker can hold rpc_mutex_
+                                // while backfill holds semantic_idx.write().
+                                auto _lk = handler.acquire_lock();
                                 field_store.backfill_embedding(pending[i], emb);
+                            }
                         }
                     }
                 } catch (const std::exception& e) {
@@ -673,6 +709,11 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
     std::mutex inflight_lc_mutex;
     std::unordered_set<std::string> inflight_learn_codebase;
 
+    // compact_wal runs on its own dedicated thread so it cannot starve behind the FIFO
+    // recall queue.  At most one compaction runs at a time; concurrent requests get a
+    // "already running" response rather than queuing.
+    // NOTE: declared above (before maintenance thread) so the maintenance lambda can see it.
+
     // Watchdog callback - log stuck operations
     pool.set_watchdog_callback([]([[maybe_unused]] const std::string& method, [[maybe_unused]] int64_t secs) {
         std::cerr << "[watchdog] Stuck operation: " << method << " (" << secs << "s)\n";
@@ -843,6 +884,31 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
                     }
                     continue;
                 }
+            }
+
+            // compact_wal fast-path: bypass the FIFO pool onto a dedicated thread so
+            // maintenance is never blocked behind 150+ queued recall tasks.
+            // At most one compaction runs at a time; extras get an immediate response.
+            if (tool_name == "compact_wal") {
+                bool expected = false;
+                if (!compact_wal_inflight.compare_exchange_strong(expected, true)) {
+                    auto req_id = parsed.value("id", json());
+                    json resp = {{"jsonrpc","2.0"}, {"id", req_id},
+                        {"result", {
+                            {"content", json::array({{{"type","text"},{"text","compact_wal already running — skipped"}}})},
+                            {"structured", {{"status","skipped"},{"reason","already_in_progress"}}}
+                        }}};
+                    server.respond(req.client_fd, resp.dump(-1, ' ', false, json::error_handler_t::replace));
+                    continue;
+                }
+                std::thread([&handler, &server, &compact_wal_inflight,
+                             fd = req.client_fd, data = req.data]() {
+                    auto request = json::parse(data);
+                    auto response = handler.handle(request);
+                    compact_wal_inflight.store(false);
+                    server.queue_response(fd, response.dump(-1, ' ', false, json::error_handler_t::replace));
+                }).detach();
+                continue;
             }
 
             // All other requests go to thread pool (health_check included — main thread must not block on rpc_mutex_)

@@ -308,6 +308,10 @@ public:
     static bool is_lockfree_write(const std::string& name) {
         static const std::unordered_set<std::string> kLockFreeWrites = {
             "log_event", "log_event_ex", "log_decision",
+            // compact_wal only touches Rust state (per-component RwLocks) and writes
+            // files to NFS — no C++ state is modified.  Holding rpc_mutex_ exclusively
+            // for a 5-min NFS write blocks all reads/recall for that entire duration.
+            "compact_wal",
         };
         return kLockFreeWrites.count(name) > 0;
     }
@@ -370,14 +374,19 @@ public:
             // Embedding inside the write lock caused 96% CPU blocks starving all readers.
             // Read tools still pre-embed below (shared lock, not exclusive).
 
-            // Pre-embed query via EmbedQueue (single-owner, non-blocking, cached).
-            // Falls through to BM25-only if the embed queue is busy or yantra unavailable.
+            // Pre-embed query via EmbedQueue (cache-only, ≤50ms budget).
+            // If the vector is cached it arrives instantly; if not, we fall through to BM25
+            // immediately and enqueue a write to warm the cache for the next call.
+            // ceiling: 2000ms wait caused all 16 pool workers to park on the single-GPU
+            //   embed queue simultaneously, saturating the pool under any recall burst.
+            //   upgrade: per-query dedup map (share one GPU call across concurrent waiters).
             if (is_read_only_tool(name) && !args.contains("_preembedding")) {
                 std::string q = args.value("query", "");
                 if (!q.empty()) {
                     std::vector<float> emb;
                     if (embed_queue_) {
-                        emb = embed_queue_->query(q, std::chrono::milliseconds(2000));
+                        emb = embed_queue_->query(q, std::chrono::milliseconds(50));
+                        if (emb.empty()) embed_queue_->enqueue_write(q); // async cache warm
                     } else if (yantra_) {
                         Artha a = yantra_->transform(q, EmbedMode::Query);
                         if (a.certainty > 0.0f) emb = a.nu.data;
@@ -468,11 +477,14 @@ private:
         return (a.certainty > 0.0f) ? a.nu.data : std::vector<float>{};
     }
 
-    // Read-path embed: await via queue (≤2s), fall to BM25 on miss.
+    // Read-path embed: await via queue (≤50ms), fall to BM25 on miss.
+    // ceiling: 2000ms caused pool workers to block 2s each on cold cache —
+    // 16 workers × 2s = 32s of wasted pool capacity per recall burst.
+    // upgrade: per-query dedup map so N concurrent callers share one GPU call.
     std::vector<float> embed_query(const std::string& query) {
         if (query.empty()) return {};
         if (embed_queue_)
-            return embed_queue_->query(query, std::chrono::milliseconds(2000));
+            return embed_queue_->query(query, std::chrono::milliseconds(50));
         if (!yantra_) return {};
         Artha a = yantra_->transform(query, EmbedMode::Query);
         return (a.certainty > 0.0f) ? a.nu.data : std::vector<float>{};
