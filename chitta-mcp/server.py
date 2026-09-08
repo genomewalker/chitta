@@ -50,6 +50,7 @@ from mcp.types import (  # noqa: E402
     Tool,
     ToolsCapability,
 )
+
 # Sibling modules must resolve regardless of launcher: the ~/.local/bin
 # console script is a setuptools *editable* install whose finder only maps
 # modules that existed at install time, so a newly added sibling is invisible
