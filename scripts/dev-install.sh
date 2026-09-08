@@ -72,11 +72,17 @@ for h in "$REPO"/hooks/*.sh; do
   link_editable "$h" "$HOOKS_DST/$(basename "$h")"
 done
 
-echo "[dev-install] restarting MCP (respawns on next tool call):"
+echo "[dev-install] restarting MCP (stdio instances respawn on next tool call; HTTP unit restarted):"
 # Process is `chitta-mcp` (hyphen), not the old `chitta mcp` subcommand — the
 # space pattern silently matched nothing, so MCP python edits never went live.
-# [c] bracket keeps this pkill from matching its own shell.
-pkill -f "chitta-m[c]p" 2>/dev/null || true
+# [c] bracket keeps this pkill from matching its own shell. `--http` instances
+# are the systemd unit Codex connects to: killing it with SIGTERM counts as a
+# clean exit, Restart=on-failure does not bring it back, and the port stayed
+# dead for six days (2026-09-02 → 09-08). Restart that one via systemd instead.
+pgrep -f "chitta-m[c]p" 2>/dev/null | while read -r pid; do
+  tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null | grep -q -- '--http' || kill "$pid" 2>/dev/null || true
+done
+systemctl --user try-restart chitta-mcp-http 2>/dev/null || true
 
 echo "[dev-install] refreshing plugin cache + Codex cache (owner: sync-installed-hooks.sh):"
 "$REPO/scripts/sync-installed-hooks.sh"

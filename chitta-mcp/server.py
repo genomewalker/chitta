@@ -24,6 +24,7 @@ import os
 import re
 import socket
 import subprocess
+import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -49,6 +50,11 @@ from mcp.types import (  # noqa: E402
     Tool,
     ToolsCapability,
 )
+# Sibling modules must resolve regardless of launcher: the ~/.local/bin
+# console script is a setuptools *editable* install whose finder only maps
+# modules that existed at install time, so a newly added sibling is invisible
+# to it (incident 2026-09-08: chitta-mcp-http crash-looped on recall_gateway).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from recall_gateway import RERANK_FETCH_MUL, get_reranker, rrf_merge  # noqa: E402
 from tools_static import COMPOSITE_TOOLS, TOOLS  # noqa: E402
 
