@@ -21,12 +21,31 @@ source "${SCRIPT_DIR}/lib.sh" 2>/dev/null || true
 
 # Read stdin (PostToolUse gets tool result)
 STDIN_DATA=$(cat)
+# Debug: `touch $MIND_PATH/.dump_bash_payload` to append raw payloads to
+# $MIND_PATH/bash_payload_dump.jsonl (schema drift diagnosis). Fail-open.
+[[ -f "$MIND_PATH/.dump_bash_payload" ]] && printf '%s\n' "$STDIN_DATA" >> "$MIND_PATH/bash_payload_dump.jsonl" 2>/dev/null || true
 
-# Extract exit code and command
-exit_code=$(echo "$STDIN_DATA" | jq -r '.tool_result.exit_code // 0')
+# Extract exit code and command. Two payload shapes (captured 2026-09-11):
+#   PostToolUse         — success only; result under .tool_response (older
+#                         builds: .tool_result); Claude Code never delivers a
+#                         failed Bash call to this event.
+#   PostToolUseFailure  — .error = "Exit code N\n<stderr>", no tool_response.
+# Until the failure event was registered, this hook only ever saw exit 0: the
+# ledger recorded zero failures in 10 days and the gotcha-on-failure lane below
+# never fired.
 command=$(echo "$STDIN_DATA" | jq -r '.tool_input.command // empty')
-output=$(echo "$STDIN_DATA" | jq -r '.tool_result.stdout // empty' | head -c 500)
-stderr=$(echo "$STDIN_DATA" | jq -r '.tool_result.stderr // empty' | head -c 500)
+_hook_event=$(echo "$STDIN_DATA" | jq -r '.hook_event_name // "PostToolUse"')
+if [[ "$_hook_event" == "PostToolUseFailure" ]]; then
+    _err=$(echo "$STDIN_DATA" | jq -r '.error // ""')
+    exit_code=$(printf '%s' "$_err" | grep -oE '^Exit code [0-9]+' | grep -oE '[0-9]+$')
+    exit_code="${exit_code:-1}"
+    output=""
+    stderr=$(printf '%s' "$_err" | tail -n +2 | head -c 500)
+else
+    exit_code=$(echo "$STDIN_DATA" | jq -r '(.tool_response // .tool_result // {}) | .exit_code // 0')
+    output=$(echo "$STDIN_DATA" | jq -r '(.tool_response // .tool_result // {}) | .stdout // empty' | head -c 500)
+    stderr=$(echo "$STDIN_DATA" | jq -r '(.tool_response // .tool_result // {}) | .stderr // empty' | head -c 500)
+fi
 
 # Outcome ledger tap (additive, Phase 1): every bash exit code, for the
 # injected-memory credit join. Fail-open — never blocks the hook.
