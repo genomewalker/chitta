@@ -96,6 +96,7 @@ struct PreparedDistillation {
     std::vector<float> ep_embedding;
     SSLParser::Result ssl_result;
     std::vector<LearningPrep> learning_preps;  // indexed 1:1 with ssl_result.learnings
+    std::vector<std::string> mdl_evidence;       // current + prior chunks; shadow only
     std::string conversation;                  // raw text — fed to the value-fact extractor
     std::vector<ValueFactPrep> value_fact_preps; // precomputed value-facts (embed+dedup done lock-free)
     bool valid = false;
@@ -160,15 +161,14 @@ private:
     void precompute_dedup(PreparedDistillation& prep);
 
     // Store learnings using precomputed dedup results — no field_store reads, writes only.
-    // `evidence` is the source transcript chunk (prep.conversation) each learning was
-    // distilled from — used only for the MDL-gate shadow log (see mdl_gate.hpp); never
-    // gates or blocks storage.
+    // `evidence` preserves source and prior conversation chunk boundaries for
+    // the MDL shadow log (see mdl_gate.hpp); never gates or blocks storage.
     void store_learnings(
         const SSLParser::Result& ssl_result,
         const std::string& realm,
         uint64_t episode_mem_id,
         const std::vector<LearningPrep>& learning_preps,
-        const std::string& evidence,
+        const std::vector<std::string>& evidence,
         DistillResult& result
     );
 
@@ -176,7 +176,7 @@ private:
     // <mind_path>/mdl_gate_shadow.jsonl. Fail-open: any exception or I/O error is
     // swallowed silently — this must never affect the storage path it observes.
     void log_mdl_shadow(const std::string& mem_id, const std::string& content,
-                         const std::string& evidence);
+                         const std::vector<std::string>& evidence);
 
     // Phase 1c (lock-free): extract value-facts from prep.conversation, embed each,
     // and run recall-based dedup — populates prep.value_fact_preps. No field_store

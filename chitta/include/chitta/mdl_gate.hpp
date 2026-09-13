@@ -89,7 +89,9 @@ inline std::vector<std::string> chunks(const std::string& data, std::size_t size
 // `margin` bytes under the two-part MDL code. Fail-open: any internal zlib
 // error returns a default Verdict (accept=false, saving=0) rather than
 // throwing.
-inline Verdict judge(const std::string& wisdom, const std::string& evidence,
+// Preserve source-chunk boundaries: each conditional cost gets a fresh deflate
+// dictionary, while the wisdom is charged once across the whole evidence pool.
+inline Verdict judge_chunks(const std::string& wisdom, const std::vector<std::string>& evidence,
                       int margin = kDefaultMargin) {
     Verdict v;
     v.margin = margin;
@@ -103,15 +105,17 @@ inline Verdict judge(const std::string& wisdom, const std::string& evidence,
 
     long c_e = 0;
     long c_e_given_w = 0;
-    for (const auto& chunk : chunks(evidence)) {
-        long ce = compress_len(chunk, nullptr);
-        if (ce < 0) return Verdict{};
-        c_e += ce;
+    for (const auto& source : evidence) {
+        for (const auto& chunk : chunks(source)) {
+            long ce = compress_len(chunk, nullptr);
+            if (ce < 0) return Verdict{};
+            c_e += ce;
 
-        long cew = wisdom.empty() ? compress_len(chunk, nullptr)
-                                   : compress_len(chunk, &wisdom);
-        if (cew < 0) return Verdict{};
-        c_e_given_w += cew;
+            long cew = wisdom.empty() ? compress_len(chunk, nullptr)
+                                       : compress_len(chunk, &wisdom);
+            if (cew < 0) return Verdict{};
+            c_e_given_w += cew;
+        }
     }
 
     v.c_e    = c_e;
@@ -119,6 +123,11 @@ inline Verdict judge(const std::string& wisdom, const std::string& evidence,
     v.saving = c_e - v.c_we;
     v.accept = v.saving >= margin;
     return v;
+}
+
+inline Verdict judge(const std::string& wisdom, const std::string& evidence,
+                     int margin = kDefaultMargin) {
+    return judge_chunks(wisdom, {evidence}, margin);
 }
 
 } // namespace mdl

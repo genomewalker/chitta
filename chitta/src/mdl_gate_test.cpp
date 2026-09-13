@@ -1,6 +1,6 @@
 // Standalone test for the MDL consolidation gate (mdl_gate.hpp).
 // Build: g++ -std=c++20 -lz src/mdl_gate_test.cpp -o t
-#include "../include/chitta/mdl_gate.hpp"
+#include "../include/chitta/mdl_evidence_pool.hpp"
 #include <cassert>
 #include <chrono>
 #include <iostream>
@@ -51,6 +51,47 @@ int main() {
         }
         return evidence;
     };
+
+    std::cout << "== small evidence pool (three conversation chunks) ==\n";
+    {
+        chitta::mdl::EvidencePool pool;
+        chitta::mdl::EvidencePool::Key key{"mind", "transcript", "session", "realm"};
+        std::vector<std::string> evidence;
+        for (int i = 0; i < 3; ++i) {
+            evidence = pool.extend(key, "[user]\n" + noise_line(i) + "\n" + kFact,
+                                   i * 10, (i + 1) * 10, 3);
+        }
+        auto pooled = chitta::mdl::judge_chunks(kFact, evidence);
+        auto single = judge(kFact, evidence.front());
+        auto unrelated = chitta::mdl::judge_chunks(
+            "the user prefers dark roast coffee and bikes to work on Tuesdays", evidence);
+        expect(evidence.size() == 3, "three actual small chunks, no padding");
+        expect(!single.accept && pooled.accept, "recurring fact: single saving=" +
+            std::to_string(single.saving) + " pooled saving=" + std::to_string(pooled.saving));
+        expect(!unrelated.accept, "unrelated rejected: saving=" + std::to_string(unrelated.saving));
+        expect(pooled.margin == 64, "margin unchanged");
+        auto other = key; other[3] = "other-realm";
+        expect(pool.extend(other, kFact, 30, 40, 3).size() == 1, "realm isolation");
+        other = key; other[2] = "other-session";
+        expect(pool.extend(other, kFact, 30, 40, 3).size() == 1, "session isolation");
+        other = key; other[0] = "other-mind";
+        expect(pool.extend(other, kFact, 30, 40, 3).size() == 1, "mind isolation");
+        other = key; other[1] = "other-transcript";
+        expect(pool.extend(other, kFact, 30, 40, 3).size() == 1, "transcript isolation");
+        expect(pool.extend(key, kFact, 20, 30, 3).size() == 3, "retry not counted twice");
+        expect(pool.extend(key, kFact, 30, 40, 1).size() == 2, "N selects recent history");
+        expect(pool.extend(key, std::string(kChunkBytes, 'x'), 40, 50, 3).size() == 1,
+               "large evidence is unchanged");
+        expect(pool.extend(key, kFact, 50, 60, 0).size() == 1, "N=0 disables pooling");
+        expect(pool.extend(key, kFact, 0, 10, 3).size() == 1, "rewind clears history");
+        setenv("CHITTA_MDL_POOL_CHUNKS", "0", 1);
+        expect(chitta::mdl::pool_chunk_limit() == 0, "environment disables pooling");
+        setenv("CHITTA_MDL_POOL_CHUNKS", "-1", 1);
+        expect(chitta::mdl::pool_chunk_limit() == 3, "invalid environment uses default");
+        setenv("CHITTA_MDL_POOL_CHUNKS", "999", 1);
+        expect(chitta::mdl::pool_chunk_limit() == 32, "environment is bounded");
+        unsetenv("CHITTA_MDL_POOL_CHUNKS");
+    }
 
     std::cout << "== (a) compressive rule, sparsely recurring across evidence => accept ==\n";
     {
