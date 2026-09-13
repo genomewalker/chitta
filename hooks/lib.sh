@@ -124,6 +124,9 @@ daemon_available() {
 
 # Compute socket path from mind path — matches C++ socket_path_for_mind()
 get_socket_path() {
+    # Explicit override first (the CLI honours the same variable), so hooks
+    # driven at a replica (benchmarks/smriti, eval-replica.sh) talk to it too.
+    if [[ -n "${CHITTA_SOCKET_PATH:-}" ]]; then echo "$CHITTA_SOCKET_PATH"; return; fi
     local mind_path="${CHITTA_DB_PATH:-${CHITTA_MIND:-$HOME/.claude/mind}}"
     local hash=$(djb2_hash "$mind_path")
     echo "$(get_socket_dir)/chitta-${hash}.sock"
