@@ -56,8 +56,83 @@ from mcp.types import (  # noqa: E402
 # modules that existed at install time, so a newly added sibling is invisible
 # to it (incident 2026-09-08: chitta-mcp-http crash-looped on recall_gateway).
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from recall_gateway import RERANK_FETCH_MUL, get_reranker, rrf_merge  # noqa: E402
+from recall_gateway import (  # noqa: E402
+    RERANK_FETCH_MUL,
+    get_reranker,
+    rrf_merge,
+    run_reranker,
+)
 from tools_static import COMPOSITE_TOOLS, TOOLS  # noqa: E402
+
+_loop_lag_max_ms = 0.0
+_loop_lag_over_count = 0
+
+
+def _lag_setting_ms(name: str, legacy_name: str, default: float) -> float:
+    raw = os.environ.get(name, os.environ.get(legacy_name, str(default)))
+    try:
+        return max(1.0, float(raw))
+    except ValueError:
+        logger.warning("invalid %s=%r; using %.0fms", name, raw, default)
+        return default
+
+
+def loop_lag_stats() -> dict[str, float | int]:
+    """Return a stable snapshot for health output and diagnostics."""
+    return {
+        "max_lag_ms": round(_loop_lag_max_ms, 1),
+        "over_count": _loop_lag_over_count,
+    }
+
+
+async def monitor_loop_lag(
+    interval_ms: float | None = None, warn_ms: float | None = None
+) -> None:
+    """Measure asyncio scheduling delay and warn when it crosses the threshold."""
+    global _loop_lag_max_ms, _loop_lag_over_count
+    if interval_ms is None:
+        interval_ms = _lag_setting_ms(
+            "CHITTA_MCP_LAG_INTERVAL_MS", "CC_SOUL_MCP_LAG_INTERVAL_MS", 250.0
+        )
+    if warn_ms is None:
+        warn_ms = _lag_setting_ms("CHITTA_MCP_LAG_WARN_MS", "CC_SOUL_MCP_LAG_WARN_MS", 200.0)
+    interval_s = interval_ms / 1000.0
+    loop = asyncio.get_running_loop()
+    while True:
+        expected = loop.time() + interval_s
+        await asyncio.sleep(interval_s)
+        lag_ms = max(0.0, (loop.time() - expected) * 1000.0)
+        _loop_lag_max_ms = max(_loop_lag_max_ms, lag_ms)
+        if lag_ms >= warn_ms:
+            _loop_lag_over_count += 1
+            logger.warning(
+                "asyncio scheduling delay %.1fms exceeds %.1fms threshold",
+                lag_ms,
+                warn_ms,
+            )
+
+
+async def _stop_loop_lag_monitor(task: asyncio.Task) -> None:
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+
+
+def _with_loop_lag_health(result: str) -> str:
+    """Attach MCP loop counters without assuming the daemon health format."""
+    stats = loop_lag_stats()
+    try:
+        payload = json.loads(result)
+    except (json.JSONDecodeError, TypeError):
+        suffix = json.dumps({"mcp_loop_lag": stats}, separators=(",", ":"))
+        return f"{result.rstrip()}\n{suffix}" if result else suffix
+    if isinstance(payload, dict):
+        payload["mcp_loop_lag"] = stats
+        return json.dumps(payload)
+    suffix = json.dumps({"mcp_loop_lag": stats}, separators=(",", ":"))
+    return f"{result.rstrip()}\n{suffix}"
 
 # Tools to HIDE from tools/list (still callable, just not listed)
 # Goal: Expose only ~30 essential tools to save context tokens
@@ -2237,7 +2312,7 @@ def handle_recall_smart(arguments: dict) -> str:
     return json.dumps({"results": merged, "plan": plan})
 
 
-def handle_recall_gateway(arguments: dict) -> str:
+async def handle_recall_gateway(arguments: dict) -> str:
     """Unified recall with strategy routing and optional cross-encoder reranking.
 
     Strategies: hybrid (default), semantic, priority, temporal, smart, keyword.
@@ -2267,14 +2342,15 @@ def handle_recall_gateway(arguments: dict) -> str:
     }
     tool = tool_map.get(strategy, "recall")
 
-    reranker = get_reranker()
+    loop = asyncio.get_running_loop()
+    reranker = await run_reranker(get_reranker)
     if not reranker:
-        return daemon_call(tool, arguments)
+        return await loop.run_in_executor(_executor, daemon_call, tool, arguments)
 
     query = arguments.get("query", "")
     limit = int(arguments.get("limit", 10))
     fetch_args = dict(arguments, limit=limit * RERANK_FETCH_MUL)
-    raw_str = daemon_call(tool, fetch_args, structured=True)
+    raw_str = await loop.run_in_executor(_executor, daemon_call, tool, fetch_args, True)
     try:
         raw = json.loads(raw_str)
         results = raw.get("results", [])
@@ -2284,10 +2360,10 @@ def handle_recall_gateway(arguments: dict) -> str:
         logger.debug("recall overfetch returned no JSON, skipping rerank: %s", exc)
         results = []
     if not results or len(results) <= limit:
-        return daemon_call(tool, arguments)
+        return await loop.run_in_executor(_executor, daemon_call, tool, arguments)
 
     pairs = [(query, h.get("text", "")) for h in results]
-    scores = reranker.predict(pairs)
+    scores = await run_reranker(reranker.predict, pairs)
     if len(scores) != len(results):
         # A backend returning a different number of scores than candidates is
         # broken. zip would silently truncate and drop memories from recall, so
@@ -2298,7 +2374,7 @@ def handle_recall_gateway(arguments: dict) -> str:
             len(scores),
             len(results),
         )
-        return daemon_call(tool, arguments)
+        return await loop.run_in_executor(_executor, daemon_call, tool, arguments)
     ranked = sorted(zip(scores, results), key=lambda x: -float(x[0]))
     reranked = [h for _, h in ranked[:limit]]
     return json.dumps({"results": reranked})
@@ -2807,12 +2883,20 @@ async def call_tool(name: str, arguments: dict):
             # memory. Deliberately catches everything.
             logger.info("merge-aware judge failed, writing normally: %s", exc)
     if name in COMPOSITE_HANDLERS:
-        result = await loop.run_in_executor(_executor, COMPOSITE_HANDLERS[name], arguments)
+        handler = COMPOSITE_HANDLERS[name]
+        if asyncio.iscoroutinefunction(handler):
+            result = await handler(arguments)
+        else:
+            result = await loop.run_in_executor(_executor, handler, arguments)
     else:
         # Forward to daemon
         result = await loop.run_in_executor(_executor, daemon_call, name, arguments)
 
-    return [TextContent(type="text", text=_sqz_compress(result, name))]
+    result = _sqz_compress(result, name)
+    if name == "health_check":
+        result = _with_loop_lag_health(result)
+
+    return [TextContent(type="text", text=result)]
 
 
 def main():
@@ -2842,8 +2926,12 @@ def _run_stdio():
             server_version="0.1.0",
             capabilities=ServerCapabilities(tools=ToolsCapability()),
         )
-        async with stdio_server() as (read_stream, write_stream):
-            await server.run(read_stream, write_stream, init_options)
+        lag_task = asyncio.create_task(monitor_loop_lag())
+        try:
+            async with stdio_server() as (read_stream, write_stream):
+                await server.run(read_stream, write_stream, init_options)
+        finally:
+            await _stop_loop_lag_monitor(lag_task)
 
     asyncio.run(run())
 
@@ -2906,8 +2994,12 @@ def _run_http(port: int):
 
         logger.warning(f"chitta-mcp HTTP listening on http://127.0.0.1:{port}/mcp")
 
-        async with session_manager.run():
-            await http_server.serve()
+        lag_task = asyncio.create_task(monitor_loop_lag())
+        try:
+            async with session_manager.run():
+                await http_server.serve()
+        finally:
+            await _stop_loop_lag_monitor(lag_task)
 
     asyncio.run(run())
 

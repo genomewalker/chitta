@@ -93,6 +93,11 @@ assert "non-ablated sem lane still present" "grep -q 'lane=sem' '$T/stderr.abl-1
 assert "admit-debug c2 unmeasured (hyb ablated, no degrade-retry substitute)" \
     "grep 'lane=sem' '$T/stderr.abl-1' | grep -q 'c2=none'"
 assert "admit line reports abl:hyb,kw" "grep -q 'abl:hyb,kw' '$T/stdout.abl-1'"
+assert "admit line carries compact lane and total timings" \
+    "grep -Eq 't:sem=[0-9]+.*total=[0-9]+' '$T/stdout.abl-1'"
+INJECTED=$(jq -c 'select(.event == "injected" and .session_id == "abl-1")' "$MIND/outcome_ledger.jsonl")
+assert "injected ledger event carries lane timing objects and hook total" \
+    "printf '%s' '$INJECTED' | jq -e '.lane_ms.sem >= 0 and (.lane_timeout.sem == true or .lane_timeout.sem == false) and .hook_ms >= 0' >/dev/null"
 unset CC_SOUL_ABLATE_LANES
 
 # ============================================================
@@ -172,5 +177,27 @@ assert "CHITTA_ABLATE_LANES: ablated hyb lane absent" "! grep -q 'lane=hyb' '$T/
 assert "CHITTA_ABLATE_LANES: ablated kw lane absent" "! grep -q 'lane=kw' '$T/stderr.abl-chitta'"
 assert "CHITTA_ABLATE_LANES: non-ablated sem lane present" "grep -q 'lane=sem' '$T/stderr.abl-chitta'"
 assert "CHITTA_ABLATE_LANES: admit line reports abl:hyb,kw" "grep -q 'abl:hyb,kw' '$T/stdout.abl-chitta'"
+
+# ============================================================
+# Item 5: an all-empty fan-out exits quietly but records which lanes
+# returned empty and how long each took. The scoped empty result also
+# exercises the timed cross-realm fallback before the final empty event.
+# ============================================================
+STUB_SEM_FILE="$T/sem-empty"; STUB_HYB_FILE="$T/hyb-empty"
+STUB_KW_FILE="$T/kw-empty"; STUB_CORR_FILE="$T/corr-empty"
+STUB_CORRK_FILE="$T/corrk-empty"
+: > "$STUB_SEM_FILE"; : > "$STUB_HYB_FILE"; : > "$STUB_KW_FILE"
+: > "$STUB_CORR_FILE"; : > "$STUB_CORRK_FILE"
+export STUB_SEM_FILE STUB_HYB_FILE STUB_KW_FILE STUB_CORR_FILE STUB_CORRK_FILE
+run_hook "empty-1" "all recall lanes return empty fixtures"
+assert "all-empty recall emits no hook context" "[[ ! -s '$T/stdout.empty-1' ]]"
+EMPTY_EVENT=$(jq -c 'select(.event == "recall_empty" and .session_id == "empty-1")' "$MIND/outcome_ledger.jsonl")
+assert "all-empty recall appends recall_empty" "[[ -n '$EMPTY_EVENT' ]]"
+assert "recall_empty carries every attempted lane timing" \
+    "printf '%s' '$EMPTY_EVENT' | jq -e '(.lane_ms | length) == 6 and .lane_ms.sem != null and .lane_ms.hyb != null and .lane_ms.kw != null and .lane_ms.corr != null and .lane_ms.corrk != null and .lane_ms.xr != null' >/dev/null"
+assert "recall_empty marks empty lane files with booleans" \
+    "printf '%s' '$EMPTY_EVENT' | jq -e '.lane_timeout | all(.[]; . == true)' >/dev/null"
+assert "recall_empty carries total hook milliseconds" \
+    "printf '%s' '$EMPTY_EVENT' | jq -e '.hook_ms >= 0' >/dev/null"
 
 exit $FAIL

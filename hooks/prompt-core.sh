@@ -43,6 +43,137 @@ _HOOK_T0=$(date +%s%3N)
 HOOK_BUDGET_MS="${CHITTA_HOOK_BUDGET_MS:-${CC_SOUL_HOOK_BUDGET_MS:-6000}}"
 budget_left() { (( $(date +%s%3N) - _HOOK_T0 < HOOK_BUDGET_MS )); }
 
+# Recall scheduling telemetry. EPOCHREALTIME is a Bash builtin, so lane
+# boundaries add no processes to the already latency-sensitive fan-out. The
+# date fallback is only for old Bash builds that do not expose EPOCHREALTIME.
+declare -A _LANE_MS=() _LANE_TIMEOUT=()
+_LANE_PIDS=()
+_LANE_ORDER=(sem ctx hyb kw corr corrk xr)
+_LANE_STAT_MARKER="__CHITTA_LANE_STAT__:"
+_RECALL_TELEMETRY_ACTIVE=0
+_RECALL_TELEMETRY_DONE=0
+_RECALL_EMPTY=0
+_RECALL_CONTEXT_EMITTED=0
+_LEDGER_OUTPUT=""
+_NOW_MS=0
+_clock_ms() {
+    local _stamp="${EPOCHREALTIME:-}"
+    if [[ -n "$_stamp" ]]; then
+        _NOW_MS="${_stamp/./}"
+        _NOW_MS="${_NOW_MS:0:13}"
+    else
+        _NOW_MS=$(date +%s%3N)
+    fi
+}
+
+_run_lane() {
+    local _lane="$1" _wait="$2" _start _rc _elapsed _bad=false
+    shift 2
+    _clock_ms; _start=$_NOW_MS
+    timeout "$_wait" "$@" >"$_ld/$_lane" 2>/dev/null
+    _rc=$?
+    _clock_ms; _elapsed=$(( _NOW_MS - _start ))
+    [[ $_rc -eq 124 || $_rc -eq 137 || ! -s "$_ld/$_lane" ]] && _bad=true
+    _LANE_MS["$_lane"]=$_elapsed
+    _LANE_TIMEOUT["$_lane"]=$_bad
+    return 0
+}
+
+_launch_lane() {
+    local _lane="$1" _wait="$2"
+    shift 2
+    (
+        local _start _rc _elapsed _bad=0
+        _start=$_LANE_FANOUT_T0
+        timeout "$_wait" "$@"
+        _rc=$?
+        _clock_ms; _elapsed=$(( _NOW_MS - _start ))
+        [[ $_rc -eq 124 || $_rc -eq 137 || ! -s "$_ld/$_lane" ]] && _bad=1
+        printf '\n%s%010d%d' "$_LANE_STAT_MARKER" "$_elapsed" "$_bad"
+    ) >"$_ld/$_lane" 2>/dev/null &
+    _LANE_PIDS+=("$!")
+}
+
+_wait_lanes() {
+    wait "${_LANE_PIDS[@]}" 2>/dev/null || true
+    return 0
+}
+
+_read_lane() {
+    local _lane="$1" _dest="$2" _raw="" _ms="" _bad=false _cut
+    [[ -f "$_ld/$_lane" ]] && _raw=$(<"$_ld/$_lane")
+    if [[ "$_raw" == *"$_LANE_STAT_MARKER"* ]]; then
+        [[ "${_raw: -1}" == "1" ]] && _bad=true
+        _ms="${_raw: -11:10}"
+        _ms=$(( 10#$_ms ))
+        _cut=$(( ${#_raw} - ${#_LANE_STAT_MARKER} - 12 ))
+        _raw="${_raw:0:_cut}"
+        while [[ "$_raw" == *$'\n' ]]; do _raw="${_raw%$'\n'}"; done
+        [[ -z "$_raw" ]] && _bad=true
+        _LANE_MS["$_lane"]=$_ms
+        _LANE_TIMEOUT["$_lane"]=$_bad
+    fi
+    printf -v "$_dest" '%s' "$_raw"
+}
+
+_render_lane_telemetry() {
+    local _lane _sep="" _bad
+    _LANE_TIMING_FIELD=""
+    _LANE_MS_JSON="{"
+    _LANE_TIMEOUT_JSON="{"
+    for _lane in "${_LANE_ORDER[@]}"; do
+        [[ -n "${_LANE_MS[$_lane]+set}" ]] || continue
+        _bad=""
+        [[ "${_LANE_TIMEOUT[$_lane]}" == "true" ]] && _bad="!"
+        _LANE_TIMING_FIELD+="${_sep}${_lane}=${_LANE_MS[$_lane]}${_bad}"
+        _LANE_MS_JSON+="${_sep}\"${_lane}\":${_LANE_MS[$_lane]}"
+        _LANE_TIMEOUT_JSON+="${_sep}\"${_lane}\":${_LANE_TIMEOUT[$_lane]}"
+        _sep=","
+    done
+    _LANE_MS_JSON+="}"
+    _LANE_TIMEOUT_JSON+="}"
+    _clock_ms
+    _HOOK_ELAPSED_MS=$(( _NOW_MS - _HOOK_T0 ))
+}
+
+_recall_telemetry_finish() {
+    local _exit_status=$? _lg_evt
+    [[ "$_RECALL_TELEMETRY_ACTIVE" -eq 1 && "$_RECALL_TELEMETRY_DONE" -eq 0 ]] || return "$_exit_status"
+    _RECALL_TELEMETRY_DONE=1
+    _render_lane_telemetry
+    if [[ -f "${SCRIPT_DIR}/outcome-ledger.sh" ]]; then
+        source "${SCRIPT_DIR}/outcome-ledger.sh" 2>/dev/null || true
+    fi
+    if ! declare -F ledger_append >/dev/null; then
+        return "$_exit_status"
+    fi
+    if [[ "$_RECALL_CONTEXT_EMITTED" -eq 1 && -n "$_LEDGER_OUTPUT" ]]; then
+        _lg_evt=$(printf '%s' "$_LEDGER_OUTPUT" | python3 -c '
+import json, re, sys
+
+lanes = {}
+for line in sys.stdin:
+    match = re.match(r"\[(\w+)\]#(\d+)", line)
+    if match:
+        lanes.setdefault(match.group(1), []).append(match.group(2))
+ids = sorted({memory_id for values in lanes.values() for memory_id in values})
+if ids:
+    print(json.dumps({
+        "event": "injected",
+        "ids": ids,
+        "lanes": lanes,
+        "lane_ms": json.loads(sys.argv[1]),
+        "lane_timeout": json.loads(sys.argv[2]),
+        "hook_ms": int(sys.argv[3]),
+    }))
+' "$_LANE_MS_JSON" "$_LANE_TIMEOUT_JSON" "$_HOOK_ELAPSED_MS" 2>/dev/null)
+        [[ -n "$_lg_evt" ]] && ledger_append "$_lg_evt" "$SESSION_ID"
+    elif [[ "$_RECALL_EMPTY" -eq 1 ]]; then
+        ledger_append "{\"event\":\"recall_empty\",\"lane_ms\":${_LANE_MS_JSON},\"lane_timeout\":${_LANE_TIMEOUT_JSON},\"hook_ms\":${_HOOK_ELAPSED_MS}}" "$SESSION_ID"
+    fi
+    return "$_exit_status"
+}
+
 # realm_detect costs up to 1s and was called twice per prompt (checkpoint block
 # + recall block). Memoize into REALM; never call inside $( ) or the cache dies
 # with the subshell.
@@ -261,8 +392,9 @@ fi
 realm_detect_once
 
 # CEC: log user_prompt event (fire-and-forget)
+_clock_ms; _RECALL_FANOUT_T0=$_NOW_MS
 timeout 0.5 "$CHITTA_BIN" log_event --tool "user_prompt" \
-    --entity "$REALM" --outcome 0 --ts_ms "$(date +%s%3N)" >/dev/null 2>&1 &
+    --entity "$REALM" --outcome 0 --ts_ms "$_RECALL_FANOUT_T0" >/dev/null 2>&1 &
 
 # ===========================================
 # MEMORY RETRIEVAL: Choose strategy based on mode
@@ -279,6 +411,8 @@ _ABLATE_LANES_RAW="${CHITTA_ABLATE_LANES:-${CC_SOUL_ABLATE_LANES:-}}"
 _ABLATE_LANES=",${_ABLATE_LANES_RAW},"
 _lane_ablated() { [[ "$_ABLATE_LANES" == *",$1,"* ]]; }
 
+_RECALL_TELEMETRY_ACTIVE=1
+trap _recall_telemetry_finish EXIT
 if [[ -n "$RLM_MODE" ]]; then
     # RLM-style exploration via Python soul_repl.
     # Query passed via env, never interpolated into Python source — the raw
@@ -309,18 +443,17 @@ else
     # probe, not one of the fuzzy recall lanes the env targets; `xr` is gated
     # further down, at the cross-realm fallback itself.
     touch "$_ld/sem" "$_ld/hyb" "$_ld/kw" "$_ld/corr" "$_ld/corrk"
-    _sem_pid=""
+    # Reuse the adjacent log_event timestamp as the common dispatch boundary:
+    # each duration includes scheduler wait with no added start-clock process.
+    _LANE_FANOUT_T0=$_RECALL_FANOUT_T0
     if ! _lane_ablated sem; then
-        ( timeout "$MAX_WAIT" "$CHITTA_BIN" smart_recall --query "$QUERY" --limit 6 --realm "$REALM" >"$_ld/sem" 2>/dev/null || true ) &
-        _sem_pid=$!
+        _launch_lane sem "$MAX_WAIT" "$CHITTA_BIN" smart_recall --query "$QUERY" --limit 6 --realm "$REALM"
     fi
     # Hybrid gets +1s: it carries the C2 maxrel and the fused hits, and a cold
     # query-embed takes ~3.7s (measured 2026-09-01) vs ~0.4s warm. Losing it
     # drops C2 to none and silences every lane.
-    _hyb_pid=""
     if ! _lane_ablated hyb; then
-        ( timeout "$((MAX_WAIT + 1))" "$CHITTA_BIN" recall --query "$QUERY" --strategy hybrid --limit "$HYB_LANE_LIMIT" --realm "$REALM" >"$_ld/hyb" 2>/dev/null || true ) &
-        _hyb_pid=$!
+        _launch_lane hyb "$((MAX_WAIT + 1))" "$CHITTA_BIN" recall --query "$QUERY" --strategy hybrid --limit "$HYB_LANE_LIMIT" --realm "$REALM"
     fi
     # Pure keyword lane: BM25 only, surfaces exact tokens (filenames, IDs, paths)
     # regardless of semantic similarity. Plain format (NOT --toon): the daemon's
@@ -329,16 +462,12 @@ else
     # positional-sed parser → the kw lane silently emitted zero lines every turn.
     # The plain format prints the same `[NN%] [type] text` shape as the hyb lane,
     # so it merges via the identical `[kw]`-prefix idiom below with no CSV parse.
-    _kw_pid=""
     if ! _lane_ablated kw; then
-        ( timeout "$MAX_WAIT" "$CHITTA_BIN" recall --query "$QUERY" --strategy keyword \
-                  --limit 3 --realm "$REALM" >"$_ld/kw" 2>/dev/null || true ) &
-        _kw_pid=$!
+        _launch_lane kw "$MAX_WAIT" "$CHITTA_BIN" recall --query "$QUERY" --strategy keyword \
+                     --limit 3 --realm "$REALM"
     fi
-    _corr_pid=""
     if ! _lane_ablated corr; then
-        ( timeout "$MAX_WAIT" "$CHITTA_BIN" recall --query "$QUERY" --tag "correction" --limit 3 --include-global true >"$_ld/corr" 2>/dev/null || true ) &
-        _corr_pid=$!
+        _launch_lane corr "$MAX_WAIT" "$CHITTA_BIN" recall --query "$QUERY" --tag "correction" --limit 3 --include-global true
     fi
     # DETERMINISTIC correction lane (capability #2). Unlike the fuzzy --tag lane
     # above (which ranks corrections by cosine and drops the right one ~99% of
@@ -346,22 +475,17 @@ else
     # re-states a corrected mistake, its correction FIRES regardless of ranking.
     # Its result is promoted to systemMessage below on a RESERVED slot. Not
     # ablatable — it isn't one of the fuzzy recall lanes the env targets.
-    ( timeout "$MAX_WAIT" "$CHITTA_BIN" correction_check --text "$QUERY" >"$_ld/corrk" 2>/dev/null || true ) &
-    _corrk_pid=$!
+    _launch_lane corrk "$MAX_WAIT" "$CHITTA_BIN" correction_check --text "$QUERY"
     # Context lane (step 1): semantic recall against the recency-weighted thread
     # bag, NOT the literal turn. Recruits the memory the current thread is about
     # even when the latest message is anaphoric ("do it properly"). Empty file
     # when CTX_QUERY is unset (lane disabled, first turn, or ablated).
-    _ctx_pid=""
     if [[ -n "$CTX_QUERY" ]] && ! _lane_ablated ctx; then
-        ( timeout "$MAX_WAIT" "$CHITTA_BIN" smart_recall --query "$CTX_QUERY" --limit 4 --realm "$REALM" >"$_ld/ctx" 2>/dev/null || true ) &
-        _ctx_pid=$!
+        _launch_lane ctx "$MAX_WAIT" "$CHITTA_BIN" smart_recall --query "$CTX_QUERY" --limit 4 --realm "$REALM"
     fi
-    wait ${_sem_pid:+"$_sem_pid"} ${_hyb_pid:+"$_hyb_pid"} ${_kw_pid:+"$_kw_pid"} \
-         ${_corr_pid:+"$_corr_pid"} "$_corrk_pid" ${_ctx_pid:+"$_ctx_pid"} 2>/dev/null || true
-    _sem_out=$(<"$_ld/sem"); _hyb_out=$(<"$_ld/hyb"); _kw_out=$(<"$_ld/kw"); _corr_out=$(<"$_ld/corr"); _corrk_out=$(<"$_ld/corrk")
-    _ctx_out=""; [[ -f "$_ld/ctx" ]] && _ctx_out=$(<"$_ld/ctx")
-    rm -rf "$_ld"
+    _wait_lanes
+    _read_lane sem _sem_out; _read_lane hyb _hyb_out; _read_lane kw _kw_out
+    _read_lane corr _corr_out; _read_lane corrk _corrk_out; _read_lane ctx _ctx_out
 
     # C2 signal: the hybrid-lane header carries the daemon's Platt-calibrated
     # max_relevance — the "feeling of knowing" scalar the C2 tag is calibrated on
@@ -470,8 +594,8 @@ else
                printf '%s\n' "$_corr_out" | grep -v '\[thought\]' | grep -E '\[[0-9]+%\]' | sed 's/^/[corr]/')
 fi
 
-if [[ -z "$memories" || "$memories" == *"No memories"* ]]; then
-    [[ -z "$CACHE_WARN" && -z "$SESSION_WARN" ]] && exit 0
+if [[ -z "$memories" || "$memories" == *"No memories"* ]] || \
+   [[ ! "$memories" =~ \[[0-9]+%\] ]]; then
     memories=""
 fi
 
@@ -479,11 +603,23 @@ fi
 # Lets project:geodesic/environment memories surface in foreign-realm sessions.
 # Cost: one extra hybrid call (~0.3s). Only fires when scoped recall was empty.
 if [[ -z "$memories" ]] && [[ "$REALM" != "brahman" ]] && budget_left && ! _lane_ablated xr; then
-    _fallback=$(timeout "$MAX_WAIT" "$CHITTA_BIN" recall --query "$QUERY" --strategy hybrid \
-                --limit 5 2>/dev/null || true)
+    if [[ "$_RECALL_TELEMETRY_ACTIVE" -eq 1 && -n "${_ld:-}" ]]; then
+        _run_lane xr "$MAX_WAIT" "$CHITTA_BIN" recall --query "$QUERY" --strategy hybrid --limit 5
+        _fallback=$(<"$_ld/xr")
+    else
+        _fallback=$(timeout "$MAX_WAIT" "$CHITTA_BIN" recall --query "$QUERY" --strategy hybrid \
+                    --limit 5 2>/dev/null || true)
+    fi
     if [[ -n "$_fallback" && "$_fallback" != *"No memories"* ]]; then
         memories=$(printf '%s\n' "$_fallback" | grep -v '\[thought\]' | grep -E '\[[0-9]+%\]' | sed 's/^/[xr]/')
     fi
+fi
+if [[ "$_RECALL_TELEMETRY_ACTIVE" -eq 1 && -n "${_ld:-}" ]]; then
+    rm -rf "$_ld"
+fi
+if [[ -z "$memories" ]]; then
+    [[ "$_RECALL_TELEMETRY_ACTIVE" -eq 1 ]] && _RECALL_EMPTY=1
+    [[ -z "$CACHE_WARN" && -z "$SESSION_WARN" ]] && exit 0
 fi
 
 # Filter and format results
@@ -735,25 +871,9 @@ for i in "${_sel[@]}"; do
     fi
 done
 
-# Outcome ledger tap (additive, Phase 1): join target for injected memory ids.
-# OUTPUT lines are `[lane]#<id> [pct%] ...` — the lane marker is added at
-# admission above; the `#<id>` prefix comes from the daemon formatters
-# (field_memory_recall.cpp). Verified live 2026-09-01.
-if [[ -f "${SCRIPT_DIR}/outcome-ledger.sh" ]]; then
-    source "${SCRIPT_DIR}/outcome-ledger.sh" 2>/dev/null
-    _lg_evt=$(printf '%s' "$OUTPUT" | python3 -c "
-import sys, re, json
-# ids stay strings: memory ids are large uint64s the daemon already quotes in
-# --json output (float round-trip through jq would corrupt them otherwise).
-lanes = {}
-for line in sys.stdin:
-    m = re.match(r'\[(\w+)\]#(\d+)', line)
-    if m: lanes.setdefault(m.group(1), []).append(m.group(2))
-ids = sorted({i for v in lanes.values() for i in v})
-ids and print(json.dumps({'event': 'injected', 'ids': ids, 'lanes': lanes}))
-" 2>/dev/null)
-    [[ -n "$_lg_evt" ]] && { ledger_append "$_lg_evt" "$SESSION_ID" || true; }
-fi
+# Preserve the pre-compression lines for the EXIT telemetry finalizer. OUTPUT
+# may later be sqz-compressed, which can replace memory ids with dedup refs.
+_LEDGER_OUTPUT="$OUTPUT"
 
 # C2 self-monitoring ("feeling of knowing"): bin the daemon's Platt-calibrated
 # max_relevance (from the hybrid-lane header) into TWO honest bands.
@@ -812,7 +932,7 @@ if [[ $COUNT -gt 0 || $((_drop_conf + _drop_dup + _drop_meta + _drop_cap + _drop
     [[ $_drop_cap  -gt 0 ]] && _out="$_out cap:$_drop_cap"
     [[ $_drop_unk  -gt 0 ]] && _out="$_out unk:$_drop_unk"
     _sr_tag=""; [[ "${_c2_small_realm_relax:-0}" -eq 1 ]] && _sr_tag=" sr:on"
-    ADMIT_LINE="[admit]${_ABLATE_LANES_RAW:+ abl:$_ABLATE_LANES_RAW}${_c2_tag:+ C2:$_c2_tag($_c2_cal%)}${_sr_tag}${_in:- none} | drop${_out:- none}${_c2_phrase}"
+    ADMIT_LINE="[admit]${_ABLATE_LANES_RAW:+ abl:$_ABLATE_LANES_RAW}${_c2_tag:+ C2:$_c2_tag($_c2_cal%)}${_sr_tag}${_in:- none} | drop${_out:- none}"
 fi
 
 # ===========================================
@@ -1348,6 +1468,16 @@ if [[ ${COUNT:-0} -gt 0 && -n "${memories:-}" && -n "${MIND_PATH:-}" && -n "${SE
         "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${_hint_surf:-0}" "${COUNT:-0}" \
         >> "${MIND_PATH}/hint_metrics.jsonl" 2>/dev/null || true
 fi
+if [[ -n "$ADMIT_LINE" ]]; then
+    if [[ "$_RECALL_TELEMETRY_ACTIVE" -eq 1 ]]; then
+        _render_lane_telemetry
+    else
+        _clock_ms
+        _HOOK_ELAPSED_MS=$(( _NOW_MS - _HOOK_T0 ))
+        _LANE_TIMING_FIELD=""
+    fi
+    ADMIT_LINE+=" | t:${_LANE_TIMING_FIELD}${_LANE_TIMING_FIELD:+,}total=${_HOOK_ELAPSED_MS}${_c2_phrase}"
+fi
 if [[ -n "$OUTPUT" && $COUNT -gt 0 ]]; then
     # #5: sqz intra-turn dedup — collapse repeated memory text seen earlier this session.
     # Only applies within this single turn's recall batch; cross-turn suppression is #1.
@@ -1369,6 +1499,7 @@ if [[ -n "$OUTPUT" && $COUNT -gt 0 ]]; then
     # OUTPUT may lose its trailing newline through sqz compress — guarantee a
     # break before the [admit] summary so it renders on its own line.
     [[ -n "$ADMIT_LINE" ]] && _append $'\n'"${ADMIT_LINE}"$'\n'
+    _RECALL_CONTEXT_EMITTED=1
 elif [[ "$_c2_tag" == "UNKNOWN" && -n "$ADMIT_LINE" ]]; then
     # Nothing cleared the bar AND recall says this is outside known memory:
     # the boundary itself is the signal — render just the admit line so the
