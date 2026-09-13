@@ -145,9 +145,22 @@ def gate_commands(worktree: Path, paths: list[str]) -> list[tuple[Path, list[str
         ]
     if any(p.startswith("chitta-mcp/") for p in paths):
         commands.append(
-            (worktree / "chitta-mcp", [sys.executable, "-m", "unittest", "discover", "tests"])
+            (worktree / "chitta-mcp", [test_python(), "-m", "unittest", "discover", "tests"])
         )
     return commands
+
+
+def test_python() -> str:
+    """server.py needs CPython >= 3.10 while this cycle may itself run under the
+    PyPy 3.9 that `python3` resolves to here; CHITTA_PY wins, then the bioinfo
+    env, then whatever we are running under."""
+    for cand in (
+        os.environ.get("CHITTA_PY", ""),
+        "/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/bin/python3",
+    ):
+        if cand and os.access(cand, os.X_OK):
+            return cand
+    return sys.executable
 
 
 def implement_command(args, worktree: Path, spec: str) -> list[str]:
