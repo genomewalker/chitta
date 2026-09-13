@@ -199,7 +199,8 @@ jobs:
       # The MCP SDK is not installed in test-hooks, so the composite-handler
       # snapshot skips there. Install it here so the guard actually runs.
       - name: Install MCP SDK
-        run: pip install 'mcp>=1.0.0'
+        # Pinned below 2: server.py uses the 1.x Server decorator API. httpx backs test_http_sessions.
+        run: pip install 'mcp>=1.0,<2' httpx
 
       - name: Composite handler-map snapshot
         working-directory: chitta-mcp

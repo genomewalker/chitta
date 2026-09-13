@@ -8,8 +8,11 @@ import os
 import unittest
 from unittest import mock
 
-import httpx
-import server
+try:
+    import httpx
+    import server
+except ImportError as exc:  # test-hooks CI job has no MCP SDK / httpx
+    raise unittest.SkipTest(f"MCP SDK or httpx unavailable: {exc}") from exc
 
 
 class SessionTableTests(unittest.IsolatedAsyncioTestCase):
