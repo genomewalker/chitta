@@ -9,11 +9,15 @@ ablate:<lane> conditions are present, and ablate_all_vs_off_sr_gap as a
 sanity check when an ablate:all condition is present.
 """
 
+from __future__ import annotations
+
 import argparse
 import json
 import math
 import sys
 from collections import defaultdict
+
+import split as task_split
 
 
 def wilson_interval(successes: int, n: int, z: float = 1.96):
@@ -79,7 +83,7 @@ def mui_credit(on_record, paired_off_records):
     return False, cost_credit
 
 
-def score(records):
+def score(records, include_splits=True):
     by_condition = defaultdict(list)
     for r in records:
         by_condition[r["condition"]].append(r)
@@ -182,7 +186,25 @@ def score(records):
             per_condition["ablate:all"]["success_rate"] - per_condition["off"]["success_rate"]
         )
 
-    return {"per_condition": per_condition, "headline": headline}
+    report = {"per_condition": per_condition, "headline": headline}
+    if include_splits:
+        assignments = task_split.load()
+        grouped = defaultdict(list)
+        for record in records:
+            grouped[record.get("split", assignments.get(record["task_id"], "unknown"))].append(
+                record
+            )
+        report["per_split"] = {
+            name: score(grouped[name], include_splits=False)
+            for name in sorted({"visible", "holdout"} | set(grouped))
+        }
+        report["split_assignment_source"] = (
+            "recorded"
+            if all("split" in r for r in records)
+            else "current manifest fallback for legacy rows"
+        )
+        report["split_hashes"] = sorted({r["split_hash"] for r in records if "split_hash" in r})
+    return report
 
 
 def main():

@@ -1,0 +1,467 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-09-13T12:49:18.899421+00:00",
+  "snapshot_id": null,
+  "socket": null,
+  "agent": "echo",
+  "acceptance_ready": false,
+  "mode": "live-smoke",
+  "errors": [
+    "golden calibration incomplete: Command '['chitta', 'recall', '--query', 'chaos nodes', '--limit', '20', '--realm', 'project:cc-soul', '--no-learn', '--json', '--strategy', 'hybrid']' timed out after 60 seconds"
+  ],
+  "golden_runs_requested": 2,
+  "injection_confirmed": false,
+  "golden_config": {
+    "limit": 20,
+    "strategy": "hybrid",
+    "reranker": false
+  },
+  "tasks": [
+    "example-001",
+    "example-002",
+    "example-003"
+  ],
+  "trials": 3,
+  "split_hash": "9d4f787493f96f2def873a72b666caea8563a0d4bc2015457eccddee649b8674",
+  "band_definition": "mean +/- 1.96 sample SD; descriptive normal band, not CI of mean",
+  "accept_rule": "improvement strictly beyond 2 * sd; positive SR/nDCG, negative tokens",
+  "metrics": {
+    "golden.ndcg": {
+      "n": 0,
+      "mean": null,
+      "sd": null,
+      "band_95": null,
+      "accept_delta": null,
+      "samples": [],
+      "status": "unavailable"
+    },
+    "smriti.off.sr": {
+      "n": 3,
+      "mean": 0,
+      "sd": 0.0,
+      "band_95": [
+        0.0,
+        0.0
+      ],
+      "accept_delta": 0.0,
+      "samples": [
+        0,
+        0,
+        0
+      ]
+    },
+    "smriti.off.tokens": {
+      "n": 3,
+      "mean": 38.333333333333336,
+      "sd": 0.0,
+      "band_95": [
+        38.333333333333336,
+        38.333333333333336
+      ],
+      "accept_delta": 0.0,
+      "samples": [
+        38.333333333333336,
+        38.333333333333336,
+        38.333333333333336
+      ]
+    },
+    "smriti.on.sr": {
+      "n": 3,
+      "mean": 0,
+      "sd": 0.0,
+      "band_95": [
+        0.0,
+        0.0
+      ],
+      "accept_delta": 0.0,
+      "samples": [
+        0,
+        0,
+        0
+      ]
+    },
+    "smriti.on.tokens": {
+      "n": 3,
+      "mean": 38.333333333333336,
+      "sd": 0.0,
+      "band_95": [
+        38.333333333333336,
+        38.333333333333336
+      ],
+      "accept_delta": 0.0,
+      "samples": [
+        38.333333333333336,
+        38.333333333333336,
+        38.333333333333336
+      ]
+    }
+  },
+  "smriti_records": [
+    {
+      "run_id": "506fdf9c",
+      "task_id": "example-001",
+      "condition": "off",
+      "trial": 0,
+      "passed": false,
+      "tokens_used": 46,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_tokens": 0,
+      "transcript": "PROMPT:\nImplement slugify() in mymodule.py per its docstring: convert text to a slug for use as a record identifier. It will be validated against this project's test suite once you're done. Follow this project's established naming conventions rather than the generic web convention for slugs.\n\nMEMORY:\n",
+      "recalled_context_preview": "",
+      "planted_memory_contents": [
+        "[convention] This repo's slugify() joins words with underscores '_', not hyphens '-' \u2014 it must match the legacy record-id format used elsewhere in the codebase.",
+        "[convention] slugify() must lowercase the input and strip punctuation before joining words."
+      ],
+      "injected_confirmed": null,
+      "timestamp": 1789303755.9486558,
+      "dry_run": true,
+      "split": "visible"
+    },
+    {
+      "run_id": "506fdf9c",
+      "task_id": "example-001",
+      "condition": "on",
+      "trial": 0,
+      "passed": false,
+      "tokens_used": 46,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_tokens": 0,
+      "transcript": "PROMPT:\nImplement slugify() in mymodule.py per its docstring: convert text to a slug for use as a record identifier. It will be validated against this project's test suite once you're done. Follow this project's established naming conventions rather than the generic web convention for slugs.\n\nMEMORY:\n",
+      "recalled_context_preview": "",
+      "planted_memory_contents": [
+        "[convention] This repo's slugify() joins words with underscores '_', not hyphens '-' \u2014 it must match the legacy record-id format used elsewhere in the codebase.",
+        "[convention] slugify() must lowercase the input and strip punctuation before joining words."
+      ],
+      "injected_confirmed": null,
+      "timestamp": 1789303756.102886,
+      "dry_run": true,
+      "split": "visible"
+    },
+    {
+      "run_id": "506fdf9c",
+      "task_id": "example-002",
+      "condition": "off",
+      "trial": 0,
+      "passed": false,
+      "tokens_used": 34,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_tokens": 0,
+      "transcript": "PROMPT:\nImplement save_data(obj, path) and load_data(path) in store.py: save_data must persist a dict of basic types to path, and load_data must read it back to an equal dict. Pick a standard-library serialization format.\n\nMEMORY:\n",
+      "recalled_context_preview": "",
+      "planted_memory_contents": [
+        "[correction] This repo never uses pickle for save_data/load_data \u2014 a 2024 incident where an untrusted pickle file crashed a batch job means all persistence here must use json, even though pickle would round-trip more Python types."
+      ],
+      "injected_confirmed": null,
+      "timestamp": 1789303756.2781112,
+      "dry_run": true,
+      "split": "visible"
+    },
+    {
+      "run_id": "506fdf9c",
+      "task_id": "example-002",
+      "condition": "on",
+      "trial": 0,
+      "passed": false,
+      "tokens_used": 34,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_tokens": 0,
+      "transcript": "PROMPT:\nImplement save_data(obj, path) and load_data(path) in store.py: save_data must persist a dict of basic types to path, and load_data must read it back to an equal dict. Pick a standard-library serialization format.\n\nMEMORY:\n",
+      "recalled_context_preview": "",
+      "planted_memory_contents": [
+        "[correction] This repo never uses pickle for save_data/load_data \u2014 a 2024 incident where an untrusted pickle file crashed a batch job means all persistence here must use json, even though pickle would round-trip more Python types."
+      ],
+      "injected_confirmed": null,
+      "timestamp": 1789303756.4358926,
+      "dry_run": true,
+      "split": "visible"
+    },
+    {
+      "run_id": "506fdf9c",
+      "task_id": "example-003",
+      "condition": "off",
+      "trial": 0,
+      "passed": false,
+      "tokens_used": 35,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_tokens": 0,
+      "transcript": "PROMPT:\nImplement parse_age(raw) in validate.py: it must parse a numeric string into a non-negative int and reject anything else. Use this project's own error-handling pattern for the rejection, not whatever built-in exception feels natural.\n\nMEMORY:\n",
+      "recalled_context_preview": "",
+      "planted_memory_contents": [
+        "[wisdom] This repo centralizes all input-rejection exceptions in errors.py's ValidationError \u2014 every validation function raises that, never a bare ValueError/TypeError, so main.py's single top-level handler can catch failures by type."
+      ],
+      "injected_confirmed": null,
+      "timestamp": 1789303756.6061933,
+      "dry_run": true,
+      "split": "visible"
+    },
+    {
+      "run_id": "506fdf9c",
+      "task_id": "example-003",
+      "condition": "on",
+      "trial": 0,
+      "passed": false,
+      "tokens_used": 35,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_tokens": 0,
+      "transcript": "PROMPT:\nImplement parse_age(raw) in validate.py: it must parse a numeric string into a non-negative int and reject anything else. Use this project's own error-handling pattern for the rejection, not whatever built-in exception feels natural.\n\nMEMORY:\n",
+      "recalled_context_preview": "",
+      "planted_memory_contents": [
+        "[wisdom] This repo centralizes all input-rejection exceptions in errors.py's ValidationError \u2014 every validation function raises that, never a bare ValueError/TypeError, so main.py's single top-level handler can catch failures by type."
+      ],
+      "injected_confirmed": null,
+      "timestamp": 1789303756.8027658,
+      "dry_run": true,
+      "split": "visible"
+    },
+    {
+      "run_id": "506fdf9c",
+      "task_id": "example-001",
+      "condition": "off",
+      "trial": 1,
+      "passed": false,
+      "tokens_used": 46,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_tokens": 0,
+      "transcript": "PROMPT:\nImplement slugify() in mymodule.py per its docstring: convert text to a slug for use as a record identifier. It will be validated against this project's test suite once you're done. Follow this project's established naming conventions rather than the generic web convention for slugs.\n\nMEMORY:\n",
+      "recalled_context_preview": "",
+      "planted_memory_contents": [
+        "[convention] This repo's slugify() joins words with underscores '_', not hyphens '-' \u2014 it must match the legacy record-id format used elsewhere in the codebase.",
+        "[convention] slugify() must lowercase the input and strip punctuation before joining words."
+      ],
+      "injected_confirmed": null,
+      "timestamp": 1789303756.981274,
+      "dry_run": true,
+      "split": "visible"
+    },
+    {
+      "run_id": "506fdf9c",
+      "task_id": "example-001",
+      "condition": "on",
+      "trial": 1,
+      "passed": false,
+      "tokens_used": 46,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_tokens": 0,
+      "transcript": "PROMPT:\nImplement slugify() in mymodule.py per its docstring: convert text to a slug for use as a record identifier. It will be validated against this project's test suite once you're done. Follow this project's established naming conventions rather than the generic web convention for slugs.\n\nMEMORY:\n",
+      "recalled_context_preview": "",
+      "planted_memory_contents": [
+        "[convention] This repo's slugify() joins words with underscores '_', not hyphens '-' \u2014 it must match the legacy record-id format used elsewhere in the codebase.",
+        "[convention] slugify() must lowercase the input and strip punctuation before joining words."
+      ],
+      "injected_confirmed": null,
+      "timestamp": 1789303757.1222653,
+      "dry_run": true,
+      "split": "visible"
+    },
+    {
+      "run_id": "506fdf9c",
+      "task_id": "example-002",
+      "condition": "off",
+      "trial": 1,
+      "passed": false,
+      "tokens_used": 34,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_tokens": 0,
+      "transcript": "PROMPT:\nImplement save_data(obj, path) and load_data(path) in store.py: save_data must persist a dict of basic types to path, and load_data must read it back to an equal dict. Pick a standard-library serialization format.\n\nMEMORY:\n",
+      "recalled_context_preview": "",
+      "planted_memory_contents": [
+        "[correction] This repo never uses pickle for save_data/load_data \u2014 a 2024 incident where an untrusted pickle file crashed a batch job means all persistence here must use json, even though pickle would round-trip more Python types."
+      ],
+      "injected_confirmed": null,
+      "timestamp": 1789303757.285538,
+      "dry_run": true,
+      "split": "visible"
+    },
+    {
+      "run_id": "506fdf9c",
+      "task_id": "example-002",
+      "condition": "on",
+      "trial": 1,
+      "passed": false,
+      "tokens_used": 34,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_tokens": 0,
+      "transcript": "PROMPT:\nImplement save_data(obj, path) and load_data(path) in store.py: save_data must persist a dict of basic types to path, and load_data must read it back to an equal dict. Pick a standard-library serialization format.\n\nMEMORY:\n",
+      "recalled_context_preview": "",
+      "planted_memory_contents": [
+        "[correction] This repo never uses pickle for save_data/load_data \u2014 a 2024 incident where an untrusted pickle file crashed a batch job means all persistence here must use json, even though pickle would round-trip more Python types."
+      ],
+      "injected_confirmed": null,
+      "timestamp": 1789303757.5507846,
+      "dry_run": true,
+      "split": "visible"
+    },
+    {
+      "run_id": "506fdf9c",
+      "task_id": "example-003",
+      "condition": "off",
+      "trial": 1,
+      "passed": false,
+      "tokens_used": 35,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_tokens": 0,
+      "transcript": "PROMPT:\nImplement parse_age(raw) in validate.py: it must parse a numeric string into a non-negative int and reject anything else. Use this project's own error-handling pattern for the rejection, not whatever built-in exception feels natural.\n\nMEMORY:\n",
+      "recalled_context_preview": "",
+      "planted_memory_contents": [
+        "[wisdom] This repo centralizes all input-rejection exceptions in errors.py's ValidationError \u2014 every validation function raises that, never a bare ValueError/TypeError, so main.py's single top-level handler can catch failures by type."
+      ],
+      "injected_confirmed": null,
+      "timestamp": 1789303757.7607436,
+      "dry_run": true,
+      "split": "visible"
+    },
+    {
+      "run_id": "506fdf9c",
+      "task_id": "example-003",
+      "condition": "on",
+      "trial": 1,
+      "passed": false,
+      "tokens_used": 35,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_tokens": 0,
+      "transcript": "PROMPT:\nImplement parse_age(raw) in validate.py: it must parse a numeric string into a non-negative int and reject anything else. Use this project's own error-handling pattern for the rejection, not whatever built-in exception feels natural.\n\nMEMORY:\n",
+      "recalled_context_preview": "",
+      "planted_memory_contents": [
+        "[wisdom] This repo centralizes all input-rejection exceptions in errors.py's ValidationError \u2014 every validation function raises that, never a bare ValueError/TypeError, so main.py's single top-level handler can catch failures by type."
+      ],
+      "injected_confirmed": null,
+      "timestamp": 1789303757.8991067,
+      "dry_run": true,
+      "split": "visible"
+    },
+    {
+      "run_id": "506fdf9c",
+      "task_id": "example-001",
+      "condition": "off",
+      "trial": 2,
+      "passed": false,
+      "tokens_used": 46,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_tokens": 0,
+      "transcript": "PROMPT:\nImplement slugify() in mymodule.py per its docstring: convert text to a slug for use as a record identifier. It will be validated against this project's test suite once you're done. Follow this project's established naming conventions rather than the generic web convention for slugs.\n\nMEMORY:\n",
+      "recalled_context_preview": "",
+      "planted_memory_contents": [
+        "[convention] This repo's slugify() joins words with underscores '_', not hyphens '-' \u2014 it must match the legacy record-id format used elsewhere in the codebase.",
+        "[convention] slugify() must lowercase the input and strip punctuation before joining words."
+      ],
+      "injected_confirmed": null,
+      "timestamp": 1789303758.0738094,
+      "dry_run": true,
+      "split": "visible"
+    },
+    {
+      "run_id": "506fdf9c",
+      "task_id": "example-001",
+      "condition": "on",
+      "trial": 2,
+      "passed": false,
+      "tokens_used": 46,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_tokens": 0,
+      "transcript": "PROMPT:\nImplement slugify() in mymodule.py per its docstring: convert text to a slug for use as a record identifier. It will be validated against this project's test suite once you're done. Follow this project's established naming conventions rather than the generic web convention for slugs.\n\nMEMORY:\n",
+      "recalled_context_preview": "",
+      "planted_memory_contents": [
+        "[convention] This repo's slugify() joins words with underscores '_', not hyphens '-' \u2014 it must match the legacy record-id format used elsewhere in the codebase.",
+        "[convention] slugify() must lowercase the input and strip punctuation before joining words."
+      ],
+      "injected_confirmed": null,
+      "timestamp": 1789303758.2595634,
+      "dry_run": true,
+      "split": "visible"
+    },
+    {
+      "run_id": "506fdf9c",
+      "task_id": "example-002",
+      "condition": "off",
+      "trial": 2,
+      "passed": false,
+      "tokens_used": 34,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_tokens": 0,
+      "transcript": "PROMPT:\nImplement save_data(obj, path) and load_data(path) in store.py: save_data must persist a dict of basic types to path, and load_data must read it back to an equal dict. Pick a standard-library serialization format.\n\nMEMORY:\n",
+      "recalled_context_preview": "",
+      "planted_memory_contents": [
+        "[correction] This repo never uses pickle for save_data/load_data \u2014 a 2024 incident where an untrusted pickle file crashed a batch job means all persistence here must use json, even though pickle would round-trip more Python types."
+      ],
+      "injected_confirmed": null,
+      "timestamp": 1789303758.410986,
+      "dry_run": true,
+      "split": "visible"
+    },
+    {
+      "run_id": "506fdf9c",
+      "task_id": "example-002",
+      "condition": "on",
+      "trial": 2,
+      "passed": false,
+      "tokens_used": 34,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_tokens": 0,
+      "transcript": "PROMPT:\nImplement save_data(obj, path) and load_data(path) in store.py: save_data must persist a dict of basic types to path, and load_data must read it back to an equal dict. Pick a standard-library serialization format.\n\nMEMORY:\n",
+      "recalled_context_preview": "",
+      "planted_memory_contents": [
+        "[correction] This repo never uses pickle for save_data/load_data \u2014 a 2024 incident where an untrusted pickle file crashed a batch job means all persistence here must use json, even though pickle would round-trip more Python types."
+      ],
+      "injected_confirmed": null,
+      "timestamp": 1789303758.5746999,
+      "dry_run": true,
+      "split": "visible"
+    },
+    {
+      "run_id": "506fdf9c",
+      "task_id": "example-003",
+      "condition": "off",
+      "trial": 2,
+      "passed": false,
+      "tokens_used": 35,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_tokens": 0,
+      "transcript": "PROMPT:\nImplement parse_age(raw) in validate.py: it must parse a numeric string into a non-negative int and reject anything else. Use this project's own error-handling pattern for the rejection, not whatever built-in exception feels natural.\n\nMEMORY:\n",
+      "recalled_context_preview": "",
+      "planted_memory_contents": [
+        "[wisdom] This repo centralizes all input-rejection exceptions in errors.py's ValidationError \u2014 every validation function raises that, never a bare ValueError/TypeError, so main.py's single top-level handler can catch failures by type."
+      ],
+      "injected_confirmed": null,
+      "timestamp": 1789303758.7386518,
+      "dry_run": true,
+      "split": "visible"
+    },
+    {
+      "run_id": "506fdf9c",
+      "task_id": "example-003",
+      "condition": "on",
+      "trial": 2,
+      "passed": false,
+      "tokens_used": 35,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read_tokens": 0,
+      "transcript": "PROMPT:\nImplement parse_age(raw) in validate.py: it must parse a numeric string into a non-negative int and reject anything else. Use this project's own error-handling pattern for the rejection, not whatever built-in exception feels natural.\n\nMEMORY:\n",
+      "recalled_context_preview": "",
+      "planted_memory_contents": [
+        "[wisdom] This repo centralizes all input-rejection exceptions in errors.py's ValidationError \u2014 every validation function raises that, never a bare ValueError/TypeError, so main.py's single top-level handler can catch failures by type."
+      ],
+      "injected_confirmed": null,
+      "timestamp": 1789303758.8966537,
+      "dry_run": true,
+      "split": "visible"
+    }
+  ]
+}

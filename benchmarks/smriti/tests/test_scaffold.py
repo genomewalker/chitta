@@ -36,6 +36,7 @@ import tempfile
 import unittest
 from contextlib import contextmanager, redirect_stdout
 from pathlib import Path
+from unittest.mock import patch
 
 SMRITI_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(SMRITI_DIR))
@@ -140,6 +141,21 @@ class TestScaffoldEndToEnd(unittest.TestCase):
     def setUp(self):
         self.output_dir = Path(tempfile.mkdtemp(prefix="smriti-test-results-"))
 
+        # Harness unit tests must not depend on, or mutate, a live daemon.
+        def fake_cli(adapter, cmd, timeout=20):
+            if "remember" in cmd:
+                return {"id": "test-planted-id"}
+            if "recall" in cmd:
+                return {"results": []}
+            return {}
+
+        cli = patch.object(runner.ChittaAdapter, "_run_cli", fake_cli)
+        cli.start()
+        self.addCleanup(cli.stop)
+        ledger = patch.object(runner, "read_injected_ids_in_window", return_value=set())
+        ledger.start()
+        self.addCleanup(ledger.stop)
+
     def tearDown(self):
         shutil.rmtree(self.output_dir, ignore_errors=True)
 
@@ -169,7 +185,7 @@ class TestScaffoldEndToEnd(unittest.TestCase):
         by_condition = {r["condition"]: r for r in records}
         # off plants nothing -- "was it injected" doesn't apply.
         self.assertIsNone(by_condition["off"]["injected_confirmed"])
-        # on plants 2 real memories via ChittaAdapter, but EchoAdapter never
+        # on receives planted IDs from the fake CLI, but EchoAdapter never
         # runs a real claude session (no hooks fire, nothing writes to the
         # outcome ledger) -- confirmation must correctly come back False, not
         # silently True.

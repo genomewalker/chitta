@@ -7,6 +7,31 @@ on:
     branches: [main]
 
 jobs:
+  eval-immutable:
+    if: github.event_name == 'pull_request' && (startsWith(github.head_ref, 'evolve/') || startsWith(github.head_ref, 'auto/'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+      - name: Check protected evaluation paths using base policy
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git fetch origin "$HEAD"
+          if [[ -f scripts/check-eval-immutable.sh ]]; then
+            bash scripts/check-eval-immutable.sh "$BASE" "$HEAD"
+          else
+            # Initial rollout: no trusted checker exists in the base yet.
+            # Require explicit approval; do not execute PR-supplied code.
+            git show -s --format=%B "$HEAD" | grep -Eq '^Eval-Change-Approved: [^[:space:]].*$'
+          fi
+
   build-and-test:
     runs-on: ubuntu-latest
 
@@ -136,6 +161,10 @@ jobs:
       - name: Run hook python tests
         run: python3 -m unittest discover -s hooks/tests -p 'test_*.py' -v
 
+      - name: Run SMRITI and eval trust tests
+        working-directory: benchmarks/smriti
+        run: python3 -m unittest discover tests -v
+
       - name: Run chitta-mcp tests
         working-directory: chitta-mcp
         run: python3 -m unittest discover tests -v
@@ -158,10 +187,10 @@ jobs:
       # ships with the plugin; scripts/ and benchmarks/ fixtures are excluded
       # there. No `|| true` — this gate is green and must stay green.
       - name: Lint
-        run: ruff check chitta-mcp hooks benchmarks/smriti
+        run: ruff check chitta-mcp hooks benchmarks/smriti benchmarks/noise.py benchmarks/check_eval_immutable.py
 
       - name: Check formatting
-        run: ruff format --check chitta-mcp hooks benchmarks/smriti
+        run: ruff format --check chitta-mcp hooks benchmarks/smriti benchmarks/noise.py benchmarks/check_eval_immutable.py
 
       # Catches syntax errors in modules no test imports.
       - name: Byte-compile
@@ -198,12 +227,16 @@ jobs:
           targets = [p for p in sorted(pathlib.Path("chitta-mcp").rglob("*.py"))
                      if "__pycache__" not in str(p) and p.name != "tools_static.py"]
           targets += sorted(pathlib.Path("hooks").glob("*.py"))
+          sys.path.insert(0, "benchmarks/smriti")
+          targets += sorted(pathlib.Path("benchmarks/smriti").glob("*.py"))
+          targets += [pathlib.Path("benchmarks/noise.py"), pathlib.Path("benchmarks/check_eval_immutable.py")]
 
           failures, skipped = [], []
           for path in targets:
               name = "smoke_" + path.stem.replace("-", "_")
               spec = importlib.util.spec_from_file_location(name, path)
               module = importlib.util.module_from_spec(spec)
+              sys.modules[name] = module
               try:
                   spec.loader.exec_module(module)
               except SystemExit:

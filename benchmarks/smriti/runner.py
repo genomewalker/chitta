@@ -85,6 +85,8 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
+import split as task_split
+
 SCRATCH_ROOT = os.environ.get("SMRITI_SCRATCH", "/projects/caeg/scratch/kbd606/tmp")
 
 # Benchmark-facing ablation lane name -> chitta's short hook-lane name
@@ -562,6 +564,7 @@ def run_all(
     trials: int,
     dry_run: bool = False,
     resume_path: Path | None = None,
+    assignments: dict | None = None,
 ) -> Path | None:
     if trials < 1:
         raise ValueError(
@@ -569,6 +572,12 @@ def run_all(
             "(README 'Threats to validity': repeated-trial default)"
         )
 
+    assignments = assignments if assignments is not None else task_split.load()
+    split_hash = task_split.fingerprint(assignments)
+    if resume_path is not None and resume_path.exists():
+        old = [json.loads(line) for line in resume_path.read_text().splitlines() if line.strip()]
+        if any(r.get("split_hash") != split_hash for r in old):
+            raise ValueError("cannot resume results with a different or unrecorded split manifest")
     resumed_run_id, done = load_resume_state(resume_path)
     run_id = resumed_run_id or uuid.uuid4().hex[:8]
     records = []
@@ -583,6 +592,8 @@ def run_all(
                 record = run_one(task, task_dir, condition, agent, run_id, trial, dry_run=dry_run)
                 if record is None:
                     continue
+                record["split"] = assignments.get(task_id, "unknown")
+                record["split_hash"] = split_hash
                 records.append(record)
                 status = "PASS" if record["passed"] else "FAIL"
                 tag = " [dry-run]" if dry_run else ""
@@ -609,9 +620,11 @@ def run_all(
 
 def main():
     parser = argparse.ArgumentParser(description="SMRITI-Bench runner")
+    parser.add_argument("--split", choices=["visible", "holdout", "all"], default="visible")
+    parser.add_argument("--split-file", type=Path, default=task_split.DEFAULT_PATH)
     parser.add_argument("--tasks-dir", default=str(Path(__file__).parent / "tasks"))
     parser.add_argument(
-        "--task", action="append", help="task id to run (default: all under tasks-dir)"
+        "--task", action="append", help="task id to run within selected split (repeatable)"
     )
     parser.add_argument(
         "--condition",
@@ -655,7 +668,11 @@ def main():
         parser.error("--trials must be >= 1")
 
     tasks_dir = Path(args.tasks_dir)
-    task_ids = args.task or [p.name for p in sorted(tasks_dir.iterdir()) if p.is_dir()]
+    try:
+        assignments = task_split.load(args.split_file, tasks_dir)
+        task_ids = task_split.select(assignments, args.task or [], args.split)
+    except (OSError, ValueError) as exc:
+        parser.error(str(exc))
     conditions = args.condition or ["off", "on"]
 
     if args.agent == "claude-code":
@@ -672,6 +689,7 @@ def main():
         trials=args.trials,
         dry_run=args.dry_run,
         resume_path=Path(args.resume) if args.resume else None,
+        assignments=assignments,
     )
     if out_path:
         print(f"results: {out_path}")
