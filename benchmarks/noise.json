@@ -1,15 +1,13 @@
 {
   "schema_version": 1,
-  "created_at": "2026-09-13T12:49:18.899421+00:00",
-  "snapshot_id": null,
-  "socket": null,
+  "created_at": "2026-09-13T13:26:26.199846+00:00",
+  "snapshot_id": "ab2444dc",
+  "socket": "/projects/caeg/scratch/kbd606/tmp/chitta-eval-mind/run/chitta/chitta-2511933830.sock",
   "agent": "echo",
   "acceptance_ready": false,
-  "mode": "live-smoke",
-  "errors": [
-    "golden calibration incomplete: Command '['chitta', 'recall', '--query', 'chaos nodes', '--limit', '20', '--realm', 'project:cc-soul', '--no-learn', '--json', '--strategy', 'hybrid']' timed out after 60 seconds"
-  ],
-  "golden_runs_requested": 2,
+  "mode": "replica",
+  "errors": [],
+  "golden_runs_requested": 5,
   "injection_confirmed": false,
   "golden_config": {
     "limit": 20,
@@ -27,13 +25,21 @@
   "accept_rule": "improvement strictly beyond 2 * sd; positive SR/nDCG, negative tokens",
   "metrics": {
     "golden.ndcg": {
-      "n": 0,
-      "mean": null,
-      "sd": null,
-      "band_95": null,
-      "accept_delta": null,
-      "samples": [],
-      "status": "unavailable"
+      "n": 5,
+      "mean": 0.4918534592286004,
+      "sd": 0.0021217011513315715,
+      "band_95": [
+        0.4876949249719905,
+        0.4960119934852103
+      ],
+      "accept_delta": 0.004243402302663143,
+      "samples": [
+        0.48809041994003216,
+        0.493199629717966,
+        0.4928955031641737,
+        0.49257892531995023,
+        0.49250281800087997
+      ]
     },
     "smriti.off.sr": {
       "n": 3,
@@ -98,7 +104,7 @@
   },
   "smriti_records": [
     {
-      "run_id": "506fdf9c",
+      "run_id": "d1cbf499",
       "task_id": "example-001",
       "condition": "off",
       "trial": 0,
@@ -114,12 +120,12 @@
         "[convention] slugify() must lowercase the input and strip punctuation before joining words."
       ],
       "injected_confirmed": null,
-      "timestamp": 1789303755.9486558,
+      "timestamp": 1789305985.4043682,
       "dry_run": true,
       "split": "visible"
     },
     {
-      "run_id": "506fdf9c",
+      "run_id": "d1cbf499",
       "task_id": "example-001",
       "condition": "on",
       "trial": 0,
@@ -135,12 +141,12 @@
         "[convention] slugify() must lowercase the input and strip punctuation before joining words."
       ],
       "injected_confirmed": null,
-      "timestamp": 1789303756.102886,
+      "timestamp": 1789305985.4484549,
       "dry_run": true,
       "split": "visible"
     },
     {
-      "run_id": "506fdf9c",
+      "run_id": "d1cbf499",
       "task_id": "example-002",
       "condition": "off",
       "trial": 0,
@@ -155,12 +161,12 @@
         "[correction] This repo never uses pickle for save_data/load_data \u2014 a 2024 incident where an untrusted pickle file crashed a batch job means all persistence here must use json, even though pickle would round-trip more Python types."
       ],
       "injected_confirmed": null,
-      "timestamp": 1789303756.2781112,
+      "timestamp": 1789305985.5005105,
       "dry_run": true,
       "split": "visible"
     },
     {
-      "run_id": "506fdf9c",
+      "run_id": "d1cbf499",
       "task_id": "example-002",
       "condition": "on",
       "trial": 0,
@@ -175,12 +181,12 @@
         "[correction] This repo never uses pickle for save_data/load_data \u2014 a 2024 incident where an untrusted pickle file crashed a batch job means all persistence here must use json, even though pickle would round-trip more Python types."
       ],
       "injected_confirmed": null,
-      "timestamp": 1789303756.4358926,
+      "timestamp": 1789305985.548583,
       "dry_run": true,
       "split": "visible"
     },
     {
-      "run_id": "506fdf9c",
+      "run_id": "d1cbf499",
       "task_id": "example-003",
       "condition": "off",
       "trial": 0,
@@ -195,12 +201,12 @@
         "[wisdom] This repo centralizes all input-rejection exceptions in errors.py's ValidationError \u2014 every validation function raises that, never a bare ValueError/TypeError, so main.py's single top-level handler can catch failures by type."
       ],
       "injected_confirmed": null,
-      "timestamp": 1789303756.6061933,
+      "timestamp": 1789305985.594808,
       "dry_run": true,
       "split": "visible"
     },
     {
-      "run_id": "506fdf9c",
+      "run_id": "d1cbf499",
       "task_id": "example-003",
       "condition": "on",
       "trial": 0,
@@ -215,12 +221,12 @@
         "[wisdom] This repo centralizes all input-rejection exceptions in errors.py's ValidationError \u2014 every validation function raises that, never a bare ValueError/TypeError, so main.py's single top-level handler can catch failures by type."
       ],
       "injected_confirmed": null,
-      "timestamp": 1789303756.8027658,
+      "timestamp": 1789305985.6396835,
       "dry_run": true,
       "split": "visible"
     },
     {
-      "run_id": "506fdf9c",
+      "run_id": "d1cbf499",
       "task_id": "example-001",
       "condition": "off",
       "trial": 1,
@@ -236,12 +242,12 @@
         "[convention] slugify() must lowercase the input and strip punctuation before joining words."
       ],
       "injected_confirmed": null,
-      "timestamp": 1789303756.981274,
+      "timestamp": 1789305985.684341,
       "dry_run": true,
       "split": "visible"
     },
     {
-      "run_id": "506fdf9c",
+      "run_id": "d1cbf499",
       "task_id": "example-001",
       "condition": "on",
       "trial": 1,
@@ -257,12 +263,12 @@
         "[convention] slugify() must lowercase the input and strip punctuation before joining words."
       ],
       "injected_confirmed": null,
-      "timestamp": 1789303757.1222653,
+      "timestamp": 1789305985.7290695,
       "dry_run": true,
       "split": "visible"
     },
     {
-      "run_id": "506fdf9c",
+      "run_id": "d1cbf499",
       "task_id": "example-002",
       "condition": "off",
       "trial": 1,
@@ -277,12 +283,12 @@
         "[correction] This repo never uses pickle for save_data/load_data \u2014 a 2024 incident where an untrusted pickle file crashed a batch job means all persistence here must use json, even though pickle would round-trip more Python types."
       ],
       "injected_confirmed": null,
-      "timestamp": 1789303757.285538,
+      "timestamp": 1789305985.7795248,
       "dry_run": true,
       "split": "visible"
     },
     {
-      "run_id": "506fdf9c",
+      "run_id": "d1cbf499",
       "task_id": "example-002",
       "condition": "on",
       "trial": 1,
@@ -297,12 +303,12 @@
         "[correction] This repo never uses pickle for save_data/load_data \u2014 a 2024 incident where an untrusted pickle file crashed a batch job means all persistence here must use json, even though pickle would round-trip more Python types."
       ],
       "injected_confirmed": null,
-      "timestamp": 1789303757.5507846,
+      "timestamp": 1789305985.8285787,
       "dry_run": true,
       "split": "visible"
     },
     {
-      "run_id": "506fdf9c",
+      "run_id": "d1cbf499",
       "task_id": "example-003",
       "condition": "off",
       "trial": 1,
@@ -317,12 +323,12 @@
         "[wisdom] This repo centralizes all input-rejection exceptions in errors.py's ValidationError \u2014 every validation function raises that, never a bare ValueError/TypeError, so main.py's single top-level handler can catch failures by type."
       ],
       "injected_confirmed": null,
-      "timestamp": 1789303757.7607436,
+      "timestamp": 1789305985.8745282,
       "dry_run": true,
       "split": "visible"
     },
     {
-      "run_id": "506fdf9c",
+      "run_id": "d1cbf499",
       "task_id": "example-003",
       "condition": "on",
       "trial": 1,
@@ -337,12 +343,12 @@
         "[wisdom] This repo centralizes all input-rejection exceptions in errors.py's ValidationError \u2014 every validation function raises that, never a bare ValueError/TypeError, so main.py's single top-level handler can catch failures by type."
       ],
       "injected_confirmed": null,
-      "timestamp": 1789303757.8991067,
+      "timestamp": 1789305985.920871,
       "dry_run": true,
       "split": "visible"
     },
     {
-      "run_id": "506fdf9c",
+      "run_id": "d1cbf499",
       "task_id": "example-001",
       "condition": "off",
       "trial": 2,
@@ -358,12 +364,12 @@
         "[convention] slugify() must lowercase the input and strip punctuation before joining words."
       ],
       "injected_confirmed": null,
-      "timestamp": 1789303758.0738094,
+      "timestamp": 1789305985.964552,
       "dry_run": true,
       "split": "visible"
     },
     {
-      "run_id": "506fdf9c",
+      "run_id": "d1cbf499",
       "task_id": "example-001",
       "condition": "on",
       "trial": 2,
@@ -379,12 +385,12 @@
         "[convention] slugify() must lowercase the input and strip punctuation before joining words."
       ],
       "injected_confirmed": null,
-      "timestamp": 1789303758.2595634,
+      "timestamp": 1789305986.0090282,
       "dry_run": true,
       "split": "visible"
     },
     {
-      "run_id": "506fdf9c",
+      "run_id": "d1cbf499",
       "task_id": "example-002",
       "condition": "off",
       "trial": 2,
@@ -399,12 +405,12 @@
         "[correction] This repo never uses pickle for save_data/load_data \u2014 a 2024 incident where an untrusted pickle file crashed a batch job means all persistence here must use json, even though pickle would round-trip more Python types."
       ],
       "injected_confirmed": null,
-      "timestamp": 1789303758.410986,
+      "timestamp": 1789305986.059149,
       "dry_run": true,
       "split": "visible"
     },
     {
-      "run_id": "506fdf9c",
+      "run_id": "d1cbf499",
       "task_id": "example-002",
       "condition": "on",
       "trial": 2,
@@ -419,12 +425,12 @@
         "[correction] This repo never uses pickle for save_data/load_data \u2014 a 2024 incident where an untrusted pickle file crashed a batch job means all persistence here must use json, even though pickle would round-trip more Python types."
       ],
       "injected_confirmed": null,
-      "timestamp": 1789303758.5746999,
+      "timestamp": 1789305986.1072233,
       "dry_run": true,
       "split": "visible"
     },
     {
-      "run_id": "506fdf9c",
+      "run_id": "d1cbf499",
       "task_id": "example-003",
       "condition": "off",
       "trial": 2,
@@ -439,12 +445,12 @@
         "[wisdom] This repo centralizes all input-rejection exceptions in errors.py's ValidationError \u2014 every validation function raises that, never a bare ValueError/TypeError, so main.py's single top-level handler can catch failures by type."
       ],
       "injected_confirmed": null,
-      "timestamp": 1789303758.7386518,
+      "timestamp": 1789305986.1538563,
       "dry_run": true,
       "split": "visible"
     },
     {
-      "run_id": "506fdf9c",
+      "run_id": "d1cbf499",
       "task_id": "example-003",
       "condition": "on",
       "trial": 2,
@@ -459,7 +465,7 @@
         "[wisdom] This repo centralizes all input-rejection exceptions in errors.py's ValidationError \u2014 every validation function raises that, never a bare ValueError/TypeError, so main.py's single top-level handler can catch failures by type."
       ],
       "injected_confirmed": null,
-      "timestamp": 1789303758.8966537,
+      "timestamp": 1789305986.1993933,
       "dry_run": true,
       "split": "visible"
     }
