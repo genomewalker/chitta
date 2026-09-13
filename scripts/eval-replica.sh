@@ -361,7 +361,16 @@ status_replica() {
 validate_paths
 
 case "${1:-}" in
-    start) start_replica ;;
+    start)
+        # The live daemon rewrites MANIFEST.* every few seconds; a copy that
+        # races a save is discarded and retried rather than failing the run.
+        for _attempt in 1 2 3; do
+            if _out="$(start_replica 2>&1)"; then printf '%s\n' "$_out"; exit 0; fi
+            printf '%s\n' "$_out" >&2
+            grep -qE 'size mismatch|source changed|manifest changed|mid-save|active' <<< "$_out" || exit 1
+            sleep 5
+        done
+        exit 1 ;;
     stop) stop_replica ;;
     status) status_replica ;;
     snapshot-id) snapshot_id_command ;;
