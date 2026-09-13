@@ -92,7 +92,9 @@ djb2_hash() {
     local h=5381
     local i c
     for ((i=0; i<${#str}; i++)); do
-        c=$(printf '%d' "'${str:$i:1}")
+        # Keep this builtin in-process: a subshell per path character adds
+        # hundreds of milliseconds before the recall lanes even launch.
+        printf -v c '%d' "'${str:$i:1}"
         h=$(( ((h << 5) + h + c) & 0xFFFFFFFF ))
     done
     echo "$h"

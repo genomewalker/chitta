@@ -2,7 +2,8 @@
 # Headless bridge participant (fusion room, codex_run): nobody is reading this.
 # A one-shot model treats injected advice as instruction and goes exploring —
 # with these live, sol ran 93 tool calls on a room prompt and never finished.
-if [[ -n "${CHITTA_HEADLESS:-$CC_SOUL_HEADLESS}" ]]; then cat >/dev/null; printf '{}'; exit 0; fi
+# Bash still passes safety checks before the headless enrichment bypass.
+if [[ -n "${CHITTA_HEADLESS:-$CC_SOUL_HEADLESS}" && "${1:-}" != "Bash" ]]; then cat >/dev/null; printf '{}'; exit 0; fi
 
 # PreToolUse hook: safety blocks, large-output guards, soul corrections.
 #
@@ -115,6 +116,26 @@ _shadow_log() {
 # ─── Safety blocks (destructive commands) ─────────────────────────────────────
 safety_check() {
     local cmd="$1"
+    # Broad MCP matches include the HTTP transport. Only a PID-selection pipeline
+    # that explicitly filters --http out may kill other MCP workers.
+    if [[ "${CHITTA_ALLOW_MCP_KILL:-0}" != "1" ]]; then
+        local _kill_segment _mcp_cmd="${cmd//\[c\]/c}"
+        while IFS= read -r _kill_segment; do
+            [[ "$_kill_segment" =~ (^|[^[:alnum:]_.-])(pkill|kill|killall)([[:space:]]|$) ]] || continue
+            [[ "$_kill_segment" == *chitta-mcp* ]] || continue
+            if [[ ! "$_kill_segment" =~ (^|[^[:alnum:]_.-])(pkill|killall)[[:space:]] ]]; then
+                local _exclude="grep[[:space:]]+(-[EF]*v[EF]*|--invert-match)[[:space:]]+(--[[:space:]]+)?['\"]?--http['\"]?([[:space:]|)]|$)"
+                # The exclusion must filter PID input, not the kill command's output.
+                if grep -qE "kill[[:space:]][^|]*\\$\\([^)]*pgrep[^)]*\\|[[:space:]]*$_exclude" <<<"$_kill_segment" ||
+                   { [[ ! "${_kill_segment%%grep*}" =~ (^|[^[:alnum:]_.-])kill[[:space:]] ]] &&
+                     grep -qE "pgrep[^|]*\\|[[:space:]]*$_exclude.*\\|[^;]*xargs[[:space:]][^;]*kill([[:space:]]|$)" <<<"$_kill_segment"; }; then
+                    continue
+                fi
+            fi
+            echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Killing chitta-mcp can sever the HTTP transport. Use scripts/dev-install.sh for managed recovery; CHITTA_ALLOW_MCP_KILL=1 is the explicit environment bypass."}}'
+            return 3
+        done < <(tr ';&\n' '\n' <<<"$_mcp_cmd")
+    fi
     if echo "$cmd" | grep -qE '^\s*rm\s+-rf\s+(/|~/?\s*$)'; then
         echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"block","additionalContext":"rm -rf on / or ~ is destructive"}}'
         return 2
@@ -252,6 +273,8 @@ case "$MATCHER" in
             echo "$safety_result"
             exit 0
         fi
+
+        if [[ -n "${CHITTA_HEADLESS:-$CC_SOUL_HEADLESS}" ]]; then printf '{}'; exit 0; fi
 
         # Stage 1b: find — memory-first search strategy
         if find_strategy "$command"; then

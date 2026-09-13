@@ -28,6 +28,16 @@ fi
 get() { local flag="$1" a p; shift; for a in "$@"; do [[ "$p" == "$flag" ]] && { echo "$a"; return; }; p="$a"; done; }
 case "$sub" in
     recall_lanes)
+        if [[ -n "${STUB_OVERLAP_DIR:-}" ]]; then
+            touch "$STUB_OVERLAP_DIR/rpc-started"
+            for ((attempt=0; attempt<80; attempt++)); do
+                if [[ -f "$STUB_OVERLAP_DIR/session-started" && -f "$STUB_OVERLAP_DIR/heartbeat-started" ]]; then
+                    touch "$STUB_OVERLAP_DIR/overlapped"
+                    break
+                fi
+                sleep 0.01
+            done
+        fi
         [[ "${STUB_RPC_MODE:-ok}" == "fail" ]] && exit 1
         cat "${STUB_RPC_FILE:-/dev/null}"
         ;;
@@ -41,7 +51,15 @@ case "$sub" in
         strategy=$(get --strategy "$@")
         tag=$(get --tag "$@")
         query=$(get --query "$@")
-        if [[ "$query" == "session_summary" ]]; then cat "${STUB_SESSION_FILE:-/dev/null}"
+        if [[ "$query" == "session_summary" ]]; then
+            if [[ -n "${STUB_OVERLAP_DIR:-}" ]]; then
+                touch "$STUB_OVERLAP_DIR/session-started"
+                for ((attempt=0; attempt<80; attempt++)); do
+                    [[ -f "$STUB_OVERLAP_DIR/rpc-started" ]] && break
+                    sleep 0.01
+                done
+            fi
+            cat "${STUB_SESSION_FILE:-/dev/null}"
         elif [[ "$strategy" == "hybrid" ]]; then cat "${STUB_HYB_FILE:-/dev/null}"
         elif [[ "$strategy" == "keyword" ]]; then cat "${STUB_KW_FILE:-/dev/null}"
         elif [[ -n "$tag" ]]; then cat "${STUB_CORR_FILE:-/dev/null}"
@@ -304,5 +322,31 @@ for arm in 0 1; do
         assert "$sid never injects a recall header" "! grep -q '\[last-session\] Found' '$T/stdout.$sid'"
     done
 done
+
+# Synchronization markers prove both independent tasks overlap recall. No
+# wall-clock threshold: the old serial scheduling cannot satisfy this handshake.
+mkdir -p "$T/overlap" "$T/plugin/chitta-mcp"
+cat > "$T/plugin/chitta-mcp/session_registry.py" <<'PY'
+import os
+import time
+from pathlib import Path
+root = Path(os.environ["STUB_OVERLAP_DIR"])
+(root / "heartbeat-started").touch()
+for _ in range(80):
+    if (root / "rpc-started").exists():
+        (root / "heartbeat-overlapped").touch()
+        break
+    time.sleep(0.01)
+PY
+export STUB_OVERLAP_DIR="$T/overlap" CHITTA_PLUGIN_DIR="$T/plugin"
+unset CC_SOUL_PLUGIN_DIR
+rm -f "$MIND/.session_active"
+CHITTA_RECALL_LANES_RPC=1 CHITTA_MAX_OUTPUT_CHARS=10000 \
+    run_hook "rpc-concurrent" "what does the persimmon fixture show"
+assert "RPC overlaps session recall and heartbeat" "[[ -f '$T/overlap/overlapped' ]]"
+assert "heartbeat proceeds alongside RPC" "[[ -f '$T/overlap/heartbeat-overlapped' ]]"
+assert "concurrent continuity is joined before rendering" \
+    "grep -q '\\[last-session\\] #99' '$T/stdout.rpc-concurrent'"
+unset STUB_OVERLAP_DIR CHITTA_PLUGIN_DIR
 
 exit $FAIL
