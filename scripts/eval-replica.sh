@@ -287,14 +287,23 @@ start_replica() {
     # this scratch daemon from consuming the live hooks' shared queue.
     touch "$EVAL_MIND/.quiesce"
     : > "$LOG_FILE"
+    # The daemon records its own pid: when setsid finds itself a process-group
+    # leader (job control on, CI runners) it forks, and $! would name the
+    # already-exited parent.
+    rm -f "$PID_FILE"
     XDG_RUNTIME_DIR="$runtime_dir" CHITTA_RPC_PORT="$EVAL_PORT" \
         CHITTA_NO_QUEUE=1 CHITTA_HINT_ENRICHER=/bin/true \
-        nohup setsid "$CHITTAD_BIN" daemon --path "$EVAL_MIND" --foreground \
+        nohup setsid bash -c 'printf "%s\n" "$$" > "$1"; shift; exec "$@"' _ "$PID_FILE" \
+            "$CHITTAD_BIN" daemon --path "$EVAL_MIND" --foreground \
             --no-autonomous --no-distill --distill-interval 60 --no-enrich \
             --no-hygiene --no-embed-interval --embed-model "$EMBED_MODEL" \
             --rpc-port "$EVAL_PORT" >> "$LOG_FILE" 2>&1 &
-    pid=$!
-    printf '%s\n' "$pid" > "$PID_FILE"
+    pid=""
+    for _ in $(seq 1 50); do
+        [[ -s "$PID_FILE" ]] && read -r pid < "$PID_FILE" && [[ -n "$pid" ]] && break
+        sleep 0.1
+    done
+    [[ -n "$pid" ]] || die "replica daemon did not record its pid"
     write_replica_env "$pid" "$snapshot_id" "$snapshot_seqno" "$generation" "$socket"
     printf 'started pid=%s socket=%s rpc_port=%s manifest_generation=%s\n' "$pid" "$socket" "$EVAL_PORT" "$generation"
 
