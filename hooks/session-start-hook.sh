@@ -550,6 +550,7 @@ else
     # Runs for any non-brahman realm; content is capped to keep context lean.
     # ===========================================
     if [[ -n "${REALM:-}" && "${REALM}" != "brahman" ]]; then
+        _recall_raw=""
         _read_lane scoped _recall_raw
 
         _recall_body=$(printf '%s\n' "$_recall_raw" | grep -E '^#[0-9]+ \[[0-9]+%\] \[[^]]+\][[:space:]]+[^[:space:]]' | grep -vE '^#[0-9]+ \[[0-9]+%\] \[episode\]')
