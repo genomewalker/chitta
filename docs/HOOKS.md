@@ -167,17 +167,107 @@ per arm measured median/p95 totals of 1311/3009 ms (standalone) and
 recall waits, including a 2014 ms RPC with a 2001 ms correction lane, plus
 shell/heartbeat/enrichment overhead. A status probe also timed out. These live
 measurements do not establish the preregistered gain or a root cause for the
-original floor. Lane scheduling, timeouts, admission, and `[admit]`/`t:` contracts
-remain unchanged pending reproducible evidence; the <900 ms target is unmet.
-See `Documentation.md` for commands, before/after results, and limitations.
+original floor. That earlier investigation left scheduling unchanged and did
+not meet the <900 ms target. Its full evidence is in
+`git show 7ba22801:Documentation.md`; the follow-up below supersedes its status.
 
 The empty `[last-session] Found 1 results ...` message had a confirmed cause:
 `prompt-core.sh` selected the first nonblank recall line, which is the summary
 header, and discarded the memory body. Continuity now requires a canonical
 memory result with nonblank content before emitting `[last-session]`. Empty,
 warning-only, summary-only, and metadata-only responses produce no heading.
-This affects the prompt continuity lane, not the separate SessionStart recap
-card. Regression coverage exercises both RPC and standalone recall paths.
+Regression coverage exercises both RPC and standalone recall paths.
+SessionStart now also requires a canonical memory line with nonblank content,
+after removing episodes. A header or weak warning cannot emit a realm recall
+card; empty scoped results still retry unscoped, and a single surviving memory
+is sufficient. Cards render memory lines first within the 1200-byte cap.
+
+#### Concurrent prompt work and hook noise metric (fix/hooks, 2026-09-13)
+
+Final paired diagnostic (unchanged benchmark, N=5 per query, 15 runs per arm):
+
+```bash
+env -u CHITTA_HEADLESS -u CC_SOUL_HEADLESS \
+  CHITTA_BENCH_BIN=/home/kbd606/.claude/bin/chitta \
+  bash scripts/bench-recall-lanes.sh 5
+```
+
+| Arm | Before median / p95 ms | Final median / p95 ms | Empties before / final |
+|---|---:|---:|---:|
+| Standalone (off) | 1502 / 5783 | 1076 / 3047 | 0 / 1 |
+| RPC (on) | 1368 / 3011 | 1094 / 5092 | 0 / 0 |
+
+**Targets remain unmet:** RPC median is above 900 ms, p95 above 2000 ms;
+standalone also produced one empty. All paired commands completed successfully
+and passed their status/capability probes, but the unchanged benchmark swallows
+individual hook exit statuses, so a separate per-hook failure count is unavailable.
+The final run had no concurrent local test or trace workload. Shared live daemon
+load is uncontrolled; these data do not establish an accepted latency gain.
+
+Logs: `/tmp/fix-hooks-before.log`, `/tmp/fix-hooks-after-final.log`.
+Intermediate after runs were also retained: concurrency alone measured off
+1194/3308 and on 1122/2995 ms; the first run including the hash fix measured off
+1214/3999 and on 1135/6549 ms, with zero empties in both intermediate runs.
+The baseline's tail overlapped the first trace; the first hash-fix benchmark
+overlapped the evaluator smoke's tail and subsequent local tests.
+
+The heartbeat now runs independently into `$_ld/heartbeat`, with its output
+descriptor redirected at launch and no prompt-side wait. Session-summary recall
+starts alongside the query lanes into `$_ld/session`; only its rendering
+consumer joins it. EXIT cleans the shared scratch directory, including early
+empty-recall exits. An empty lane PID list cannot accidentally wait for unrelated
+jobs. The six-process fallback, lane timeouts, C2, admission, ledger events, and
+`[admit]`/`t:` formats are preserved. A stub handshake proves heartbeat and
+continuity overlap the RPC and that continuity is joined before rendering.
+
+Timestamped `bash -x hooks/prompt-core.sh` traces used fd 9 and
+`PS4='+T$(date +%s%N) ${LINENO}: '` (Bash 4.4, no EPOCHREALTIME), with the
+benchmark's temporary HOME/mind/queue and read-only CLI wrapper. Before tracing
+showed a 212 ms registry call and about 194 ms around continuity recall. It also
+exposed socket hashing's per-character command substitutions; `printf -v`
+replaces those subprocesses without changing DJB2. The hash regression covers
+empty input, punctuation, long paths, and 32-bit overflow. A later trace hit the
+3000 ms RPC timeout and fell back, so daemon waits remain a material tail risk.
+Trace totals are not benchmark numbers. Raw traces remain in /tmp. The final
+post-hash trace attempt failed its read-only daemon status probe before tracing;
+the valid before/after traces cover the concurrency change.
+
+`benchmarks/noise.py` now includes `hook_total_ms`. One observation is the median
+of the three fixed queries from `scripts/bench-recall-lanes.sh`; N observations
+supply sample SD and the existing 2-SD acceptance threshold. The report also
+retains the median of those observations and every query total. Timings come
+only from the existing `t:` total field; empty, ambiguous, failed, or timed-out
+hook executions fail evaluation rather than becoming zero-ms samples.
+
+The hook runner isolates HOME, runtime, mind, queue, and task ledger, clears both
+HEADLESS aliases, and uses the benchmark's read-only RPC allowlist. Full
+calibration includes the hook panel by default. For hook-only calibration,
+source a frozen replica's env (socket, snapshot ID, replica mind), then use
+`--hook-only --hook-runs N`. Timing calibration needs no agent execution; live
+smoke remains `acceptance_ready=false`, so `noise.py band hook_total_ms` refuses it.
+
+Only one live evaluator smoke was run, during implementation; full calibration
+was not run:
+
+```bash
+env -u CHITTA_HEADLESS -u CC_SOUL_HEADLESS \
+  CHITTA_BENCH_BIN=/home/kbd606/.claude/bin/chitta \
+  bash scripts/eval-noise.sh --hook-only --hook-runs 5 \
+  --output /tmp/fix-hooks-noise.json
+```
+
+The 15 hook invocations produced five panel medians:
+3635, 2400, 2160, 1273, 1292 ms. Median: 2160 ms; mean: 2152 ms;
+sample SD: 971.223 ms; descriptive 2-SD threshold: 1942.446 ms.
+This proves metric plumbing only, not a calibrated gain. It preceded the final
+socket-hash measurement and is not the final before/after benchmark.
+
+Validation: all 11 `hooks/tests/*.sh` suites, 99 MCP tests, and 46 SMRITI tests
+pass with isolated state. Changed shells pass `bash -n`; `noise.py` passes ruff
+and imports on PyPy 3.9.18. The evaluator tests cover panel aggregation, isolated
+launch, missing/failed output, and live-band rejection. The initial SMRITI run
+caught older programmatic callers lacking `hook_runs`; they now retain their
+offline behavior. No native code changed, so no cargo/cmake commands were run.
 
 ### PostToolUse
 
@@ -267,6 +357,16 @@ Read | Edit | Write | Bash | Agent | ScheduleWakeup
 | `rm -rf /` or `rm -rf ~`    | Destroys root or home           |
 | `chmod -R 777 /`            | Exposes entire filesystem       |
 | `dd` to a raw disk device   | Overwrites disk directly        |
+
+**MCP transport guard (structured deny, exit 0):** Bash command text containing
+`pkill`, `kill`, or `killall` targeting `chitta-mcp` (including the
+`chitta-m[c]p` spelling) is denied. This covers explicit `--http` targets
+and broad matches that include the HTTP transport. A `kill` PID-selection
+pipeline may pass only with an explicit `grep -v -- --http` exclusion;
+filtering the kill command's output does not qualify. Compound commands are
+checked independently so an exclusion elsewhere does not unlock a broad kill.
+The reason points to `scripts/dev-install.sh`. The explicit hook-environment
+bypass is `CHITTA_ALLOW_MCP_KILL=1`; headless mode does not bypass this guard.
 
 **Stage 2 — Find/grep/ls fallback strategy:**
 
@@ -382,12 +482,14 @@ The shadow log auto-rotates when it reaches **10 MB**. The current log is rename
 ## Environment Variables
 
 Every `CHITTA_*` variable below also works under its pre-rename `CC_SOUL_*`
-name (see [docs/RENAME.md](RENAME.md)).
+name, except the new explicit `CHITTA_ALLOW_MCP_KILL` bypass
+(see [docs/RENAME.md](RENAME.md)).
 
 | Variable                      | Default      | Description                                                              |
 |-------------------------------|--------------|--------------------------------------------------------------------------|
 | `CHITTA_HOOK_ENFORCE`        | (auto)       | `1` = force enforce; `0` = force shadow only                             |
 | `CHITTA_ALLOW_READ`          | `0`          | `1` = bypass Read deny and indexed-large deny for this session           |
+| `CHITTA_ALLOW_MCP_KILL`      | `0`          | `1` in the hook environment bypasses the MCP transport kill guard; no legacy alias |
 | `CHITTA_DEEP_SEARCH`         | `0`          | `1` = allow root-wide `find` (removes `-maxdepth 3` scoping)             |
 | `CHITTA_STRICT_MODE`         | `0`          | `1` = enforce symbol-level flow for indexed files                        |
 | `CHITTA_AGENT_NO_FORCE`      | `0`          | `1` = disable Haiku routing for search/research agents (explicit `model` and `subagent_type: fork` are exempt regardless) |

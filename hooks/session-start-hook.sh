@@ -424,22 +424,22 @@ else
             --limit 6 \
             --text-only 2>/dev/null || true)
 
-        _recall_lines=$(echo "$_recall_raw" | grep -v '^\s*$' | grep -v 'No memories' | grep -vE '^(#[0-9]+ )?(\[[0-9]+%\] )?\[episode\]' | wc -l)
+        _recall_body=$(printf '%s\n' "$_recall_raw" | grep -E '^#[0-9]+ \[[0-9]+%\] \[[^]]+\][[:space:]]+[^[:space:]]' | grep -vE '^#[0-9]+ \[[0-9]+%\] \[episode\]')
 
         # Pass 2: unfiltered fallback — covers projects whose memories live under brahman
-        if [[ "${_recall_lines:-0}" -le 1 ]]; then
+        if [[ -z "$_recall_body" ]]; then
             _project_kw=$(basename "${PROJECT_DIR:-$REALM}")
             _recall_raw=$(timeout "$MAX_WAIT" "$CHITTA_BIN" recall \
                 --query "${_project_kw} ${_recall_query}" \
                 --limit 6 \
                 --text-only 2>/dev/null || true)
-            _recall_lines=$(echo "$_recall_raw" | grep -v '^\s*$' | grep -v 'No memories' | grep -vE '^(#[0-9]+ )?(\[[0-9]+%\] )?\[episode\]' | wc -l)
+            _recall_body=$(printf '%s\n' "$_recall_raw" | grep -E '^#[0-9]+ \[[0-9]+%\] \[[^]]+\][[:space:]]+[^[:space:]]' | grep -vE '^#[0-9]+ \[[0-9]+%\] \[episode\]')
         fi
 
-        if [[ "${_recall_lines:-0}" -gt 1 ]]; then
+        if [[ -n "$_recall_body" ]]; then
             echo ""
             echo "[recall:${REALM}]"
-            echo "$_recall_raw" | grep -vE '^(#[0-9]+ )?(\[[0-9]+%\] )?\[episode\]' | grep -v 'No memories' | head -c 1200
+            printf '%s\n' "$_recall_body" | head -c 1200
             echo ""
             echo "[/recall:${REALM}]"
             echo "[soul] If context above is sparse for the current task, call mcp__chitta__recall or mcp__chitta__smart_context for deeper retrieval."

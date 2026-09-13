@@ -95,6 +95,7 @@ _launch_lane() {
 }
 
 _wait_lanes() {
+    (( ${#_LANE_PIDS[@]} )) || return 0
     wait "${_LANE_PIDS[@]}" 2>/dev/null || true
     return 0
 }
@@ -221,6 +222,11 @@ TRANSCRIPT_PATH=$(echo "$INPUT" | jq -r '.transcript_path // empty' 2>/dev/null 
 [[ -z "$QUERY" ]] && exit 0
 [[ ! -x "$CHITTA_BIN" ]] && exit 0
 
+# Open background output files at launch so EXIT cleanup is safe even if the
+# heartbeat is still running. Only continuity has an output consumer to join.
+_ld=$(mktemp -d "${TMPDIR:-/tmp}/ccsoul-lanes.XXXXXX") || exit 0
+trap '_recall_telemetry_finish; rm -rf "$_ld"' EXIT
+
 # A prompt is authoritative proof that this frontend session is alive. Refresh
 # both the Chitta session heartbeat and any thread lease, independent of whether
 # this is a Claude or Codex adapter invocation. Rate-limited: the daemon's
@@ -232,7 +238,9 @@ if [[ "$SESSION_ID" != "unknown" ]]; then
     _HB_AGE=999999
     [[ -f "$_HB_MARKER" ]] && _HB_AGE=$(( $(date +%s) - $(stat -c %Y "$_HB_MARKER" 2>/dev/null || echo 0) ))
     if [[ "$_HB_AGE" -ge 120 ]]; then
-        printf '%s' "$INPUT" | registry_call 1 heartbeat --queued && touch "$_HB_MARKER" 2>/dev/null
+        (
+            printf '%s' "$INPUT" | registry_call 1 heartbeat --queued && touch "$_HB_MARKER"
+        ) >"$_ld/heartbeat" 2>/dev/null &
     fi
 fi
 
@@ -417,7 +425,13 @@ _ABLATE_LANES=",${_ABLATE_LANES_RAW},"
 _lane_ablated() { [[ "$_ABLATE_LANES" == *",$1,"* ]]; }
 
 _RECALL_TELEMETRY_ACTIVE=1
-trap _recall_telemetry_finish EXIT
+# Fetch continuity concurrently with recall; consume it only when rendering.
+_SESSION_PID=""
+if [[ ! -f "$MIND_PATH/.session_active" ]] && budget_left; then
+    timeout 1 "$CHITTA_BIN" recall --query "session_summary" --limit 1 \
+        >"$_ld/session" 2>/dev/null &
+    _SESSION_PID=$!
+fi
 if [[ -n "$RLM_MODE" ]]; then
     # RLM-style exploration via Python soul_repl.
     # Query passed via env, never interpolated into Python source — the raw
@@ -437,7 +451,6 @@ else
     # Each lane runs in a backgrounded subshell writing to a file. `var=$(cmd) &`
     # captures the output inside the subshell and loses it — wait collects exit
     # status, not variables — so lanes must hand results back through the filesystem.
-    _ld=$(mktemp -d "${TMPDIR:-/tmp}/ccsoul-lanes.XXXXXX")
     # Lane ablation: a listed lane's recall call is skipped and its file stays
     # empty, exactly like a real timeout, so every downstream consumer (merge,
     # C2, admit accounting) already treats it as "no signal" with no separate
@@ -691,9 +704,6 @@ if [[ -z "$memories" ]] && [[ "$REALM" != "brahman" ]] && budget_left && ! _lane
     if [[ -n "$_fallback" && "$_fallback" != *"No memories"* ]]; then
         memories=$(printf '%s\n' "$_fallback" | grep -v '\[thought\]' | grep -E '\[[0-9]+%\]' | sed 's/^/[xr]/')
     fi
-fi
-if [[ "$_RECALL_TELEMETRY_ACTIVE" -eq 1 && -n "${_ld:-}" ]]; then
-    rm -rf "$_ld"
 fi
 if [[ -z "$memories" ]]; then
     [[ "$_RECALL_TELEMETRY_ACTIVE" -eq 1 ]] && _RECALL_EMPTY=1
@@ -1437,7 +1447,11 @@ fi
 if [[ ! -f "$MIND_PATH/.session_active" ]]; then
     touch "$MIND_PATH/.session_active"
     # Surface last session summary for continuity
-    recent_session=$(budget_left && timeout 1 "$CHITTA_BIN" recall --query "session_summary" --limit 1 2>/dev/null || true)
+    recent_session=""
+    if [[ -n "$_SESSION_PID" ]]; then
+        wait "$_SESSION_PID" 2>/dev/null || true
+        recent_session=$(<"$_ld/session")
+    fi
     if [[ -n "$recent_session" && "$recent_session" != *"No memories"* ]]; then
         # Recall begins with a count/maxrel header, even when no body survives.
         # Only a result with nonblank content can supply continuity context.
