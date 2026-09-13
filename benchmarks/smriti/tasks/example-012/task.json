@@ -1,7 +1,7 @@
 {
   "id": "example-012",
   "repo_fixture": "repo_fixture",
-  "prompt": "Implement get_api_key() in client.py: it must return this service's API credential, read from wherever this project's deployment scripts and CI already export it -- don't assume the generic env var name is right just because it's the obvious first guess.",
+  "prompt": "Implement get_api_key() in client.py: it must return this service's API credential, read from wherever this project's deployment scripts and CI already export it -- don't assume the generic env var name is right just because it's the obvious first guess. If the credential isn't set, return None -- don't raise.",
   "check_cmd": "python3 -m unittest test_client -v",
   "planted_memories": [
     {
