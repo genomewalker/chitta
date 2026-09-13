@@ -13,6 +13,13 @@ import urllib.request
 from pathlib import Path
 
 MAX_RESPONSE = 8 * 1024 * 1024
+# Prefixes the live bridge's web_fetch/paper_fetch use for a failed fetch (never real content).
+FETCH_FAILURE_PREFIXES = ("Error:", "[error", "(curl fallback:", "(could not fetch metadata")
+
+
+def jina_proxy(url: str) -> str:
+    """Reader-proxy URL for a page the bridge's direct fetch gets a 403 from (arxiv.org, openai.com)."""
+    return "https://r.jina.ai/" + url
 
 
 class BridgeError(RuntimeError):
@@ -218,11 +225,15 @@ def main() -> int:
     try:
         print(json.dumps({"tool_count": len(client.list_tools())}), flush=True)
         if args.fetch:
-            fetched = tool_text(
-                client.call_tool("web_fetch", {"url": args.fetch, "max_chars": 2000})
-            )
+            fetched = ""
+            for candidate in (jina_proxy(args.fetch), args.fetch):
+                fetched = tool_text(
+                    client.call_tool("web_fetch", {"url": candidate, "max_chars": 2000})
+                )
+                if not fetched.startswith(FETCH_FAILURE_PREFIXES):
+                    break
             print(fetched)
-            if fetched.startswith(("Error:", "[error", "(curl fallback: HTTP")):
+            if fetched.startswith(FETCH_FAILURE_PREFIXES):
                 return 1
     except BridgeError as exc:
         parser.exit(1, str(exc) + "\n")

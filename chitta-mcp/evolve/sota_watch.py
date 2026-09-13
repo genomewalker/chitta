@@ -12,7 +12,15 @@ import subprocess
 import sys
 from pathlib import Path
 
-from .bridge_client import BridgeError, add_client_args, client_from_args, json_object, tool_text
+from .bridge_client import (
+    FETCH_FAILURE_PREFIXES,
+    BridgeError,
+    add_client_args,
+    client_from_args,
+    jina_proxy,
+    json_object,
+    tool_text,
+)
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
@@ -21,6 +29,8 @@ INVENTORY = Path("/projects/caeg/scratch/kbd606/tmp/chitta-truth-inventory.md")
 ARXIV = re.compile(
     r"(?:arxiv[.:/]|/abs/|\A)(\d{2}(?:0[1-9]|1[0-2])\.\d{4,5})(?:v\d+)?(?=$|[\s/?#])", re.I
 )
+# Unanchored: a bare id inside a recall row's free-text or tags (no URL/prefix context needed).
+BARE_ARXIV_ID = re.compile(r"\b(\d{2}(?:0[1-9]|1[0-2])\.\d{4,5})(?:v\d+)?\b")
 
 
 def paper_id(value: str) -> str:
@@ -75,15 +85,27 @@ def parse_papers(text: str, provider: str, since: dt.date, until: dt.date) -> li
 
 
 def memory_ids(data) -> set:
-    """Read card identities only from matching realm results, ignoring recall's other lanes."""
+    """Card identities from matching-realm recall rows: an arXiv id in text/tags, or an
+    embedded card's own id. Tolerant of schema drift across chitta builds (a bare list of
+    rows, or {"results"|"memories": [...]}) and never raises on an unexpected shape."""
+    if isinstance(data, list):
+        rows = data
+    elif isinstance(data, dict):
+        rows = data.get("results", data.get("memories", []))
+    else:
+        rows = []
+    if not isinstance(rows, list):
+        rows = []
     found = set()
-    rows = data if isinstance(data, list) else data.get("results", data.get("memories", []))
     for row in rows:
         if not isinstance(row, dict) or row.get("realm", REALM) != REALM:
             continue
         content = row.get("text", row.get("content", ""))
-        if not isinstance(content, str):
-            continue
+        content = content if isinstance(content, str) else ""
+        tags = row.get("tags", [])
+        tag_text = " ".join(str(tag) for tag in tags) if isinstance(tags, list) else str(tags or "")
+        for match in BARE_ARXIV_ID.finditer(content + " " + tag_text):
+            found.add(match.group(1))
         start = content.find("{")
         try:
             card = json_object(content[start:]) if start >= 0 else {}
@@ -118,32 +140,53 @@ class MemoryStore:
         return data
 
     def recall(self, query: str = "sota-card") -> set:
-        data = self._run(
-            [
-                "recall",
-                "--json",
-                "--tag",
-                "sota-card",
-                "--realm",
-                REALM,
-                "--query",
-                query,
-                "--limit",
-                "100",
-                "--strategy",
-                "keyword",
-                "--no-learn",
-                "true",
-                "--expand",
-                "false",
-            ]
-        )
-        if not isinstance(data.get("results", data.get("memories")), list):
-            raise BridgeError("Recall returned an unexpected schema; refusing unverified dedupe")
-        if data.get("realm", REALM) != REALM:
-            raise BridgeError(
-                "Recall did not honor the requested realm; refusing unverified dedupe"
+        """Dedupe against existing sota-card memories. A broken CLI, a timeout, or an
+        unrecognized response shape degrades to "no existing cards" with a logged warning
+        instead of aborting the watch: a missed duplicate is recoverable, a blocked watch
+        is not (see docs/EVOLVE-BRIDGE.md)."""
+        try:
+            proc = subprocess.run(
+                [
+                    str(self.executable),
+                    "recall",
+                    "--json",
+                    "--tag",
+                    "sota-card",
+                    "--realm",
+                    REALM,
+                    "--query",
+                    query,
+                    "--limit",
+                    "100",
+                    "--strategy",
+                    "keyword",
+                    "--no-learn",
+                    "true",
+                    "--expand",
+                    "false",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=self.timeout,
+                check=False,
             )
+            data = json.loads(proc.stdout)
+        except (OSError, subprocess.TimeoutExpired, ValueError) as exc:
+            print(f"sota_watch: recall unavailable ({exc}); assuming no existing cards", file=sys.stderr)
+            return set()
+        if not isinstance(data, (list, dict)):
+            print(
+                "sota_watch: recall returned an unrecognized JSON shape; assuming no existing cards",
+                file=sys.stderr,
+            )
+            return set()
+        if isinstance(data, dict) and (data.get("error") or data.get("status") == "error"):
+            print(
+                f"sota_watch: recall reported an error ({data.get('error') or data.get('status')}); "
+                "assuming no existing cards",
+                file=sys.stderr,
+            )
+            return set()
         return memory_ids(data)
 
     def remember(self, card: dict) -> dict:
@@ -349,17 +392,18 @@ def watch(
                 if paper["id"] in memory.recall(paper["id"]):
                     continue
                 fetched = ""
+                # Bridge web_fetch gets a 403 straight from arxiv.org/openai.com; the reader
+                # proxy fetches those pages first, and the direct URL is the last resort.
                 for tool, arguments in [
                     ("paper_fetch", {"url": paper["source"], "full_text": False}),
+                    ("web_fetch", {"url": jina_proxy(paper["source"]), "max_chars": 14000}),
                     ("web_fetch", {"url": paper["source"], "max_chars": 14000}),
                 ]:
                     try:
                         fetched = tool_text(client.call_tool(tool, arguments))
                     except BridgeError:
                         continue
-                    if len(fetched) >= 200 and not fetched.startswith(
-                        ("Error:", "[error", "(curl fallback:", "(could not fetch metadata")
-                    ):
+                    if len(fetched) >= 200 and not fetched.startswith(FETCH_FAILURE_PREFIXES):
                         break
                     fetched = ""
                 if not fetched:

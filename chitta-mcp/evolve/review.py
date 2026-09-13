@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import subprocess
+import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -113,6 +114,50 @@ def parse_verdict(raw: str) -> dict:
         }
 
 
+def _codex_review(repo: Path, prompt: str, *, timeout: float = 900) -> str:
+    """Invoke the local Codex CLI directly instead of the bridge's codex_review tool,
+    which passes a removed `--full-auto` flag on this build (see docs/EVOLVE-BRIDGE.md).
+    `codex exec review --commit/--base/--uncommitted` cannot take a custom prompt (the
+    CLI rejects the combination), so this feeds Claude's exact self-contained review
+    prompt to plain `codex exec` over stdin, sandboxed read-only so it cannot touch the
+    repo even if it ignored the "no tool calls" instruction in the prompt."""
+    with tempfile.TemporaryDirectory() as tmp:
+        outfile = Path(tmp) / "codex-verdict.txt"
+        try:
+            proc = subprocess.run(
+                [
+                    "codex",
+                    "exec",
+                    "-C",
+                    str(repo),
+                    "-s",
+                    "read-only",
+                    "--skip-git-repo-check",
+                    "--ephemeral",
+                    "-m",
+                    "gpt-6-astra",
+                    "-c",
+                    "model_reasoning_effort=high",
+                    "-o",
+                    str(outfile),
+                    "-",
+                ],
+                cwd=str(repo),
+                input=prompt,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise BridgeError("codex exec failed to start: " + str(exc)) from None
+        text = outfile.read_text().strip() if outfile.exists() else ""
+        if text:
+            return text
+        detail = (proc.stderr or proc.stdout or "").strip()[-500:]
+        raise BridgeError("codex exec produced no output" + (": " + detail if detail else ""))
+
+
 def _one_review(client, reviewer: str, prompt: str, repo: Path, schemas: dict) -> dict:
     attempts = []
     try:
@@ -166,23 +211,12 @@ def _one_review(client, reviewer: str, prompt: str, repo: Path, schemas: dict) -
                 )
             result["model"] = "sonnet" if len(attempts) > 1 else "claude-sonnet-4-6"
         else:
-            props = schemas.get("codex_review", {}).get("properties", {})
-            arguments = {
-                "mode": "adversarial",
-                "focus": prompt,
-                "working_dir": str(repo),
-                "effort": "high",
-            }
-            if "model" in props:
-                arguments["model"] = "gpt-6-astra"
-            if "sandbox" in props:
-                arguments["sandbox"] = "read-only"
-            else:
-                raise BridgeError("codex_review lacks read-only sandbox selection")
-            raw = tool_text(client.call_tool("codex_review", arguments))
-            attempts.append({"tool": "codex_review", "raw": raw})
+            # The bridge's codex_review tool invokes `codex exec --full-auto`, an argument
+            # this build's Codex CLI rejects. Call the local `codex exec` CLI directly.
+            raw = _codex_review(repo, prompt)
+            attempts.append({"tool": "codex exec", "raw": raw})
             result = parse_verdict(raw)
-            result["model"] = arguments.get("model", "bridge-default")
+            result["model"] = "gpt-6-astra"
     except BridgeError as exc:
         result = {"verdict": "block", "reasons": [str(exc)], "error": True}
     result["attempts"] = attempts

@@ -19,7 +19,13 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from evolve.bridge_client import BridgeClient, BridgeError, json_object, tool_text  # noqa: E402
+from evolve.bridge_client import (  # noqa: E402
+    BridgeClient,
+    BridgeError,
+    jina_proxy,
+    json_object,
+    tool_text,
+)
 from evolve.review import collect, parse_verdict, review_prompt, run_review  # noqa: E402
 from evolve.sota_watch import (  # noqa: E402
     MemoryStore,
@@ -158,6 +164,12 @@ class ClientTests(unittest.TestCase):
             with patch.dict(os.environ, {"CHITTA_BRIDGE_TOKEN": ""}):
                 self.assertEqual(BridgeClient(token_file=path)._token, "file-secret")
 
+    def test_jina_proxy_prefixes_reader_url(self):
+        self.assertEqual(
+            jina_proxy("https://arxiv.org/abs/2511.17208"),
+            "https://r.jina.ai/https://arxiv.org/abs/2511.17208",
+        )
+
     def test_multiline_sse_and_size_bound(self):
         raw = b'data: {"id": 7,\ndata: "result": {}}\n\n'
         self.assertEqual(
@@ -223,6 +235,8 @@ class FakeLiterature:
     def __init__(self):
         self.calls = []
         self.invalid = False
+        self.short_paper_fetch = False
+        self.fail_direct_web_fetch = False
 
     def call_tool(self, name, args):
         self.calls.append((name, args))
@@ -233,9 +247,17 @@ class FakeLiterature:
                 "OpenAlex search: fixture\n\n[W1] Paper 0\n  DOI: https://doi.org/10.48550/arxiv.2609.00000\n"
             )
         if name == "paper_fetch":
+            if self.short_paper_fetch:
+                return result("too short")
             return result(
                 "Abstract: This paper proposes widened retrieval candidates and reranking. " * 10
             )
+        if name == "web_fetch":
+            if args["url"].startswith("https://r.jina.ai/"):
+                return result("Abstract via reader proxy, past the direct-fetch 403. " * 10)
+            if self.fail_direct_web_fetch:
+                return result("(curl fallback: HTTP 403)")
+            return result("Abstract via direct fetch. " * 10)
         if name == "discuss":
             return result("invalid" if self.invalid else json.dumps(EXTRACTED))
         raise AssertionError(name)
@@ -278,6 +300,15 @@ class WatchTests(unittest.TestCase):
         self.assertLess(len(prompts[0]), 42000)
         oa = [args for name, args in self.client.calls if name == "lit_search_openalex"]
         self.assertIn("from_publication_date:2026-08-30", oa[0]["filters"])
+
+    def test_fetch_routes_through_jina_reader_proxy_before_direct_url(self):
+        self.client.short_paper_fetch = True
+        report = self.run_watch(max_papers=1)
+        self.assertEqual(report["model_calls"], 1)
+        self.assertEqual(report["errors"], [])
+        web_fetch_urls = [args["url"] for name, args in self.client.calls if name == "web_fetch"]
+        self.assertTrue(web_fetch_urls[0].startswith("https://r.jina.ai/https://arxiv.org/"))
+        self.assertEqual(len(web_fetch_urls), 1)
 
     def test_invalid_model_outputs_still_count_toward_cap(self):
         self.client.invalid = True
@@ -331,6 +362,18 @@ class WatchTests(unittest.TestCase):
         self.assertEqual(memory_ids({"results": rows[:1]}), set())
         self.assertEqual(memory_ids({"results": rows}), {"2609.00001"})
 
+    def test_memory_ids_accepts_bare_list_and_matches_arxiv_id_in_tags(self):
+        rows = [
+            {
+                "realm": "project:chitta-evolve",
+                "text": "no embedded card json here",
+                "tags": ["sota-card", "2609.00001"],
+            }
+        ]
+        self.assertEqual(memory_ids(rows), {"2609.00001"})
+        self.assertEqual(memory_ids({"memories": rows}), {"2609.00001"})
+        self.assertEqual(memory_ids("not a list or dict"), set())
+
     def test_recovery_does_not_store_another_proposals_stream(self):
         cards = self.root / "cards"
         cards.mkdir()
@@ -338,13 +381,20 @@ class WatchTests(unittest.TestCase):
         self.run_watch(max_papers=0)
         self.assertEqual(self.memory.writes, [])
 
-    def test_recall_rejects_wrong_shape_and_realm(self):
+    def test_recall_degrades_on_unexpected_shape_instead_of_raising(self):
         memory = MemoryStore(Path("/fixture/chitta"))
         with patch("evolve.sota_watch.subprocess.run") as run:
-            for data in ({"found": True, "record": "unrelated"}, {"realm": "", "results": []}):
-                run.return_value = subprocess.CompletedProcess([], 0, json.dumps(data), "")
-                with self.assertRaises(BridgeError):
-                    memory.recall()
+            for stdout in ('"unexpected string"', '{"found": true, "record": "unrelated"}', "[]"):
+                run.return_value = subprocess.CompletedProcess([], 0, stdout, "")
+                with contextlib.redirect_stderr(io.StringIO()):
+                    self.assertEqual(memory.recall(), set())
+
+    def test_recall_accepts_bare_list_response(self):
+        memory = MemoryStore(Path("/fixture/chitta"))
+        rows = [{"realm": "project:chitta-evolve", "text": "x", "tags": ["2609.00001"]}]
+        with patch("evolve.sota_watch.subprocess.run") as run:
+            run.return_value = subprocess.CompletedProcess([], 0, json.dumps(rows), "")
+            self.assertEqual(memory.recall(), {"2609.00001"})
 
     def test_rejects_nan_and_schema_confusion(self):
         for invalid in (float("nan"), "0.2", True):
@@ -367,8 +417,9 @@ class WatchTests(unittest.TestCase):
             memory.remember({"id": "2609.00001"})
             self.assertTrue(run.call_args.args[0][-1].startswith("sota-card {"))
             run.return_value = subprocess.CompletedProcess([], 0, '{"error":"failed"}', "")
-            with self.assertRaises(BridgeError):
-                memory.recall()
+            with contextlib.redirect_stderr(io.StringIO()) as captured:
+                self.assertEqual(memory.recall(), set())
+            self.assertIn("assuming no existing cards", captured.getvalue())
 
 
 class FakeReview:
@@ -393,19 +444,42 @@ class FakeReview:
         return result(json.dumps({"verdict": verdict, "reasons": ["Fixture evaluator changes"]}))
 
 
+def fake_codex_subprocess(verdict: str, reasons=("Fixture evaluator changes",)):
+    """subprocess.run side_effect faking a `codex exec` invocation that writes its
+    verdict to the -o output file, for ReviewTests."""
+    calls = []
+
+    def run(args, **kwargs):
+        calls.append((args, kwargs))
+        if args[0] != "codex":
+            raise AssertionError(args)
+        outfile = Path(args[args.index("-o") + 1])
+        outfile.write_text(json.dumps({"verdict": verdict, "reasons": list(reasons)}))
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    return run, calls
+
+
 class ReviewTests(unittest.TestCase):
     def test_two_reviewers_actual_routing_and_block_aggregation(self):
         FakeReview.calls = []
         inputs = {"base": "a", "head": "b", "diff": "+reward = 1", "artifacts": []}
-        reviewed = run_review(FakeReview, Path("/fixture"), inputs)
+        fake_run, codex_calls = fake_codex_subprocess("block")
+        with patch("evolve.review.subprocess.run", side_effect=fake_run):
+            reviewed = run_review(FakeReview, Path("/fixture"), inputs)
         self.assertEqual(reviewed["overall"], "block")
         self.assertEqual(reviewed["reviewers"]["claude"]["verdict"], "concern")
+        self.assertEqual(reviewed["reviewers"]["codex"]["verdict"], "block")
+        self.assertEqual(reviewed["reviewers"]["codex"]["model"], "gpt-6-astra")
         calls = dict(FakeReview.calls)
-        self.assertEqual(calls["codex_review"]["model"], "gpt-6-astra")
-        self.assertEqual(calls["codex_review"]["sandbox"], "read-only")
         self.assertEqual(calls["discuss"]["backend"], "claude")
-        self.assertEqual(calls["codex_review"]["focus"], calls["discuss"]["message"])
-        self.assertNotIn("base", calls["codex_review"])
+        codex_args, codex_kwargs = next((a, k) for a, k in codex_calls if a[0] == "codex")
+        self.assertEqual(codex_args[:2], ["codex", "exec"])
+        self.assertIn("gpt-6-astra", codex_args)
+        self.assertIn("model_reasoning_effort=high", codex_args)
+        self.assertIn("read-only", codex_args)
+        self.assertNotIn("--full-auto", codex_args)
+        self.assertEqual(codex_kwargs["input"], calls["discuss"]["message"])
         for phrase in ("Goodhart", "#<id> [pct%]", "snapshot/WAL", "pre-registered bet"):
             self.assertIn(phrase, review_prompt(inputs))
 
@@ -418,7 +492,9 @@ class ReviewTests(unittest.TestCase):
             def call_tool(self, name, args):
                 return result('{"verdict":"pass","reasons":["No code defects"]}')
 
-        reviewed = run_review(Passing, Path("/fixture"), {"base": "a", "head": "b", "diff": ""})
+        fake_run, _ = fake_codex_subprocess("pass", reasons=("No code defects",))
+        with patch("evolve.review.subprocess.run", side_effect=fake_run):
+            reviewed = run_review(Passing, Path("/fixture"), {"base": "a", "head": "b", "diff": ""})
         self.assertEqual(reviewed["overall"], "concern")
         self.assertEqual(len(reviewed["policy_concerns"]), 2)
 
@@ -427,7 +503,8 @@ class ReviewTests(unittest.TestCase):
             def call_tool(self, name, args):
                 raise BridgeError("timeout")
 
-        reviewed = run_review(Failed, Path("/fixture"), {"base": "a", "head": "b", "diff": ""})
+        with patch("evolve.review.subprocess.run", side_effect=OSError("codex not found")):
+            reviewed = run_review(Failed, Path("/fixture"), {"base": "a", "head": "b", "diff": ""})
         self.assertEqual(reviewed["overall"], "block")
         self.assertTrue(all(v["error"] for v in reviewed["reviewers"].values()))
 
