@@ -44,8 +44,10 @@ codex exec -C /projects/caeg/scratch/kbd606/tmp/codex-wt-<name> \
   -o /path/to/last-message.txt "<spec>" </dev/null
 ```
 
-- **Effort:** use the model and effort assigned by the task. Do not change them
-  or delegate merely because another setting is available.
+- **Effort:** use the model and effort assigned by the task (`high` is the
+  default for implementation). Do not change them or delegate merely because
+  another setting is available; never `ultra` unattended — it silently spawns
+  sub-agents on other models, a cost and audit black box.
 - **Approvals:** `--approve-for-me` works in **this** dev build (verified in
   `codex exec --help`) but is absent from the public docs; fall back to `-a never`.
   It implies the workspace-write sandbox and cannot be combined with `-s/--sandbox`

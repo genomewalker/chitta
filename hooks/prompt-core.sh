@@ -324,9 +324,14 @@ if [[ -n "$LAST_STOP_FILE" ]]; then
     LAST_STOP=$(cat "$LAST_STOP_FILE" 2>/dev/null || echo 0)
     NOW=$(date +%s)
     GAP=$(( NOW - LAST_STOP ))
-    if [[ $GAP -gt 300 ]]; then
+    # Prompt-cache TTL is account/session dependent: it was 5 min when this
+    # heuristic was written and is 60 min on the current plan, so a fixed 300 s
+    # threshold fired false alarms (2026-09-13, 19 min idle). Default to 60 min;
+    # override with CHITTA_CACHE_TTL_MIN (CC_SOUL_ alias honored) when the plan differs.
+    _ttl_min="${CHITTA_CACHE_TTL_MIN:-${CC_SOUL_CACHE_TTL_MIN:-60}}"
+    if [[ $GAP -gt $(( _ttl_min * 60 )) ]]; then
         GAP_MIN=$(( GAP / 60 ))
-        CACHE_WARN="[cache-expired: ${GAP_MIN}m idle — full context re-prices at cache-write rates; run /compact or start new session with /recap]"
+        CACHE_WARN="[cache-expired: ${GAP_MIN}m idle (> ${_ttl_min}m TTL) — full context re-prices at cache-write rates; run /compact or start new session with /recap]"
     fi
 fi
 
