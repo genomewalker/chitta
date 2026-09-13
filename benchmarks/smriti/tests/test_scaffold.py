@@ -27,13 +27,14 @@ manually-launched benchmark run, not the test suite.
 
 import io
 import json
+import os
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import contextmanager, redirect_stdout
 from pathlib import Path
 
 SMRITI_DIR = Path(__file__).resolve().parent.parent
@@ -41,6 +42,19 @@ sys.path.insert(0, str(SMRITI_DIR))
 
 import runner  # noqa: E402
 import scorer  # noqa: E402
+
+
+@contextmanager
+def temporary_env(name, value):
+    previous = os.environ.get(name)
+    os.environ[name] = value
+    try:
+        yield
+    finally:
+        if previous is None:
+            os.environ.pop(name, None)
+        else:
+            os.environ[name] = previous
 
 
 def validate_against_schema(instance, schema, path="$"):
@@ -506,6 +520,14 @@ class TestAblationWiring(unittest.TestCase):
         self.assertNotIn("CC_SOUL_ABLATE_LANES", off_env)
         self.assertNotIn("CHITTA_ABLATE_LANES", on_env)
         self.assertNotIn("CC_SOUL_ABLATE_LANES", on_env)
+
+    def test_eval_socket_reaches_cli_and_agent_environment(self):
+        socket = "/tmp/chitta-eval-test.sock"
+        with temporary_env("CHITTA_EVAL_SOCKET", socket):
+            memory = runner.ChittaAdapter(dry_run=True)
+            cmd = memory._with_eval_socket([memory.CHITTA_BIN, "recall", "--json"])
+            self.assertEqual(cmd[-2:], ["--socket-path", socket])
+            self.assertEqual(memory.agent_env("project:smriti-test")["CHITTA_SOCKET_PATH"], socket)
 
 
 class TestMUI(unittest.TestCase):

@@ -35,6 +35,10 @@ daemon when `claude -p` runs. Two adapter-level env vars steer that:
   .cc-soul-realm-file and git-repo-name fallbacks, so this pins the agent's
   own hooks to exactly this trial's planted realm without touching the
   materialized fixture's files.
+- When CHITTA_EVAL_SOCKET is set, ChittaAdapter pins its own CLI calls with
+  --socket-path and passes CHITTA_SOCKET_PATH to the agent subprocess. The
+  latter takes effect for hooks inside "claude -p" once the chitta CLI honors
+  that environment variable.
 - NullAdapter.agent_env sets CHITTA_HEADLESS=1 (and CC_SOUL_HEADLESS=1, the
   pre-rename name). Every memory-injecting hook (prompt-core.sh,
   session-start-hook.sh, resume-inject-hook.sh, post-bash-hook.sh,
@@ -190,6 +194,11 @@ class ChittaAdapter(MemoryAdapter):
         self.ablate_lane = ablate_lane
         self.dry_run = dry_run
 
+    @staticmethod
+    def _with_eval_socket(cmd: list) -> list:
+        socket = os.environ.get("CHITTA_EVAL_SOCKET")
+        return [*cmd, "--socket-path", socket] if socket else cmd
+
     def _run_cli(self, cmd: list, timeout: int = 20) -> dict:
         if self.dry_run:
             print(f"[dry-run] would run: {' '.join(shlex.quote(c) for c in cmd)}")
@@ -226,19 +235,21 @@ class ChittaAdapter(MemoryAdapter):
                 "--tags",
                 "smriti-bench",
             ]
-            data = self._run_cli(cmd)
+            data = self._run_cli(self._with_eval_socket(cmd))
             if "id" in data:
                 ids.append(data["id"])
         return ids
 
     def context_for(self, prompt, realm_prefix):
         cmd = [self.CHITTA_BIN, "recall", "--json", "--query", prompt, "--realm", realm_prefix]
-        data = self._run_cli(cmd)
+        data = self._run_cli(self._with_eval_socket(cmd))
         results = data.get("results", [])
         return "\n".join(r.get("text", "") for r in results)
 
     def agent_env(self, realm_prefix):
         env = {"CHITTA_REALM": realm_prefix}
+        if socket := os.environ.get("CHITTA_EVAL_SOCKET"):
+            env["CHITTA_SOCKET_PATH"] = socket
         if self.ablate_lane == "all":
             env["CHITTA_ABLATE_LANES"] = env["CC_SOUL_ABLATE_LANES"] = ABLATE_ALL_LANES
         elif self.ablate_lane:
@@ -247,7 +258,8 @@ class ChittaAdapter(MemoryAdapter):
 
     def teardown(self, realm_prefix, planted_ids):
         for mem_id in planted_ids:
-            self._run_cli([self.CHITTA_BIN, "forget", "--json", "--id", mem_id])
+            cmd = [self.CHITTA_BIN, "forget", "--json", "--id", mem_id]
+            self._run_cli(self._with_eval_socket(cmd))
 
 
 # ---- agent adapters ----
