@@ -3,11 +3,10 @@
 All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 [docs/RENAME.md](docs/RENAME.md)) are documented here.
 
-> **Gap notice, 2026-09-02.** Entries below jump from 5.71.0 to 5.41.3.
-> Versions 5.42.0 through 5.70.x were released without changelog entries;
-> roughly 419 commits landed in that window. The git history and the GitHub
-> release notes are the record for that period. This is a documentation gap,
-> not a period of inactivity.
+> **Gap backfilled, 2026-09-13.** 5.42.0 through 5.70.4 were originally
+> released without changelog entries (~419 commits). The sections below were
+> reconstructed from `git log` between tags; patch releases are grouped under
+> their minor version (`## [5.x.y]`) with per-release dates on one line.
 
 ## [5.71.0] - 2026-09-02
 
@@ -81,6 +80,286 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
   claimed "150+ tools" and listed 241; the real surface is 343.
 - New pages: `docs/recall.html` (the retrieval pipeline) and
   `docs/benchmarks.html` (SMRITI-Bench, LongMemEval, LoCoMo).
+
+## [5.70.x] - 2026-07-06 to 2026-07-14
+
+Patch releases: 5.70.0 (07-06), 5.70.1 (07-07), 5.70.2 (07-07), 5.70.3 (07-07), 5.70.4 (07-14).
+
+- **soul**: C2 self-monitoring (feeling-of-knowing) confidence signal, recalibrated
+  to a 2-band scale with timeout-degrade handling; workspace-admission inspector.
+- **daemon**: dormant PPR injection lane, delta-HNSW persist, `ops_log`,
+  `semantic_backfill` RPC, task-state and durable-correction keyed lanes,
+  `provenance_check` exposed on CLI/MCP; single-writer lock made actually
+  exclusive; recall latency bounded under embed/queue load via a priority gate.
+- **distill**: synchronous `distill_now` RPC; deterministic value-fact extractor;
+  value-fact embed/recall moved off the RPC lock.
+- **hooks/dev**: editable dev-install symlinks live hooks and MCP to the repo,
+  ending the dual-copy drift; `session-end-hook.sh` deregisters sessions.
+- **mcp/recall**: INT8 ONNX cross-encoder reranker; `assoc_census`/`assoc_decay`
+  tools; auto-inject `source_session` on `remember`/`remember_batch`.
+
+## [5.69.x] - 2026-07-06
+
+Patch releases: 5.69.0–5.69.3, all 2026-07-06.
+
+- **queue**: two-lane processing + ledger-coalesce; code-intel CLI wiring.
+- **mcp**: default recall strategy changed to hybrid; grade-recall re-bootstrapped
+  against it.
+- **code-intel**: member-call edges populated via `find_child_by_field`, scoped
+  per project.
+- **distill**: fail-fast endpoint probe so a dead LLM never burns 180s/item.
+
+## [5.68.x] - 2026-07-06
+
+Patch releases: 5.68.0, 5.68.1, both 2026-07-06.
+
+- **code-intel**: scoped `find_symbol` + dedupe GC surface; missing
+  `field_store.hpp` FFI wrappers restored (v5.68.0 build fix).
+- **queue**: checkpoint the `.processing` batch, fix graceful-shutdown tail-drop.
+
+## [5.67.x] - 2026-07-06
+
+Patch releases: 5.67.0, 5.67.1, both 2026-07-06.
+
+- **recall**: C++ windowed temporal recall + Tier-1 fusion reranking; `[gap]`
+  quarantine with rescore-before-truncate.
+- **hooks**: enforce read-dedup by truncating re-reads to 40 lines.
+
+## [5.66.x] - 2026-07-04 to 2026-07-06
+
+Patch releases: 5.66.0 (07-05), 5.66.1 (07-05), 5.66.2 (07-06), 5.66.3 (07-06).
+
+- **span-lane**: C++ surface + MCP hide-list, then live-ingest wiring.
+- **queue**: `queue_status` surfaces live queue depth.
+- **embed**: GGUF failover when the HTTP embed endpoint dies (2s connect
+  timeout).
+- **mcp**: fail closed when a `session_id` can't be resolved for messaging.
+- **field**: per-realm span count fix; flat-scan exact recall with a >2M drift
+  bound; lock-order fix in `span_backfill_memories`.
+
+## [5.65.x] - 2026-06-29 to 2026-07-01
+
+Patch releases: 5.65.0 (06-30), 5.65.1 (07-01).
+
+- **eval**: graph-only multihop, GOLDEN_SET v6 (30 queries); G-entropy/S-entropy
+  logging; grader abstain signal + multi-strategy RRF re-ranking.
+- **dream**: BridgeBrain routes dreams through bridge rooms (local/gemma) with
+  fallback to LocalBrain; gap-memory seeds; prune time guard.
+- **subconscious**: removed the automatic `prune_episodes` call and guarded
+  against its recurrence.
+- **ci**: add OpenBLAS/openblas-devel for turbovec's BLAS feature.
+
+## [5.64.x] - 2026-06-29
+
+Patch releases: 5.64.0, 5.64.1, 5.64.2, all 2026-06-29.
+
+- **embed**: `CHITTA_EMBED_URL` for a dedicated embed GPU, GGUF-first priority,
+  background embedding on by default; batch size 40→256.
+- **embed_loop**: removed the `prune_episodes` call, respects
+  `config_.embedding_interval`.
+- **field**: multi-hop DAM + scoring.json; turbovec DAM submatrix; TurboState
+  lazy index.
+
+## [5.63.0] - 2026-06-29
+
+- **daemon**: GPU retry, queue-lock shortening, embedder decode-fallback reinit.
+- **eval**: grade-recall results updated (nDCG@20=0.808).
+
+## [5.62.x] - 2026-06-28
+
+Patch releases: 5.62.0–5.62.6, all 2026-06-28.
+
+- **embed**: GPU-first embedding — try Ollama before CPU GGUF.
+- **daemon**: fixed an ABBA deadlock between `backfill_embedding`,
+  `sync_foreign`, and pool workers; `sync_foreign` no longer re-replays the
+  WAL on restart (`seen_offsets` seeding).
+- **recall**: normalize RRF scores before display.
+- **hooks**: fixed recall lanes losing output to subshells and never being
+  injected.
+
+## [5.61.x] - 2026-06-23 to 2026-06-28
+
+Patch releases: 5.61.0–5.61.16, spanning 2026-06-23 to 2026-06-28.
+
+- **mcp**: HTTP MCP transport + Bearer auth for chitta-mcp.
+- **recall**: RRF hybrid reranking and a cross-encoder reranker taking G0
+  nDCG@20 from 0.784 to 0.905, then 0.933 on a refreshed 174-query eval with an
+  L-12 reranker; embedding model fine-tuned to Jina-v2-base-en at 768-dim
+  (142k memories re-embedded), later switched to nomic-embed-text-v1.5 to fix
+  domain bias.
+- **eval**: GOLDEN_VERSION 3 grader with sig-primary gold keys and
+  realm-scoped sweep; 150-query benchmark; real eval harness with a
+  `--strategy` flag.
+- **hooks**: cross-realm fallback when scoped recall returns empty; recalled
+  memories escalated to `systemMessage` on cache-expired sessions.
+- **docs**: synced API/ARCHITECTURE/CLI/HOOKS/chitta-field README/model table
+  to code.
+
+## [5.60.0] - 2026-06-23
+
+- **field-rag**: Phase 1 — Modern Hopfield recall via `strategy=field`.
+
+## [5.59.0] - 2026-06-23
+
+- **recall**: RRF hybrid + embed bug fix.
+
+## [5.58.x] - 2026-06-23
+
+Patch releases: 5.58.0, 5.58.1, both 2026-06-23.
+
+- **soul**: G5–G11 auto-evolving cognitive architecture.
+- **eval**: G0 nDCG@10 grader + debug-recall diagnostic tool.
+
+## [5.57.x] - 2026-06-23
+
+Patch releases: 5.57.0, 5.57.1, both 2026-06-23.
+
+- **hooks**: forward-bet emission in `distill.sh` + settle-predictions sweeper.
+- **eval**: G0 golden-set grader + G4 persona catalog; grader queries
+  recalibrated to 1.000; density tiebreak added to the persona selector.
+
+## [5.56.x] - 2026-06-12 to 2026-06-23
+
+Patch releases: 5.56.0–5.56.11, spanning 2026-06-12 to 2026-06-23.
+
+- **field**: single in-RAM embedding home (−600MB RSS); sleep consolidation +
+  CW sweep re-enabled; transitive forgetting; snapshot compaction; NFS ghost
+  janitor.
+- **hooks**: retired Edit→file_patch enforcement now that built-in Edit is the
+  default; auto-recap after compact/clear; realm recall block injected at
+  session start when soul-context is sparse; fall back to unfiltered recall
+  when realm-filtered recall returns nothing; `dream-sweep.sh` for
+  cross-session transcript distillation.
+- **memory**: stop raw-turn flood, wire read-dedup enforcement, belief gate.
+- **skills**: add prog-review (first-principles refactor/review workflow).
+- **hooks**: fixed the ledger queue path, TODOS extraction via `jq`, and
+  transcript sanitization before `jq`.
+
+## [5.55.0] - 2026-06-11
+
+- **field**: v2.5.1–v2.5.4 — states/payloads lock-order deadlock hotfix,
+  `sync_foreign` moved under the exclusive rpc lock, CW-refresh per-query
+  budget, ANN recall on by default.
+
+## [5.54.0] - 2026-06-11
+
+- **field**: v2.2.0–v2.5.0 — confluent merge replay + coverage-vector
+  manifest, Phase 2 save-cost cuts + LWW clocks, `.hdc`/`.pld` dirty-skip,
+  ApplyCtx refactor, cross-context provenance (Phase 3).
+
+## [5.53.0] - 2026-06-10
+
+- **hint**: PR1/PR2 real-time hint telemetry and `chitta_hintd`, a resident
+  hint-extraction daemon (default-off).
+- **daemon**: safe thread-pool back-pressure; `consolidation_pass` serialized
+  at the daemon level; MCP daemon socket serialized with response-id
+  verification; daemon finds the bge GGUF in `~/.claude/bin` without a silent
+  Ollama fallback.
+- **hooks**: `prompt-core.sh` token-saving pass, `MAX_OUTPUT_CHARS` lowered
+  800→500 (~125 tokens per injection).
+- **docs**: record chitta-field v2.1.0 as the rollback floor (V23 snapshot
+  format).
+
+## [5.52.0] - 2026-06-03
+
+- **daemon**: lock-free recall that never blocks on an index-mutating write;
+  a `rpc_mutex` lock-hold profiler (`[lockprof]`).
+- **recall**: `smart_recall`/`hybrid_recall` no longer take the exclusive
+  `rpc_mutex` (had blocked all recall for ~800ms); an abstain signal for
+  "nothing strongly relevant" (no new model); daemon auto-start no longer
+  spawns an unmanaged second writer, the root cause of store corruption.
+- **docs**: consolidation-redesign v2 with the corrected mechanism and a
+  stall-free RCU migration plan.
+- **field**: bumped to v2.0.0 with calibrated bounded-envelope recall
+  scoring, centered flat-scan, and lock-free snapshot sidecars.
+
+## [5.51.0] - 2026-06-01
+
+- **embed**: ship bge-large-en-v1.5 (1024-d) as the public embedding default;
+  public ssl_distiller training + eval pipeline; multi-teacher synthetic SSL
+  corpus generator; codex CLI teacher for synthetic corpus generation.
+- **install**: fixed a public-install embed-model mismatch.
+
+## [5.50.0] - 2026-05-30
+
+- **cli**: `prune-memories` command (dry-run preview + `--apply
+  --delete/--background`); `format-id`, `execv` self-update gate, and
+  `migrate-store-format`.
+- **recall**: discriminating recall via embedding mean-centering +
+  robustness hardening.
+- **field**: V3 WAL segment lineage fencing.
+
+## [5.49.0] - 2026-05-28
+
+- **embed**: migrate to the ssl_distiller_dpo 1536-dim embedding model.
+
+## [5.48.x] - 2026-05-26 to 2026-05-28
+
+Patch releases: 5.48.0 (05-26), 5.48.1 (05-27), 5.48.2 (05-28).
+
+- **build**: replace ONNX with llama.cpp+nomic GGUF in CI; embed-model
+  download added to smart-install; llama.cpp pin bumped b4990→b9294.
+- **daemon**: `consolidation_pass` moved to a subprocess path so it no longer
+  holds the exclusive `rpc_mutex` during the Sequitur+FEP rebuild.
+- **install**: smart-install preserves `--embed-model` across updates.
+
+## [5.47.x] - 2026-05-26
+
+Patch releases: 5.47.0, 5.47.1, both 2026-05-26.
+
+- **field**: prune orphaned triplet `ingestion_times`, add `--embed-model`
+  flag, switch to ssl_distiller_dpo.
+- **docs**: add a Models section; wire `v5-model-b` as the active hint model
+  (88% vs 68%).
+
+## [5.46.x] - 2026-05-25 to 2026-05-26
+
+Patch releases: 5.46.0, 5.46.1, 5.46.2 (all 05-25), 5.46.3 (05-26).
+
+- **build**: remove ONNX support, always build with llama.cpp.
+- **hooks**: replace deprecated `codex_hooks` with `hooks` in `[features]`
+  config; reduce correction-classifier false positives in `prompt-core.sh`.
+- **docs**: rewrite README, drop version-history noise, lead with what
+  matters.
+
+## [5.45.x] - 2026-05-25
+
+Patch releases: 5.45.0, 5.45.1, 5.45.2, all 2026-05-25.
+
+- **hooks**: move `ledger_append` before the daemon gate; fix the transcript
+  parser for Claude Code JSONL.
+
+## [5.44.x] - 2026-05-25
+
+Patch releases: 5.44.0–5.44.4, all 2026-05-25.
+
+- **daemon**: `EmbedQueue`, a single-owner async embed architecture; predicate
+  store wired into C++ handlers + MCP.
+- **hooks**: predicate re-falsification, tighter correction regex, discipline
+  enforcement; auto-store in the Stop hook when the discipline threshold is
+  crossed.
+- **fix**: predicate operations unblocked (three independent bugs).
+
+## [5.43.0] - 2026-05-25
+
+- **daemon**: reliability + eval improvements (v5.43).
+
+## [5.42.0] - 2026-05-24
+
+- **field**: Interaction Ledger (v6.0) — reads/writes/outcomes as first-class
+  events.
+
+## [5.41.4] - 2026-05-23
+
+- **hint**: HintYantra in-process hint extraction + auto-enrichment daemon
+  thread; LlamaYantra inline GGUF embeddings via llama.cpp (no Ollama
+  required); ONNX→Ollama embedding migration + hint-corpus pipeline;
+  `chitta-hint-tuned` fine-tuned retrieval hint model + MCP tool.
+- **recall**: pre-embed the recall query outside `rpc_mutex_`, reduce the
+  Ollama timeout 30s→8s.
+- **fix**: OllamaYantra retries with progressive truncation on HTTP 400;
+  `PROMPT_TEMPLATE` crash fixed with per-model template selection; dedup
+  `learn_codebase` pool submissions by `(path, project)`.
 
 ## [5.41.3] - 2026-05-21
 
