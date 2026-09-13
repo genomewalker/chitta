@@ -1,0 +1,13 @@
+# Git wildmatch patterns, rooted at the repository; changes include add/delete/rename.
+hooks/grade-recall-goldids.json
+hooks/grade-recall.py
+benchmarks/smriti/tasks/*/hidden/**
+benchmarks/smriti/split.json
+benchmarks/noise.json
+hooks/outcome-ledger.sh
+scripts/eval-replica.sh
+# Protect the trust policy and its enforcement, too.
+benchmarks/EVAL_IMMUTABLE.txt
+benchmarks/check_eval_immutable.py
+scripts/check-eval-immutable.sh
+.github/workflows/ci.yml
