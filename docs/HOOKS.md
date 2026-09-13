@@ -227,11 +227,15 @@ usable context, including after the cross-realm fallback, the hook appends a
 `recall_empty` event with those timing fields even though it emits no context.
 This keeps empty prompt-hook runs diagnosable without changing fail-open output.
 
-Set `CHITTA_RECALL_LANES_RPC=1` to replace the prompt hook's six recall CLI
-processes with one `recall_lanes` RPC. The switch defaults off while latency is
-measured. Ablated lanes are omitted from the request, the cross-realm `xr` lane
-remains a separate fallback, and an unavailable or invalid fan-in response
-falls open to the original process fan-out for that prompt.
+The prompt hook's six recall lanes run as one `recall_lanes` RPC by default
+(`CHITTA_RECALL_LANES_RPC=1`, since 2026-09-13; set `0` for the six-process
+path). Measured on the live daemon, 3 queries × 20 runs per arm: median total
+1496 → 1201 ms, p95 3208 → 3087, zero empties either way; the RPC alone returns
+all lanes in ~190 ms. Ablated lanes are omitted from the request, the
+cross-realm `xr` lane remains a separate fallback, and an unavailable or invalid
+fan-in response falls open to the process fan-out for that prompt. The
+remaining ~2 s of hook time is sequential pre-lane work (heartbeat, session
+recall, C2), not recall — see the evolve backlog.
 
 ### PreToolUse
 
@@ -393,6 +397,8 @@ name (see [docs/RENAME.md](RENAME.md)).
 | `CHITTA_LOOP_LIMIT`          | `20`         | ScheduleWakeup iterations before block                                   |
 | `CHITTA_SUBAGENT_BASH_RECALL`| `0`          | `1` = run Bash recall for subagent calls (adds ~2s per call, default off)|
 | `CHITTA_MAX_WAIT`            | `5`          | Max seconds to wait for daemon responses                                 |
+| `CHITTA_CACHE_TTL_MIN`       | `60`         | Prompt-cache TTL in minutes; the `[cache-expired]` banner fires only past it (was a fixed 5 min) |
+| `CHITTA_RECALL_LANES_RPC`    | `1`          | One `recall_lanes` RPC for all prompt-hook lanes (default on since 2026-09-13; `0` = six CLI processes) |
 | `CHITTA_MCP_LAG_INTERVAL_MS` | `250`        | MCP asyncio scheduling-delay sampling interval in milliseconds            |
 | `CHITTA_MCP_LAG_WARN_MS`     | `200`        | Scheduling delay that increments `over_count` and logs a warning          |
 | `CHITTA_LEAN`                | `false`      | Ultra-lean context mode (stats only)                                     |
