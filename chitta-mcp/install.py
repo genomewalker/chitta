@@ -227,7 +227,6 @@ def _is_cc_soul_hook_command(cmd: str, hooks_dir: Path) -> bool:
     )
 
 
-
 def _strip_plugin_entry(text: str, name: str) -> str:
     """Drop the [plugins."<name>@<marketplace>"] table: its header and the
     `key = value` lines directly under it. Stops at the next header, a blank
@@ -246,6 +245,7 @@ def _strip_plugin_entry(text: str, name: str) -> str:
             continue
         out.append(line)
     return "\n".join(out)
+
 
 def _install_codex():
     source = _plugin_source_dir()

@@ -154,8 +154,7 @@ class RerankerExecutorTests(unittest.IsolatedAsyncioTestCase):
             mock.patch.object(server, "_sqz_compress", side_effect=lambda text, _name: text),
         ):
             output = await server.call_tool(
-                "recall",
-                {"query": "test query", "strategy": "semantic", "limit": 1}
+                "recall", {"query": "test query", "strategy": "semantic", "limit": 1}
             )
 
         self.assertNotEqual(reranker.predict_thread, loop_thread)

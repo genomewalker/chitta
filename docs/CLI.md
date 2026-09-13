@@ -75,7 +75,7 @@ chittad daemon [options]
 - Writes PID via `pid_path_for_mind(mind_path)`
 - Starts thread pool (hard-coded 8 min / 16 max workers); queue depth cap via `CHITTA_MAX_QUEUE_DEPTH` (default 256)
 - Sets `OMP_NUM_THREADS`, `MKL_NUM_THREADS`, `OPENBLAS_NUM_THREADS`, `ORT_NUM_THREADS` to 4
-- Runs queue processor: reads `/tmp/chitta-queue.jsonl`; failed ops written to `{mind}/.failed_queue.jsonl`
+- Runs queue processor: reads `{mind}/queue.jsonl` (`CHITTA_QUEUE` overrides); failed ops written to `{mind}/queue.jsonl.failed`
 - Runs hint enrichment thread (trigger: 3 new memories; cooldown: 600s; batch: 50); binary via `CHITTA_HINT_ENRICHER` env or smart-install default
 - Runs inotify watcher on `segments/` for same-host peer writes (Linux only); 5s fallback for foreign sync
 - Detects binary self-updates every 60s via `/proc/self/exe` mtime; checks vector-space id compatibility before restart (Linux only)
@@ -343,7 +343,7 @@ There is no `--model` / `--vocab` flag and no ONNX model. The embed model is not
 - Backfill thread (embedding backfill, batch 100)
 - Distillation thread
 - Hint enrichment thread (trigger: 3 new memories, cooldown: 600s, batch: 50)
-- Queue processor thread (reads `/tmp/chitta-queue.jsonl`)
+- Queue processor thread (reads `{mind}/queue.jsonl`)
 - ThreadPool (8-16 workers)
 
 ---

@@ -392,21 +392,18 @@ def _replica_snapshot_id() -> str | None:
     if not CHITTA_EVAL_SOCKET:
         return None
     eval_mind = Path(
-        os.environ.get(
-            "CHITTA_EVAL_MIND", "/projects/caeg/scratch/kbd606/tmp/chitta-eval-mind"
-        )
+        os.environ.get("CHITTA_EVAL_MIND", "/projects/caeg/scratch/kbd606/tmp/chitta-eval-mind")
     )
     try:
         lines = (eval_mind / "replica.env").read_text().splitlines()
         value = next(
-            line.split("=", 1)[1]
-            for line in lines
-            if line.startswith("CHITTA_EVAL_SNAPSHOT_ID=")
+            line.split("=", 1)[1] for line in lines if line.startswith("CHITTA_EVAL_SNAPSHOT_ID=")
         )
         values = shlex.split(value)
         return values[0] if values else None
     except (OSError, StopIteration, ValueError):
         return None
+
 
 GREEN = "\033[32m"
 RED = "\033[31m"
@@ -844,10 +841,14 @@ def main():
         # replica refused to start mid-save and the grader ran anyway).
         probe = subprocess.run(
             _chitta_cli("recall", "--query", "ping", "--limit", "1"),
-            capture_output=True, text=True, timeout=60,
+            capture_output=True,
+            text=True,
+            timeout=60,
         )
         if probe.returncode != 0 or "Cannot connect" in (probe.stdout + probe.stderr):
-            print(f"eval replica at {CHITTA_EVAL_SOCKET} is not reachable; aborting", file=sys.stderr)
+            print(
+                f"eval replica at {CHITTA_EVAL_SOCKET} is not reachable; aborting", file=sys.stderr
+            )
             return 2
     if a.no_reranker:
         global _reranker

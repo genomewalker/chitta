@@ -87,7 +87,18 @@ from pathlib import Path
 
 import split as task_split
 
-SCRATCH_ROOT = os.environ.get("SMRITI_SCRATCH", "/projects/caeg/scratch/kbd606/tmp")
+
+def _scratch_root() -> str:
+    """Cluster scratch when writable (/tmp does not persist across nodes), else the system tmp."""
+    root = os.environ.get("SMRITI_SCRATCH", "/projects/caeg/scratch/kbd606/tmp")
+    if os.access(root, os.W_OK):
+        return root
+    import tempfile
+
+    return tempfile.gettempdir()
+
+
+SCRATCH_ROOT = _scratch_root()
 
 # Benchmark-facing ablation lane name -> chitta's short hook-lane name
 # (hooks/prompt-core.sh's CHITTA_ABLATE_LANES contract). graph and hybrid

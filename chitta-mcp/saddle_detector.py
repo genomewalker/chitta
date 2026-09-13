@@ -27,7 +27,10 @@ from collections import defaultdict
 from difflib import SequenceMatcher
 from pathlib import Path
 
-DEFAULT_LEDGER = Path(os.environ.get("CHITTA_DB_PATH", os.path.expanduser("~/.claude/mind"))) / "outcome_ledger.jsonl"
+DEFAULT_LEDGER = (
+    Path(os.environ.get("CHITTA_DB_PATH", os.path.expanduser("~/.claude/mind")))
+    / "outcome_ledger.jsonl"
+)
 
 _NUM = re.compile(r"\d+")
 _WS = re.compile(r"\s+")
@@ -156,7 +159,11 @@ def report(by_session: dict[str, list[dict]], args) -> dict:
         "escape_rate_without_injection": round(esc_without / (len(all_eps) - with_inj), 3)
         if len(all_eps) - with_inj
         else None,
-        "params": {"min_fails": args.min_fails, "window": args.window, "similarity": args.similarity},
+        "params": {
+            "min_fails": args.min_fails,
+            "window": args.window,
+            "similarity": args.similarity,
+        },
         "top_episodes": sorted(all_eps, key=lambda e: -e["n_fails"])[:8],
     }
 
@@ -177,7 +184,9 @@ def check(by_session: dict[str, list[dict]], args) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("mode", choices=["report", "check"])
     ap.add_argument("--ledger", type=Path, default=DEFAULT_LEDGER)
     ap.add_argument("--min-fails", type=int, default=3)
@@ -202,7 +211,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{k:34s} {v}")
     print("top episodes:")
     for e in out["top_episodes"]:
-        print(f"  {e['n_fails']:2d} fails  escaped={str(e['escaped']):5s} inj={e['injected_during']}  {e['session_id'][:8]}  {e['cmd_head']}")
+        print(
+            f"  {e['n_fails']:2d} fails  escaped={str(e['escaped']):5s} inj={e['injected_during']}  {e['session_id'][:8]}  {e['cmd_head']}"
+        )
     return 0
 
 

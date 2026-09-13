@@ -129,13 +129,19 @@ def hook_runs(n: int) -> dict:
         )
         socket = subprocess.run(
             ["bash", "-c", 'source "$1/hooks/lib.sh"; get_socket_path', "bash", str(ROOT)],
-            env=probe_env, check=True, capture_output=True, text=True, timeout=10,
+            env=probe_env,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=10,
         ).stdout.strip()
     if not Path(socket).is_socket():
         raise ValueError(f"daemon socket not found: {socket}")
     subprocess.run(
         [str(binary), "--socket-path", socket, "status"],
-        check=True, capture_output=True, timeout=10,
+        check=True,
+        capture_output=True,
+        timeout=10,
     )
     with tempfile.TemporaryDirectory(prefix="noise-hook-") as scratch:
         scratch = Path(scratch)
@@ -143,19 +149,29 @@ def hook_runs(n: int) -> dict:
         home = scratch / "home"
         (home / ".claude/mind").mkdir(parents=True)
         mind.mkdir()
-        env.update({
-            "HOME": str(home), "XDG_RUNTIME_DIR": str(scratch / "runtime"),
-            "CHITTA_DB_PATH": str(mind), "CHITTA_QUEUE": str(scratch / "queue"),
-            "CHITTA_TASK_LEDGER": str(scratch / "tasks.sqlite"),
-            "CHITTA_PLUGIN_DIR": str(ROOT), "CC_SOUL_PLUGIN_DIR": str(ROOT),
-            "CHITTA_REALM": env.get("CHITTA_BENCH_REALM", "brahman"),
-            "CHITTA_LEAN": "1",
-            "CHITTA_HOOK_BUDGET_MS": env.get("CHITTA_BENCH_HOOK_BUDGET_MS", "6000"),
-            "BENCH_REAL_CHITTA": str(binary), "BENCH_LIVE_SOCKET": socket,
-        })
+        env.update(
+            {
+                "HOME": str(home),
+                "XDG_RUNTIME_DIR": str(scratch / "runtime"),
+                "CHITTA_DB_PATH": str(mind),
+                "CHITTA_QUEUE": str(scratch / "queue"),
+                "CHITTA_TASK_LEDGER": str(scratch / "tasks.sqlite"),
+                "CHITTA_PLUGIN_DIR": str(ROOT),
+                "CC_SOUL_PLUGIN_DIR": str(ROOT),
+                "CHITTA_REALM": env.get("CHITTA_BENCH_REALM", "brahman"),
+                "CHITTA_LEAN": "1",
+                "CHITTA_HOOK_BUDGET_MS": env.get("CHITTA_BENCH_HOOK_BUDGET_MS", "6000"),
+                "BENCH_REAL_CHITTA": str(binary),
+                "BENCH_LIVE_SOCKET": socket,
+            }
+        )
         isolated_socket = subprocess.run(
             ["bash", "-c", 'source "$1/hooks/lib.sh"; get_socket_path', "bash", str(ROOT)],
-            env=env, check=True, capture_output=True, text=True, timeout=10,
+            env=env,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=10,
         ).stdout.strip()
         Path(isolated_socket).parent.mkdir(parents=True, exist_ok=True)
         Path(isolated_socket).symlink_to(socket)
@@ -175,26 +191,39 @@ esac
         for trial in range(n):
             totals = []
             for query in HOOK_QUERIES:
-                payload = {"session_id": f"noise-hook-{uuid.uuid4().hex}",
-                           "prompt": query, "cwd": "/tmp"}
+                payload = {
+                    "session_id": f"noise-hook-{uuid.uuid4().hex}",
+                    "prompt": query,
+                    "cwd": "/tmp",
+                }
                 result = subprocess.run(
                     ["bash", str(ROOT / "hooks/prompt-core.sh")],
-                    input=json.dumps(payload), env=env, check=True,
-                    capture_output=True, text=True, timeout=30,
+                    input=json.dumps(payload),
+                    env=env,
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
                 )
                 matches = re.findall(r"\| t:[^\n]*?\btotal=(\d+)\b", result.stdout)
                 if len(matches) != 1:
-                    raise ValueError("prompt hook missing/ambiguous t: total; refusing empty timing")
+                    raise ValueError(
+                        "prompt hook missing/ambiguous t: total; refusing empty timing"
+                    )
                 totals.append(int(matches[0]))
             panels.append(totals)
             print(f"hook {trial + 1}/{n}: median={statistics.median(totals)} ms", flush=True)
     samples = [statistics.median(panel) for panel in panels]
-    return {**summary(samples), "median": statistics.median(samples),
-            "query_totals_ms": panels, "queries": list(HOOK_QUERIES),
-            "statistic": "median of three fixed queries per run",
-            "recall_lanes_rpc": env.get(
-                "CHITTA_RECALL_LANES_RPC", env.get("CC_SOUL_RECALL_LANES_RPC", "1")
-            )}
+    return {
+        **summary(samples),
+        "median": statistics.median(samples),
+        "query_totals_ms": panels,
+        "queries": list(HOOK_QUERIES),
+        "statistic": "median of three fixed queries per run",
+        "recall_lanes_rpc": env.get(
+            "CHITTA_RECALL_LANES_RPC", env.get("CC_SOUL_RECALL_LANES_RPC", "1")
+        ),
+    }
 
 
 def hook_calibration(args) -> dict:
@@ -202,14 +231,20 @@ def hook_calibration(args) -> dict:
     snapshot = os.environ.get("CHITTA_EVAL_SNAPSHOT_ID")
     mind = os.environ.get("CHITTA_EVAL_MIND")
     if socket and (not snapshot or not mind):
-        raise ValueError("hook replica calibration needs CHITTA_EVAL_SNAPSHOT_ID and CHITTA_EVAL_MIND")
+        raise ValueError(
+            "hook replica calibration needs CHITTA_EVAL_SNAPSHOT_ID and CHITTA_EVAL_MIND"
+        )
     if socket and Path(mind).resolve() == (Path.home() / ".claude/mind").resolve():
         raise ValueError("CHITTA_EVAL_MIND must be a replica")
     return {
-        "schema_version": 1, "created_at": datetime.now(timezone.utc).isoformat(),
-        "snapshot_id": snapshot, "socket": socket, "agent": None,
+        "schema_version": 1,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "snapshot_id": snapshot,
+        "socket": socket,
+        "agent": None,
         "acceptance_ready": bool(socket and snapshot and mind),
-        "mode": "replica" if socket else "live-smoke", "errors": [],
+        "mode": "replica" if socket else "live-smoke",
+        "errors": [],
         "accept_rule": "hook_total_ms improvement strictly below -2 * sd",
         "metrics": {"hook_total_ms": hook_runs(args.hook_runs)},
     }
@@ -298,8 +333,11 @@ def calibrate(args) -> dict:
         "samples": [],
         "status": "unavailable",
     }
-    metrics = {"golden.ndcg": summary(golden) if golden else unavailable, **smriti_metrics(rows),
-               "hook_total_ms": unavailable}
+    metrics = {
+        "golden.ndcg": summary(golden) if golden else unavailable,
+        **smriti_metrics(rows),
+        "hook_total_ms": unavailable,
+    }
     # Older programmatic smoke callers have no hook panel argument.
     if getattr(args, "hook_runs", 0):
         try:
@@ -360,7 +398,9 @@ def main():
             temporary.replace(args.output)
             print(f"noise report: {args.output}; acceptance_ready={result['acceptance_ready']}")
             if result["errors"] or (
-                not args.hook_only and args.agent == "claude-code" and not result["acceptance_ready"]
+                not args.hook_only
+                and args.agent == "claude-code"
+                and not result["acceptance_ready"]
             ):
                 parser.exit(2, "eval-noise: incomplete or unconfirmed calibration; see report\n")
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as exc:

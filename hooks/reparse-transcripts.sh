@@ -5,7 +5,9 @@
 set -e
 
 CHITTA_BIN="${CHITTA_BIN:-$HOME/.claude/bin/chitta}"
-QUEUE_FILE="/tmp/chitta-queue.jsonl"
+MIND_PATH="${MIND_PATH:-${CHITTA_DB_PATH:-$HOME/.claude/mind}}"
+# Same derivation as queue_path in lib.sh: the queue lives with the mind.
+QUEUE_FILE="${CHITTA_QUEUE:-${CHITTA_QUEUE_PATH:-${MIND_PATH%/}/queue.jsonl}}"
 MAX_CONTENT=5000  # Truncate content to avoid huge entries
 
 # Parse a single transcript file

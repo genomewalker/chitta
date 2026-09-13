@@ -172,7 +172,10 @@ class MemoryStore:
             )
             data = json.loads(proc.stdout)
         except (OSError, subprocess.TimeoutExpired, ValueError) as exc:
-            print(f"sota_watch: recall unavailable ({exc}); assuming no existing cards", file=sys.stderr)
+            print(
+                f"sota_watch: recall unavailable ({exc}); assuming no existing cards",
+                file=sys.stderr,
+            )
             return set()
         if not isinstance(data, (list, dict)):
             print(
