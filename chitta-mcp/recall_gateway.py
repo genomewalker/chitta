@@ -12,12 +12,47 @@ without a running chittad:
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
+import time
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
+from functools import wraps
 from typing import Any, Callable, Protocol
 
 logger = logging.getLogger("chitta-mcp")
+
+
+@contextmanager
+def profile_stage(stage: str, **fields: Any):
+    """Opt-in monotonic stage timings on stderr; never log query or memory text."""
+    if os.environ.get("CHITTA_MCP_PROFILE") != "1":
+        yield
+        return
+    started = time.monotonic()
+    try:
+        yield
+    finally:
+        logger.warning(
+            "mcp_profile stage=%s elapsed_ms=%.3f %s",
+            stage,
+            (time.monotonic() - started) * 1000,
+            " ".join(f"{key}={value}" for key, value in fields.items()),
+        )
+
+
+def profile_async(stage: str):
+    def decorate(func):
+        @wraps(func)
+        async def wrapped(*args, **kwargs):
+            with profile_stage(stage):
+                return await func(*args, **kwargs)
+
+        return wrapped
+
+    return decorate
+
 
 RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 # How many extra candidates to pull before reranking, as a multiple of `limit`.
@@ -33,7 +68,17 @@ _rerank_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="chitta-
 async def run_reranker(func: Callable[..., Any], *args: Any) -> Any:
     """Run model loading or inference on the dedicated serial executor."""
     loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(_rerank_executor, func, *args)
+    queued = time.monotonic()
+
+    def run():
+        if os.environ.get("CHITTA_MCP_PROFILE") == "1":
+            logger.warning(
+                "mcp_profile stage=rerank_queue elapsed_ms=%.3f", (time.monotonic() - queued) * 1000
+            )
+        with profile_stage("rerank_" + getattr(func, "__name__", type(func).__name__)):
+            return func(*args)
+
+    return await loop.run_in_executor(_rerank_executor, run)
 
 
 class Reranker(Protocol):
@@ -64,31 +109,76 @@ class OnnxReranker:
     """
 
     def __init__(self, model_dir: str) -> None:
-        import onnxruntime as ort
-        from transformers import AutoTokenizer
+        with profile_stage("onnx_import"):
+            import onnxruntime as ort
 
-        self._tok = AutoTokenizer.from_pretrained(model_dir)
+        with profile_stage("tokenizer_load"):
+            tokenizer_file = os.path.join(model_dir, "tokenizer.json")
+            self._native_tokenizer = os.path.isfile(tokenizer_file)
+            if self._native_tokenizer:
+                # AutoTokenizer imports the Transformers/Torch stack (~10s cold)
+                # just to drive this same Rust tokenizer. The export already
+                # contains normalization, pair templates and special-token IDs.
+                from tokenizers import Tokenizer
+
+                with open(os.path.join(model_dir, "tokenizer_config.json")) as stream:
+                    config = json.load(stream)
+                pad = config.get("pad_token", "[PAD]")
+                if isinstance(pad, dict):
+                    pad = pad["content"]
+                self._tok = Tokenizer.from_file(tokenizer_file)
+                pad_id = self._tok.token_to_id(pad)
+                if pad_id is None:
+                    raise ValueError("exported tokenizer has no padding token")
+                self._tok.enable_truncation(
+                    max_length=RERANK_MAX_LEN,
+                    direction=config.get("truncation_side", "right"),
+                )
+                self._tok.enable_padding(
+                    pad_id=pad_id,
+                    pad_token=pad,
+                    direction=config.get("padding_side", "right"),
+                )
+            else:
+                # Older exports contain only vocab.txt; preserve their loader.
+                from transformers import AutoTokenizer
+
+                self._tok = AutoTokenizer.from_pretrained(model_dir)
         options = ort.SessionOptions()
         options.intra_op_num_threads = int(os.environ.get("CHITTA_RERANK_THREADS", "8"))
         options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-        self._sess = ort.InferenceSession(
-            os.path.join(model_dir, "model_int8.onnx"),
-            options,
-            providers=["CPUExecutionProvider"],
-        )
+        with profile_stage("onnx_session_load"):
+            self._sess = ort.InferenceSession(
+                os.path.join(model_dir, "model_int8.onnx"),
+                options,
+                providers=["CPUExecutionProvider"],
+            )
         self._innames = {i.name for i in self._sess.get_inputs()}
 
     def predict(self, pairs: list[tuple[str, str]]) -> Any:
         if not pairs:
             return []
-        enc = self._tok(
-            [p[0] for p in pairs],
-            [p[1] for p in pairs],
-            padding=True,
-            truncation=True,
-            max_length=RERANK_MAX_LEN,
-            return_tensors="np",
-        )
+        with profile_stage("tokenize", candidates=len(pairs)):
+            if self._native_tokenizer:
+                import numpy as np
+
+                encoded = self._tok.encode_batch(pairs)
+                enc = {
+                    "input_ids": np.asarray([e.ids for e in encoded], dtype=np.int64),
+                    "attention_mask": np.asarray(
+                        [e.attention_mask for e in encoded], dtype=np.int64
+                    ),
+                    "token_type_ids": np.asarray([e.type_ids for e in encoded], dtype=np.int64),
+                }
+            else:
+                enc = self._tok(
+                    [p[0] for p in pairs],
+                    [p[1] for p in pairs],
+                    padding=True,
+                    truncation=True,
+                    max_length=RERANK_MAX_LEN,
+                    return_tensors="np",
+                )
         feed = {k: v for k, v in enc.items() if k in self._innames}
         return self._sess.run(None, feed)[0][:, 0]
 

@@ -1,0 +1,37 @@
+mcp_profile stage=rerank_queue elapsed_ms=0.428
+asyncio scheduling delay 1000.6ms exceeds 200.0ms threshold
+mcp_profile stage=rerank_get_reranker elapsed_ms=10465.345 
+mcp_profile stage=daemon_connect elapsed_ms=0.098 tool=hybrid_recall
+mcp_profile stage=daemon_rpc elapsed_ms=123.051 tool=hybrid_recall
+mcp_profile stage=rerank_queue elapsed_ms=0.126
+mcp_profile stage=rerank_predict elapsed_ms=138.246 
+mcp_profile stage=recall_gateway elapsed_ms=10730.199 
+mcp_profile stage=compression elapsed_ms=100.020 tool=recall
+mcp_profile stage=tools_call elapsed_ms=10830.439 
+mcp_profile stage=rerank_queue elapsed_ms=0.155
+mcp_profile stage=rerank_get_reranker elapsed_ms=0.002 
+mcp_profile stage=daemon_connect elapsed_ms=0.005 tool=hybrid_recall
+mcp_profile stage=daemon_rpc elapsed_ms=119.472 tool=hybrid_recall
+mcp_profile stage=rerank_queue elapsed_ms=0.078
+mcp_profile stage=rerank_predict elapsed_ms=148.199 
+mcp_profile stage=recall_gateway elapsed_ms=269.785 
+mcp_profile stage=compression elapsed_ms=97.631 tool=recall
+mcp_profile stage=tools_call elapsed_ms=367.637 
+mcp_profile stage=rerank_queue elapsed_ms=0.145
+mcp_profile stage=rerank_get_reranker elapsed_ms=0.003 
+mcp_profile stage=daemon_connect elapsed_ms=0.002 tool=hybrid_recall
+mcp_profile stage=daemon_rpc elapsed_ms=119.852 tool=hybrid_recall
+mcp_profile stage=rerank_queue elapsed_ms=0.066
+mcp_profile stage=rerank_predict elapsed_ms=158.616 
+mcp_profile stage=recall_gateway elapsed_ms=280.714 
+mcp_profile stage=compression elapsed_ms=87.515 tool=recall
+mcp_profile stage=tools_call elapsed_ms=368.471 
+mcp_profile stage=rerank_queue elapsed_ms=0.242
+mcp_profile stage=rerank_get_reranker elapsed_ms=0.002 
+mcp_profile stage=daemon_connect elapsed_ms=0.003 tool=hybrid_recall
+mcp_profile stage=daemon_rpc elapsed_ms=123.054 tool=hybrid_recall
+mcp_profile stage=rerank_queue elapsed_ms=0.071
+mcp_profile stage=rerank_predict elapsed_ms=147.863 
+mcp_profile stage=recall_gateway elapsed_ms=273.424 
+mcp_profile stage=compression elapsed_ms=5.795 tool=recall
+mcp_profile stage=tools_call elapsed_ms=279.434 

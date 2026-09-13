@@ -20,6 +20,7 @@ import hashlib
 import itertools
 import json
 import logging
+import math
 import os
 import re
 import socket
@@ -59,6 +60,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from recall_gateway import (  # noqa: E402
     RERANK_FETCH_MUL,
     get_reranker,
+    profile_async,
+    profile_stage,
     rrf_merge,
     run_reranker,
 )
@@ -85,9 +88,7 @@ def loop_lag_stats() -> dict[str, float | int]:
     }
 
 
-async def monitor_loop_lag(
-    interval_ms: float | None = None, warn_ms: float | None = None
-) -> None:
+async def monitor_loop_lag(interval_ms: float | None = None, warn_ms: float | None = None) -> None:
     """Measure asyncio scheduling delay and warn when it crosses the threshold."""
     global _loop_lag_max_ms, _loop_lag_over_count
     if interval_ms is None:
@@ -120,19 +121,126 @@ async def _stop_loop_lag_monitor(task: asyncio.Task) -> None:
         pass
 
 
+class HttpSessionTable(dict):
+    """SDK transport table with monotonic activity, bounded admission and reaping.
+
+    The SDK inserts through __setitem__ and looks up existing sessions through
+    __getitem__. Its creation lock is replaced by this async context manager so
+    capacity is reserved atomically before a transport (and server task) exists.
+    """
+
+    def __init__(self, owners, idle_s=1800.0, max_sessions=64):
+        super().__init__()
+        self.owners = owners
+        self.idle_s = idle_s
+        self.max_sessions = max_sessions
+        self.last_seen = {}
+        self.created = self.expired = self.evicted = 0
+        self.lock = asyncio.Lock()
+
+    def __setitem__(self, key, value):
+        super().__setitem__(key, value)
+        self.last_seen[key] = time.monotonic()
+        self.created += 1
+
+    def __getitem__(self, key):
+        value = super().__getitem__(key)
+        self.last_seen[key] = time.monotonic()
+        return value
+
+    def stats(self):
+        return {
+            "active": len(self),
+            "created": self.created,
+            "expired": self.expired,
+            "evicted": self.evicted,
+            "max_sessions": self.max_sessions,
+            "idle_s": self.idle_s,
+        }
+
+    async def _remove(self, key, reason):
+        transport = self.pop(key, None)
+        self.last_seen.pop(key, None)
+        self.owners.pop(key, None)
+        if transport is not None:
+            if reason == "expired":
+                self.expired += 1
+            elif reason == "evicted":
+                self.evicted += 1
+            await transport.terminate()
+
+    async def _reap(self):
+        now = time.monotonic()
+        for key in list(self.last_seen):
+            if key not in self:
+                self.last_seen.pop(key, None)
+                self.owners.pop(key, None)
+            elif self.get(key).is_terminated:
+                await self._remove(key, "closed")
+            elif now - self.last_seen[key] > self.idle_s:
+                await self._remove(key, "expired")
+
+    async def reap(self):
+        async with self.lock:
+            await self._reap()
+
+    async def __aenter__(self):
+        await self.lock.acquire()
+        try:
+            await self._reap()
+            while len(self) >= self.max_sessions:
+                oldest = min(self, key=lambda key: self.last_seen[key])
+                await self._remove(oldest, "evicted")
+        except BaseException:
+            self.lock.release()
+            raise
+        return self
+
+    async def __aexit__(self, *exc):
+        self.lock.release()
+
+    async def monitor(self):
+        while True:
+            await asyncio.sleep(min(30.0, self.idle_s / 2))
+            await self.reap()
+
+
+_http_sessions: HttpSessionTable | None = None
+
+
+def _session_setting(name, default, kind):
+    try:
+        value = kind(os.environ.get(name, str(default)))
+        if not math.isfinite(value) or value <= 0:
+            raise ValueError("must be finite and positive")
+        return value
+    except ValueError:
+        logger.warning("invalid %s; using %s", name, default)
+        return default
+
+
+def http_session_stats():
+    return _http_sessions.stats() if _http_sessions is not None else {"active": 0}
+
+
 def _with_loop_lag_health(result: str) -> str:
     """Attach MCP loop counters without assuming the daemon health format."""
     stats = loop_lag_stats()
+    sessions = http_session_stats()
     try:
         payload = json.loads(result)
     except (json.JSONDecodeError, TypeError):
-        suffix = json.dumps({"mcp_loop_lag": stats}, separators=(",", ":"))
+        suffix = json.dumps(
+            {"mcp_loop_lag": stats, "mcp_sessions": sessions}, separators=(",", ":")
+        )
         return f"{result.rstrip()}\n{suffix}" if result else suffix
     if isinstance(payload, dict):
         payload["mcp_loop_lag"] = stats
+        payload["mcp_sessions"] = sessions
         return json.dumps(payload)
-    suffix = json.dumps({"mcp_loop_lag": stats}, separators=(",", ":"))
+    suffix = json.dumps({"mcp_loop_lag": stats, "mcp_sessions": sessions}, separators=(",", ":"))
     return f"{result.rstrip()}\n{suffix}"
+
 
 # Tools to HIDE from tools/list (still callable, just not listed)
 # Goal: Expose only ~30 essential tools to save context tokens
@@ -1063,7 +1171,9 @@ def daemon_call(tool_name: str, arguments: dict, structured: bool = False) -> st
     """
     global client
 
-    if not ensure_daemon():
+    with profile_stage("daemon_connect", tool=tool_name):
+        connected = ensure_daemon()
+    if not connected:
         return "Error: Failed to connect to daemon"
 
     arguments = _normalize_args(arguments)
@@ -1085,7 +1195,8 @@ def daemon_call(tool_name: str, arguments: dict, structured: bool = False) -> st
         "params": {"name": tool_name, "arguments": arguments},
     }
 
-    response = client.call(req)
+    with profile_stage("daemon_rpc", tool=tool_name):
+        response = client.call(req)
 
     # If no response, connection might be stale - try reconnecting once
     if not response:
@@ -2312,6 +2423,7 @@ def handle_recall_smart(arguments: dict) -> str:
     return json.dumps({"results": merged, "plan": plan})
 
 
+@profile_async("recall_gateway")
 async def handle_recall_gateway(arguments: dict) -> str:
     """Unified recall with strategy routing and optional cross-encoder reranking.
 
@@ -2742,6 +2854,7 @@ def _sqz_compress(text: str, tool_name: str = "mcp") -> str:
 
 
 @server.call_tool()
+@profile_async("tools_call")
 async def call_tool(name: str, arguments: dict):
     """Handle tool calls - composite tools handled locally, others forwarded to daemon."""
     global current_session_id
@@ -2892,7 +3005,8 @@ async def call_tool(name: str, arguments: dict):
         # Forward to daemon
         result = await loop.run_in_executor(_executor, daemon_call, name, arguments)
 
-    result = _sqz_compress(result, name)
+    with profile_stage("compression", tool=name):
+        result = _sqz_compress(result, name)
     if name == "health_check":
         result = _with_loop_lag_health(result)
 
@@ -2944,25 +3058,55 @@ def _mcp_token() -> str:
         return ""
 
 
+def create_http_session_manager():
+    from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
+
+    class BoundedSessionManager(StreamableHTTPSessionManager):
+        async def handle_request(self, scope, receive, send):
+            # Reject expired IDs even between periodic sweeps, before the SDK
+            # looks them up and refreshes last_seen.
+            await self._server_instances.reap()
+            await super().handle_request(scope, receive, send)
+
+    global _http_sessions
+    session_manager = BoundedSessionManager(
+        app=server,
+        json_response=True,
+        stateless=False,
+    )
+    _http_sessions = HttpSessionTable(
+        session_manager._session_owners,
+        idle_s=_session_setting("CHITTA_MCP_SESSION_IDLE_S", 1800.0, float),
+        max_sessions=_session_setting("CHITTA_MCP_MAX_SESSIONS", 64, int),
+    )
+    # Keep SDK transport cleanup and ownership checks; bound its creation path.
+    session_manager._server_instances = _http_sessions
+    session_manager._session_creation_lock = _http_sessions
+
+    return session_manager
+
+
 def _run_http(port: int):
     """Run as streamable HTTP MCP server for Codex, Cursor, Copilot CLI etc."""
-    from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
     from starlette.applications import Starlette
     from starlette.responses import JSONResponse, PlainTextResponse
     from starlette.routing import Mount
 
     token = _mcp_token()
 
-    session_manager = StreamableHTTPSessionManager(
-        app=server,
-        json_response=True,
-        stateless=True,
-    )
+    session_manager = create_http_session_manager()
 
     from starlette.routing import Route
 
     async def health(request):
-        return JSONResponse({"status": "ok", "server": "chitta-mcp", "transport": "http"})
+        return JSONResponse(
+            {
+                "status": "ok",
+                "server": "chitta-mcp",
+                "transport": "http",
+                "mcp_sessions": http_session_stats(),
+            }
+        )
 
     async def auth_middleware(scope, receive, send):
         if scope["type"] == "http" and scope.get("path", "").startswith("/mcp"):
@@ -2995,10 +3139,12 @@ def _run_http(port: int):
         logger.warning(f"chitta-mcp HTTP listening on http://127.0.0.1:{port}/mcp")
 
         lag_task = asyncio.create_task(monitor_loop_lag())
+        session_task = asyncio.create_task(_http_sessions.monitor())
         try:
             async with session_manager.run():
                 await http_server.serve()
         finally:
+            await _stop_loop_lag_monitor(session_task)
             await _stop_loop_lag_monitor(lag_task)
 
     asyncio.run(run())

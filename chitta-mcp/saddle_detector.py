@@ -87,7 +87,7 @@ def find_episodes(events: list[dict], min_fails: int, window: int, threshold: fl
         fails = [i]
         escaped = False
         end_idx = i
-        for j, (i2, r2) in enumerate(bash[k + 1 : k + 1 + window], start=1):
+        for _j, (i2, r2) in enumerate(bash[k + 1 : k + 1 + window], start=1):
             if i2 in used:
                 break
             if not similar(anchor, normalize(r2.get("cmd_head", "")), threshold):

@@ -1,0 +1,43 @@
+mcp_profile stage=rerank_queue elapsed_ms=0.371
+mcp_profile stage=onnx_import elapsed_ms=211.049 
+mcp_profile stage=tokenizer_load elapsed_ms=38.523 
+mcp_profile stage=onnx_session_load elapsed_ms=97.953 
+mcp_profile stage=rerank_get_reranker elapsed_ms=348.048 
+mcp_profile stage=daemon_connect elapsed_ms=0.120 tool=hybrid_recall
+mcp_profile stage=daemon_rpc elapsed_ms=452.682 tool=hybrid_recall
+mcp_profile stage=rerank_queue elapsed_ms=0.064
+mcp_profile stage=tokenize elapsed_ms=8.419 candidates=40
+mcp_profile stage=rerank_predict elapsed_ms=173.498 
+mcp_profile stage=recall_gateway elapsed_ms=977.026 
+mcp_profile stage=compression elapsed_ms=89.042 tool=recall
+mcp_profile stage=tools_call elapsed_ms=1066.324 
+mcp_profile stage=rerank_queue elapsed_ms=0.132
+mcp_profile stage=rerank_get_reranker elapsed_ms=0.004 
+mcp_profile stage=daemon_connect elapsed_ms=0.004 tool=hybrid_recall
+mcp_profile stage=daemon_rpc elapsed_ms=124.021 tool=hybrid_recall
+mcp_profile stage=rerank_queue elapsed_ms=0.076
+mcp_profile stage=tokenize elapsed_ms=5.630 candidates=40
+mcp_profile stage=rerank_predict elapsed_ms=159.063 
+mcp_profile stage=recall_gateway elapsed_ms=285.147 
+mcp_profile stage=compression elapsed_ms=84.816 tool=recall
+mcp_profile stage=tools_call elapsed_ms=370.181 
+mcp_profile stage=rerank_queue elapsed_ms=0.131
+mcp_profile stage=rerank_get_reranker elapsed_ms=0.002 
+mcp_profile stage=daemon_connect elapsed_ms=0.003 tool=hybrid_recall
+mcp_profile stage=daemon_rpc elapsed_ms=139.847 tool=hybrid_recall
+mcp_profile stage=rerank_queue elapsed_ms=0.065
+mcp_profile stage=tokenize elapsed_ms=7.174 candidates=40
+mcp_profile stage=rerank_predict elapsed_ms=170.958 
+mcp_profile stage=recall_gateway elapsed_ms=313.162 
+mcp_profile stage=compression elapsed_ms=85.918 tool=recall
+mcp_profile stage=tools_call elapsed_ms=399.316 
+mcp_profile stage=rerank_queue elapsed_ms=0.147
+mcp_profile stage=rerank_get_reranker elapsed_ms=0.003 
+mcp_profile stage=daemon_connect elapsed_ms=0.003 tool=hybrid_recall
+mcp_profile stage=daemon_rpc elapsed_ms=471.203 tool=hybrid_recall
+mcp_profile stage=rerank_queue elapsed_ms=0.087
+mcp_profile stage=tokenize elapsed_ms=6.887 candidates=40
+mcp_profile stage=rerank_predict elapsed_ms=166.512 
+mcp_profile stage=recall_gateway elapsed_ms=639.923 
+mcp_profile stage=compression elapsed_ms=5.410 tool=recall
+mcp_profile stage=tools_call elapsed_ms=645.601 
