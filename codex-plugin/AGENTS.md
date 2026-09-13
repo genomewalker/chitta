@@ -8,7 +8,7 @@ the end of the file (#13386, #37956). Anything that must survive lives up here.
 
 1. **Never `pkill` the `--http` MCP process.** It is your own transport on port
    9481. SIGTERM reads as a clean exit, so `Restart=on-failure` won't revive it —
-   port 9481 stayed dead 2026-09-02 to 09-08. Use `bash scripts/dev-install.sh`.
+   port 9481 stayed dead 2026-09-02 to 09-08. Recovery belongs to the orchestrator.
 2. **Work in your own git worktree, never on `main`.** One worktree per stream.
 3. **`install`, never `cp`, over a running binary** — `cp` gives ETXTBSY.
 4. **The worktree files are the state, not your context.** Do not rely on Astra's
@@ -44,10 +44,8 @@ codex exec -C /projects/caeg/scratch/kbd606/tmp/codex-wt-<name> \
   -o /path/to/last-message.txt "<spec>" </dev/null
 ```
 
-- **Effort:** `high` for implementation. Reach for `xhigh` or `max` only when an
-  eval shows it helps. Never `ultra` unattended — it silently spawns sub-agents on
-  other models, which is a cost and audit black box. Astra itself has no published
-  effort recommendation.
+- **Effort:** use the model and effort assigned by the task. Do not change them
+  or delegate merely because another setting is available.
 - **Approvals:** `--approve-for-me` works in **this** dev build (verified in
   `codex exec --help`) but is absent from the public docs; fall back to `-a never`.
   It implies the workspace-write sandbox and cannot be combined with `-s/--sandbox`
@@ -58,10 +56,6 @@ codex exec -C /projects/caeg/scratch/kbd606/tmp/codex-wt-<name> \
 - **Getting the result out:** `-o/--output-last-message FILE` is the robust way to
   capture the final message; `--json` emits events as JSONL for tracking. Parsing
   the terminal transcript is not reliable.
-- `~/.codex/config.toml` defaults to `gpt-5.6-sol` at `xhigh`, so pass `-m`
-  explicitly. Also local: `gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.5`,
-  `gpt-5.3-codex-spark`. The CLI cannot list models or effort names
-  non-interactively — check `codex --help` or the picker before using another.
 
 ## Reaching chitta
 
@@ -85,7 +79,11 @@ text matching, not authority — state failures explicitly in your own report.
 
 ## Working in a worktree (what a stream may do)
 
-Bootstrap, from the repo root the orchestrator gives you:
+If the task supplies a worktree and branch, reuse them. Confirm `pwd`,
+`git branch --show-current`, and `git status --short` before editing. Create a
+worktree only when one was not supplied. Hook-only changes need no native build.
+
+Bootstrap when needed:
 
 ```bash
 git worktree add -b <branch> /projects/caeg/scratch/kbd606/tmp/codex-wt-<name> main
@@ -118,25 +116,37 @@ orchestrator builds again on `main` and deploys after review. Streams run in
 parallel only on disjoint file sets; if your spec's scope overlaps another
 stream's, stop and say so.
 
-## Build & deploy (orchestrator only)
+## Hook experiments in an isolated worktree
 
-```bash
-cd chitta && cmake --build build --parallel && cd ..
-install -m 0755 bin/chittad ~/.claude/bin/chittad
-install -m 0755 bin/chitta  ~/.claude/bin/chitta
-[ -f bin/chitta_hintd ] && install -m 0755 bin/chitta_hintd ~/.claude/bin/chitta_hintd
-systemctl --user restart chittad
-systemctl --user try-restart chitta-hintd 2>/dev/null || true
-bash scripts/dev-install.sh
-```
+- Unset **both** `CHITTA_HEADLESS` and `CC_SOUL_HEADLESS` for hook tests and
+  benchmarks. Either one bypasses prompt recall and returns `{}`; an all-empty
+  benchmark is not a latency result. Export test overrides when shell functions
+  launch child hooks; check both aliases when inherited settings interfere.
+- For tests, use a temporary `HOME` (create `$HOME/.claude/mind`),
+  `XDG_RUNTIME_DIR`, `CHITTA_DB_PATH`, `CHITTA_QUEUE`, and `CHITTA_TASK_LEDGER`.
+  The turn counter still uses `$HOME/.claude/mind`; changing the DB path alone
+  does not isolate every hook write. For `test_post_bash_payloads.sh`, set
+  `CHITTA_BIN=/bin/true` to satisfy its executable gate without live RPCs.
+  Resolve the live socket before changing HOME.
+- `scripts/bench-recall-lanes.sh` already isolates state and wraps the CLI with a
+  read-only allowlist. If this worktree has no `bin/chitta`, set
+  `CHITTA_BENCH_BIN` to an existing CLI explicitly; do not install to benchmark.
+  Keep the benchmark unchanged and report repetitions, both arms' median/p95,
+  empties, and failures. Frozen-replica evaluation and the verdict belong to the
+  caller; live timing alone does not establish a gain.
+- Trace `hooks/prompt-core.sh` directly: `prompt-hook.sh` execs it, so tracing
+  only the adapter does not trace the core. Reuse the benchmark's isolation and
+  read-only wrapper. On this host Bash 4.4 has no `EPOCHREALTIME`; use
+  `PS4='+T$(date +%s%N) ${LINENO}: '` and a separate trace fd opened before
+  assigning `BASH_XTRACEFD`. Traces locate delays but add substantial overhead;
+  measure latency without `bash -x`. A small lane timing is not the total cost
+  of shell parsing, admission, heartbeat, and enrichment.
+- Recall text begins with a summary/warning. Select a nonempty memory result
+  (`#<id> [pct%] [type] content`) before adding a continuity heading. Test both
+  header-only and populated responses with enough output budget to expose them.
 
-`chitta_hintd` exists only in a `CHITTA_WITH_LLAMA_CPP=ON` build. The MCP process
-name uses a hyphen, `chitta-mcp`; a pattern with a space matches nothing.
-
-Hooks and MCP Python run from `~/.claude/hooks/*` and the plugin cache, not from a
-checkout — `dev-install.sh` symlinks both back here, and a plugin update can
-replace those symlinks with a stale clone, so re-run it afterwards. Binaries stay
-on the build-and-install flow above. Release: `./scripts/release.sh patch|minor|major -y`.
+Deployment instructions remain in `CLAUDE.md` for the orchestrator. Source
+changes in this worktree become live only through that reviewed deployment.
 
 ## Orientation
 
@@ -150,8 +160,7 @@ on the build-and-install flow above. Release: `./scripts/release.sh patch|minor|
 
 `hooks/pre-tool-hook.sh` is the enforcement layer: its behaviour, the `CHITTA_*`
 table, bypass flags, and the `CC_SOUL_*` aliases are in `docs/HOOKS.md` and
-`docs/RENAME.md`. Its Haiku routing applies to Claude Code, not to you. A
-`CHITTA_*` command prefix does not reach a nested bash — `export` it first.
+`docs/RENAME.md`. Its Haiku routing applies to Claude Code, not to you.
 
 **Sources.** Codex [AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md)
 and the approvals reference; `gpt-6-astra` (openai.com/index/gpt-6-astra,
@@ -161,22 +170,3 @@ issues Sept 2026: #13386 and #37956 silent doc truncation; #34289 no PostToolUse
 exit code; #26602 flag ordering; #41378 bearer-token propagation; #41600
 streamable-HTTP session leak; #43194, #43335, #42449 context-management state loss;
 #44305 tool-output amplification. Claude-side sources are in `docs/HOOKS.md`.
-
-<!-- BEGIN sqz-claude-guidance (auto-installed by sqz init; remove this block to disable) -->
-
-## sqz — context compression
-
-`sqz` compresses verbose tool output. A PreToolUse hook already pipes `Bash`
-output through it, so do not add `| sqz compress` by hand; compound and
-interactive commands are skipped automatically.
-
-The `sqz-mcp` server exposes `sqz_read_file`, `sqz_grep`, and `sqz_list_dir` —
-prefer them over `Read`, `Grep`, and `ls` for anything over a few KB. There are no
-write tools by design.
-
-A `§ref:HASH§` token is a dedup reference to content already seen. Resolve one
-with `sqz expand <prefix>`, or the `expand` MCP tool. To opt out for one command,
-prefix `SQZ_NO_DEDUP=1`; `passthrough` returns raw text if compression is making a
-task harder.
-
-<!-- END sqz-claude-guidance -->

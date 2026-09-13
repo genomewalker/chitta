@@ -158,6 +158,27 @@ after a plugin update, which can replace those symlinks with a fresh clone.
 8. Run `anticipation_predict` for context-based predictions
 9. Output combined context
 
+#### Prompt latency investigation and session continuity (2026-09-13)
+
+Proposal `69a8f047e822354f` reported a ~2 s floor despite fast recall lanes.
+The unchanged worktree benchmark did **not** reproduce a fixed floor: 15 runs
+per arm measured median/p95 totals of 1311/3009 ms (standalone) and
+1210/3105 ms (RPC), with zero empties. Timestamped core traces showed actual
+recall waits, including a 2014 ms RPC with a 2001 ms correction lane, plus
+shell/heartbeat/enrichment overhead. A status probe also timed out. These live
+measurements do not establish the preregistered gain or a root cause for the
+original floor. Lane scheduling, timeouts, admission, and `[admit]`/`t:` contracts
+remain unchanged pending reproducible evidence; the <900 ms target is unmet.
+See `Documentation.md` for commands, before/after results, and limitations.
+
+The empty `[last-session] Found 1 results ...` message had a confirmed cause:
+`prompt-core.sh` selected the first nonblank recall line, which is the summary
+header, and discarded the memory body. Continuity now requires a canonical
+memory result with nonblank content before emitting `[last-session]`. Empty,
+warning-only, summary-only, and metadata-only responses produce no heading.
+This affects the prompt continuity lane, not the separate SessionStart recap
+card. Regression coverage exercises both RPC and standalone recall paths.
+
 ### PostToolUse
 
 **What chitta Does:**
