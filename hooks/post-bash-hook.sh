@@ -41,6 +41,18 @@ if [[ "$_hook_event" == "PostToolUseFailure" ]]; then
     exit_code="${exit_code:-1}"
     output=""
     stderr=$(printf '%s' "$_err" | tail -n +2 | head -c 500)
+elif echo "$STDIN_DATA" | jq -e '.tool_response | type == "string"' >/dev/null 2>&1; then
+    # Codex shape (captured 2026-09-13): PostToolUse fires for failures too, but
+    # tool_response is the aggregated output STRING with no exit code. Recording
+    # 0 here would book every Codex failure as a success (it did, until today).
+    # exit_code stays "null" (unknown); a text heuristic flags likely failures.
+    output=$(echo "$STDIN_DATA" | jq -r '.tool_response' | head -c 500)
+    stderr=""
+    exit_code=0          # downstream branches keep their pre-existing behavior
+    exit_known=0         # ...but the ledger must not claim success
+    if printf '%s' "$output" | grep -qiE 'No such file|command not found|Permission denied|Traceback \(most recent|^Error[: ]|FAILED|fatal:|Exit code [1-9]'; then
+        likely_fail=1
+    fi
 else
     exit_code=$(echo "$STDIN_DATA" | jq -r '(.tool_response // .tool_result // {}) | .exit_code // 0')
     output=$(echo "$STDIN_DATA" | jq -r '(.tool_response // .tool_result // {}) | .stdout // empty' | head -c 500)
@@ -53,7 +65,9 @@ if [[ -n "$command" && -f "${SCRIPT_DIR}/outcome-ledger.sh" ]]; then
     source "${SCRIPT_DIR}/outcome-ledger.sh" 2>/dev/null
     _lg_sid=$(echo "$STDIN_DATA" | jq -r '.session_id // "unknown"' 2>/dev/null)
     _lg_cmd=$(printf '%s' "${command:0:80}" | jq -Rs . 2>/dev/null)
-    ledger_append "{\"event\":\"bash_outcome\",\"exit_code\":${exit_code:-0},\"cmd_head\":${_lg_cmd:-\"\"}}" "$_lg_sid" 2>/dev/null || true
+    _lg_exit="${exit_code:-0}"; [[ "${exit_known:-1}" == "0" ]] && _lg_exit="null"
+    _lg_extra=""; [[ "${likely_fail:-0}" == "1" ]] && _lg_extra=',"likely_fail":true'
+    ledger_append "{\"event\":\"bash_outcome\",\"exit_code\":${_lg_exit},\"cmd_head\":${_lg_cmd:-\"\"}${_lg_extra}}" "$_lg_sid" 2>/dev/null || true
 fi
 
 # Normalize command to first word (basename only)

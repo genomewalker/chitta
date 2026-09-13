@@ -33,6 +33,15 @@ _NUM = re.compile(r"\d+")
 _WS = re.compile(r"\s+")
 
 
+def failed(r: dict) -> bool:
+    """Codex PostToolUse payloads carry no exit code: the hook records
+    exit_code=null plus a likely_fail text heuristic. Unknown means unknown."""
+    code = r.get("exit_code", 0)
+    if code is None:
+        return bool(r.get("likely_fail"))
+    return int(code) != 0
+
+
 def normalize(head: str) -> str:
     """Collapse the volatile parts of a command head so retries compare equal."""
     h = _NUM.sub("#", head.strip().lower())
@@ -72,7 +81,7 @@ def find_episodes(events: list[dict], min_fails: int, window: int, threshold: fl
     episodes: list[dict] = []
     used: set[int] = set()
     for k, (i, r) in enumerate(bash):
-        if i in used or int(r.get("exit_code", 0)) == 0:
+        if i in used or not failed(r):
             continue
         anchor = normalize(r.get("cmd_head", ""))
         fails = [i]
@@ -84,7 +93,7 @@ def find_episodes(events: list[dict], min_fails: int, window: int, threshold: fl
             if not similar(anchor, normalize(r2.get("cmd_head", "")), threshold):
                 continue
             end_idx = i2
-            if int(r2.get("exit_code", 0)) == 0:
+            if not failed(r2):
                 escaped = True
                 break
             fails.append(i2)
@@ -116,7 +125,7 @@ def report(by_session: dict[str, list[dict]], args) -> dict:
     for sid, evs in by_session.items():
         eps = find_episodes(evs, args.min_fails, args.window, args.similarity)
         n_bash = sum(1 for r in evs if r.get("event") == "bash_outcome")
-        n_fail = sum(1 for r in evs if r.get("event") == "bash_outcome" and int(r.get("exit_code", 0)) != 0)
+        n_fail = sum(1 for r in evs if r.get("event") == "bash_outcome" and failed(r))
         total_bash += n_bash
         total_fail += n_fail
         if eps:

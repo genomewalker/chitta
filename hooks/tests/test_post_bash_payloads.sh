@@ -28,4 +28,14 @@ printf '%s' '{"session_id":"t-legacy","tool_name":"Bash","tool_input":{"command"
   | bash "$hook" >/dev/null 2>&1 || true
 check "legacy tool_result shape still records" "$(grep t-legacy "$T/outcome_ledger.jsonl")" '"exit_code":0'
 
+# Codex: PostToolUse fires for failures but tool_response is a plain string
+# with no exit code — must record null (unknown) + likely_fail, never 0.
+printf '%s' '{"hook_event_name":"PostToolUse","session_id":"t-codex-fail","tool_name":"Bash","tool_input":{"command":"ls ./nope"},"tool_response":"ls: cannot access ./nope: No such file or directory\n"}' \
+  | bash "$hook" >/dev/null 2>&1 || true
+check "codex string response records null exit" "$(grep t-codex-fail "$T/outcome_ledger.jsonl")" '"exit_code":null'
+check "codex failure text sets likely_fail" "$(grep t-codex-fail "$T/outcome_ledger.jsonl")" '"likely_fail":true'
+printf '%s' '{"hook_event_name":"PostToolUse","session_id":"t-codex-ok","tool_name":"Bash","tool_input":{"command":"echo hi"},"tool_response":"hi\n"}' \
+  | bash "$hook" >/dev/null 2>&1 || true
+check "codex clean output has no likely_fail" "$(grep t-codex-ok "$T/outcome_ledger.jsonl" | grep -c likely_fail)" '0'
+
 exit $fail

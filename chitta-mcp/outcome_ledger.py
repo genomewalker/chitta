@@ -78,7 +78,14 @@ def compute_credit(events: list, window_s: int) -> dict:
             window = [o for o in outcomes if ts0 <= o.get("ts", 0) <= ts0 + window_s * 1000]
             if not window:
                 continue
-            all_zero = all(o.get("exit_code", 0) == 0 for o in window)
+            # Codex payloads carry no exit code (recorded as null) — only a
+            # likely_fail heuristic. Unknown outcomes never count as successes;
+            # a window with nothing known yields no verdict.
+            known = [o for o in window if o.get("exit_code") is not None]
+            flagged = any(o.get("likely_fail") for o in window)
+            if not known and not flagged:
+                continue
+            all_zero = all(o.get("exit_code") == 0 for o in known) and not flagged
             for mid in ids:
                 stats[mid]["successes" if all_zero else "failures"] += 1
     return stats
