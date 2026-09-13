@@ -1434,8 +1434,10 @@ if [[ ! -f "$MIND_PATH/.session_active" ]]; then
     # Surface last session summary for continuity
     recent_session=$(budget_left && timeout 1 "$CHITTA_BIN" recall --query "session_summary" --limit 1 2>/dev/null || true)
     if [[ -n "$recent_session" && "$recent_session" != *"No memories"* ]]; then
-        # Extract just the first relevant line
-        session_line=$(echo "$recent_session" | grep -v '^$' | head -1 | head -c 150)
+        # Recall begins with a count/maxrel header, even when no body survives.
+        # Only a result with nonblank content can supply continuity context.
+        session_line=$(printf '%s\n' "$recent_session" | \
+            grep -m1 -E '^#[0-9]+ \[[0-9]+%\] \[[^]]+\][[:space:]]+[^[:space:]]' | head -c 150)
         [[ -n "$session_line" ]] && ANTICIPATIONS="${ANTICIPATIONS}[last-session] ${session_line}
 "
     fi

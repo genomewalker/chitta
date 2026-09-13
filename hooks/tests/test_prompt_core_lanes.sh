@@ -40,7 +40,9 @@ case "$sub" in
     recall)
         strategy=$(get --strategy "$@")
         tag=$(get --tag "$@")
-        if [[ "$strategy" == "hybrid" ]]; then cat "${STUB_HYB_FILE:-/dev/null}"
+        query=$(get --query "$@")
+        if [[ "$query" == "session_summary" ]]; then cat "${STUB_SESSION_FILE:-/dev/null}"
+        elif [[ "$strategy" == "hybrid" ]]; then cat "${STUB_HYB_FILE:-/dev/null}"
         elif [[ "$strategy" == "keyword" ]]; then cat "${STUB_KW_FILE:-/dev/null}"
         elif [[ -n "$tag" ]]; then cat "${STUB_CORR_FILE:-/dev/null}"
         fi
@@ -272,5 +274,35 @@ assert "failed fan-in falls back to smart_recall" "grep -q '^smart_recall ' '$ST
 assert "failed fan-in falls back to recall lanes" "grep -q '^recall ' '$STUB_CALL_LOG'"
 assert "failed fan-in falls back to correction_check" "grep -q '^correction_check ' '$STUB_CALL_LOG'"
 assert "fallback lane output reaches normal admission" "grep -q '\[sem\]#31' '$T/stdout.rpc-fallback'"
+
+# Session continuity must select a result line, never a recall summary or warning.
+# Use a large output budget so truncation cannot hide a broken last-session block.
+STUB_SESSION_FILE="$T/session-summary"
+export STUB_SESSION_FILE
+for arm in 0 1; do
+    for fixture in header empty warning metadata populated; do
+        case "$fixture" in
+            header) printf 'Found 1 results (maxrel 80%%):\n' > "$STUB_SESSION_FILE" ;;
+            empty) : > "$STUB_SESSION_FILE" ;;
+            warning) printf '[weak: no strongly-relevant memory]\nFound 0 results:\n' > "$STUB_SESSION_FILE" ;;
+            metadata) printf 'Found 1 results (maxrel 80%%):\n#99 [80%%] [wisdom]   \n' > "$STUB_SESSION_FILE" ;;
+            populated)
+                printf 'Found 1 results (maxrel 80%%):\n#99 [80%%] [wisdom] persimmon continuity body\npersimmon continuity body\n' > "$STUB_SESSION_FILE"
+                ;;
+        esac
+        sid="session-$arm-$fixture"
+        rm -f "$MIND/.session_active"
+        CHITTA_RECALL_LANES_RPC="$arm" CHITTA_MAX_OUTPUT_CHARS=10000 \
+            run_hook "$sid" "what does the persimmon fixture show"
+        assert "$sid reaches recall output" "grep -q '\[soul\]' '$T/stdout.$sid'"
+        if [[ "$fixture" == populated ]]; then
+            assert "$sid includes the memory body" \
+                "grep -q '\[last-session\] #99 \[80%\] \[wisdom\] persimmon continuity body' '$T/stdout.$sid'"
+        else
+            assert "$sid suppresses empty continuity" "! grep -q '\[last-session\]' '$T/stdout.$sid'"
+        fi
+        assert "$sid never injects a recall header" "! grep -q '\[last-session\] Found' '$T/stdout.$sid'"
+    done
+done
 
 exit $FAIL

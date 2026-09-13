@@ -10,7 +10,7 @@ silently once past `project_doc_max_bytes`, dropping the end of the file
 (#13386, #37956).
 
 1. **Never `pkill` the `--http` MCP process** — it is Codex's own transport on port
-   9481 and does not self-restart. Use `bash scripts/dev-install.sh`.
+   9481 and does not self-restart. Recovery belongs to the orchestrator.
 2. **Implementation happens in its own git worktree, never on `main`.** One
    worktree per stream; never two streams in one checkout.
 3. **`install`, never `cp`, over a running binary** — `cp` gives ETXTBSY.
