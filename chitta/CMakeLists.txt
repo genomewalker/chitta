@@ -396,6 +396,7 @@ add_executable(chittad
     src/handlers/field_misc_io.cpp
     src/handlers/field_operator.cpp
     src/handlers/field_session.cpp
+    src/handlers/field_task_ledger.cpp
     src/handlers/field_system.cpp
     src/handlers/intervention.cpp
     src/handlers/learning.cpp
@@ -476,7 +477,14 @@ if(CHITTA_BUILD_TESTS)
                 $<TARGET_FILE:chittad> $<TARGET_FILE:chitta_tool>
                 ${CMAKE_CURRENT_SOURCE_DIR}/../hooks/lib.sh ${CHITTA_EMBED_DIM})
         set_tests_properties(daemon_isolation_test PROPERTIES TIMEOUT 240)
+        add_test(NAME task_ledger_integration_test
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/task_ledger_integration_test.py
+                $<TARGET_FILE:chittad> ${CHITTA_EMBED_DIM})
+        set_tests_properties(task_ledger_integration_test PROPERTIES TIMEOUT 240)
     endif()
+    add_executable(task_ledger_test src/task_ledger_test.cpp)
+    target_link_libraries(task_ledger_test PRIVATE chitta)
+    add_test(NAME task_ledger_test COMMAND task_ledger_test)
     add_executable(thread_pool_test src/thread_pool_test.cpp)
     target_link_libraries(thread_pool_test PRIVATE chitta)
     add_test(NAME thread_pool_test COMMAND thread_pool_test)
@@ -513,6 +521,7 @@ if(CHITTA_BUILD_TESTS)
     add_test(NAME maintenance_jitter_test COMMAND maintenance_jitter_test)
 
     set(CHITTA_TEST_TARGETS
+        task_ledger_test
         thread_pool_test llm_probe_test callsite_extract_test
         value_fact_extract_test mdl_gate_test prefilter_keep_test
         hit_line_test tool_spec_test rpc_work_policy_test recall_lanes_test

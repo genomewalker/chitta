@@ -28,7 +28,7 @@ chitta-stack = "stack:main"
 [tool.setuptools]
 py-modules = [
     "server", "install", "sync_tools", "tools_static", "stack",
-    "task_ledger", "resume_capsule", "resume_selector",
+    "daemon_client", "task_ledger", "resume_capsule", "resume_selector",
     "session_registry", "thread_inference",
     # server.py imports this at module scope — omitting it makes an installed
     # package fail on import.

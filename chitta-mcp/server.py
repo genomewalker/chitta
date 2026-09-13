@@ -17,19 +17,15 @@ from __future__ import annotations
 import asyncio
 import datetime
 import hashlib
-import itertools
 import json
 import logging
 import math
 import os
 import re
-import socket
 import subprocess
 import sys
-import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from http.client import HTTPException
 from pathlib import Path
 from typing import Any
 
@@ -57,6 +53,13 @@ from mcp.types import (  # noqa: E402
 # modules that existed at install time, so a newly added sibling is invisible
 # to it (incident 2026-09-08: chitta-mcp-http crash-looped on recall_gateway).
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from daemon_client import (  # noqa: E402, F401
+    ChittaClient,
+    ChittaHttpClient,
+    djb2_hash,
+    get_socket_dir,
+    get_socket_path,
+)
 from recall_gateway import (  # noqa: E402
     RERANK_FETCH_MUL,
     get_reranker,
@@ -766,14 +769,6 @@ def clean_tool_schema(tool: Tool) -> Tool:
     return Tool(name=tool.name, description=tool.description, inputSchema=clean_schema)
 
 
-def djb2_hash(s: str) -> int:
-    """DJB2 hash algorithm matching C++ implementation."""
-    h = 5381
-    for c in s:
-        h = ((h << 5) + h + ord(c)) & 0xFFFFFFFF
-    return h
-
-
 def to_toon(obj: Any, indent: int = 0) -> str:
     """Convert JSON to TOON format (~40% fewer tokens).
 
@@ -833,171 +828,6 @@ def to_toon(obj: Any, indent: int = 0) -> str:
         return "\n".join(lines)
 
     return str(obj)
-
-
-def get_socket_dir() -> str:
-    """Get persistent socket directory (matches C++ daemon logic)."""
-    # XDG_RUNTIME_DIR is session-scoped and managed by systemd
-    xdg_runtime = os.environ.get("XDG_RUNTIME_DIR")
-    if xdg_runtime and os.access(xdg_runtime, os.W_OK):
-        socket_dir = os.path.join(xdg_runtime, "chitta")
-        os.makedirs(socket_dir, mode=0o700, exist_ok=True)
-        return socket_dir
-    run_user = f"/run/user/{os.getuid()}"
-    if os.access(run_user, os.W_OK):
-        socket_dir = os.path.join(run_user, "chitta")
-        os.makedirs(socket_dir, mode=0o700, exist_ok=True)
-        return socket_dir
-    # Fall back to ~/.cache/chitta (persistent, user-owned)
-    home = os.environ.get("HOME")
-    if home:
-        cache_dir = os.path.join(home, ".cache")
-        os.makedirs(cache_dir, mode=0o755, exist_ok=True)
-        socket_dir = os.path.join(cache_dir, "chitta")
-        os.makedirs(socket_dir, mode=0o700, exist_ok=True)
-        return socket_dir
-    # Last resort: /tmp
-    return "/tmp"
-
-
-def get_socket_path() -> str:
-    """Get the daemon socket path."""
-    home = os.environ.get("HOME", "")
-    mind_path = os.path.join(home, ".claude", "mind")
-    hash_val = djb2_hash(mind_path)
-    return os.path.join(get_socket_dir(), f"chitta-{hash_val}.sock")
-
-
-class ChittaClient:
-    """Client for communicating with chittad daemon."""
-
-    def __init__(self, socket_path: str):
-        self.socket_path = socket_path
-        self.sock: socket.socket | None = None
-        # One socket shared by the 4-worker executor: the lock keeps two
-        # threads from interleaving sendall/recv and reading each other's
-        # responses; monotonic ids let us detect a desynced connection.
-        self.lock = threading.Lock()
-        self._ids = itertools.count(1)
-
-    def connect(self) -> bool:
-        """Connect to daemon socket."""
-        try:
-            self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            self.sock.connect(self.socket_path)
-            self.sock.settimeout(30.0)
-            return True
-        except OSError as exc:
-            # No daemon listening yet, stale socket file, or wrong permissions.
-            # ensure_daemon() treats False as "spawn or wait", so this is a
-            # normal startup state, not an error worth surfacing.
-            logger.debug("daemon socket connect failed (%s): %s", self.socket_path, exc)
-            self.sock = None
-            return False
-
-    def call(self, req: dict) -> str | None:
-        """Send one JSON-RPC request and return the matching response line.
-
-        Assigns a fresh monotonic id, serializes socket access, and verifies
-        the response id. A mismatched id means a stale response from a prior
-        timed-out request is still in the pipe — the connection is desynced,
-        so it is dropped and the caller's reconnect-once logic takes over.
-        """
-        with self.lock:
-            if not self.sock:
-                return None
-            req_id = next(self._ids)
-            req["id"] = req_id
-            try:
-                self.sock.sendall((json.dumps(req) + "\n").encode())
-                buf = b""
-                while b"\n" not in buf:
-                    chunk = self.sock.recv(4096)
-                    if not chunk:
-                        return None
-                    buf += chunk
-                line, _, _ = buf.partition(b"\n")
-                response = line.decode().strip()
-                try:
-                    resp_id = json.loads(response).get("id")
-                    # id None is legal (e.g. parse-error responses); anything
-                    # else must echo our id.
-                    if resp_id is not None and resp_id != req_id:
-                        self.sock.close()
-                        self.sock = None
-                        return None
-                except (ValueError, AttributeError):
-                    pass
-                return response
-            except (OSError, UnicodeDecodeError) as exc:
-                # Broken pipe, timeout, or an undecodable frame. Returning None
-                # is the caller's signal to drop the connection and retry once
-                # (see daemon_call), so do not raise through the lock.
-                logger.debug("daemon socket call failed: %s", exc)
-                return None
-
-    def close(self):
-        if self.sock:
-            try:
-                self.sock.close()
-            except OSError:
-                # Already closed or reset by the daemon; the handle is being
-                # discarded either way.
-                pass
-            self.sock = None
-
-
-class ChittaHttpClient:
-    """HTTP client for chittad — survives daemon restarts (no persistent connection)."""
-
-    def __init__(self, base_url: str):
-        self.base_url = base_url
-        self._ids = itertools.count(1)
-        self.lock = threading.Lock()
-
-    def connect(self) -> bool:
-        import urllib.request
-
-        try:
-            urllib.request.urlopen(
-                urllib.request.Request(
-                    self.base_url + "/",
-                    data=b'{"jsonrpc":"2.0","id":0,"method":"tools/call","params":{"name":"health_check","arguments":{}}}',
-                    headers={"Content-Type": "application/json"},
-                ),
-                timeout=5,
-            )
-            return True
-        except (OSError, HTTPException) as exc:
-            # Daemon not listening on the RPC port yet. ensure_daemon() falls
-            # through to its spawn-and-wait path on False.
-            logger.debug("daemon HTTP health probe failed (%s): %s", self.base_url, exc)
-            return False
-
-    def call(self, req: dict) -> str | None:
-        import urllib.request
-
-        with self.lock:
-            req_id = next(self._ids)
-            req["id"] = req_id
-            try:
-                r = urllib.request.urlopen(
-                    urllib.request.Request(
-                        self.base_url + "/",
-                        data=json.dumps(req).encode(),
-                        headers={"Content-Type": "application/json"},
-                    ),
-                    timeout=60,
-                )
-                return r.read().decode()
-            except (OSError, HTTPException, UnicodeDecodeError) as exc:
-                # Same contract as the Unix-socket client: None means "retry
-                # once with a fresh connection".
-                logger.debug("daemon HTTP call failed: %s", exc)
-                return None
-
-    def close(self):
-        pass  # stateless — nothing to close
 
 
 # Global client and server

@@ -19,6 +19,7 @@
 #include "../transcript_parser.hpp"
 #include "sandbox.hpp"
 #include "work_policy.hpp"
+#include "../task_ledger.hpp"
 #include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
@@ -74,8 +75,12 @@ class FieldRpcHandler {
 public:
     explicit FieldRpcHandler(FieldStore* fs, VakYantra* yantra)
         : field_store_(fs), yantra_(yantra) {
+        load_task_ledger();
         register_tools();
     }
+
+    // Requires the caller to hold rpc_mutex_ (queue and normal dispatch).
+    ToolResult dispatch_session(const std::string& tool, const json& args);
 
     void set_embed_queue(EmbedQueue* eq) { embed_queue_ = eq; }
 
@@ -541,7 +546,7 @@ public:
                 // and the hot recall path relies on publish ordering rather than this lock so
                 // an index-mutating write can never block it (is_lockfree_read).
                 result = it->second(args);
-            } else if (is_read_only_tool(name)) {
+            } else if (is_read_only_tool(name) || (name == "ledger_op" && TaskLedger::is_read(args.value("op", "")))) {
                 auto _lp_w0 = std::chrono::steady_clock::now();
                 auto _lk = acquire_shared_lock();
                 if (_lp_thr > 0) {
@@ -579,6 +584,9 @@ public:
     }
 
 private:
+    TaskLedger task_ledger_;
+    void load_task_ledger();
+    ToolResult tool_ledger_op(const json& params);
     FieldStore* field_store_;
     VakYantra* yantra_;
     Subconscious* subconscious_ = nullptr;

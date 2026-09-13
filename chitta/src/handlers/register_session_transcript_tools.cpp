@@ -6,6 +6,12 @@
 namespace chitta {
 
 void FieldRpcHandler::register_session_transcript_tools() {
+    tools_.push_back({{"name","ledger_op"},{"description","Daemon-owned task ledger operation; list pages capped at 100"},
+        {"inputSchema",{{"type","object"},{"properties",{
+            {"op",{{"type","string"}}},{"args",{{"type","object"}}}
+        }},{"required",json::array({"op"})}}}});
+    handlers_["ledger_op"] = [this](const json& p) { return tool_ledger_op(p); };
+
     tools_.push_back({{"name","transcript_register"},{"description","Register transcript for distillation"},
         {"inputSchema",{{"type","object"},{"properties",{
             {"session_id",{{"type","string"}}},{"transcript_path",{{"type","string"}}},

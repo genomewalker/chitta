@@ -3,32 +3,26 @@
 
 from __future__ import annotations
 
-import argparse
 import json
 import os
 import socket
-import subprocess
 import sys
 import time
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
 
 sys.path.insert(0, str(Path(__file__).parent))
+from daemon_client import daemon_call, hook_budget  # noqa: E402
 from task_ledger import (  # noqa: E402
     lease_claim,
     lease_list,
-    session_bind,
-    session_close,
     session_get,
-    session_touch,
 )
 from task_ledger import (
     session_list as ledger_session_list,
 )
 
-CHITTA_BIN = os.environ.get("CHITTA_BIN", str(Path.home() / ".claude" / "bin" / "chitta"))
 _MIND = Path(
     os.environ.get("MIND_PATH")
     or os.environ.get("CHITTA_DB_PATH")
@@ -51,20 +45,17 @@ def _read_json_stdin() -> dict[str, Any]:
 def _run_chitta(
     args: list[str], cwd: str | None = None, timeout_seconds: float = 2.0
 ) -> dict[str, Any] | None:
-    try:
-        proc = subprocess.run(
-            [CHITTA_BIN, *args, "--json"],
-            cwd=cwd or None,
-            capture_output=True,
-            text=True,
-            timeout=timeout_seconds,
-        )
-        if proc.returncode == 0 and proc.stdout.strip():
-            value = json.loads(proc.stdout)
-            return value if isinstance(value, dict) else {"items": value}
-    except (OSError, subprocess.SubprocessError, json.JSONDecodeError):
-        pass
-    return None
+    # Preserve the internal adapter signature while avoiding a CLI subprocess.
+    params = {}
+    it = iter(args[1:])
+    for key in it:
+        value = next(it, "true")
+        try:
+            value = json.loads(value)
+        except (ValueError, TypeError):
+            pass
+        params[key.removeprefix("--")] = value
+    return daemon_call(args[0], params, timeout=min(timeout_seconds, 0.075))
 
 
 def _latest(paths: list[Path]) -> str:
@@ -152,15 +143,28 @@ def _ancestor_client_pid(client: str) -> int:
 
 
 def _detect_realm(project_dir: str) -> str:
-    result = _run_chitta(["realm_detect"], cwd=project_dir or None)
-    if result:
-        for key in ("realm", "detected_realm", "project"):
-            if result.get(key):
-                return str(result[key])
-    name = Path(project_dir).name if project_dir else ""
-    return f"project:{name}" if name else "brahman"
+    # realm_detect was a client-side CLI command: the daemon's environment and
+    # working directory cannot identify a hook's project. Preserve its precedence
+    # locally without launching git or another interpreter.
+    project = Path(project_dir or os.getcwd())
+    if "CHITTA_REALM" in os.environ:
+        return os.environ["CHITTA_REALM"] or (
+            f"project:{project.name}" if project.name else "brahman"
+        )
+    try:
+        with (project / ".cc-soul-realm").open(encoding="utf-8") as handle:
+            realm = handle.readline().strip()
+        if realm:
+            return realm
+    except (OSError, UnicodeError):
+        pass
+    for directory in (project, *project.parents):
+        if (directory / ".git").exists():
+            return f"project:{directory.name}"
+    return "brahman"
 
 
+@hook_budget
 def register(input_data: dict[str, Any], client: str) -> dict[str, Any]:
     session_id = str(input_data.get("session_id") or "")
     if not session_id:
@@ -194,16 +198,6 @@ def register(input_data: dict[str, Any], client: str) -> dict[str, Any]:
     }
     realm = str(input_data.get("realm") or _detect_realm(project_dir))
     pid = _ancestor_client_pid(client)
-    queue_args = {
-        "session_id": session_id,
-        "realm": realm,
-        "pid": pid,
-        "project_dir": project_dir,
-        "transcript_path": transcript_path,
-        "client": client,
-        "kind": client,
-        "metadata": metadata,
-    }
     args = [
         "session_register",
         "--session_id",
@@ -220,7 +214,6 @@ def register(input_data: dict[str, Any], client: str) -> dict[str, Any]:
     if transcript_path:
         args.extend(["--transcript_path", transcript_path])
     daemon_result = _run_chitta(args, cwd=project_dir)
-    daemon_queued = daemon_result is None and _queue_tool("session_register", queue_args)
     transcript_result = None
     transcript_queued = False
     if transcript_path:
@@ -245,20 +238,10 @@ def register(input_data: dict[str, Any], client: str) -> dict[str, Any]:
                     "realm": realm,
                 },
             )
-    session_bind(
-        session_id=session_id,
-        thread_id=thread_id or None,
-        client=client,
-        project_dir=project_dir,
-        transcript_path=transcript_path,
-        metadata=metadata,
-    )
-    lease = lease_claim(thread_id, session_id) if thread_id else None
+    lease = lease_claim(thread_id, session_id) if thread_id and daemon_result is not None else None
     return {
-        "registered": daemon_result is not None or daemon_queued,
-        "registration_mode": "direct"
-        if daemon_result is not None
-        else ("queued" if daemon_queued else "failed"),
+        "registered": daemon_result is not None,
+        "registration_mode": "direct" if daemon_result is not None else "failed",
         "session_id": session_id,
         "client": client,
         "model": model,
@@ -276,6 +259,8 @@ def register(input_data: dict[str, Any], client: str) -> dict[str, Any]:
 
 
 def _queue_tool(tool: str, args: dict[str, Any]) -> bool:
+    from uuid import uuid4
+
     item = {
         "ack_id": str(uuid4()),
         "tool": tool,
@@ -303,44 +288,60 @@ def _queue_heartbeat(session_id: str, metadata: dict[str, Any]) -> bool:
     )
 
 
+@hook_budget
 def heartbeat(input_data: dict[str, Any], queued: bool = False) -> dict[str, Any]:
     session_id = str(input_data.get("session_id") or "")
     if not session_id:
         return {"heartbeat": False, "reason": "missing_session_id"}
+    if queued:
+        metadata = {
+            "thread_id": str(input_data.get("thread_id") or ""),
+            "client": str(input_data.get("client") or ""),
+        }
+        return {
+            "heartbeat": _queue_heartbeat(session_id, metadata),
+            "queued": True,
+            "session_id": session_id,
+            **metadata,
+        }
     row = session_get(session_id) or {}
     metadata = {
         "thread_id": str(row.get("thread_id") or ""),
         "client": str(row.get("client") or ""),
     }
-    if queued:
-        heartbeat_ok = _queue_heartbeat(session_id, metadata)
-    else:
-        heartbeat_ok = (
-            _run_chitta(
-                [
-                    "session_heartbeat",
-                    "--session_id",
-                    session_id,
-                    "--metadata",
-                    json.dumps(metadata, separators=(",", ":")),
-                ]
-            )
-            is not None
+    heartbeat_ok = (
+        _run_chitta(
+            [
+                "session_heartbeat",
+                "--session_id",
+                session_id,
+                "--metadata",
+                json.dumps(metadata, separators=(",", ":")),
+            ]
         )
-    session_touch(session_id)
+        is not None
+    )
     return {"heartbeat": heartbeat_ok, "queued": queued, "session_id": session_id, **metadata}
 
 
+@hook_budget
 def close(input_data: dict[str, Any]) -> dict[str, Any]:
     session_id = str(input_data.get("session_id") or "")
     if not session_id:
         return {"closed": False, "reason": "missing_session_id"}
-    result = _run_chitta(["session_deregister", "--session_id", session_id])
+    result = _run_chitta(
+        [
+            "session_deregister",
+            "--session_id",
+            session_id,
+            "--status",
+            str(input_data.get("status") or "ended"),
+        ]
+    )
     queued = result is None and _queue_tool(
         "session_deregister",
-        {"session_id": session_id},
+        {"session_id": session_id, "status": str(input_data.get("status") or "ended")},
     )
-    session_close(session_id, str(input_data.get("status") or "ended"))
     return {
         "closed": result is not None or queued,
         "mode": "direct" if result is not None else ("queued" if queued else "failed"),
@@ -363,7 +364,16 @@ def inventory() -> dict[str, Any]:
     }
 
 
-def _cli() -> None:
+def _cli_args() -> tuple[str, str, bool]:
+    # argparse costs ~25 ms on PyPy. Keep canonical hook invocations on a tiny
+    # fast path; help, errors and alternate argparse spellings retain the parser.
+    argv = sys.argv[1:]
+    if argv in (["close"], ["inventory"], ["heartbeat"], ["heartbeat", "--queued"]):
+        return argv[0], "", "--queued" in argv
+    if len(argv) == 3 and argv[:2] == ["register", "--client"] and argv[2] in ("claude", "codex"):
+        return "register", argv[2], False
+    import argparse
+
     parser = argparse.ArgumentParser(prog="session_registry")
     sub = parser.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("register")
@@ -373,13 +383,17 @@ def _cli() -> None:
     sub.add_parser("close")
     sub.add_parser("inventory")
     args = parser.parse_args()
+    return args.cmd, getattr(args, "client", ""), getattr(args, "queued", False)
 
-    input_data = {} if args.cmd == "inventory" else _read_json_stdin()
-    if args.cmd == "register":
-        result = register(input_data, args.client)
-    elif args.cmd == "heartbeat":
-        result = heartbeat(input_data, args.queued)
-    elif args.cmd == "close":
+
+def _cli() -> None:
+    command, client, queued = _cli_args()
+    input_data = {} if command == "inventory" else _read_json_stdin()
+    if command == "register":
+        result = register(input_data, client)
+    elif command == "heartbeat":
+        result = heartbeat(input_data, queued)
+    elif command == "close":
         result = close(input_data)
     else:
         result = inventory()
