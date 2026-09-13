@@ -82,6 +82,7 @@ public:
     // Base mind dir (parent of chitta-field). Used by tool_consolidation_pass to
     // honor the .disable_consolidation marker at the same path the hooks check.
     void set_mind_path(const std::string& p) { mind_path_ = p; }
+    const std::string& mind_path() const { return mind_path_; }
 
     void set_subconscious(Subconscious* s) { subconscious_ = s; }
     // Recall-priority gate for background workers (queue processor, backfill): true

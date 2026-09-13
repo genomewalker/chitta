@@ -1,3 +1,4 @@
+#include <chitta/queue_path.hpp>
 // Chitta CLI - Multi-mode memory operations
 // Command-line interface for soul integration
 //
@@ -1519,7 +1520,7 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    // queue_write: enqueue a JSONL request line to /tmp/chitta-queue.jsonl.
+    // queue_write: enqueue a JSONL request line to the mind-local queue.
     // Client-side only (no daemon required). Hooks use this instead of
     // `jq -c ... >> file` so args are parsed/compacted natively and the
     // append is a single atomic write() syscall (see sandbox::append_line_atomic).
@@ -1560,8 +1561,7 @@ int main(int argc, char* argv[]) {
             {"ts",     now_ms / 1000}
         };
 
-        std::string queue_path = "/tmp/chitta-queue.jsonl";
-        if (const char* env = std::getenv("CHITTA_QUEUE_PATH")) queue_path = env;
+        const auto queue_path = chitta::queue_path_for_mind(chitta::SocketClient::default_mind_path());
 
         if (!chitta::sandbox::append_line_atomic(
                 queue_path,

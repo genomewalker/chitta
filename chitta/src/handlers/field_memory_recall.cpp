@@ -428,6 +428,8 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
     };
 
     // Field-RAG / Modern Hopfield mode: bypass RRF, run DAM relaxation.
+    // Tagged requests must reach the common tag/realm selection below.
+    std::vector<FieldRecallHit> tagged_field_hits;
     if (strategy == "field") {
         auto emb = params.contains("_preembedding")
             ? params["_preembedding"].get<std::vector<float>>()
@@ -438,8 +440,11 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
                 std::remove_if(hits.begin(), hits.end(),
                     [](const FieldRecallHit& h) { return h.content.empty(); }),
                 hits.end());
-            json results = hits_to_results_json(hits, false);
-            return ToolResult::ok(std::to_string(hits.size()) + " field memories", {{"results", results}});
+            if (tag.empty()) {
+                json results = hits_to_results_json(hits, false);
+                return ToolResult::ok(std::to_string(hits.size()) + " field memories", {{"results", results}});
+            }
+            tagged_field_hits = std::move(hits);
         }
     }
 
@@ -489,7 +494,9 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
     // through to the fused path and the flag was a silent no-op, so callers who
     // asked for the keyword lane got whatever the fused path did — including,
     // when pre-embed missed, the unscoped fallback below (the cross-realm leak).
-    if (strategy == "keyword") {
+    if (!tagged_field_hits.empty()) {
+        hits = window_gate(std::move(tagged_field_hits));
+    } else if (strategy == "keyword") {
         hits = window_gate(field_store_->recall_keyword(query, pool_limit, realm, no_learn));
     } else if (expand && query_has_entities(query)) {
         std::vector<std::string> forms = {query, query}; // original 2× = boosted weight
@@ -674,11 +681,14 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
             }
         } catch (...) {}
 
+        // Tag selection is a hard filter, including when no such tag exists.
+        if (tagged_ids.empty()) hits.clear();
         if (!tagged_ids.empty()) {
             // Filter semantic hits to tagged set
             hits.erase(
                 std::remove_if(hits.begin(), hits.end(),
-                    [&](const FieldRecallHit& h) { return tagged_ids.find(h.memory_id) == tagged_ids.end(); }),
+                    [&](const FieldRecallHit& h) { return tagged_ids.find(h.memory_id) == tagged_ids.end()
+                            || (!realm.empty() && h.realm != realm); }),
                 hits.end());
 
             // If no semantic hits matched tags, fetch tagged memories directly

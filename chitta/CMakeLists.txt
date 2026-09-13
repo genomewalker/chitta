@@ -415,7 +415,7 @@ add_executable(chittad
     src/handlers/register_protocol_tools.cpp
 )
 target_include_directories(chittad PRIVATE "${CHITTA_FIELD_INCLUDE}")
-find_package(Python3 REQUIRED COMPONENTS Development)
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 find_package(BLAS REQUIRED)
 target_link_libraries(chittad PRIVATE chitta "${CHITTA_FIELD_LIB}" dl pthread Python3::Python ${BLAS_LIBRARIES})
 if(CHITTA_WITH_LLAMA_CPP)
@@ -470,6 +470,13 @@ install(TARGETS chitta_migrate DESTINATION bin)
 # Add new test targets to that list, or their checks silently evaporate.
 if(CHITTA_BUILD_TESTS)
     enable_testing()
+    if(CHITTA_BUILD_RPC)
+        add_test(NAME daemon_isolation_test
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/daemon_isolation_test.py
+                $<TARGET_FILE:chittad> $<TARGET_FILE:chitta_tool>
+                ${CMAKE_CURRENT_SOURCE_DIR}/../hooks/lib.sh ${CHITTA_EMBED_DIM})
+        set_tests_properties(daemon_isolation_test PROPERTIES TIMEOUT 240)
+    endif()
     add_executable(thread_pool_test src/thread_pool_test.cpp)
     target_link_libraries(thread_pool_test PRIVATE chitta)
     add_test(NAME thread_pool_test COMMAND thread_pool_test)

@@ -26,6 +26,7 @@ bool run_distillation(
     DistillResult* out
 ) {
     NativeDistillConfig native_config;
+    if (handler) native_config.mind_path = handler->mind_path();
     native_config.model = handler ? handler->get_distill_model() : config.model;
     native_config.endpoint = config.endpoint;  // pre-probed by slow lane; empty = discover
     native_config.timeout_secs = 180;

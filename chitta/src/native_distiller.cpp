@@ -2,7 +2,7 @@
 #include "../include/chitta/ssl_gloss.hpp"
 #include "../include/chitta/ssl_prompt.hpp"
 #include "../include/chitta/value_fact_extractor.hpp"
-#include "../include/chitta/mdl_gate.hpp"
+#include "../include/chitta/mdl_evidence_pool.hpp"
 #include <nlohmann/json.hpp>
 #include <sstream>
 #include <cmath>
@@ -66,9 +66,11 @@ void NativeDistiller::log(const std::string& msg) {
 // Shadow tap for the MDL consolidation gate (see mdl_gate.hpp / chitta-mcp/mdl_gate.py).
 // Fail-open: never lets a judging or I/O error touch the caller's storage path.
 void NativeDistiller::log_mdl_shadow(const std::string& mem_id, const std::string& content,
-                                     const std::string& evidence) {
+                                     const std::vector<std::string>& evidence) {
     try {
-        auto v = mdl::judge(content, evidence);
+        auto v = mdl::judge_chunks(content, evidence);
+        size_t evidence_bytes = 0;
+        for (const auto& chunk : evidence) evidence_bytes += chunk.size();
 
         std::string mind_path = config_.mind_path;
         if (mind_path.empty()) {
@@ -88,7 +90,8 @@ void NativeDistiller::log_mdl_shadow(const std::string& mem_id, const std::strin
             {"id", mem_id},
             {"accept", v.accept},
             {"saving", v.saving},
-            {"evidence_bytes", evidence.size()},
+            {"evidence_bytes", evidence_bytes},
+            {"pool_chunks", evidence.empty() ? 0 : evidence.size() - 1},
             {"title_head", content.substr(0, 80)},
             {"source", "native"},
         };
@@ -167,7 +170,7 @@ void NativeDistiller::store_learnings(
     const std::string& realm,
     uint64_t episode_mem_id,
     const std::vector<LearningPrep>& learning_preps,
-    const std::string& evidence,
+    const std::vector<std::string>& evidence,
     DistillResult& result
 ) {
     for (size_t i = 0; i < ssl_result.learnings.size(); ++i) {
@@ -427,6 +430,17 @@ PreparedDistillation NativeDistiller::prepare_distillation(
     }
     auto conversation = TranscriptParser::build_conversation(turns, trunc);
     prep.conversation = conversation;  // reused by the deterministic value-fact pass
+    prep.mdl_evidence = {conversation};
+    // A new NativeDistiller is constructed per pass. Retain bounded history here,
+    // outside the RPC write lock; never extend the LLM/value-fact input or gate writes.
+    try {
+        static mdl::EvidencePool pool;
+        prep.mdl_evidence = pool.extend(
+            {config_.mind_path, transcript_path, session_id, realm}, conversation,
+            skip_lines, prep.last_line, mdl::pool_chunk_limit());
+    } catch (...) {
+        // Pooling is shadow-only and must not fail distillation.
+    }
 
     // 4. Build SSL prompt
     auto prompt = ssl::build_prompt(conversation);
@@ -491,7 +505,7 @@ DistillResult NativeDistiller::commit_distillation(const PreparedDistillation& p
     // Store learnings and triplets (writes only — dedup precomputed in prepare phase)
     store_learnings(prep.ssl_result, prep.realm,
                     static_cast<uint64_t>(episode_id), prep.learning_preps,
-                    prep.conversation, result);
+                    prep.mdl_evidence, result);
     result.triplets_created = static_cast<int>(prep.ssl_result.triplets.size());
 
     // Value-fact write-back: precomputed (extract+embed+dedup) in prepare_distillation,

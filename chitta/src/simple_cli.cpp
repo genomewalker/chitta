@@ -1,3 +1,4 @@
+#include <chitta/queue_path.hpp>
 // chitta-cli: Simplified daemon for SimpleMind
 //
 // Usage: chittad <command> [options]
@@ -824,15 +825,9 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
     std::atomic<size_t> queue_count{0};
     std::atomic<size_t> queue_distill_count{0};  // Separate counter for pre-compact distillations
     std::atomic<size_t> queue_fail_count{0};
-    // Isolation: measurement/scratch daemons must NOT drain the shared global
-    // queue that live hooks+MCP write to, or they ingest the operator's live
-    // transcripts into the scratch store. CHITTA_QUEUE_PATH gives a private queue;
-    // CHITTA_NO_QUEUE skips the processor entirely (frozen store, read-only bench).
-    std::string queue_path = "/tmp/chitta-queue.jsonl";
-    if (const char* qp = std::getenv("CHITTA_QUEUE_PATH")) {
-        if (qp[0]) queue_path = qp;
-    }
-    std::string failed_queue_path = mind_path + "/.failed_queue.jsonl";
+    // Queue ownership follows --path; explicit overrides opt into sharing.
+    std::string queue_path = queue_path_for_mind(mind_path);
+    std::string failed_queue_path = queue_path + ".failed";
     const bool no_queue = std::getenv("CHITTA_NO_QUEUE") != nullptr;
 
     // Token-triggered distillation: per-session content accumulators
@@ -1212,6 +1207,10 @@ void print_usage(const char* prog) {
               << "  help       Show this help\n\n"
               << "Options:\n"
               << "  --path PATH        Mind storage path (chitta-field)\n"
+              << "                     Queue: <PATH>/queue.jsonl (.slow/.failed siblings).\n"
+              << "                     CHITTA_QUEUE overrides; CHITTA_QUEUE_PATH is a legacy alias.\n"
+              << "                     Mind-local queues persist across nodes; /tmp does not.\n"
+              << "                     CHITTA_NO_QUEUE disables queue consumption.\n"
               << "  --interval SECS    Sync interval (default: 60)\n"
               << "  -f, --foreground   Run in foreground\n"
               << "  --verbose          Verbose logging\n"

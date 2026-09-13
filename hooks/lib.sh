@@ -178,7 +178,9 @@ get_next_turn() {
 
 # Default queue file location (must match daemon's queue_path in simple_cli.cpp)
 get_queue_file() {
-    echo "${CHITTA_QUEUE:-/tmp/chitta-queue.jsonl}"
+    # Match daemon overrides; /tmp does not persist across nodes.
+    local mind_path="${MIND_PATH:-${CHITTA_DB_PATH:-$HOME/.claude/mind}}"
+    echo "${CHITTA_QUEUE:-${CHITTA_QUEUE_PATH:-${mind_path%/}/queue.jsonl}}"
 }
 
 # Generate UUID for queue acknowledgments
