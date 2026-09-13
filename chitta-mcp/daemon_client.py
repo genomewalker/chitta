@@ -213,7 +213,12 @@ class ChittaHttpClient:
 # Hooks make one attempt, never start a daemon, and suppress follow-on waits
 # after a failure. Long-lived MCP clients retain their own connection policy.
 _unavailable_until = 0.0
-_deadline = contextvars.ContextVar("chitta_hook_deadline", default=None)
+# Remaining daemon-wait budget for one hook operation, in seconds. Only time
+# spent waiting on the daemon counts: a wall-clock deadline let the transcript
+# glob on NFS (~70 ms) plus PyPy warm-up exhaust the budget before the first
+# RPC, so every SessionStart registration failed.
+_budget = contextvars.ContextVar("chitta_hook_budget", default=None)
+HOOK_BUDGET_S = float(os.environ.get("CHITTA_HOOK_RPC_BUDGET_S", "0.100"))
 
 
 def hook_budget(fn):
@@ -221,11 +226,11 @@ def hook_budget(fn):
 
     @functools.wraps(fn)
     def wrapped(*args, **kwargs):
-        token = _deadline.set(time.monotonic() + 0.100)
+        token = _budget.set([HOOK_BUDGET_S])
         try:
             return fn(*args, **kwargs)
         finally:
-            _deadline.reset(token)
+            _budget.reset(token)
 
     return wrapped
 
@@ -235,13 +240,22 @@ def daemon_call(tool_name: str, arguments: dict, timeout: float = 0.075):
     global _unavailable_until
     if time.monotonic() < _unavailable_until:
         return None
-    deadline = _deadline.get()
-    if deadline is not None:
-        timeout = min(timeout, deadline - time.monotonic())
+    budget = _budget.get()
+    if budget is not None:
+        timeout = min(timeout, budget[0])
         if timeout <= 0:
             return None
-    transport = None
     started = time.monotonic()
+    try:
+        return _daemon_call(tool_name, arguments, timeout, started)
+    finally:
+        if budget is not None:
+            budget[0] -= time.monotonic() - started
+
+
+def _daemon_call(tool_name: str, arguments: dict, timeout: float, started: float):
+    global _unavailable_until
+    transport = None
     try:
         port = os.environ.get("CHITTA_RPC_PORT")
         if port and not os.environ.get("CHITTA_SOCKET_PATH"):

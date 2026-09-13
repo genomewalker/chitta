@@ -125,7 +125,8 @@ stream's, stop and say so.
   benchmark is not a latency result. Export test overrides when shell functions
   launch child hooks; check both aliases when inherited settings interfere.
 - For tests, use a temporary `HOME` (create `$HOME/.claude/mind`),
-  `XDG_RUNTIME_DIR`, `CHITTA_DB_PATH`, `CHITTA_QUEUE`, and `CHITTA_TASK_LEDGER`.
+  `XDG_RUNTIME_DIR`, `CHITTA_DB_PATH`, and `CHITTA_QUEUE` (the task ledger is
+  daemon-owned, so point `CHITTA_SOCKET_PATH` at a scratch daemon).
   The turn counter still uses `$HOME/.claude/mind`; changing the DB path alone
   does not isolate every hook write. For `test_post_bash_payloads.sh`, set
   `CHITTA_BIN=/bin/true` to satisfy its executable gate without live RPCs.

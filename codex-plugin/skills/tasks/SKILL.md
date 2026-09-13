@@ -95,5 +95,5 @@ python3 "$_MCP_DIR/task_ledger.py" inbox_push \
 ## Notes
 
 - The MCP dir can be found reliably as: the directory containing `task_ledger.py` under `$HOME/.claude/plugins/cache/genomewalker-chitta/` (or the pre-rename `genomewalker-cc-soul/`, if that's what's installed).
-- If the task ledger DB doesn't exist yet (`~/.claude/task-ledger.db`), the ledger will be empty — that's fine, just say "No tracked tasks yet."
+- The ledger lives in the chitta daemon (`ledger_op` RPC); if the daemon is down every call returns empty — say "No tracked tasks yet (daemon unreachable)."
 - Use `realm_detect` via chitta if REALM is not set: `chitta realm_detect`
