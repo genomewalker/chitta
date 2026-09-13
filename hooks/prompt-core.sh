@@ -442,48 +442,119 @@ else
     # skipped. `corrk` isn't ablatable — it's the deterministic correction
     # probe, not one of the fuzzy recall lanes the env targets; `xr` is gated
     # further down, at the cross-realm fallback itself.
-    touch "$_ld/sem" "$_ld/hyb" "$_ld/kw" "$_ld/corr" "$_ld/corrk"
+    touch "$_ld/sem" "$_ld/ctx" "$_ld/hyb" "$_ld/kw" "$_ld/corr" "$_ld/corrk"
     # Reuse the adjacent log_event timestamp as the common dispatch boundary:
     # each duration includes scheduler wait with no added start-clock process.
     _LANE_FANOUT_T0=$_RECALL_FANOUT_T0
-    if ! _lane_ablated sem; then
-        _launch_lane sem "$MAX_WAIT" "$CHITTA_BIN" smart_recall --query "$QUERY" --limit 6 --realm "$REALM"
+    _lanes_rpc_ok=0
+    if [[ "${CHITTA_RECALL_LANES_RPC:-0}" == "1" ]]; then
+        _rpc_lane_names=()
+        for _rpc_lane in sem hyb kw corr; do
+            _lane_ablated "$_rpc_lane" || _rpc_lane_names+=("$_rpc_lane")
+        done
+        _rpc_lane_names+=(corrk)
+        if [[ -n "$CTX_QUERY" ]] && ! _lane_ablated ctx; then
+            _rpc_lane_names+=(ctx)
+        fi
+        _rpc_lanes_json="["; _rpc_sep=""
+        for _rpc_lane in "${_rpc_lane_names[@]}"; do
+            _rpc_lanes_json+="${_rpc_sep}\"${_rpc_lane}\""; _rpc_sep=","
+        done
+        _rpc_lanes_json+="]"
+        _rpc_cmd=("$CHITTA_BIN" recall_lanes --json --query "$QUERY" --realm "$REALM"
+                  --lanes "$_rpc_lanes_json"
+                  --limits "{\"sem\":6,\"ctx\":4,\"hyb\":${HYB_LANE_LIMIT},\"kw\":3,\"corr\":3}")
+        [[ -n "$CTX_QUERY" ]] && _rpc_cmd+=(--ctx-query "$CTX_QUERY")
+        if timeout "$((MAX_WAIT + 1))" "${_rpc_cmd[@]}" >"$_ld/rpc.json" 2>/dev/null; then
+            _rpc_requested=$(IFS=,; printf '%s' "${_rpc_lane_names[*]}")
+            if python3 - "$_ld/rpc.json" "$_ld" "$_rpc_requested" >"$_ld/rpc.stats" <<'PY'
+import json
+import pathlib
+import sys
+
+source, lane_dir, requested = sys.argv[1:]
+allowed = {"sem", "ctx", "hyb", "kw", "corr", "corrk"}
+names = requested.split(",") if requested else []
+if any(name not in allowed for name in names):
+    raise SystemExit(1)
+try:
+    payload = json.loads(pathlib.Path(source).read_text())
+    lanes = payload["lanes"]
+except (OSError, ValueError, KeyError, TypeError):
+    raise SystemExit(1)
+validated = []
+for name in names:
+    try:
+        lane = lanes[name]
+        text = lane["text"]
+        ms = lane["ms"]
+        timed_out = lane["timed_out"]
+        results = lane["results"]
+    except (KeyError, TypeError):
+        raise SystemExit(1)
+    if not isinstance(text, str) or not isinstance(ms, int) or ms < 0:
+        raise SystemExit(1)
+    if not isinstance(timed_out, bool) or not isinstance(results, list):
+        raise SystemExit(1)
+    validated.append((name, text, ms, timed_out))
+lane_path = pathlib.Path(lane_dir)
+for name, text, ms, timed_out in validated:
+    (lane_path / name).write_text(text)
+    print(f"{name}\t{ms}\t{'true' if timed_out else 'false'}")
+PY
+            then
+                while IFS=$'\t' read -r _rpc_lane _rpc_ms _rpc_timeout; do
+                    [[ -n "$_rpc_lane" ]] || continue
+                    _LANE_MS["$_rpc_lane"]="$_rpc_ms"
+                    _LANE_TIMEOUT["$_rpc_lane"]="$_rpc_timeout"
+                done <"$_ld/rpc.stats"
+                _lanes_rpc_ok=1
+            fi
+        fi
     fi
-    # Hybrid gets +1s: it carries the C2 maxrel and the fused hits, and a cold
-    # query-embed takes ~3.7s (measured 2026-09-01) vs ~0.4s warm. Losing it
-    # drops C2 to none and silences every lane.
-    if ! _lane_ablated hyb; then
-        _launch_lane hyb "$((MAX_WAIT + 1))" "$CHITTA_BIN" recall --query "$QUERY" --strategy hybrid --limit "$HYB_LANE_LIMIT" --realm "$REALM"
+
+    # Fail open on an unavailable/invalid fan-in RPC by running the unchanged
+    # process fan-out for this prompt.
+    if [[ "$_lanes_rpc_ok" -ne 1 ]]; then
+        if ! _lane_ablated sem; then
+            _launch_lane sem "$MAX_WAIT" "$CHITTA_BIN" smart_recall --query "$QUERY" --limit 6 --realm "$REALM"
+        fi
+        # Hybrid gets +1s: it carries the C2 maxrel and the fused hits, and a cold
+        # query-embed takes ~3.7s (measured 2026-09-01) vs ~0.4s warm. Losing it
+        # drops C2 to none and silences every lane.
+        if ! _lane_ablated hyb; then
+            _launch_lane hyb "$((MAX_WAIT + 1))" "$CHITTA_BIN" recall --query "$QUERY" --strategy hybrid --limit "$HYB_LANE_LIMIT" --realm "$REALM"
+        fi
+        # Pure keyword lane: BM25 only, surfaces exact tokens (filenames, IDs, paths)
+        # regardless of semantic similarity. Plain format (NOT --toon): the daemon's
+        # TOON results[] schema is variable (an optional `affect` key) and its `atoms`
+        # column is nested JSON carrying its own commas/quotes, which broke the old
+        # positional-sed parser → the kw lane silently emitted zero lines every turn.
+        # The plain format prints the same `[NN%] [type] text` shape as the hyb lane,
+        # so it merges via the identical `[kw]`-prefix idiom below with no CSV parse.
+        if ! _lane_ablated kw; then
+            _launch_lane kw "$MAX_WAIT" "$CHITTA_BIN" recall --query "$QUERY" --strategy keyword \
+                         --limit 3 --realm "$REALM"
+        fi
+        if ! _lane_ablated corr; then
+            _launch_lane corr "$MAX_WAIT" "$CHITTA_BIN" recall --query "$QUERY" --tag "correction" --limit 3 --include-global true
+        fi
+        # DETERMINISTIC correction lane (capability #2). Unlike the fuzzy --tag lane
+        # above (which ranks corrections by cosine and drops the right one ~99% of
+        # the time), correction_check is an exact-key bigram probe: if this turn
+        # re-states a corrected mistake, its correction FIRES regardless of ranking.
+        # Its result is promoted to systemMessage below on a RESERVED slot. Not
+        # ablatable — it isn't one of the fuzzy recall lanes the env targets.
+        _launch_lane corrk "$MAX_WAIT" "$CHITTA_BIN" correction_check --text "$QUERY"
+        # Context lane (step 1): semantic recall against the recency-weighted thread
+        # bag, NOT the literal turn. Recruits the memory the current thread is about
+        # even when the latest message is anaphoric ("do it properly"). Empty file
+        # when CTX_QUERY is unset (lane disabled, first turn, or ablated).
+        if [[ -n "$CTX_QUERY" ]] && ! _lane_ablated ctx; then
+            _launch_lane ctx "$MAX_WAIT" "$CHITTA_BIN" smart_recall --query "$CTX_QUERY" --limit 4 --realm "$REALM"
+        fi
+        _wait_lanes
     fi
-    # Pure keyword lane: BM25 only, surfaces exact tokens (filenames, IDs, paths)
-    # regardless of semantic similarity. Plain format (NOT --toon): the daemon's
-    # TOON results[] schema is variable (an optional `affect` key) and its `atoms`
-    # column is nested JSON carrying its own commas/quotes, which broke the old
-    # positional-sed parser → the kw lane silently emitted zero lines every turn.
-    # The plain format prints the same `[NN%] [type] text` shape as the hyb lane,
-    # so it merges via the identical `[kw]`-prefix idiom below with no CSV parse.
-    if ! _lane_ablated kw; then
-        _launch_lane kw "$MAX_WAIT" "$CHITTA_BIN" recall --query "$QUERY" --strategy keyword \
-                     --limit 3 --realm "$REALM"
-    fi
-    if ! _lane_ablated corr; then
-        _launch_lane corr "$MAX_WAIT" "$CHITTA_BIN" recall --query "$QUERY" --tag "correction" --limit 3 --include-global true
-    fi
-    # DETERMINISTIC correction lane (capability #2). Unlike the fuzzy --tag lane
-    # above (which ranks corrections by cosine and drops the right one ~99% of
-    # the time), correction_check is an exact-key bigram probe: if this turn
-    # re-states a corrected mistake, its correction FIRES regardless of ranking.
-    # Its result is promoted to systemMessage below on a RESERVED slot. Not
-    # ablatable — it isn't one of the fuzzy recall lanes the env targets.
-    _launch_lane corrk "$MAX_WAIT" "$CHITTA_BIN" correction_check --text "$QUERY"
-    # Context lane (step 1): semantic recall against the recency-weighted thread
-    # bag, NOT the literal turn. Recruits the memory the current thread is about
-    # even when the latest message is anaphoric ("do it properly"). Empty file
-    # when CTX_QUERY is unset (lane disabled, first turn, or ablated).
-    if [[ -n "$CTX_QUERY" ]] && ! _lane_ablated ctx; then
-        _launch_lane ctx "$MAX_WAIT" "$CHITTA_BIN" smart_recall --query "$CTX_QUERY" --limit 4 --realm "$REALM"
-    fi
-    _wait_lanes
     _read_lane sem _sem_out; _read_lane hyb _hyb_out; _read_lane kw _kw_out
     _read_lane corr _corr_out; _read_lane corrk _corrk_out; _read_lane ctx _ctx_out
 

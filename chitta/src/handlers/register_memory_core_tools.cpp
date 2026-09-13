@@ -449,6 +449,25 @@ void FieldRpcHandler::register_memory_core_tools() {
     });
     handlers_["hybrid_recall"] = [this](const json& p) { return tool_hybrid_recall(p); };
 
+    tools_.push_back({{"name","recall_lanes"},{"description","Fan-in prompt recall lanes over one daemon RPC"},
+        {"inputSchema",{{"type","object"},{"properties",{
+            {"query",{{"type","string"},{"description","Prompt query shared by sem, hyb, kw, corr, and corrk"}}},
+            {"ctx_query",{{"type","string"},{"description","Optional context query; defaults to query"}}},
+            {"realm",{{"type","string"},{"description","Realm for sem, ctx, hyb, and kw"}}},
+            {"limits",{{"type","object"},{"description","Per-lane result limits (sem, ctx, hyb, kw, corr)"},
+                {"properties",{
+                    {"sem",{{"type","integer"},{"default",6}}},
+                    {"ctx",{{"type","integer"},{"default",4}}},
+                    {"hyb",{{"type","integer"},{"default",5}}},
+                    {"kw",{{"type","integer"},{"default",3}}},
+                    {"corr",{{"type","integer"},{"default",3}}}
+                }}}},
+            {"lanes",{{"type","array"},{"items",{{"type","string"}}},{"description","Subset of sem, ctx, hyb, kw, corr, corrk (default all)"}}},
+            {"budget_ms",{{"type","integer"},{"minimum",1},{"description","Per-lane wall-clock budget override; capped by CHITTA_RPC_BUDGET_MS"}}}
+        }},{"required",{"query"}}}}
+    });
+    handlers_["recall_lanes"] = [this](const json& p) { return tool_recall_lanes(p); };
+
     tools_.push_back({{"name","recall_session"},{"description","Session-level recall: groups chunk evidence by source session using noisy-OR aggregation. Returns ranked sessions with best evidence."},
         {"inputSchema",{{"type","object"},{"properties",{
             {"query",{{"type","string"},{"description","Natural language query"}}},

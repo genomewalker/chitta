@@ -29,9 +29,9 @@ int main() {
         assert(clamped[std::string(limit.name)] == limit.minimum);
     }
 
-    chitta::rpc::BudgetTracker tracker(1);
+    chitta::rpc::BudgetTracker tracker(100);
     {
-        auto scope = tracker.measure("synthetic_handler");
+        auto scope = tracker.measure("synthetic_lane", 1);
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
     assert(tracker.over_budget_count() == 1);

@@ -79,20 +79,25 @@ public:
 
     class Scope {
     public:
-        Scope(BudgetTracker& tracker, std::string tool)
-            : tracker_(tracker), tool_(std::move(tool)), started_(Clock::now()) {}
+        Scope(BudgetTracker& tracker, std::string tool, long budget_ms)
+            : tracker_(tracker), tool_(std::move(tool)), budget_ms_(budget_ms),
+              started_(Clock::now()) {}
         Scope(const Scope&) = delete;
         Scope& operator=(const Scope&) = delete;
-        ~Scope() { tracker_.record(tool_, started_); }
+        ~Scope() { tracker_.record(tool_, started_, budget_ms_); }
 
     private:
         using Clock = std::chrono::steady_clock;
         BudgetTracker& tracker_;
         std::string tool_;
+        long budget_ms_;
         Clock::time_point started_;
     };
 
-    Scope measure(std::string tool) { return Scope(*this, std::move(tool)); }
+    Scope measure(std::string tool) { return Scope(*this, std::move(tool), budget_ms_); }
+    Scope measure(std::string tool, long budget_ms) {
+        return Scope(*this, std::move(tool), budget_ms > 0 ? budget_ms : budget_ms_);
+    }
     uint64_t over_budget_count() const {
         return over_budget_count_.load(std::memory_order_relaxed);
     }
@@ -109,12 +114,13 @@ public:
 private:
     using Clock = std::chrono::steady_clock;
 
-    void record(const std::string& tool, Clock::time_point started) {
+    void record(const std::string& tool, Clock::time_point started, long budget_ms) {
         const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
             Clock::now() - started).count();
-        if (elapsed > budget_ms_) {
+        if (elapsed > budget_ms) {
             over_budget_count_.fetch_add(1, std::memory_order_relaxed);
-            std::cerr << "[rpc] over-budget tool=" << tool << " ms=" << elapsed << "\n";
+            std::cerr << "[rpc] over-budget tool=" << tool << " ms=" << elapsed
+                      << " budget_ms=" << budget_ms << "\n";
         }
     }
 

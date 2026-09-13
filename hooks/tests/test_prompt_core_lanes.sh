@@ -22,8 +22,15 @@ cat > "$STUB" <<'STUBEOF'
 # Fake chitta CLI: dispatches on subcommand (+ --limit, for the two
 # smart_recall call sites) to canned fixture files set via env vars.
 sub="$1"; shift
+if [[ -n "${STUB_CALL_LOG:-}" ]]; then
+    printf '%s %s\n' "$sub" "$*" >> "$STUB_CALL_LOG"
+fi
 get() { local flag="$1" a p; shift; for a in "$@"; do [[ "$p" == "$flag" ]] && { echo "$a"; return; }; p="$a"; done; }
 case "$sub" in
+    recall_lanes)
+        [[ "${STUB_RPC_MODE:-ok}" == "fail" ]] && exit 1
+        cat "${STUB_RPC_FILE:-/dev/null}"
+        ;;
     smart_recall)
         limit=$(get --limit "$@")
         if [[ "$limit" == "6" ]]; then cat "${STUB_SEM_FILE:-/dev/null}"
@@ -53,6 +60,7 @@ export CHITTA_QUEUE="$T/queue.jsonl"
 export CHITTA_REALM="project:stubrealm"   # skips realm_detect entirely
 export CC_SOUL_ADMIT_DEBUG=1
 export CC_SOUL_CTX_LANE=0                 # keep fixtures to sem/hyb/kw/corr; ctx covered by the same code path as sem
+unset CHITTA_RECALL_LANES_RPC CC_SOUL_RECALL_LANES_RPC
 
 # Bind (not listen) a UNIX socket at the path daemon_available() checks —
 # bind() alone creates the filesystem node, which is all `-S` requires.
@@ -199,5 +207,70 @@ assert "recall_empty marks empty lane files with booleans" \
     "printf '%s' '$EMPTY_EVENT' | jq -e '.lane_timeout | all(.[]; . == true)' >/dev/null"
 assert "recall_empty carries total hook milliseconds" \
     "printf '%s' '$EMPTY_EVENT' | jq -e '.hook_ms >= 0' >/dev/null"
+
+# ============================================================
+# Item 6: CHITTA_RECALL_LANES_RPC=1 makes one fan-in call, consumes
+# its verbatim lane text, and carries daemon lane timings unchanged.
+# ============================================================
+STUB_SEM_FILE="$T/sem-rpc"; STUB_HYB_FILE="$T/hyb-rpc"; STUB_KW_FILE="$T/kw-rpc"
+STUB_CORR_FILE="$T/corr-rpc"; STUB_RPC_FILE="$T/recall-lanes.json"
+cat > "$STUB_SEM_FILE" <<'EOF'
+Smart recall (semantic, ep=17): 1 results
+#31 [91%] [wisdom] persimmon fan-in fixture line
+EOF
+cat > "$STUB_HYB_FILE" <<'EOF'
+Found 1 results in realm 'project:stubrealm' (maxrel 90%):
+#32 [89%] [wisdom] persimmon hybrid fixture line
+EOF
+cat > "$STUB_KW_FILE" <<'EOF'
+Found 1 results in realm 'project:stubrealm' (maxrel 90%):
+#33 [80%] [wisdom] persimmon keyword fixture line
+EOF
+: > "$STUB_CORR_FILE"
+jq -n --rawfile sem "$STUB_SEM_FILE" --rawfile hyb "$STUB_HYB_FILE" \
+      --rawfile kw "$STUB_KW_FILE" --rawfile corr "$STUB_CORR_FILE" '
+  {lanes: {
+    sem:   {text:$sem,  results:[], ms:12, timed_out:false},
+    hyb:   {text:$hyb,  results:[], ms:34, timed_out:false},
+    kw:    {text:$kw,   results:[], ms:5,  timed_out:false},
+    corr:  {text:$corr, results:[], ms:3,  timed_out:false},
+    corrk: {text:"NO CORRECTION — no stored [correction] trigger matches this turn", results:[], ms:2, timed_out:false}
+  }, total_ms:35}' > "$STUB_RPC_FILE"
+STUB_CALL_LOG="$T/calls-rpc"; : > "$STUB_CALL_LOG"
+export STUB_SEM_FILE STUB_HYB_FILE STUB_KW_FILE STUB_CORR_FILE STUB_RPC_FILE STUB_CALL_LOG
+STUB_RPC_MODE=ok CHITTA_RECALL_LANES_RPC=1 run_hook "rpc-on" "what does the persimmon fixture show"
+assert "fan-in switch makes exactly one recall_lanes CLI call" \
+    "[[ \$(grep -c '^recall_lanes ' '$STUB_CALL_LOG') -eq 1 ]]"
+assert "fan-in success skips standalone recall processes" \
+    "! grep -Eq '^(smart_recall|recall|correction_check) ' '$STUB_CALL_LOG'"
+assert "fan-in lane text reaches normal admission" "grep -q '\[sem\]#31' '$T/stdout.rpc-on'"
+assert "fan-in lane timings come from RPC response" \
+    "grep -Eq 't:sem=12,hyb=34,kw=5,corr=3,corrk=2,total=' '$T/stdout.rpc-on'"
+
+STUB_RPC_FILE="$T/recall-lanes-ablated.json"
+jq 'del(.lanes.hyb, .lanes.kw)' "$T/recall-lanes.json" > "$STUB_RPC_FILE"
+export STUB_RPC_FILE
+: > "$STUB_CALL_LOG"
+STUB_RPC_MODE=ok CHITTA_RECALL_LANES_RPC=1 CHITTA_ABLATE_LANES=hyb,kw \
+    run_hook "rpc-ablated" "what does the persimmon fixture show"
+assert "fan-in request omits ablated lanes" \
+    "grep -Fq -- '--lanes [\"sem\",\"corr\",\"corrk\"]' '$STUB_CALL_LOG'"
+assert "fan-in ablation omits their timing entries" \
+    "grep -Eq 't:sem=12,corr=3,corrk=2,total=' '$T/stdout.rpc-ablated'"
+
+# ============================================================
+# Item 7: a failed fan-in call falls back, for that same prompt, to
+# the original standalone process fan-out.
+# ============================================================
+STUB_RPC_FILE="$T/recall-lanes.json"
+export STUB_RPC_FILE
+: > "$STUB_CALL_LOG"
+STUB_RPC_MODE=fail CHITTA_RECALL_LANES_RPC=1 run_hook "rpc-fallback" "what does the persimmon fixture show"
+assert "failed fan-in was attempted once" \
+    "[[ \$(grep -c '^recall_lanes ' '$STUB_CALL_LOG') -eq 1 ]]"
+assert "failed fan-in falls back to smart_recall" "grep -q '^smart_recall ' '$STUB_CALL_LOG'"
+assert "failed fan-in falls back to recall lanes" "grep -q '^recall ' '$STUB_CALL_LOG'"
+assert "failed fan-in falls back to correction_check" "grep -q '^correction_check ' '$STUB_CALL_LOG'"
+assert "fallback lane output reaches normal admission" "grep -q '\[sem\]#31' '$T/stdout.rpc-fallback'"
 
 exit $FAIL

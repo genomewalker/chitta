@@ -179,6 +179,14 @@ static const std::vector<ToolSpec> TOOL_SPECS = {
       {"pool", "Candidate pool depth before the recall-biased pre-filter (max 160)", false, "60"},
       {"prefilter", "Recall-biased pre-filter (false = narrow-pool legacy path)", false, "true"}}},
 
+    {"recall_lanes", "Fan-in prompt recall lanes over one daemon RPC",
+     {{"query", "Prompt query", true, nullptr},
+      {"ctx_query", "Optional context query (defaults to query)", false, nullptr},
+      {"realm", "Filter by realm", false, nullptr},
+      {"limits", "JSON object of sem/ctx/hyb/kw/corr limits", false, nullptr},
+      {"lanes", "JSON array or comma-separated lane names", false, nullptr},
+      {"budget_ms", "Per-lane wall-clock budget override", false, nullptr}}},
+
     {"correction_check", "Deterministic durable-correction check (capability #2): does a stored [correction] trigger recur in this turn? Exact keyed bigram probe — reserves an injection slot, bypasses fuzzy recall.",
      {{"text", "Turn/context text to scan for a recurring corrected mistake", true, nullptr}}},
 
@@ -1174,11 +1182,11 @@ int run_cli(const std::string& socket_path, const std::string& tool,
     }
 
     // Normalize comma-separated strings to arrays for known array keys
-    static const std::set<std::string> ARRAY_KEYS = {"tags", "shared_realms"};
+    static const std::set<std::string> ARRAY_KEYS = {"tags", "shared_realms", "lanes"};
     for (const auto& key : ARRAY_KEYS) {
         if (args.contains(key) && args[key].is_string()) {
             std::string val = args[key].get<std::string>();
-            if (val.find(',') != std::string::npos) {
+            if (key == "lanes" || val.find(',') != std::string::npos) {
                 json arr = json::array();
                 std::istringstream iss(val);
                 std::string item;
@@ -1234,7 +1242,7 @@ int run_cli(const std::string& socket_path, const std::string& tool,
         "msg_inbox", "msg_send", "msg_ack", "msg_ack_all", "msg_history",
         "ledger_save", "narrative_log", "narrative_history",
         "anticipation_filter", "anticipation_gate_status",
-        "recall", "smart_recall", "hybrid_recall"
+        "recall", "smart_recall", "hybrid_recall", "recall_lanes"
     };
     if (SESSION_TOOLS.count(tool) && !args.contains("session_id")) {
         pid_t ppid = getppid();
@@ -1687,7 +1695,7 @@ int main(int argc, char* argv[]) {
                         "msg_inbox", "msg_send", "msg_ack", "msg_ack_all", "msg_history",
                         "ledger_save", "narrative_log", "narrative_history",
                         "anticipation_filter", "anticipation_gate_status",
-                        "recall", "smart_recall", "hybrid_recall"
+                        "recall", "smart_recall", "hybrid_recall", "recall_lanes"
                     };
                     if (SESSION_TOOLS.count(tool_name) && !arguments.contains("session_id")) {
                         pid_t ppid = getppid();
