@@ -29,7 +29,8 @@ from task_ledger import (
 )
 
 CHITTA_BIN = os.environ.get("CHITTA_BIN", str(Path.home() / ".claude" / "bin" / "chitta"))
-CHITTA_QUEUE = Path(os.environ.get("CHITTA_QUEUE", "/tmp/chitta-queue.jsonl"))
+_MIND = Path(os.environ.get("MIND_PATH") or os.environ.get("CHITTA_DB_PATH") or Path.home() / ".claude" / "mind")
+CHITTA_QUEUE = Path(os.environ.get("CHITTA_QUEUE") or os.environ.get("CHITTA_QUEUE_PATH") or _MIND / "queue.jsonl")
 
 
 def _read_json_stdin() -> dict[str, Any]:

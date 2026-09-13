@@ -6,7 +6,8 @@ import os
 import sys
 from pathlib import Path
 
-QUEUE_FILE = "/tmp/chitta-queue.jsonl"
+_MIND = os.environ.get("MIND_PATH") or os.environ.get("CHITTA_DB_PATH") or str(Path.home() / ".claude" / "mind")
+QUEUE_FILE = os.environ.get("CHITTA_QUEUE") or os.environ.get("CHITTA_QUEUE_PATH") or os.path.join(_MIND, "queue.jsonl")
 
 
 def parse_transcript(filepath: Path) -> tuple[int, int]:
