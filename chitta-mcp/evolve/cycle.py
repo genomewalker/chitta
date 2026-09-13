@@ -105,10 +105,14 @@ def noise_bands(repo: Path, budget: Budget, metric: str) -> dict[str, float]:
     return bands
 
 
-def immutable(repo: Path, budget: Budget):
+def immutable(repo: Path, budget: Budget, base: str = "main", head: str = "HEAD"):
+    """The helper (benchmarks/check_eval_immutable.py) takes BASE HEAD and fails
+    if an evaluator path changed between them without an Eval-Change-Approved
+    trailer. On the bare repo before a candidate exists, BASE==HEAD is a wiring
+    check; in a worktree it compares the candidate against main."""
     helper = repo / "scripts/check-eval-immutable.sh"
     if helper.exists():
-        budget.run(["bash", str(helper)], repo)
+        budget.run(["bash", str(helper), base, head], repo)
     else:
         print("WARNING: immutability helper absent; built-in frozen-path check remains active")
 
@@ -369,7 +373,7 @@ def run(args) -> int:
     budget = Budget(args.max_minutes)
     store = MemoryStore(timeout=min(30, budget.remaining()))
     store.remaining = budget.remaining
-    immutable(repo, budget)
+    immutable(repo, budget, "HEAD", "HEAD")
     proposals, warnings = (
         ([normalize(p) for p in json.loads(args.backlog.read_text())], [])
         if args.backlog
@@ -492,7 +496,7 @@ def run(args) -> int:
             )
         for n, (cwd, cmd) in enumerate(gate_commands(worktree, paths)):
             budget.run(cmd, cwd, artifacts / f"gate-{n}.log")
-        immutable(worktree, budget)
+        immutable(worktree, budget, base, "HEAD")
         if budget.run(
             ["git", "status", "--porcelain", "--untracked-files=all"], worktree
         ).stdout.strip():
@@ -580,7 +584,7 @@ def run(args) -> int:
     value["memory_id"] = store.remember("verdict", value)
     print(json.dumps(value, indent=2))
     if args.open_pr and verdict == "accept":
-        immutable(worktree, budget)
+        immutable(worktree, budget, base, "HEAD")
         frozen_check(changed_files(worktree, base, budget))
         if budget.run(
             ["git", "status", "--porcelain", "--untracked-files=all"], worktree
