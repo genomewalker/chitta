@@ -63,9 +63,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: chitta/build
-          key: cmake-${{ runner.os }}-${{ hashFiles('chitta/CMakeLists.txt', 'chitta/cmake/**', 'chitta/src/**', 'chitta/include/**') }}
+          key: cmake-chitta-${{ runner.os }}-${{ hashFiles('chitta/CMakeLists.txt', 'chitta/cmake/**', 'chitta/src/**', 'chitta/include/**') }}
           restore-keys: |
-            cmake-${{ runner.os }}-
+            cmake-chitta-${{ runner.os }}-
 
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v3

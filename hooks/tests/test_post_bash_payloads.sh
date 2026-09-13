@@ -9,6 +9,7 @@ hook="$here/../post-bash-hook.sh"
 T=$(mktemp -d "${TMPDIR:-/tmp}/postbash.XXXXXX")
 trap 'rm -rf "$T"' EXIT
 export CHITTA_DB_PATH="$T" MIND_PATH="$T" CHITTA_BIN="${CHITTA_BIN:-$HOME/.claude/bin/chitta}"
+[[ -x "$CHITTA_BIN" ]] || export CHITTA_BIN=/bin/true   # CI has no CLI; the hook only needs the executable gate
 fail=0
 check() { if [[ "$2" == *"$3"* ]]; then echo "ok: $1"; else echo "FAIL: $1 -> $2"; fail=1; fi; }
 

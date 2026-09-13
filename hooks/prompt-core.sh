@@ -562,6 +562,7 @@ PY
         fi
         _wait_lanes
     fi
+    _sem_out="" _hyb_out="" _kw_out="" _corr_out="" _corrk_out="" _ctx_out=""
     _read_lane sem _sem_out; _read_lane hyb _hyb_out; _read_lane kw _kw_out
     _read_lane corr _corr_out; _read_lane corrk _corrk_out; _read_lane ctx _ctx_out
 
