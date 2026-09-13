@@ -79,8 +79,16 @@ echo "[dev-install] restarting MCP (stdio instances respawn on next tool call; H
 # are the systemd unit Codex connects to: killing it with SIGTERM counts as a
 # clean exit, Restart=on-failure does not bring it back, and the port stayed
 # dead for six days (2026-09-02 → 09-08). Restart that one via systemd instead.
-pgrep -f "chitta-m[c]p" 2>/dev/null | while read -r pid; do
-  tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null | grep -q -- '--http' || kill "$pid" 2>/dev/null || true
+# Match only real MCP server processes (the console script or server.py), never
+# an arbitrary shell whose argv merely mentions "chitta-mcp" — pgrep -f on the
+# bare name once killed the calling deploy shell (`systemctl … chitta-mcp-http`
+# in its command line). Also skip our own process tree.
+_self_tree="$$ $PPID"
+pgrep -f 'chitta-mcp$|chitta-mcp/server\.py|bin/chitta-mcp( |$)' 2>/dev/null | while read -r pid; do
+  case " $_self_tree " in *" $pid "*) continue ;; esac
+  cmd=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null)
+  case "$cmd" in *--http*) continue ;; esac
+  kill "$pid" 2>/dev/null || true
 done
 systemctl --user try-restart chitta-mcp-http 2>/dev/null || true
 
