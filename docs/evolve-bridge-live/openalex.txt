@@ -1,0 +1,51 @@
+OpenAlex search: 'agent memory retrieval' — 524 total, showing 10
+
+[W7211989832] Graph-Based Personalized Memory for LLM Agents: Representation, Evolution, Retrieval, and Evaluation
+  Authors: Dac Duy Anh Nguyen, Zhangchi Qiu, Shigeng Chen, Alan Wee-Chung Liew
+  Year: 2026  Cited by: 0
+  DOI: https://doi.org/10.48550/arxiv.2609.08599
+
+[W7207764053] Consistent Conversational State for Virtual Agents: Slot-Based Memory for Accurate Fact Retrieval
+  Authors: Erica Butts, Salam Daher
+  Year: 2026  Cited by: 0
+  DOI: https://doi.org/10.1145/3806774.3832787
+
+[W7208738929] When Users Don't Ask: Benchmarking Context-Driven Memory Retrieval in Conversational Agents
+  Authors: Wen-Yu Chang, Yun-Nung Chen
+  Year: 2026  Cited by: 0
+  DOI: https://doi.org/10.48550/arxiv.2609.03467
+
+[W7204889407] AgenticRag-R1: Agentic Reinforcement Learning with Stack Memory for Multi-Step Reasoning, Retrieval and Memorizing
+  Authors: Xinke Jiang, Yue Fang, Zhibang Yang, Jiaran Gao
+  Year: 2026  Cited by: 0
+  DOI: https://doi.org/10.48550/arxiv.2608.29622
+
+[W7212079526] EdgeMem: LLM-Free Agent Memory Construction and Retrieval via Evidence-Preserving Multi-Anchor Hypergraph
+  Authors: Zeyang Cui, Jiannong Cao, Zhiyuan Wen, Bo Yuan
+  Year: 2026  Cited by: 0
+  DOI: https://doi.org/10.48550/arxiv.2609.05553
+
+[W4414898195] Beyond static responses: multi-agent LLM systems as a new paradigm for social science research
+  Authors: Jennifer Haase, Sebastian Pokutta
+  Year: 2026  Cited by: 2
+  DOI: https://doi.org/10.1057/s41599-026-08832-2
+
+[W7204960506] Multi agent retrieval validation and knowledge reasoning for enhanced retrieval augmented generation
+  Authors: Babasaheb Satpute, Wasudeo P. Rahane, Poonam Pawar, Hrishikesh Vanjari
+  Year: 2026  Cited by: 0
+  DOI: https://doi.org/10.1038/s41598-026-69002-7
+
+[W7212049521] Personalizing LLM Agent Memory Using Biometrics
+  Authors: Yanhong Qian, Qingguo Meng, Shihao Ding, Xingbo Dong
+  Year: 2026  Cited by: 0
+  DOI: https://doi.org/10.48550/arxiv.2609.08558
+
+[W7206216662] fidelis: zero-LLM agent memory for Claude Code and AI agents
+  Authors: Rolando Bosch Rodriguez
+  Year: 2026  Cited by: 0
+  DOI: https://doi.org/10.5281/zenodo.22248259
+
+[W7165570319] fidelis: zero-LLM agent memory for Claude Code and AI agents
+  Authors: Rolando Bosch Rodriguez
+  Year: 2026  Cited by: 0
+  DOI: https://doi.org/10.5281/zenodo.20803113

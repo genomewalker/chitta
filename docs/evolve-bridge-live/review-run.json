@@ -1,0 +1,27 @@
+{
+  "base": "b5df6a3ddccc97d23b0ad535ffb80fc58031d8c8",
+  "head": "0c2e598e3e6567a5e26122c4ce2b1f8615887695",
+  "reviewers": {
+    "claude": {
+      "verdict": "pass",
+      "reasons": [
+        "Touches hooks/grade-recall.py, which computes eval/grading metrics (admitted-are-gold precision, gold coverage); it does not touch a separate gold/hidden/ledger data file, only the grading harness's own control flow.",
+        "No reward inflation: the change makes the grader stricter, not looser \u2014 it now aborts (exit 2) rather than silently scoring 0.0 when the eval replica socket is unreachable, so it removes a failure mode that previously produced a misleadingly low (not inflated) score; net effect is toward more honest measurement, not Goodharting upward.",
+        "No frozen-contract artifacts (RPC shapes, '#<id> [pct%]' lines, snapshot/WAL formats) appear in this diff at all \u2014 only a CLI probe subprocess call and a return-code check are added.",
+        "Blast radius: change is confined to grade-recall.py's main(), gated behind CHITTA_EVAL_SOCKET being set, so it only affects eval-replica runs, not the live production daemon/hooks path; the sys.exit(main()) change ensures the new exit code 2 actually propagates as a process exit status, which is a behavior change for any caller relying on exit codes but is disclosed via the comment and is low-risk/reversible (revert is a two-line diff).",
+        "No pre-registered bet or verdict is present in this diff; the added comment references a past 2026-09-13 incident as motivation but supplies no bet/threshold/evidence structure, so the bet-resolution rubric item has nothing to evaluate \u2014 this is a gap rather than a violation, so it does not by itself justify a block."
+      ],
+      "routing_note": "review cannot reliably route Claude; used explicit Claude discuss",
+      "model": "sonnet"
+    },
+    "codex": {
+      "verdict": "block",
+      "reasons": [
+        "Reviewer returned no valid verdict JSON"
+      ],
+      "error": true,
+      "model": "gpt-6-astra"
+    }
+  },
+  "overall": "block"
+}

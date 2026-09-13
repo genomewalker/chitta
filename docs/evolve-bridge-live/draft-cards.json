@@ -1,0 +1,105 @@
+{
+  "status": "draft-only: recall/dedupe and memory persistence unverified",
+  "model_calls": 3,
+  "cards": [
+    {
+      "id": "2609.08599",
+      "title": "Graph-Based Personalized Memory for LLM Agents: Representation, Evolution, Retrieval, and Evaluation",
+      "mechanism": "Attach an explicit evidence-link field (source episode/session/utterance ID) to every triplet edge at write time in the graph store, and expose it in triplet_query_as_of/triplet_supersede results so retrieval and contradiction-resolution can rank/filter by evidence traceability and recency, not just edge existence.",
+      "expected_gain": {
+        "metric": "nDCG@20 on chitta golden recall set",
+        "delta": 0.01,
+        "confidence": 0.2,
+        "rationale": "chitta already has temporal triplet versioning (triplet_query_as_of/triplet_supersede) and memory-level provenance (memory_provenance, provenance_check), but no per-edge evidence link inside the triplet/graph store itself — this closes that specific gap the survey flags as core to graph representation."
+      },
+      "cost": {
+        "effort_h": 4.0,
+        "blast_radius": "chitta-field/src/store.rs triplet schema, chitta/include/chitta/rpc/field_handler.hpp, field_memory_recall.cpp ranking path"
+      },
+      "evidence": [
+        {
+          "source": "https://arxiv.org/abs/2609.08599",
+          "claim": "Abstract states graph-based personalized memory models user info \"through explicit relations, temporal context, and evidence links\""
+        },
+        {
+          "source": "https://arxiv.org/abs/2609.08599",
+          "claim": "Abstract frames memory evolution (revision) and retrieval as lifecycle stages built on those representations"
+        }
+      ],
+      "source": "https://arxiv.org/abs/2609.08599",
+      "already_have": false,
+      "inventory": {
+        "path": "/projects/caeg/scratch/kbd606/tmp/chitta-truth-inventory.md",
+        "sha256": "6a2b73d936ff564571596f34659e799a58314c568673f3561f831fa6fc8150b1"
+      }
+    },
+    {
+      "id": "2609.03467",
+      "title": "When Users Don't Ask: Benchmarking Context-Driven Memory Retrieval in Conversational Agents",
+      "mechanism": "Add a query-rewriting/expansion pre-pass to recall that converts implicit and composed conversational queries (context-derived, not explicit asks) into explicit multi-facet sub-queries before hitting the RRF lanes, targeting the paper's finding that implicit/composed queries have the largest retrieval gap and that rewriting narrows it for raw-turn memory",
+      "expected_gain": {
+        "metric": "nDCG@20 on implicit/composed query subset (golden-set style eval)",
+        "delta": 0.03,
+        "confidence": 0.2,
+        "rationale": "chitta's hybrid/RRF recall (handle_recall_gateway, strategy=hybrid) and cross-encoder rerank already improve explicit/keyword recall, but nothing rewrites implicit context-only queries into explicit sub-queries, which is exactly the gap this paper measures"
+      },
+      "cost": {
+        "effort_h": 6,
+        "blast_radius": "chitta-mcp/server.py handle_recall_gateway/handle_recall_smart, prompt-hook.sh query construction, adds one LLM call per recall on implicit-query heuristic"
+      },
+      "evidence": [
+        {
+          "source": "https://arxiv.org/abs/2609.03467",
+          "claim": "Paper finds conversational framing exposes retrieval gaps on implicit and composed queries beyond QA benchmarks"
+        },
+        {
+          "source": "https://arxiv.org/abs/2609.03467",
+          "claim": "Multi-facet query rewriting narrows the gap for raw-turn memory but not abstractive memory"
+        }
+      ],
+      "source": "https://arxiv.org/abs/2609.03467",
+      "already_have": false,
+      "inventory": {
+        "path": "/projects/caeg/scratch/kbd606/tmp/chitta-truth-inventory.md",
+        "sha256": "6a2b73d936ff564571596f34659e799a58314c568673f3561f831fa6fc8150b1"
+      }
+    },
+    {
+      "id": "2608.29622",
+      "title": "AgenticRag-R1: Agentic Reinforcement Learning with Stack Memory for Multi-Step Reasoning, Retrieval and Memorizing",
+      "mechanism": "Add a stack-based memory scratchpad to recall_smart/recall_gateway: instead of one-shot RRF merge, let the agent push/pop retrieval sub-goals so intermediate retrieved facts persist across multi-hop steps and get scored by an action-aware reward (retrieve/verify/memorize as distinct fine-grained actions) rather than only a trajectory-level RRF merge",
+      "expected_gain": {
+        "metric": "longmemeval_s accuracy, %",
+        "delta": 3.0,
+        "confidence": 0.2,
+        "rationale": "chitta already does multi-lane RRF hybrid recall (78.0% on longmemeval_s) but has no explicit multi-hop stack/scratchpad or per-action reward shaping, so gains would come from better long-horizon retrieval chaining, not from adding memory itself"
+      },
+      "cost": {
+        "effort_h": 20.0,
+        "blast_radius": "chitta-mcp/server.py recall_gateway/recall_smart handlers, field_memory_recall.cpp RRF merge path, no daemon storage schema change expected"
+      },
+      "evidence": [
+        {
+          "source": "https://arxiv.org/abs/2608.29622",
+          "claim": "Paper reports stack memory + fine-grained action space + hierarchical action-aware rewards improve multi-hop reasoning/retrieval over trajectory-level-reward baselines"
+        },
+        {
+          "source": "https://arxiv.org/abs/2608.29622",
+          "claim": "Abstract states existing agentic RAG RL methods use coarse action spaces and trajectory-level rewards causing weak reward assignment"
+        }
+      ],
+      "source": "https://arxiv.org/abs/2608.29622",
+      "already_have": false,
+      "inventory": {
+        "path": "/projects/caeg/scratch/kbd606/tmp/chitta-truth-inventory.md",
+        "sha256": "6a2b73d936ff564571596f34659e799a58314c568673f3561f831fa6fc8150b1"
+      }
+    }
+  ],
+  "errors": [
+    {
+      "id": "6774.38327",
+      "error": "No paper text fetched"
+    }
+  ]
+}
