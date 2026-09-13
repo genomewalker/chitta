@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Chitta evolution mechanism card",
+  "type": "object",
+  "required": ["id", "title", "mechanism", "expected_gain", "cost", "evidence", "source"],
+  "properties": {
+    "id": {"type": "string", "minLength": 1},
+    "title": {"type": "string", "minLength": 1},
+    "mechanism": {"type": "string", "minLength": 1},
+    "expected_gain": {
+      "type": "object",
+      "required": ["metric", "delta", "confidence"],
+      "properties": {
+        "metric": {"type": "string", "minLength": 1},
+        "delta": {"type": "number"},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    },
+    "cost": {
+      "type": "object",
+      "required": ["effort_h", "blast_radius"],
+      "properties": {
+        "effort_h": {"type": "number", "exclusiveMinimum": 0},
+        "blast_radius": {"type": "number", "minimum": 1}
+      }
+    },
+    "evidence": {"type": "array"},
+    "source": {"enum": ["telemetry", "memory", "hypothesis"]}
+  }
+}
