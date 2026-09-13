@@ -121,6 +121,8 @@ after a plugin update, which can replace those symlinks with a fresh clone.
 
 ### SessionStart
 
+Status 2026-09-13: SessionStart concurrent lanes preserve output order and enforce the hook budget; 10 isolated live-read runs improved median/p95 from 3116.5/4137 ms to 739.5/1573 ms (992 bytes each, 0 failures); the 300 ms/call stub completes in 1077 ms. [Attribution and gates](../hooks/tests/session_start_latency.md).
+
 **What chitta Does:**
 1. Auto-install binaries if needed (`smart-install.sh`)
 2. Start subconscious daemon (`subconscious.sh start`)

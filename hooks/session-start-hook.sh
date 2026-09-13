@@ -2,6 +2,40 @@
 # Headless bridge participant: no session to restore — it answers once and exits.
 if [[ -n "${CHITTA_HEADLESS:-$CC_SOUL_HEADLESS}" ]]; then cat >/dev/null; printf '{}'; exit 0; fi
 
+# One process-group deadline covers setup, every lane, and output assembly.
+# SIGKILL bounds children that ignore TERM. Only this invocation's private group
+# is affected; the supervising shell removes its local result directory.
+if [[ "${1:-}" != --session-start-worker ]]; then
+    HOOK_BUDGET_MS="${CHITTA_HOOK_BUDGET_MS:-${CC_SOUL_HOOK_BUDGET_MS:-6000}}"
+    [[ "$HOOK_BUDGET_MS" =~ ^[1-9][0-9]*$ ]] || HOOK_BUDGET_MS=6000
+    _ld=$(mktemp -d /tmp/chitta-session-start.XXXXXX) || exit 0
+    trap 'rm -rf "$_ld"' EXIT
+    printf -v _budget '%d.%03d' "$((HOOK_BUDGET_MS / 1000))" "$((HOOK_BUDGET_MS % 1000))"
+    _trace=()
+    [[ $- == *x* ]] && _trace=(-x)
+    timeout --signal=KILL "$_budget" bash "${_trace[@]}" "${BASH_SOURCE[0]}" --session-start-worker "$_ld" "$PPID"
+    exit 0
+fi
+_ld="$2"
+_SESSION_START_PARENT_PID="$3"
+# Nested timeout normally creates a new process group, escaping the outer
+# deadline. Keep every lane (including registry_call's timeout) in our group.
+timeout() { command timeout --foreground "$@"; }
+declare -A _lane_pids=()
+_launch_lane() {
+    local name="$1"
+    shift
+    # Explicit stdin preserves the registry payload in an asynchronous shell.
+    ( "$@" || true; : ) <&0 >"$_ld/$name" 2>/dev/null &
+    _lane_pids["$name"]=$!
+}
+_read_lane() {
+    local name="$1" dest="$2" value
+    wait "${_lane_pids[$name]}" 2>/dev/null || true
+    value=$(<"$_ld/$name")
+    printf -v "$dest" '%s' "$value"
+}
+
 # SessionStart hook: Initialize soul context with FULL state restoration
 #
 # LOSSLESS: Restores complete session state after compaction
@@ -34,6 +68,7 @@ HOOK_SOURCE=$(echo "$INPUT" | jq -r '.source // "startup"')
 MIND_PATH="${CHITTA_DB_PATH:-${HOME}/.claude/mind}"
 STRICT_MODE_FILE="${MIND_PATH}/.strict_claude_style"
 STRICT_MODE_DEFAULT="${CHITTA_STRICT_MODE_DEFAULT:-${CC_SOUL_STRICT_MODE_DEFAULT:-1}}"
+_reset_session_state() {
 if [[ "$HOOK_SOURCE" != "compact" ]]; then
     rm -f "$MIND_PATH/.session_active" "$MIND_PATH/.gaps_surfaced"
     rm -f "$MIND_PATH/.stop_dedup_"* 2>/dev/null || true
@@ -59,15 +94,20 @@ if [[ -n "$SESSION_ID" ]]; then
     echo "$CURRENT_TURN" > "${MIND_PATH}/.last_store_turn_${SESSION_ID}"
 fi
 
+}
+_launch_lane cleanup _reset_session_state
+
 # Check chitta CLI exists and daemon is running
-[[ ! -x "$CHITTA_BIN" ]] && exit 0
-daemon_available || exit 0
+if [[ ! -x "$CHITTA_BIN" ]] || ! daemon_available; then
+    wait "${_lane_pids[cleanup]}" 2>/dev/null || true
+    exit 0
+fi
 
 # Register every Claude session through the same adapter used by Codex.  This
 # records the exact transcript, project, frontend kind, and long-lived parent
 # PID in Chitta and in the shared task ledger before any early-exit path.
 if [[ -n "$SESSION_ID" ]]; then
-    printf '%s' "$INPUT" | registry_call 8 register --client claude
+    _launch_lane registry registry_call 8 register --client claude <<< "$INPUT"
 fi
 
 # Detect subagent session: SubagentStart hook writes sentinel before session starts
@@ -84,8 +124,22 @@ fi
 if [[ "$IS_SUBAGENT" == "true" ]]; then
     # The shared adapter above registered this session. SubagentStart already
     # injected context, so this hook remains silent.
+    wait "${_lane_pids[@]}" 2>/dev/null || true
     exit 0
 fi
+
+# Start realm-independent reads before path decoding and realm/ledger lookup.
+_launch_lane soul timeout "$MAX_WAIT" "$CHITTA_BIN" soul_context
+_launch_lane themes timeout "$MAX_WAIT" "$CHITTA_BIN" sql_query \
+    --query "SELECT t.memory_count, substr(m.content, 1, 60) as label FROM theme t JOIN memory m ON t.representative_id = m.id WHERE t.memory_count > 0 ORDER BY t.updated_at DESC LIMIT 3" --json
+_launch_lane kinds timeout "$MAX_WAIT" "$CHITTA_BIN" sql_query \
+    --query "SELECT kind, COUNT(*) as cnt FROM memory WHERE access_count > 1 GROUP BY kind ORDER BY cnt DESC LIMIT 6" --json
+_launch_lane counts timeout "$MAX_WAIT" "$CHITTA_BIN" sql_query \
+    --query "SELECT COUNT(*) as total, COUNT(CASE WHEN priority_tier = 2 THEN 1 END) as critical, COUNT(CASE WHEN pinned = true THEN 1 END) as pinned FROM memory" --json
+_launch_lane corrections_raw timeout "$MAX_WAIT" "$CHITTA_BIN" recall --query correction --tag correction --limit 5 --json
+_launch_lane compliance timeout "$MAX_WAIT" "$CHITTA_BIN" recall --query "compliance:auto user correction" --limit 2 --text-only
+_launch_lane probe timeout 1 "$CHITTA_BIN" query_triplets --predicate probe_signal --limit 10
+_launch_lane cache timeout "$MAX_WAIT" "$CHITTA_BIN" recall --query "cache:break session cache_hit_ratio" --limit 1 --text-only
 
 # Derive project directory from transcript path
 # Transcript path: ~/.claude/projects/-maps-projects-X-Y-Z/session.jsonl
@@ -127,6 +181,45 @@ fi
 # Background maintenance: auto-index and realm-retag
 # ═══════════════════════════════════════════════════════════════════════════
 
+_load_ledger() {
+    timeout "$MAX_WAIT" "$CHITTA_BIN" ledger_load --project "$REALM" --json || echo '{}'
+}
+_launch_lane ledger _load_ledger
+if [[ -n "${REALM:-}" && "$REALM" != brahman ]]; then
+    _launch_lane recent timeout "$MAX_WAIT" "$CHITTA_BIN" sql_query \
+        --query "SELECT id, kind, content FROM memory WHERE realm = '${REALM}' ORDER BY accessed_at DESC LIMIT 3" --json
+fi
+
+_render_tasks() {
+    # Both public renderers share one interpreter, retaining independent
+    # four-second ceilings without changing the task_ledger module.
+    timeout 8 python3 - "$PLUGIN_DIR/chitta-mcp" "$REALM" <<'PY'
+import signal
+import sys
+
+sys.path.insert(0, sys.argv[1])
+from task_ledger import render_inbox, render_threads  # noqa: E402
+
+
+def expired(signum, frame):
+    raise TimeoutError()
+
+
+signal.signal(signal.SIGALRM, expired)
+for render, limit in ((render_inbox, 5), (render_threads, 3)):
+    try:
+        signal.alarm(4)
+        text = render(sys.argv[2], limit).rstrip('\n')
+        if text:
+            print('\n' + text, flush=True)
+    except Exception:  # noqa: BLE001 - preserve the independent fail-open calls
+        pass  # One failed renderer must not suppress the other card.
+    finally:
+        signal.alarm(0)
+PY
+}
+_launch_lane tasks _render_tasks
+
 # Auto-index codebase (10-minute rate limit built into script)
 if [[ -n "$PROJECT_DIR" && -d "$PROJECT_DIR" ]]; then
     AUTO_INDEX_SCRIPT="$PLUGIN_DIR/scripts/auto-index.sh"
@@ -146,6 +239,7 @@ fi
 # Trigger transcript distillation once the shared registry has recorded it.
 if [[ -n "$TRANSCRIPT_PATH" && -f "$TRANSCRIPT_PATH" ]]; then
     # Trigger distillation of any pending un-distilled transcripts (handles post-compaction case)
+    _read_lane registry _registry_unused
     queue_write "distill_trigger" "{\"session_id\":\"$SESSION_ID\"}"
 fi
 
@@ -159,7 +253,7 @@ fi
 # Export session environment variables for other processes. Registration itself
 # is handled above by session_registry.py for both Claude and Codex.
 if [[ -n "$SESSION_ID" ]]; then
-    CLAUDE_PID=${PPID:-$$}
+    CLAUDE_PID=$_SESSION_START_PARENT_PID
     SESSION_ENV_FILE="$HOME/.claude/mind/.session_env_$$"
     mkdir -p "$(dirname "$SESSION_ENV_FILE")"
     cat > "$SESSION_ENV_FILE" << EOF
@@ -201,7 +295,20 @@ fi
 
 # Get full ledger entry (not just summary)
 # ledger_load returns the most recent entry for the project
-LEDGER_JSON=$(timeout "$MAX_WAIT" "$CHITTA_BIN" ledger_load --project "$REALM" --json 2>/dev/null || echo "{}")
+_read_lane ledger LEDGER_JSON
+
+# The query depends on the ledger. Speculate the fallback concurrently, but
+# display it only when the scoped answer contains no usable memory.
+if [[ -n "${REALM:-}" && "$REALM" != brahman ]]; then
+    _recall_query="$REALM"
+    if [[ -n "$LEDGER_JSON" && "$LEDGER_JSON" != '{}' ]]; then
+        _snap=$(echo "$LEDGER_JSON" | jq -r '.snapshot // empty' | head -1 | head -c 120)
+        [[ -n "$_snap" ]] && _recall_query="$_snap"
+    fi
+    _project_kw=$(basename "${PROJECT_DIR:-$REALM}")
+    _launch_lane scoped timeout "$MAX_WAIT" "$CHITTA_BIN" recall --query "$_recall_query" --realm "$REALM" --limit 6 --text-only
+    _launch_lane fallback timeout "$MAX_WAIT" "$CHITTA_BIN" recall --query "${_project_kw} ${_recall_query}" --limit 6 --text-only
+fi
 
 # Check if this is a post-compaction session
 # Primary signal: Claude Code passes source="compact" in hook input (authoritative)
@@ -227,6 +334,62 @@ if [[ "$HOOK_SOURCE" == "clear" ]]; then
         IS_POST_CLEAR=true
     fi
 fi
+
+_collect_corrections() {
+    local surface_file="${MIND_PATH}/.correction_surfaces"
+    local corr_id corr_text tags current corrections_out="" index=0
+    local -a ids=() texts=() tag_pids=()
+    mkdir -p "$MIND_PATH"
+    touch "$surface_file"
+    # Parse once, retaining full-width IDs and Python's Unicode character cap.
+    # NUL framing preserves embedded tabs/newlines without per-result Python.
+    python3 - "$_ld/corrections_raw" >"$_ld/correction_records" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1]) as handle:
+    data = json.load(handle)
+for result in data.get('results', []):
+    text = result.get('text', '')
+    if 'verified' in text.lower():
+        continue
+    if result.get('correction_state', 'emitted') in ('verified', 'applied'):
+        continue
+    ident = str(result.get('id', '')).replace('\0', '').rstrip('\n')
+    text = text[:120].replace('\0', '').rstrip('\n')
+    if ident and text:
+        sys.stdout.write(ident + '\0' + text + '\0')
+PY
+    while IFS= read -r -d '' corr_id && IFS= read -r -d '' corr_text; do
+        ids+=("$corr_id")
+        texts+=("$corr_text")
+        (
+            timeout 0.5 "$CHITTA_BIN" triplet_history --id "$corr_id" --predicate tagged --json |
+                jq -r '[.triplets[]? | .object // ""] | join(" ")'
+        ) >"$_ld/tag-$index" 2>/dev/null &
+        tag_pids+=("$!")
+        index=$((index + 1))
+    done <"$_ld/correction_records"
+    for index in "${!ids[@]}"; do
+        wait "${tag_pids[$index]}" 2>/dev/null || true
+        tags=$(<"$_ld/tag-$index")
+        [[ "$tags" =~ wontfix|verified ]] && continue
+        corr_id="${ids[$index]}"
+        corr_text="${texts[$index]}"
+        current=$(grep -c "^${corr_id}$" "$surface_file" 2>/dev/null | tail -1 || echo 0)
+        current="${current//[^0-9]/}"
+        [[ -z "$current" ]] && current=0
+        [[ "$current" -ge 5 ]] && continue
+        echo "$corr_id" >>"$surface_file"
+        corrections_out="${corrections_out}${corr_text}\n"
+    done
+    if [[ -n "$corrections_out" ]]; then
+        echo ""
+        echo "[recent-corrections]"
+        printf '%b' "$corrections_out" | head -5
+        echo "[/recent-corrections]"
+    fi
+}
 
 if [[ "$IS_POST_COMPACT" == "true" ]]; then
     # This is a continuation after compaction - inject full state
@@ -310,24 +473,13 @@ elif [[ "$IS_POST_CLEAR" == "true" ]]; then
     echo -e "$_card"
 else
     # Normal session start - just show minimal info
-    # ── Task ledger: inbox + active tasks ─────────────────────────────────
-    _PLUGIN_DIR="${CHITTA_PLUGIN_DIR:-${CC_SOUL_PLUGIN_DIR:-$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")}}"
-    _MCP_DIR="$_PLUGIN_DIR/chitta-mcp"
-    _inbox_txt=$(timeout 4 python3 "$_MCP_DIR/task_ledger.py" render_inbox \
-        --realm "${REALM:-}" --limit 5 2>/dev/null || true)
-    if [[ -n "$_inbox_txt" ]]; then
-        echo ""
-        echo "$_inbox_txt"
-    fi
-    _threads_txt=$(timeout 4 python3 "$_MCP_DIR/task_ledger.py" render_threads \
-        --realm "${REALM:-}" --limit 3 2>/dev/null || true)
-    if [[ -n "$_threads_txt" ]]; then
-        echo ""
-        echo "$_threads_txt"
-    fi
-    # ── End task ledger ───────────────────────────────────────────────────────
+    # Dependent correction tags start as soon as their recall has completed.
+    _read_lane corrections_raw corrections_raw
+    _launch_lane corrections _collect_corrections
+    _read_lane tasks _tasks_txt
+    [[ -n "$_tasks_txt" ]] && printf '%s\n' "$_tasks_txt"
 
-    soul_output=$(timeout "$MAX_WAIT" "$CHITTA_BIN" soul_context 2>/dev/null || true)
+    _read_lane soul soul_output
     if [[ -n "$soul_output" ]]; then
         memories=$(echo "$soul_output" | grep -oE 'Memory: [0-9]+' | grep -oE '[0-9]+' || echo "0")
         triplets=$(echo "$soul_output" | grep -oE '[0-9]+ triplets' | grep -oE '[0-9]+' || echo "0")
@@ -346,25 +498,13 @@ else
     # ═══════════════════════════════════════════
     TOPOLOGY_PARTS=()
 
-    # Four independent sql_query calls — run in parallel.
-    _tf=$(mktemp); _kf=$(mktemp); _cf=$(mktemp); _rf=$(mktemp)
-    timeout "$MAX_WAIT" "$CHITTA_BIN" sql_query \
-        --query "SELECT t.memory_count, substr(m.content, 1, 60) as label FROM theme t JOIN memory m ON t.representative_id = m.id WHERE t.memory_count > 0 ORDER BY t.updated_at DESC LIMIT 3" \
-        --json >"$_tf" 2>/dev/null &
-    timeout "$MAX_WAIT" "$CHITTA_BIN" sql_query \
-        --query "SELECT kind, COUNT(*) as cnt FROM memory WHERE access_count > 1 GROUP BY kind ORDER BY cnt DESC LIMIT 6" \
-        --json >"$_kf" 2>/dev/null &
-    timeout "$MAX_WAIT" "$CHITTA_BIN" sql_query \
-        --query "SELECT COUNT(*) as total, COUNT(CASE WHEN priority_tier = 2 THEN 1 END) as critical, COUNT(CASE WHEN pinned = true THEN 1 END) as pinned FROM memory" \
-        --json >"$_cf" 2>/dev/null &
-    if [[ -n "${REALM:-}" && "${REALM}" != "brahman" ]]; then
-        timeout "$MAX_WAIT" "$CHITTA_BIN" sql_query \
-            --query "SELECT id, kind, content FROM memory WHERE realm = '${REALM}' ORDER BY accessed_at DESC LIMIT 3" \
-            --json >"$_rf" 2>/dev/null &
+    _read_lane themes theme_out
+    _read_lane kinds kind_out
+    _read_lane counts count_out
+    recent_out=""
+    if [[ -n "${REALM:-}" && "$REALM" != brahman ]]; then
+        _read_lane recent recent_out
     fi
-    wait
-    theme_out=$(cat "$_tf"); kind_out=$(cat "$_kf"); count_out=$(cat "$_cf"); recent_out=$(cat "$_rf")
-    rm -f "$_tf" "$_kf" "$_cf" "$_rf"
 
     if [[ -n "$theme_out" ]]; then
         theme_str=$(echo "$theme_out" | jq -r '[.rows[]? | "\(.memory_count)m: \(.label)"] | join(" | ")' 2>/dev/null || true)
@@ -410,29 +550,13 @@ else
     # Runs for any non-brahman realm; content is capped to keep context lean.
     # ===========================================
     if [[ -n "${REALM:-}" && "${REALM}" != "brahman" ]]; then
-        # Build query seed: ledger snapshot first word/line, else realm
-        _recall_query="$REALM"
-        if [[ -n "$LEDGER_JSON" && "$LEDGER_JSON" != "{}" ]]; then
-            _snap=$(echo "$LEDGER_JSON" | jq -r '.snapshot // empty' | head -1 | head -c 120)
-            [[ -n "$_snap" ]] && _recall_query="$_snap"
-        fi
-
-        # Pass 1: realm-filtered (exact match; works when memories are properly tagged)
-        _recall_raw=$(timeout "$MAX_WAIT" "$CHITTA_BIN" recall \
-            --query "$_recall_query" \
-            --realm "$REALM" \
-            --limit 6 \
-            --text-only 2>/dev/null || true)
+        _read_lane scoped _recall_raw
 
         _recall_body=$(printf '%s\n' "$_recall_raw" | grep -E '^#[0-9]+ \[[0-9]+%\] \[[^]]+\][[:space:]]+[^[:space:]]' | grep -vE '^#[0-9]+ \[[0-9]+%\] \[episode\]')
 
         # Pass 2: unfiltered fallback — covers projects whose memories live under brahman
         if [[ -z "$_recall_body" ]]; then
-            _project_kw=$(basename "${PROJECT_DIR:-$REALM}")
-            _recall_raw=$(timeout "$MAX_WAIT" "$CHITTA_BIN" recall \
-                --query "${_project_kw} ${_recall_query}" \
-                --limit 6 \
-                --text-only 2>/dev/null || true)
+            _read_lane fallback _recall_raw
             _recall_body=$(printf '%s\n' "$_recall_raw" | grep -E '^#[0-9]+ \[[0-9]+%\] \[[^]]+\][[:space:]]+[^[:space:]]' | grep -vE '^#[0-9]+ \[[0-9]+%\] \[episode\]')
         fi
 
@@ -451,55 +575,12 @@ else
     # Corrections tagged 'wontfix' or 'verified' are suppressed.
     # Others are suppressed after CORRECTION_MAX_SURFACES sessions without action.
     # ===========================================
-    CORRECTION_MAX_SURFACES=5
-    SURFACE_COUNT_FILE="${MIND_PATH}/.correction_surfaces"
-    touch "$SURFACE_COUNT_FILE" 2>/dev/null
-
-    corrections_raw=$(timeout "$MAX_WAIT" "$CHITTA_BIN" recall --query "correction" --tag "correction" --limit 5 --json 2>/dev/null || true)
-
-    # Filter out verified corrections
-    corrections_raw=$(echo "$corrections_raw" | python3 -c "
-import sys, json
-d = json.load(sys.stdin)
-d['results'] = [r for r in d.get('results', [])
-                if 'verified' not in r.get('text','').lower()
-                and r.get('correction_state','emitted') not in ('verified','applied')]
-print(json.dumps(d))
-" 2>/dev/null || echo "$corrections_raw")
-
-    if [[ -n "$corrections_raw" && "$corrections_raw" != *"No memories"* ]]; then
-        corrections_out=""
-        while IFS= read -r corr_line; do
-            [[ -z "$corr_line" ]] && continue
-            corr_id=$(echo "$corr_line" | python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('id',''))" 2>/dev/null || true)
-            corr_text=$(echo "$corr_line" | python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('text','')[:120])" 2>/dev/null || true)
-            [[ -z "$corr_id" || -z "$corr_text" ]] && continue
-
-            # Skip if tagged wontfix or verified
-            tags=$(timeout 0.5 "$CHITTA_BIN" triplet_history --id "$corr_id" --predicate "tagged" --json 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(' '.join(t.get('object','') for t in d.get('triplets',[])))" 2>/dev/null || echo "")
-            [[ "$tags" =~ wontfix|verified ]] && continue
-
-            # Track surface count
-            current=$(grep -c "^${corr_id}$" "$SURFACE_COUNT_FILE" 2>/dev/null | tail -1 || echo "0")
-            current="${current//[^0-9]/}"
-            [[ -z "$current" ]] && current=0
-            if [[ "$current" -ge "$CORRECTION_MAX_SURFACES" ]]; then
-                continue  # Suppressed after N surfaces without action
-            fi
-            echo "$corr_id" >> "$SURFACE_COUNT_FILE"
-            corrections_out="${corrections_out}${corr_text}\n"
-        done <<< "$(echo "$corrections_raw" | python3 -c "import sys,json; d=json.load(sys.stdin); [print(json.dumps(r)) for r in d.get('results',[])]" 2>/dev/null)"
-
-        if [[ -n "$corrections_out" ]]; then
-            echo ""
-            echo "[recent-corrections]"
-            printf '%b' "$corrections_out" | head -5
-            echo "[/recent-corrections]"
-        fi
-    fi
+    _read_lane corrections _corrections_txt
+    [[ -n "$_corrections_txt" ]] && printf '%s\n' "$_corrections_txt"
 
     # Check for compliance failures (missed learning opportunities)
-    compliance=$(timeout "$MAX_WAIT" "$CHITTA_BIN" recall --query "compliance:auto user correction" --limit 2 --text-only 2>/dev/null | head -c 300 || true)
+    _read_lane compliance compliance
+    compliance=$(printf '%s' "$compliance" | head -c 300)
     if [[ -n "$compliance" && "$compliance" != *"No memories"* ]]; then
         echo ""
         echo "[compliance] missed corrections"
@@ -511,7 +592,7 @@ print(json.dumps(d))
     # If a pattern is chronic (>=3 occurrences), inject a direct behavioral nudge.
     # ===========================================
     _probe_nudge=""
-    _probe_triplets=$(timeout 1 "$CHITTA_BIN" query_triplets --predicate "probe_signal" --limit 10 2>/dev/null || true)
+    _read_lane probe _probe_triplets
     if [[ -n "$_probe_triplets" && "$_probe_triplets" != *"No triplets"* ]]; then
         _hedge_count=$(echo "$_probe_triplets" | grep -c "hedging" || true)
         _syco_count=$(echo "$_probe_triplets" | grep -c "sycophantic" || true)
@@ -529,7 +610,8 @@ print(json.dumps(d))
     # ===========================================
     # CACHE BREAK WARNING: Surface recent cache break detections
     # ===========================================
-    _sus3_cb_warn=$(timeout "$MAX_WAIT" "$CHITTA_BIN" recall --query "cache:break session cache_hit_ratio" --limit 1 --text-only 2>/dev/null | head -c 400 || true)
+    _read_lane cache _sus3_cb_warn
+    _sus3_cb_warn=$(printf '%s' "$_sus3_cb_warn" | head -c 400)
     if [[ -n "$_sus3_cb_warn" && "$_sus3_cb_warn" != *"No memories"* && "$_sus3_cb_warn" != *"0 memories"* ]]; then
         echo ""
         echo "⚠️ BEFORE RUNNING: [cache] Recent cache break detected:"
@@ -633,4 +715,6 @@ if [[ -f "$_wp_file" ]]; then
     queue_write "file_watch_register" "{\"session_id\":\"$SESSION_ID\",\"paths\":$_wp_json}" 2>/dev/null || true
 fi
 
+# Reap only our lanes; never wait on detached maintenance daemons.
+wait "${_lane_pids[@]}" 2>/dev/null || true
 exit 0
