@@ -18,6 +18,7 @@
 #include "../text_utils.hpp"
 #include "../transcript_parser.hpp"
 #include "sandbox.hpp"
+#include "work_policy.hpp"
 #include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
@@ -131,20 +132,57 @@ public:
     // returning. The FFI has no Rust→C++ callbacks; adding one would let the
     // two lock domains interleave and deadlock across the language boundary.
     // See the matching note at the top of field_store.hpp.
-    std::unique_lock<std::shared_mutex> acquire_lock() { return std::unique_lock<std::shared_mutex>(rpc_mutex_); }
+    std::unique_lock<std::shared_mutex> acquire_lock() {
+        const auto started = std::chrono::steady_clock::now();
+        std::unique_lock<std::shared_mutex> lock(rpc_mutex_);
+        record_lock_wait(ms_since(started));
+        return lock;
+    }
 
     // Shared lock for maintenance ops whose mutations are protected by their
     // own internal Rust locks (parking_lot RwLock inside FieldStore). Using a
     // shared lock here means periodic background work (sync_foreign, flush,
     // demotion) does not starve concurrent reader RPCs. Writer RPCs still
     // serialize via the exclusive side.
-    std::shared_lock<std::shared_mutex> acquire_shared_lock() { return std::shared_lock<std::shared_mutex>(rpc_mutex_); }
+    std::shared_lock<std::shared_mutex> acquire_shared_lock() {
+        const auto started = std::chrono::steady_clock::now();
+        std::shared_lock<std::shared_mutex> lock(rpc_mutex_);
+        record_lock_wait(ms_since(started));
+        return lock;
+    }
     std::shared_mutex& rpc_mutex() { return rpc_mutex_; }
+
+    void set_rpc_load_counters(const std::atomic<size_t>* pending,
+                               const std::atomic<size_t>* active) {
+        rpc_pending_ = pending;
+        rpc_active_ = active;
+    }
+
+    bool maintenance_should_skip(const std::string& task) const {
+        const size_t pending = rpc_pending_ ? rpc_pending_->load(std::memory_order_relaxed) : 0;
+        const size_t active = rpc_active_ ? rpc_active_->load(std::memory_order_relaxed) : 0;
+        const long wait_ms = recent_lock_wait_ms_.load(std::memory_order_relaxed);
+        const int64_t wait_at = recent_lock_wait_at_ms_.load(std::memory_order_relaxed);
+        const int64_t now = steady_now_ms();
+        const bool recent_wait = wait_ms >= maintenance_lock_wait_threshold_ms()
+                              && wait_at > 0 && now - wait_at <= 60000;
+        if (pending == 0 && active == 0 && !recent_wait) return false;
+        int64_t prior = last_maintenance_skip_log_ms_.load(std::memory_order_relaxed);
+        if (now - prior >= 5000 && last_maintenance_skip_log_ms_.compare_exchange_strong(
+                prior, now, std::memory_order_relaxed)) {
+            std::cerr << "[maintenance] skip task=" << task
+                      << " reason=rpc_load pending=" << pending
+                      << " active=" << active << " lock_wait_ms=" << (recent_wait ? wait_ms : 0)
+                      << "\n";
+        }
+        return true;
+    }
 
     // Lock-free health_check fast path — bypasses both thread pool and rpc_mutex_.
     // Both raw_memory_count() and raw_pending_count() use AtomicUsize internally.
     // Called inline on the socket-loop thread when details=false (the default).
     std::string fast_health_check_json(const json& req_id, int pool_workers, int pool_active, int pool_pending) const {
+        auto budget_scope = rpc_budget_.measure("health_check");
         if (!field_store_) {
             json err = {{"jsonrpc","2.0"},{"id",req_id},
                         {"error",{{"code",-32000},{"message","store unavailable"}}}};
@@ -165,6 +203,7 @@ public:
             {"pool_workers",     pool_workers},
             {"pool_active",      pool_active},
             {"pool_pending",     pool_pending},
+            {"rpc_over_budget",  rpc_budget_.over_budget_count()},
         };
         std::string text = "Status: ok\nchitta-field daemon healthy\n  memories : ~"
                            + std::to_string(mem) + "\n";
@@ -288,22 +327,75 @@ public:
 
     static bool is_read_only_tool(const std::string& name) {
         static const std::unordered_set<std::string> kReads = {
-            "health_check", "version_check", "soul_context", "hygiene_stats",
-            "recall", "smart_recall", "hybrid_recall",
-            "search_memories", "list_memories", "list_memories_brief",
-            "expand_memory", "get_memory_metadata", "explain_fact", "memory_stats",
-            "find_symbol", "read_symbol", "read_function", "describe_symbol",
-            "code_context", "codebase_overview", "smart_context",
-            "symbol_callers", "symbol_callees", "search_symbols",
-            // Read-only event/queue queries — without these, hook-driven calls
-            // like msg_inbox take the exclusive lock and starve every other
-            // RPC for the duration of their event scan.
-            "msg_inbox", "msg_history",
-            "queue_status", "distill_status", "enrichment_status",
-            "probe_status", "ledger_query", "ledger_contradictions",
-            "agent_list", "agent_get", "agent_protocol_stats",
-            "dream_list", "dream_status",
-            "file_at_time", "file_timeline", "file_dependents", "file_imports",
+            // Memory/graph retrieval.
+            "recall", "recall_temporal", "recall_temporal_events", "recall_keyword",
+            "provenance_check", "correction_check", "task_state", "explore_recall",
+            "explore_peek", "explore_expand", "explore_neighbors", "query_graph",
+            "query_triplets_temporal", "triplet_history", "triplet_query_as_of",
+            "graph_traverse", "graph_pagerank", "get", "get_embeddings",
+            "expand_memory", "query", "list_by_status", "list_memories_brief",
+            "recall_by_priority", "memory_type_stats", "smart_recall", "hybrid_recall",
+            "recall_session", "recall_spreading", "structured_recall", "route_stats",
+            "ask", "expand_query", "recall_last_action", "recall_failure_pattern",
+            "recall_causal_antecedent", "recall_hdcbind", "recall_counterfactual",
+            "refutation_stats", "recall_motif_value", "recall_analogy", "span_query",
+            "assoc_census", "span_stats", "list_policies", "recall_true_counterfactual",
+            "hypothesis_probes", "turiya_status", "tape_stats", "verbalize_rules",
+            "fep_status", "routed_recall", "harvest_scope", "ledger_query",
+            "ledger_contradictions", "predicate_list",
+
+            // Code intelligence. describe_symbol is deliberately absent: it calls
+            // set_symbol_description(). clear_triplets/resolve_callsites are current no-op reads.
+            "extract_symbols", "find_symbol", "symbol_callers", "symbol_callees",
+            "read_symbol", "read_function", "search_symbols", "code_context",
+            "smart_context", "codebase_overview", "clear_triplets", "resolve_callsites",
+            "type_hierarchy", "file_imports", "file_dependents", "enrichment_status",
+
+            // Distillation/drift inspection and pure transforms.
+            "distill_status", "suggestion_pending", "suggestion_count",
+            "consolidation_scan", "metacognition_corrections", "metacognition_outcomes",
+            "metacognition_evaluate", "epiplexity_check", "ssl_convert", "curiosity_gaps",
+            "lookup", "trajectory_compact", "get_evidence_type", "labile_memories",
+            "5w_search", "recall_ucb1", "find_near_duplicates", "cooccurrence_graph",
+            "labile_memories_top", "behavioral_probe", "probe_status",
+
+            // Sessions and transcript inspection.
+            "transcript_get", "transcript_list", "transcript_parse", "transcript_search",
+            "read_transcript", "get_turns", "msg_inbox", "msg_history", "session_list",
+            "repl_session_get", "repl_session_list",
+
+            // System/operator inspection.
+            "memory_status", "memory_provenance", "spectral_drift", "queue_status",
+            "ledger_health", "health_check", "version_check", "soul_context",
+            "resonance_stats", "subconscious_stats", "embed_coverage", "embed_probe",
+            "write_gate_stats", "symbol_event_log", "what_do_i_know_about",
+            "cross_harness_conflicts", "hygiene_stats", "chitta_health", "theme_list",
+            "theme_get", "theme_recall", "theme_stats", "realm_list", "realm_get",
+            "realm_detect", "ledger_load", "ledger_list", "ledger_get", "long_task_get",
+            "long_task_active", "long_task_snapshot", "long_task_evaluate", "skill_read",
+            "skill_list", "skill_search", "agent_get", "agent_list", "why_active",
+            "what_superseded", "show_conflicts", "detect_contradictions",
+            "scan_contradictions", "conflict_inspector", "memory_history",
+
+            // Misc state inspection.
+            "anticipation_predict", "anticipation_list", "anticipation_filter",
+            "anticipation_gate_status", "habit_match", "habit_list", "profile_get",
+            "goal_get", "goal_list", "calibration_score", "narrative_status",
+            "narrative_history", "sadhana_status", "sadhana_list", "dream_list",
+            "dream_status", "memory_revert", "list_pinned", "memory_lock_status",
+            "list_merge_queue", "file_timeline", "file_at_time", "get_sus_metrics",
+            "episode_cluster_status", "insight_global", "list_by_aspect", "list_aspects",
+            "query_claims", "get_policies", "get_entities", "get_relationship_events",
+
+            // Protocol ledgers.
+            "query_unify", "query_chain", "explain_fact", "trigger_list",
+            "predict_needed", "query_surprises", "get_blind_spots", "surprise_stats",
+            "query_debts", "get_fragile_decisions", "debt_stats", "get_source_weights",
+            "integration_stats", "surprise_learning_stats", "query_wisdom_candidates",
+            "wisdom_promotion_stats", "learned_scorer_stats", "effective_scorer_weights",
+            "query_interventions", "get_intervention", "intervention_stats",
+            "list_open_interventions", "get_task", "query_tasks", "agent_protocol_stats",
+            "query_wisdom_lineages", "get_wisdom_lineage", "wisdom_lineage_stats",
         };
         return kReads.count(name) > 0;
     }
@@ -381,6 +473,13 @@ public:
             if (it == handlers_.end()) {
                 return rpc::make_error(id, -32601, "Unknown tool: " + name);
             }
+            auto budget_scope = rpc_budget_.measure(name);
+            if (is_read_only_tool(name)) {
+                args = rpc::clamp_read_arguments(name, std::move(args));
+                // All reads, including the Rust-self-synchronized lock-free recall
+                // path, count as foreground activity for maintenance scheduling.
+                if (subconscious_) subconscious_->notify_query();
+            }
 
             // Write tools: skip synchronous embedding here — the backfill thread
             // will embed pending memories asynchronously via backfill_embedding().
@@ -440,12 +539,8 @@ public:
                 // an index-mutating write can never block it (is_lockfree_read).
                 result = it->second(args);
             } else if (is_read_only_tool(name)) {
-                // Mark recall/read activity so the background embed_loop's
-                // recall-priority gate yields the cores to live queries under load
-                // (embed inference otherwise CPU-starves the pool → recall >15s).
-                if (subconscious_) subconscious_->notify_query();
                 auto _lp_w0 = std::chrono::steady_clock::now();
-                std::shared_lock<std::shared_mutex> _lk(rpc_mutex_);
+                auto _lk = acquire_shared_lock();
                 if (_lp_thr > 0) {
                     long _wait = ms_since(_lp_w0);
                     if (_wait >= _lp_thr)
@@ -457,6 +552,7 @@ public:
                 _was_write = true;
                 auto _lp_w0 = std::chrono::steady_clock::now();
                 std::unique_lock<std::shared_mutex> _lk(rpc_mutex_);
+                record_lock_wait(ms_since(_lp_w0));
                 auto _lp_h0 = std::chrono::steady_clock::now();
                 result = it->second(args);
                 if (_lp_thr > 0) {
@@ -499,6 +595,34 @@ private:
     mutable std::mutex distill_mutex_;
     std::string distill_model_ = "github-copilot/gpt-5-mini";
     std::atomic<bool> distill_enabled_{true};
+    mutable rpc::BudgetTracker rpc_budget_;
+    const std::atomic<size_t>* rpc_pending_ = nullptr;
+    const std::atomic<size_t>* rpc_active_ = nullptr;
+    mutable std::atomic<long> recent_lock_wait_ms_{0};
+    mutable std::atomic<int64_t> recent_lock_wait_at_ms_{0};
+    mutable std::atomic<int64_t> last_maintenance_skip_log_ms_{0};
+
+    static int64_t steady_now_ms() {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
+    }
+
+    static long maintenance_lock_wait_threshold_ms() {
+        static const long threshold = [] {
+            const char* value = std::getenv("CHITTA_MAINT_SKIP_LOCKWAIT_MS");
+            if (!value || !*value) return 500L;
+            char* end = nullptr;
+            const long parsed = std::strtol(value, &end, 10);
+            return end != value && parsed >= 0 ? parsed : 500L;
+        }();
+        return threshold;
+    }
+
+    void record_lock_wait(long wait_ms) const {
+        if (wait_ms < maintenance_lock_wait_threshold_ms()) return;
+        recent_lock_wait_ms_.store(wait_ms, std::memory_order_relaxed);
+        recent_lock_wait_at_ms_.store(steady_now_ms(), std::memory_order_relaxed);
+    }
 
     std::vector<json> tools_;
     std::unordered_map<std::string, std::function<ToolResult(const json&)>> handlers_;

@@ -1580,7 +1580,7 @@ ToolResult FieldRpcHandler::tool_recall_spreading(const json& params) {
     size_t      limit = static_cast<size_t>(params.value("limit", 10));
     std::string realm = params.value("realm", "");
 
-    auto hits = field_store_->recall_spreading(query, limit, realm);
+    auto hits = field_store_->recall_spreading(query, limit, realm, 256, 64, 2);
     json results = json::array();
     for (auto& h : hits) {
         results.push_back({
@@ -2001,6 +2001,7 @@ ToolResult FieldRpcHandler::tool_recall_analogy(const json& params) {
     json args = json::object();
     args["mode"]  = mode;
     args["limit"] = params.value("limit", 8);
+    args["fact_limit"] = 10000;  // Internal serving-path bound; not a public RPC field.
 
     std::string header;
     if (mode == "proportional") {

@@ -1440,7 +1440,12 @@ static std::string detect_realm() {
 }
 
 int main(int argc, char* argv[]) {
-    std::string socket_path = chitta::SocketClient::default_socket_path();
+    std::string socket_path = [] {
+        if (const char* configured = std::getenv("CHITTA_SOCKET_PATH")) {
+            if (*configured) return std::string(configured);
+        }
+        return chitta::SocketClient::default_socket_path();
+    }();
     OutputFormat output_format = OutputFormat::Text;
     std::string tool;
     int tool_arg_index = 0;

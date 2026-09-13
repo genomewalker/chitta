@@ -145,44 +145,46 @@ void Subconscious::process_loop() {
 
         // Theme maintenance via FieldStore
         if (config_.enable_theme_maintenance && time_for_theme_maintenance()) {
-            run_theme_maintenance();
+            if (!maintenance_loaded("theme_maintenance")) run_theme_maintenance();
         }
 
         // Sleep consolidation: encode new memories into cortical index + snapshot
         if (config_.enable_sleep_consolidation && field_store_ && time_for_sleep_consolidation()) {
-            run_sleep_consolidation();
+            if (!maintenance_loaded("sleep_consolidation")) run_sleep_consolidation();
         }
 
         // Demotion pass: tier demotion + hard-deletion of weak memories
         if (config_.enable_sleep_consolidation && field_store_ && time_for_demotion()) {
-            run_demotion_pass();
+            if (!maintenance_loaded("demotion")) run_demotion_pass();
         }
 
         // Belief maintenance: stale demotion + contradiction resolution + duplicate consolidation
         if (config_.enable_belief_maintenance && maintenance_cb_ && time_for_belief_maintenance()) {
-            last_belief_maintenance_ = std::chrono::steady_clock::now();
-            stats_.belief_maintenance_runs++;
-            stats_.last_belief_maintenance_at = now_ms();
-            try {
-                maintenance_cb_();
-            } catch (const std::exception& e) {
-                std::cerr << "[subconscious] Belief maintenance failed: " << e.what() << "\n";
+            if (!maintenance_loaded("belief_maintenance")) {
+                last_belief_maintenance_ = std::chrono::steady_clock::now();
+                stats_.belief_maintenance_runs++;
+                stats_.last_belief_maintenance_at = now_ms();
+                try {
+                    maintenance_cb_();
+                } catch (const std::exception& e) {
+                    std::cerr << "[subconscious] Belief maintenance failed: " << e.what() << "\n";
+                }
             }
         }
 
         // Autonomous learning cycle: auto-resolve debts, cluster wisdom, calibrate scorer
         if (config_.enable_learning_cycle && field_store_ && time_for_learning_cycle()) {
-            run_learning_cycle();
+            if (!maintenance_loaded("learning_cycle")) run_learning_cycle();
         }
 
         // Code intel staleness: restore confidence of code intel memories
         if (config_.enable_code_intel_staleness && field_store_ && time_for_code_intel_staleness()) {
-            run_code_intel_staleness();
+            if (!maintenance_loaded("code_intel_staleness")) run_code_intel_staleness();
         }
 
         // Correction promotion: elevate cross-project corrections to brahman
         if (config_.enable_correction_promotion && field_store_ && time_for_correction_promotion()) {
-            run_correction_promotion();
+            if (!maintenance_loaded("correction_promotion")) run_correction_promotion();
         }
 
         // Episode pruning is manual-only (RPC tool `prune_episodes`) — see
@@ -670,9 +672,8 @@ bool Subconscious::time_for_theme_maintenance() const {
     if (last == 0) return true;
 
     auto now = now_ms();
-    auto interval_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-        config_.theme_maintenance_interval
-    ).count();
+    auto interval_ms = maintenance_jitter_.delay(
+        config_.theme_maintenance_interval, "theme_maintenance", static_cast<uint64_t>(last)).count();
 
     return (now - last) >= interval_ms;
 }
@@ -730,16 +731,18 @@ void Subconscious::run_sleep_consolidation() {
 bool Subconscious::time_for_wal_compact() const {
     auto last = stats_.last_compact_wal_at.load();
     if (last == 0) return true;
-    return (now_ms() - last) >= 24LL * 3600 * 1000;
+    auto delay = maintenance_jitter_.delay(
+        std::chrono::hours(24), "wal_compact", static_cast<uint64_t>(last));
+    return (now_ms() - last) >= delay.count();
 }
 
 bool Subconscious::time_for_sleep_consolidation() const {
     auto last = stats_.last_sleep_consolidation_at.load();
     if (last == 0) return true;
 
-    auto interval_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-        config_.sleep_consolidation_interval
-    ).count();
+    auto interval_ms = maintenance_jitter_.delay(
+        config_.sleep_consolidation_interval, "sleep_consolidation",
+        static_cast<uint64_t>(last)).count();
 
     return (now_ms() - last) >= interval_ms;
 }
@@ -764,23 +767,24 @@ bool Subconscious::time_for_demotion() const {
     auto last = stats_.last_demotion_at.load();
     if (last == 0) return true;
 
-    auto interval_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-        config_.demotion_interval
-    ).count();
+    auto interval_ms = maintenance_jitter_.delay(
+        config_.demotion_interval, "demotion", static_cast<uint64_t>(last)).count();
 
     return (now_ms() - last) >= interval_ms;
 }
 
 bool Subconscious::time_for_belief_maintenance() const {
-    auto elapsed = std::chrono::duration_cast<std::chrono::minutes>(
-        std::chrono::steady_clock::now() - last_belief_maintenance_).count();
-    return elapsed >= config_.belief_maintenance_interval.count();
+    auto elapsed = std::chrono::steady_clock::now() - last_belief_maintenance_;
+    const auto anchor = static_cast<uint64_t>(last_belief_maintenance_.time_since_epoch().count());
+    return elapsed >= maintenance_jitter_.delay(
+        config_.belief_maintenance_interval, "belief_maintenance", anchor);
 }
 
 bool Subconscious::time_for_learning_cycle() const {
-    auto elapsed = std::chrono::duration_cast<std::chrono::minutes>(
-        std::chrono::steady_clock::now() - last_learning_cycle_).count();
-    return elapsed >= config_.learning_cycle_interval.count();
+    auto elapsed = std::chrono::steady_clock::now() - last_learning_cycle_;
+    const auto anchor = static_cast<uint64_t>(last_learning_cycle_.time_since_epoch().count());
+    return elapsed >= maintenance_jitter_.delay(
+        config_.learning_cycle_interval, "learning_cycle", anchor);
 }
 
 void Subconscious::run_learning_cycle() {
@@ -889,9 +893,11 @@ void Subconscious::run_learning_cycle() {
 }
 
 bool Subconscious::time_for_code_intel_staleness() const {
-    auto elapsed = std::chrono::duration_cast<std::chrono::hours>(
-        std::chrono::steady_clock::now() - last_code_intel_staleness_).count();
-    return elapsed >= config_.code_intel_staleness_interval_hours;
+    auto elapsed = std::chrono::steady_clock::now() - last_code_intel_staleness_;
+    const auto anchor = static_cast<uint64_t>(last_code_intel_staleness_.time_since_epoch().count());
+    return elapsed >= maintenance_jitter_.delay(
+        std::chrono::hours(config_.code_intel_staleness_interval_hours),
+        "code_intel_staleness", anchor);
 }
 
 void Subconscious::run_code_intel_staleness() {
@@ -926,7 +932,10 @@ void Subconscious::run_code_intel_staleness() {
 
 bool Subconscious::time_for_correction_promotion() const {
     auto elapsed = std::chrono::steady_clock::now() - last_correction_promotion_;
-    auto interval = std::chrono::hours(config_.correction_promotion_interval_hours);
+    const auto anchor = static_cast<uint64_t>(last_correction_promotion_.time_since_epoch().count());
+    auto interval = maintenance_jitter_.delay(
+        std::chrono::hours(config_.correction_promotion_interval_hours),
+        "correction_promotion", anchor);
     return elapsed >= interval;
 }
 
@@ -990,8 +999,8 @@ void Subconscious::run_correction_promotion() {
 bool Subconscious::time_for_background_embedding() const {
     auto last = stats_.last_embedding_at.load();
     if (last == 0) return true;
-    auto interval_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-        config_.embedding_interval).count();
+    auto interval_ms = maintenance_jitter_.delay(
+        config_.embedding_interval, "background_embedding", static_cast<uint64_t>(last)).count();
     return (now_ms() - last) >= interval_ms;
 }
 
@@ -1035,6 +1044,12 @@ void Subconscious::embed_loop() {
     // once the same memory has failed EMBED_MAX_ATTEMPTS times.
     static constexpr int EMBED_MAX_ATTEMPTS = 5;
     std::unordered_map<uint64_t, int> embed_attempts;
+    uint64_t compact_sequence = 0;
+    uint64_t promote_sequence = 0;
+    uint64_t cycles_until_compact = static_cast<uint64_t>(maintenance_jitter_.delay(
+        std::chrono::milliseconds(10), "embed_compact_cycles", compact_sequence++).count());
+    uint64_t cycles_until_promote = static_cast<uint64_t>(maintenance_jitter_.delay(
+        std::chrono::milliseconds(50), "promote_staged_cycles", promote_sequence++).count());
     while (running_.load()) {
         auto pending = field_store_->pending_embeddings(config_.embedding_batch_size);
         if (!pending.empty()) {
@@ -1105,15 +1120,23 @@ void Subconscious::embed_loop() {
                 std::cerr << "[embed_loop] Embedded " << embedded << "/" << pending.size() << " pending\n";
             }
         }
-        // Periodic maintenance every 10 embed cycles (~5 min at 30s/cycle).
-        if (++embed_cycle_count_ % 10 == 0)
-            field_store_->maybe_compact_wal(50);
-        if (embed_cycle_count_ % 50 == 0)
-            field_store_->promote_staged_memories();
+        // Periodic maintenance is jittered independently so multiple daemon
+        // instances do not compact/promote in lockstep.
+        ++embed_cycle_count_;
+        if (--cycles_until_compact == 0) {
+            if (!maintenance_loaded("embed_compact_wal")) field_store_->maybe_compact_wal(50);
+            cycles_until_compact = static_cast<uint64_t>(maintenance_jitter_.delay(
+                std::chrono::milliseconds(10), "embed_compact_cycles", compact_sequence++).count());
+        }
+        if (--cycles_until_promote == 0) {
+            if (!maintenance_loaded("promote_staged_memories")) field_store_->promote_staged_memories();
+            cycles_until_promote = static_cast<uint64_t>(maintenance_jitter_.delay(
+                std::chrono::milliseconds(50), "promote_staged_cycles", promote_sequence++).count());
+        }
         // Sleep config_.embedding_interval in small increments so shutdown is responsive.
-        auto sleep_ticks = std::max(static_cast<long>(1),
-            static_cast<long>(std::chrono::duration_cast<std::chrono::milliseconds>(
-                config_.embedding_interval).count() / 100));
+        auto sleep_ticks = std::max(static_cast<long>(1), static_cast<long>(
+            maintenance_jitter_.delay(config_.embedding_interval, "embedding_poll",
+                                      embed_cycle_count_).count() / 100));
         for (long i = 0; i < sleep_ticks && running_.load(); ++i)
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }

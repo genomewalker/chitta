@@ -19,6 +19,23 @@ void FieldRpcHandler::register_tools() {
     register_system_tools();
     register_misc_tools();
     register_protocol_tools();
+
+    // Keep tools/list honest: the same central table drives runtime clamping.
+    // Only read handlers are annotated/clamped; writes retain their published schemas.
+    for (auto& tool : tools_) {
+        const std::string name = tool.value("name", "");
+        if (!is_read_only_tool(name) || !tool.contains("inputSchema")) continue;
+        auto& schema = tool["inputSchema"];
+        if (!schema.is_object() || !schema.contains("properties")
+            || !schema["properties"].is_object()) continue;
+        auto& properties = schema["properties"];
+        for (const auto& limit : rpc::kReadParameterLimits) {
+            auto it = properties.find(std::string(limit.name));
+            if (it == properties.end() || !it->is_object()) continue;
+            (*it)["minimum"] = limit.minimum;
+            (*it)["maximum"] = limit.maximum;
+        }
+    }
 }
 
 void FieldRpcHandler::classify_tools() {

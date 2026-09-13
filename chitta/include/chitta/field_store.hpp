@@ -138,7 +138,9 @@ int cf_recall_session(struct CfHandle* h,
     const char* query_text, const char* realm, size_t k,
     CfSessionHit* hits_buf, size_t hits_cap, size_t* hits_written,
     char** session_ids_json_out);
-int cf_recall_spreading(struct CfHandle* h, const char* query, size_t k, const char* realm, char* out_json, size_t out_json_len);
+int cf_recall_spreading(struct CfHandle* h, const char* query, size_t k, const char* realm,
+    size_t max_nodes, size_t max_entries_per_entity, uint8_t depth,
+    char* out_json, size_t out_json_len);
 int cf_recall_hdc(struct CfHandle* h, const char* query, const char* realm,
     size_t k, CfRecallHit* buf, size_t buf_cap, size_t* written);
 
@@ -326,9 +328,11 @@ char* cf_triplet_query_as_of(struct CfHandle* h, const char* subject, int64_t wo
 int   cf_triplet_supersede(struct CfHandle* h, uint64_t old_id, uint64_t new_id, int64_t at_ms);
 // Graph traversal FFI
 char* cf_graph_traverse(struct CfHandle* h, const char* start, const char* edge_types_json,
-                        size_t max_hops, size_t max_results, const char* direction);
+                        size_t max_hops, size_t max_results, const char* direction,
+                        size_t max_edges);
 char* cf_graph_pagerank(struct CfHandle* h, const char* seeds_json, const char* edge_types_json,
-                        float damping, uint8_t iterations, size_t top_k);
+                        float damping, uint8_t iterations, size_t top_k,
+                        size_t max_nodes, size_t max_edges);
 
 // Interaction Ledger FFI
 int   cf_ledger_append(const struct CfHandle* h, const char* json_in, uint64_t* out_event_id);
@@ -1526,11 +1530,14 @@ public:
     };
 
     std::vector<SpreadingHit> recall_spreading(
-        const std::string& query, size_t k, const std::string& realm = "") const
+        const std::string& query, size_t k, const std::string& realm = "",
+        size_t max_nodes = 256, size_t max_entries_per_entity = 64,
+        uint8_t depth = 2) const
     {
         char buf[1 << 20];
         int n = cf_recall_spreading(handle_, query.c_str(), k,
                                     realm.empty() ? nullptr : realm.c_str(),
+                                    max_nodes, max_entries_per_entity, depth,
                                     buf, sizeof(buf));
         if (n <= 0) return {};
         std::vector<SpreadingHit> out;
@@ -1610,9 +1617,10 @@ public:
 
     /// BFS traversal from start node. Returns JSON array of TraversalHit objects.
     std::string graph_traverse(const std::string& start, const std::string& edge_types_json,
-                               size_t max_hops, size_t max_results, const std::string& direction) {
+                               size_t max_hops, size_t max_results, const std::string& direction,
+                               size_t max_edges) {
         char* s = cf_graph_traverse(handle_, start.c_str(), edge_types_json.c_str(),
-                                    max_hops, max_results, direction.c_str());
+                                    max_hops, max_results, direction.c_str(), max_edges);
         if (!s) { cf_soft(-1, __func__); return "[]"; }
         std::string result(s);
         cf_free_string(s);
@@ -1621,9 +1629,10 @@ public:
 
     /// Personalized PageRank. Returns JSON array of [node, score] pairs.
     std::string graph_pagerank(const std::string& seeds_json, const std::string& edge_types_json,
-                               float damping, uint8_t iterations, size_t top_k) {
+                               float damping, uint8_t iterations, size_t top_k,
+                               size_t max_nodes, size_t max_edges) {
         char* s = cf_graph_pagerank(handle_, seeds_json.c_str(), edge_types_json.c_str(),
-                                    damping, iterations, top_k);
+                                    damping, iterations, top_k, max_nodes, max_edges);
         if (!s) { cf_soft(-1, __func__); return "[]"; }
         std::string result(s);
         cf_free_string(s);

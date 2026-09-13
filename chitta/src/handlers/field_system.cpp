@@ -116,6 +116,8 @@ ToolResult FieldRpcHandler::tool_health_check(const json& params) {
        << "  yantra   : " << (yantra_ ? "loaded" : "unavailable") << "\n"
        << "  backend  : chitta-field\n";
 
+    ss << "  rpc over budget : " << rpc_budget_.over_budget_count() << "\n";
+
     if (!details) {
         // Fast path: O(1) only — raw_memory_count() returns payloads.len() (HashMap.len()),
         // avoiding O(N) states.read() that contends with encode_memory's write locks.
@@ -134,6 +136,7 @@ ToolResult FieldRpcHandler::tool_health_check(const json& params) {
             {"pid",              static_cast<int>(getpid())},
             {"memory_count",     raw_count},
             {"pending_count",    pending},
+            {"rpc_over_budget", rpc_budget_.over_budget_count()},
         };
         return ToolResult::ok(ss.str(), out);
     }
@@ -155,6 +158,7 @@ ToolResult FieldRpcHandler::tool_health_check(const json& params) {
         {"pid",              static_cast<int>(getpid())},
         {"memory_count",     mem_count},
         {"symbol_count",     sym_count},
+        {"rpc_over_budget",  rpc_budget_.over_budget_count()},
     };
 
     json stats_j;
@@ -761,6 +765,7 @@ ToolResult FieldRpcHandler::tool_chitta_health(const json&) {
        << "  yantra        : " << yantra_status << "\n";
     if (!yantra_model.empty()) ss << "  yantra_model  : " << yantra_model << "\n";
     ss << "  subconscious  : " << (subconscious_ok ? "running" : "not running") << "\n"
+       << "  rpc_over_budget: " << rpc_budget_.over_budget_count() << "\n"
        << "  fts           : available (chitta-field BM25)\n"
        << "  backend       : chitta-field\n";
 
@@ -772,6 +777,7 @@ ToolResult FieldRpcHandler::tool_chitta_health(const json&) {
         {"subconscious",  subconscious_ok ? "running" : "not running"},
         {"fts",           "available"},
         {"backend",       "chitta-field"},
+        {"rpc_over_budget", rpc_budget_.over_budget_count()},
     };
     if (!yantra_model.empty()) out["yantra_model"] = yantra_model;
 
