@@ -2,6 +2,7 @@
 # Manage a read-mostly chitta daemon from a manifest-committed snapshot.
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 EVAL_MIND="${CHITTA_EVAL_MIND:-/projects/caeg/scratch/kbd606/tmp/chitta-eval-mind}"
 LIVE_MIND="${CHITTA_LIVE_MIND:-${HOME}/.claude/mind}"
 LIVE_FIELD="$LIVE_MIND/chitta-field"
@@ -50,91 +51,11 @@ print(digest.hexdigest())
 PY
 }
 
-# Emit the newest manifest family for which every recorded file has the
-# committed byte size. This mirrors Manifest::validated_snapshot_path().
+# Emit the family selected by Manifest::load() + validated_snapshot_path().
+# Modern snapshots (v11+) additionally require a valid .pld: save strips their
+# payload content from the snapshot body, and open refuses to serve without it.
 select_family() {
-    python3 - "$LIVE_FIELD" <<'PY'
-import json
-import pathlib
-import re
-import sys
-
-root = pathlib.Path(sys.argv[1])
-candidates = []
-manifest_errors = []
-for manifest_path in (root / "MANIFEST.1", root / "MANIFEST.2"):
-    if not manifest_path.is_file():
-        continue
-    try:
-        manifest = json.loads(manifest_path.read_text())
-    except (OSError, json.JSONDecodeError) as exc:
-        manifest_errors.append(f"{manifest_path.name}: {exc}")
-        continue
-    if manifest.get("magic") != "CHITTA_FIELD_MANIFEST_V1":
-        manifest_errors.append(f"{manifest_path.name}: wrong manifest magic")
-        continue
-    if manifest.get("format_version") != 1:
-        manifest_errors.append(f"{manifest_path.name}: unsupported format_version")
-        continue
-    families = list((manifest.get("families") or {}).values())
-    if manifest.get("checkpoints"):
-        families.append(manifest["checkpoints"])
-    for family in families:
-        candidates.append((family.get("snapshot_seqno", -1), manifest_path, family))
-
-if not candidates:
-    detail = "; ".join(manifest_errors) or "no committed checkpoint entries"
-    raise SystemExit(f"no usable manifest: {detail}")
-
-failures = []
-seen = set()
-for seqno, manifest_path, family in sorted(candidates, key=lambda item: item[0], reverse=True):
-    snapshot = family.get("snapshot") or {}
-    snapshot_name = snapshot.get("name", "")
-    if snapshot_name in seen:
-        continue
-    seen.add(snapshot_name)
-    match = re.fullmatch(r"chitta\.([0-9A-Fa-f]+)\.snapshot", snapshot_name)
-    if not match:
-        failures.append(f"{manifest_path.name}: unsafe snapshot name {snapshot_name!r}")
-        continue
-    refs = [snapshot, *(family.get("sidecars") or [])]
-    checked = []
-    bad = None
-    for ref in refs:
-        name = ref.get("name", "")
-        expected = ref.get("size_bytes")
-        if not name or pathlib.Path(name).name != name or not isinstance(expected, int):
-            bad = f"invalid file reference {ref!r}"
-            break
-        path = root / name
-        try:
-            actual = path.stat().st_size
-        except OSError:
-            bad = f"missing {name}"
-            break
-        if actual != expected:
-            bad = f"size mismatch for {name}: expected {expected}, got {actual}"
-            break
-        checked.append((name, expected))
-    if bad:
-        failures.append(f"{snapshot_name}: {bad}")
-        continue
-
-    snapshot_id = match.group(1).lower()
-    print(f"ID\t{snapshot_id}")
-    print(f"SEQNO\t{seqno}")
-    print(f"MANIFEST\t{manifest_path.name}")
-    for name, size in checked:
-        print(f"FILE\t{name}\t{size}")
-    cortex = root / f"cortex.{snapshot_id}.snapshot"
-    if cortex.is_file():
-        print(f"CORTEX\t{cortex.name}\t{cortex.stat().st_size}")
-    raise SystemExit(0)
-
-detail = "; ".join(failures[:8])
-raise SystemExit(f"no consistent snapshot family: {detail}")
-PY
+    python3 "$SCRIPT_DIR/eval-replica-select.py" "${1:-$LIVE_FIELD}"
 }
 
 assert_not_mid_save() {
@@ -160,7 +81,7 @@ for path in root.iterdir():
         continue
     selected = path.name.startswith(f"chitta.{snapshot_id}.") or path.name == f"cortex.{snapshot_id}.tmp"
     manifest_tmp = path.name.startswith("MANIFEST.")
-    if selected or manifest_tmp or now - path.stat().st_mtime <= max_age:
+    if (selected or manifest_tmp) and now - path.stat().st_mtime <= max_age:
         active.append(path.name)
 if active:
     raise SystemExit("snapshot save appears active (temporary files present): " + ", ".join(sorted(active)))
@@ -216,13 +137,14 @@ load_replica_env() {
 }
 
 write_replica_env() {
-    local pid="$1" snapshot_id="$2" snapshot_seqno="$3" socket="$4" tmp="$ENV_FILE.tmp"
+    local pid="$1" snapshot_id="$2" snapshot_seqno="$3" generation="$4" socket="$5" tmp="$ENV_FILE.tmp"
     {
         printf 'CHITTA_EVAL_MIND=%q\n' "$EVAL_MIND"
         printf 'CHITTA_EVAL_SOCKET=%q\n' "$socket"
         printf 'CHITTA_EVAL_PORT=%q\n' "$EVAL_PORT"
         printf 'CHITTA_EVAL_SNAPSHOT_ID=%q\n' "$snapshot_id"
         printf 'CHITTA_EVAL_SNAPSHOT_SEQNO=%q\n' "$snapshot_seqno"
+        printf 'CHITTA_EVAL_MANIFEST_GENERATION=%q\n' "$generation"
         printf 'CHITTA_EVAL_PID=%q\n' "$pid"
     } > "$tmp"
     mv "$tmp" "$ENV_FILE"
@@ -254,7 +176,8 @@ start_replica() {
     local pid rc
     if pid="$(running_pid)"; then
         load_replica_env
-        printf 'eval replica already running (pid=%s, snapshot=%s)\n' "$pid" "$CHITTA_EVAL_SNAPSHOT_ID"
+        printf 'eval replica already running (pid=%s, snapshot=%s, manifest_generation=%s)\n' \
+            "$pid" "$CHITTA_EVAL_SNAPSHOT_ID" "${CHITTA_EVAL_MANIFEST_GENERATION:-unknown}"
         status_probe "$CHITTA_EVAL_SOCKET"
         return
     else
@@ -271,28 +194,33 @@ start_replica() {
     [[ "$START_TIMEOUT" =~ ^[0-9]+$ ]] || die "invalid CHITTA_EVAL_START_TIMEOUT: $START_TIMEOUT"
     [[ -d "$LIVE_FIELD" ]] || die "live store directory not found: $LIVE_FIELD"
 
-    local before selection snapshot_id="" snapshot_seqno="" manifest_name=""
-    local kind name size stage stage_field after socket runtime_dir old_field i
-    local -a family_files=() family_sizes=()
+    local before selection after_selection staged_selection snapshot_id="" snapshot_seqno="" generation=""
+    local staged_id="" staged_generation="" kind name size stage stage_field after socket runtime_dir old_field i
+    local -a family_files=() family_sizes=() manifest_files=() manifest_sizes=() wal_files=() wal_sizes=()
     before="$(manifest_fingerprint)" || die "could not fingerprint live manifests"
     selection="$(select_family)" || die "unable to select a snapshot family"
     while IFS=$'\t' read -r kind name size; do
         case "$kind" in
             ID) snapshot_id="$name" ;;
             SEQNO) snapshot_seqno="$name" ;;
-            MANIFEST) manifest_name="$name" ;;
-            FILE|CORTEX) family_files+=("$name"); family_sizes+=("$size") ;;
+            GENERATION) generation="$name" ;;
+            MANIFEST) manifest_files+=("$name"); manifest_sizes+=("$size") ;;
+            FILE) family_files+=("$name"); family_sizes+=("$size") ;;
+            WAL) wal_files+=("$name"); wal_sizes+=("$size") ;;
         esac
     done <<< "$selection"
-    [[ -n "$snapshot_id" && -n "$snapshot_seqno" && -n "$manifest_name" ]] || die "incomplete snapshot selection"
+    [[ -n "$snapshot_id" && -n "$snapshot_seqno" && -n "$generation" && ${#manifest_files[@]} -gt 0 ]] \
+        || die "incomplete snapshot selection"
     assert_not_mid_save "$snapshot_id" || die "refusing to copy while the live store may be saving"
 
     mkdir -p "${EVAL_MIND%/*}"
     stage="$(mktemp -d "${EVAL_MIND}.stage.XXXXXX")"
     stage_field="$stage/chitta-field"
     mkdir -p "$stage_field"
+    (( ${#wal_files[@]} == 0 )) || mkdir -p "$stage_field/segments"
     trap 'rm -rf "${stage:-}"' EXIT
-    printf 'copying snapshot %s (seqno=%s, files=%s)\n' "$snapshot_id" "$snapshot_seqno" "${#family_files[@]}"
+    printf 'copying snapshot %s (seqno=%s, manifest_generation=%s, files=%s)\n' \
+        "$snapshot_id" "$snapshot_seqno" "$generation" "$(( ${#family_files[@]} + ${#manifest_files[@]} + ${#wal_files[@]} ))"
     for ((i = 0; i < ${#family_files[@]}; i++)); do
         name="${family_files[$i]}"
         size="${family_sizes[$i]}"
@@ -300,10 +228,38 @@ start_replica() {
         [[ "$(stat -c %s "$stage_field/$name")" == "$size" ]] || die "copied size mismatch for $name"
         [[ "$(stat -c %s "$LIVE_FIELD/$name")" == "$size" ]] || die "source changed while copying $name"
     done
-    cp --preserve=mode,timestamps "$LIVE_FIELD/$manifest_name" "$stage_field/$manifest_name"
+    for ((i = 0; i < ${#manifest_files[@]}; i++)); do
+        name="${manifest_files[$i]}"
+        size="${manifest_sizes[$i]}"
+        cp --preserve=mode,timestamps "$LIVE_FIELD/$name" "$stage_field/$name"
+        [[ "$(stat -c %s "$stage_field/$name")" == "$size" ]] || die "copied size mismatch for $name"
+    done
+    for ((i = 0; i < ${#wal_files[@]}; i++)); do
+        name="${wal_files[$i]}"
+        size="${wal_sizes[$i]}"
+        cp --reflink=auto --preserve=mode,timestamps "$LIVE_FIELD/segments/$name" "$stage_field/segments/$name"
+        [[ "$(stat -c %s "$stage_field/segments/$name")" == "$size" ]] || die "copied size mismatch for segments/$name"
+        [[ "$(stat -c %s "$LIVE_FIELD/segments/$name")" == "$size" ]] || die "source changed while copying segments/$name"
+    done
     after="$(manifest_fingerprint)" || die "could not re-fingerprint live manifests"
     [[ "$before" == "$after" ]] || die "live manifest changed during the copy; snapshot discarded"
+    after_selection="$(select_family)" || die "live family became inconsistent during the copy; snapshot discarded"
+    [[ "$selection" == "$after_selection" ]] || die "live family files changed during the copy; snapshot discarded"
     assert_not_mid_save "$snapshot_id" || die "a live snapshot save began during the copy; snapshot discarded"
+
+    # There is no read-only cf_open/CLI validator: cf_open creates a WAL and may
+    # prune caches. Re-run the manifest/file/.pld checks above against staging,
+    # before the first daemon process is launched.
+    staged_selection="$(select_family "$stage_field")" || die "copied store failed pre-start consistency verification"
+    while IFS=$'\t' read -r kind name _; do
+        case "$kind" in
+            ID) staged_id="$name" ;;
+            GENERATION) staged_generation="$name" ;;
+        esac
+    done <<< "$staged_selection"
+    [[ "$staged_id" == "$snapshot_id" && "$staged_generation" == "$generation" ]] \
+        || die "copied store selects snapshot=$staged_id generation=$staged_generation; expected snapshot=$snapshot_id generation=$generation"
+    printf 'verified snapshot=%s manifest_generation=%s before daemon start\n' "$snapshot_id" "$generation"
 
     mkdir -p "$EVAL_MIND"
     old_field="$EVAL_MIND/chitta-field.previous.$$"
@@ -332,8 +288,8 @@ start_replica() {
             --rpc-port "$EVAL_PORT" >> "$LOG_FILE" 2>&1 &
     pid=$!
     printf '%s\n' "$pid" > "$PID_FILE"
-    write_replica_env "$pid" "$snapshot_id" "$snapshot_seqno" "$socket"
-    printf 'started pid=%s socket=%s rpc_port=%s\n' "$pid" "$socket" "$EVAL_PORT"
+    write_replica_env "$pid" "$snapshot_id" "$snapshot_seqno" "$generation" "$socket"
+    printf 'started pid=%s socket=%s rpc_port=%s manifest_generation=%s\n' "$pid" "$socket" "$EVAL_PORT" "$generation"
 
     local deadline=$((SECONDS + START_TIMEOUT))
     while (( SECONDS < deadline )); do
@@ -344,7 +300,7 @@ start_replica() {
             die "replica exited before becoming ready"
         fi
         if status_probe "$socket" >/dev/null 2>&1; then
-            printf 'ready snapshot=%s seqno=%s\n' "$snapshot_id" "$snapshot_seqno"
+            printf 'ready snapshot=%s seqno=%s manifest_generation=%s\n' "$snapshot_id" "$snapshot_seqno" "$generation"
             return
         fi
         sleep 2
@@ -380,8 +336,9 @@ status_replica() {
     local pid
     pid="$(running_pid)" || die "eval replica is not running"
     load_replica_env
-    printf 'pid=%s snapshot=%s socket=%s rpc_port=%s\n' \
-        "$pid" "$CHITTA_EVAL_SNAPSHOT_ID" "$CHITTA_EVAL_SOCKET" "$CHITTA_EVAL_PORT"
+    printf 'pid=%s snapshot=%s manifest_generation=%s socket=%s rpc_port=%s\n' \
+        "$pid" "$CHITTA_EVAL_SNAPSHOT_ID" "${CHITTA_EVAL_MANIFEST_GENERATION:-unknown}" \
+        "$CHITTA_EVAL_SOCKET" "$CHITTA_EVAL_PORT"
     status_probe "$CHITTA_EVAL_SOCKET"
 }
 
