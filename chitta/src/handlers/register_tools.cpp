@@ -55,7 +55,7 @@ void FieldRpcHandler::classify_tools() {
         "type_hierarchy", "version_check",
         "export_soul", "import_soul",
         "cycle", "anticipation_gate_status", "anticipation_record_outcome",
-        "session_register", "session_heartbeat", "session_deregister", "msg_ack",
+        "ledger_op", "session_register", "session_heartbeat", "session_deregister", "msg_ack",
         "file_index_session", "file_index_all",
         "chitta_health",
         "ingest_source", "wiki_export", "health_check_start", "export_training_pairs",

@@ -1990,6 +1990,19 @@ public:
         return event_id;
     }
 
+    /// Startup-only replay, grow until complete; never silently truncate history.
+    std::string task_ledger_events() {
+        std::vector<uint8_t> buf(64 * 1024);
+        size_t written = 0;
+        for (;;) {
+            int r = cf_get_events_by_domain_kind(handle_, "ledger", "task_records",
+                std::numeric_limits<size_t>::max(), buf.data(), buf.size(), &written);
+            if (r == -2) { buf.resize(buf.size() * 2); continue; }
+            cf_checked(r, __func__);
+            return std::string(reinterpret_cast<char*>(buf.data()), written);
+        }
+    }
+
     /// Query events by domain+kind+target. Returns JSON array string.
     std::string get_events_by_target(const std::string& domain, const std::string& kind,
                                      const std::string& target, size_t limit = 20) {

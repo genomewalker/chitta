@@ -695,6 +695,8 @@ static const std::vector<ToolSpec> TOOL_SPECS = {
       {"direction", "sent|received|both", false, "both"},
       {"limit", "Max messages", false, "50"}}},
 
+    {"ledger_op", "Daemon-owned task ledger operation",
+     {{"op", "Operation name", true, nullptr}, {"args", "Operation arguments JSON", false, "{}"}}},
     {"session_register", "Register session for cross-session messaging",
      {{"session_id", "Session ID", true, nullptr},
       {"realm", "Realm", false, "brahman"},

@@ -589,38 +589,10 @@ void QueueProcessor::run() {
                             queue_count_++;
                         } catch (...) {}
                     }
-                } else if (tool == "session_register") {
-                    std::string sid = args.value("session_id", "");
-                    if (!sid.empty()) {
-                        if (!args.contains("kind")) {
-                            json metadata = json::object();
-                            if (args.contains("metadata") && args["metadata"].is_object()) {
-                                metadata = args["metadata"];
-                            } else if (args.contains("metadata") && args["metadata"].is_string()) {
-                                metadata = json::parse(args["metadata"].get<std::string>(), nullptr, false);
-                            }
-                            args["kind"] = metadata.is_object()
-                                ? metadata.value("client", "unknown") : "unknown";
-                        }
-                        field_store_.emit_event("session", "register", sid, args.dump(), 0,
-                                                args.value("realm", "brahman"));
-                        queue_count_++;
-                    }
-                } else if (tool == "session_heartbeat") {
-                    std::string sid = args.value("session_id", "");
-                    if (!sid.empty()) {
-                        json metadata = args.contains("metadata")
-                            ? args["metadata"] : json::object();
-                        field_store_.emit_event("session", "heartbeat", sid,
-                                                json({{"metadata", metadata}}).dump());
-                        queue_count_++;
-                    }
-                } else if (tool == "session_deregister") {
-                    std::string sid = args.value("session_id", "");
-                    if (!sid.empty()) {
-                        field_store_.emit_event("session", "deregister", sid, "{}");
-                        queue_count_++;
-                    }
+                } else if (tool == "session_register" || tool == "session_heartbeat" || tool == "session_deregister") {
+                    auto result = handler_.dispatch_session(tool, args);
+                    if (result.is_error) throw std::runtime_error("queued session lifecycle failed");
+                    queue_count_++;
                 } else if (tool == "transcript_register") {
                     std::string session_id = args.value("session_id", "");
                     std::string path = args.value("transcript_path", "");

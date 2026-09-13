@@ -1,0 +1,135 @@
+{
+  "signature_diffs": {},
+  "key_set_diffs": {
+    "threads": {
+      "added": [],
+      "removed": []
+    },
+    "thread_sessions": {
+      "added": [],
+      "removed": []
+    },
+    "thread_leases": {
+      "added": [],
+      "removed": []
+    },
+    "artifacts": {
+      "added": [],
+      "removed": []
+    },
+    "inbox": {
+      "added": [],
+      "removed": []
+    }
+  },
+  "restart": [
+    "acknowledged writes survived SIGKILL and WAL replay",
+    "full snapshot + WAL suffix survived SIGKILL, including session_list",
+    "queued lifecycle survived restart"
+  ],
+  "timings_ms": {
+    "register": {
+      "median": 131.57,
+      "max": 143.05,
+      "samples": [
+        143.05,
+        139.92,
+        119.12,
+        123.39,
+        137.58,
+        129.89,
+        131.57
+      ]
+    },
+    "heartbeat": {
+      "median": 121.83,
+      "max": 136.03,
+      "samples": [
+        115.17,
+        136.03,
+        127.45,
+        121.83,
+        108.75,
+        111.29,
+        131.54
+      ]
+    },
+    "close": {
+      "median": 124.29,
+      "max": 142.66,
+      "samples": [
+        130.84,
+        137.85,
+        123.72,
+        142.66,
+        124.29,
+        111.77,
+        109.8
+      ]
+    }
+  },
+  "migration": {
+    "first": {
+      "rows": {
+        "threads": 53,
+        "thread_sessions": 22,
+        "thread_leases": 7,
+        "inbox": 6,
+        "artifacts": 803
+      },
+      "inserted": {
+        "threads": 53,
+        "thread_sessions": 22,
+        "thread_leases": 7,
+        "inbox": 6,
+        "artifacts": 803
+      }
+    },
+    "second": {
+      "rows": {
+        "threads": 53,
+        "thread_sessions": 22,
+        "thread_leases": 7,
+        "inbox": 6,
+        "artifacts": 803
+      },
+      "inserted": {
+        "threads": 0,
+        "thread_sessions": 0,
+        "thread_leases": 0,
+        "inbox": 0,
+        "artifacts": 0
+      }
+    },
+    "all_values_equal": true
+  },
+  "snapshot_segments_deleted": 1,
+  "queue": "heartbeat renews binding/lease; deregister ends binding and deletes lease",
+  "source_copy": {
+    "integrity_check": "ok",
+    "sha256": "42ba58c855aecf50f1607d18b00311730ff47b97b601bbcb3ba7c115b566de9a"
+  },
+  "gates": {
+    "ctest": {
+      "passed": 15,
+      "failed": 0
+    },
+    "rust": {
+      "passed": 257,
+      "ignored": 1,
+      "failed": 0
+    },
+    "python": {
+      "passed": 117,
+      "failed": 0
+    },
+    "smriti": {
+      "passed": 46,
+      "failed": 0
+    },
+    "ruff_check": "passed",
+    "ruff_format_check": "63 files formatted",
+    "shell_tests": "11 scripts passed; bash -n passed",
+    "pypy": "3.9.18, seven hook modules import"
+  }
+}

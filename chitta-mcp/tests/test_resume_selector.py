@@ -1,6 +1,5 @@
 import json
 import sys
-import tempfile
 import time
 import unittest
 from pathlib import Path
@@ -9,6 +8,7 @@ MCP_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(MCP_DIR))
 
 import task_ledger  # noqa: E402
+from fake_ledger import fake_ledger  # noqa: E402
 from resume_selector import claim_selected, select_resume  # noqa: E402
 
 
@@ -194,81 +194,61 @@ class ResumeSelectorTests(unittest.TestCase):
         self.assertIsNone(result["selected"])
 
     def test_lease_claim_is_exclusive(self):
-        old_path = task_ledger.DB_PATH
-        with tempfile.TemporaryDirectory() as tmp:
-            task_ledger.DB_PATH = Path(tmp) / "ledger.db"
-            try:
-                thread_id = task_ledger.thread_create("shared", "project:test")
-                task_ledger.session_bind("claude", thread_id, client="claude")
-                task_ledger.session_bind("codex", thread_id, client="codex")
-                first = task_ledger.lease_claim(thread_id, "claude")
-                second = task_ledger.lease_claim(thread_id, "codex")
-                self.assertTrue(first["claimed"])
-                self.assertFalse(second["claimed"])
-                self.assertEqual(second["owner_session_id"], "claude")
-                renewed = task_ledger.lease_claim(thread_id, "claude")
-                self.assertEqual(renewed["generation"], first["generation"])
-                task_ledger.session_close("claude")
-                after_close = task_ledger.lease_claim(thread_id, "codex")
-                self.assertTrue(after_close["claimed"])
-            finally:
-                task_ledger.DB_PATH = old_path
+        with fake_ledger():
+            thread_id = task_ledger.thread_create("shared", "project:test")
+            task_ledger.session_bind("claude", thread_id, client="claude")
+            task_ledger.session_bind("codex", thread_id, client="codex")
+            first = task_ledger.lease_claim(thread_id, "claude")
+            second = task_ledger.lease_claim(thread_id, "codex")
+            self.assertTrue(first["claimed"])
+            self.assertFalse(second["claimed"])
+            self.assertEqual(second["owner_session_id"], "claude")
+            renewed = task_ledger.lease_claim(thread_id, "claude")
+            self.assertEqual(renewed["generation"], first["generation"])
+            task_ledger.session_close("claude")
+            after_close = task_ledger.lease_claim(thread_id, "codex")
+            self.assertTrue(after_close["claimed"])
 
     def test_failed_claim_does_not_bind_contender_to_owned_thread(self):
-        old_path = task_ledger.DB_PATH
-        with tempfile.TemporaryDirectory() as tmp:
-            task_ledger.DB_PATH = Path(tmp) / "ledger.db"
-            try:
-                thread_id = task_ledger.thread_create("owned", "project:test")
-                task_ledger.session_bind("owner", thread_id, client="claude")
-                task_ledger.lease_claim(thread_id, "owner")
-                result = {"selected": {"thread_id": thread_id}}
-                claim = claim_selected(result, "contender", "codex", self.project)
-                self.assertFalse(claim["claimed"])
-                self.assertIsNone(task_ledger.session_get("contender")["thread_id"])
-            finally:
-                task_ledger.DB_PATH = old_path
+        with fake_ledger():
+            thread_id = task_ledger.thread_create("owned", "project:test")
+            task_ledger.session_bind("owner", thread_id, client="claude")
+            task_ledger.lease_claim(thread_id, "owner")
+            result = {"selected": {"thread_id": thread_id}}
+            claim = claim_selected(result, "contender", "codex", self.project)
+            self.assertFalse(claim["claimed"])
+            self.assertIsNone(task_ledger.session_get("contender")["thread_id"])
 
     def test_session_rebind_preserves_registration_metadata(self):
-        old_path = task_ledger.DB_PATH
-        with tempfile.TemporaryDirectory() as tmp:
-            task_ledger.DB_PATH = Path(tmp) / "ledger.db"
-            try:
-                task_ledger.session_bind(
-                    "session",
-                    client="codex",
-                    metadata={"model": "gpt", "host": "node"},
-                )
-                thread_id = task_ledger.thread_create("work", "project:test")
-                task_ledger.session_bind("session", thread_id)
-                row = task_ledger.session_get("session")
-                self.assertEqual(row["client"], "codex")
-                self.assertEqual(json.loads(row["metadata_json"])["model"], "gpt")
-            finally:
-                task_ledger.DB_PATH = old_path
+        with fake_ledger():
+            task_ledger.session_bind(
+                "session",
+                client="codex",
+                metadata={"model": "gpt", "host": "node"},
+            )
+            thread_id = task_ledger.thread_create("work", "project:test")
+            task_ledger.session_bind("session", thread_id)
+            row = task_ledger.session_get("session")
+            self.assertEqual(row["client"], "codex")
+            self.assertEqual(json.loads(row["metadata_json"])["model"], "gpt")
 
     def test_claim_creates_thread_for_historical_session(self):
-        old_path = task_ledger.DB_PATH
-        with tempfile.TemporaryDirectory() as tmp:
-            task_ledger.DB_PATH = Path(tmp) / "ledger.db"
-            try:
-                result = {
-                    "selected": {
-                        "session_id": "old-codex",
-                        "client": "codex",
-                        "project_dir": self.project,
-                        "transcript_path": "/tmp/old-codex.jsonl",
-                        "status": "ended",
-                        "thread_id": "",
-                    }
+        with fake_ledger():
+            result = {
+                "selected": {
+                    "session_id": "old-codex",
+                    "client": "codex",
+                    "project_dir": self.project,
+                    "transcript_path": "/tmp/old-codex.jsonl",
+                    "status": "ended",
+                    "thread_id": "",
                 }
-                claim = claim_selected(result, "new-claude", "claude", self.project)
-                self.assertTrue(claim["claimed"])
-                self.assertTrue(result["selected"]["thread_id"])
-                owner = task_ledger.lease_list()[0]
-                self.assertEqual(owner["session_id"], "new-claude")
-            finally:
-                task_ledger.DB_PATH = old_path
+            }
+            claim = claim_selected(result, "new-claude", "claude", self.project)
+            self.assertTrue(claim["claimed"])
+            self.assertTrue(result["selected"]["thread_id"])
+            owner = task_ledger.lease_list()[0]
+            self.assertEqual(owner["session_id"], "new-claude")
 
 
 if __name__ == "__main__":

@@ -890,6 +890,12 @@ ToolResult FieldRpcHandler::tool_session_register(const json& params) {
         "session", "register", session_id, payload.dump(), 0, realm);
 
     if (event_id == 0) return ToolResult::error("Failed to register session");
+    json binding = {{"session_id",session_id},{"client",client},{"project_dir",project_dir},
+        {"transcript_path",transcript_path},{"metadata",metadata_obj}};
+    auto tid = metadata_obj.value("thread_id", "");
+    if (!tid.empty()) binding["thread_id"] = tid;
+    auto bound = tool_ledger_op({{"op","session_bind"},{"args",binding}});
+    if (bound.is_error) return bound;
 
     return ToolResult::ok("Session registered", {
         {"session_id",      session_id},
@@ -908,6 +914,8 @@ ToolResult FieldRpcHandler::tool_session_heartbeat(const json& params) {
         "session", "heartbeat", session_id, payload.dump());
 
     if (event_id == 0) return ToolResult::error("Failed to send heartbeat");
+    auto touched = tool_ledger_op({{"op","session_touch"},{"args",{{"session_id",session_id}}}});
+    if (touched.is_error) return touched;
 
     return ToolResult::ok("Heartbeat sent", {
         {"session_id", session_id},
@@ -990,6 +998,8 @@ ToolResult FieldRpcHandler::tool_session_deregister(const json& params) {
         "session", "deregister", session_id, "");
 
     if (event_id == 0) return ToolResult::error("Failed to deregister session");
+    auto closed = tool_ledger_op({{"op","session_close"},{"args",{{"session_id",session_id},{"status",params.value("status","ended")}}}});
+    if (closed.is_error) return closed;
 
     return ToolResult::ok("Session deregistered", {
         {"session_id", session_id},

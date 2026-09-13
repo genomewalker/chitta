@@ -1,0 +1,101 @@
+{
+  "signatures": {
+    "thread_create": "(title: 'str', realm: 'str' = '', fingerprint: 'str | None' = None, parent: 'str | None' = None) -> 'str'",
+    "thread_list": "(realm: 'str | None' = None, status: 'str | None' = None, limit: 'int' = 20) -> 'list[dict]'",
+    "thread_get": "(thread_id: 'str') -> 'dict | None'",
+    "thread_seal": "(thread_id: 'str', reason: 'str | None' = None) -> 'bool'",
+    "thread_update": "(thread_id: 'str', **fields) -> 'bool'",
+    "session_bind": "(session_id: 'str', thread_id: 'str | None' = None, client: 'str' = '', project_dir: 'str' = '', transcript_path: 'str' = '', status: 'str' = 'active', metadata: 'dict | None' = None) -> 'bool'",
+    "session_touch": "(session_id: 'str') -> 'bool'",
+    "session_close": "(session_id: 'str', status: 'str' = 'ended') -> 'bool'",
+    "session_get": "(session_id: 'str') -> 'dict | None'",
+    "session_list": "(project_dir: 'str | None' = None, status: 'str | None' = None, thread_id: 'str | None' = None, limit: 'int' = 100) -> 'list[dict]'",
+    "lease_claim": "(thread_id: 'str', session_id: 'str', ttl: 'int' = 900, force: 'bool' = False) -> 'dict'",
+    "lease_release": "(session_id: 'str', thread_id: 'str | None' = None) -> 'bool'",
+    "lease_list": "(active_only: 'bool' = True) -> 'list[dict]'",
+    "inbox_push": "(task_id: 'str', event_type: 'str', digest: 'str', target_realm: 'str', thread_id: 'str | None' = None, payload: 'dict | None' = None) -> 'str'",
+    "inbox_list": "(target_realm: 'str | None' = None, state: 'str' = 'pending', limit: 'int' = 50) -> 'list[dict]'",
+    "inbox_ack": "(item_id: 'str', new_state: 'str' = 'acked') -> 'bool'",
+    "artifact_register": "(task_id: 'str', path: 'str', kind: 'str' = 'file', thread_id: 'str | None' = None, parent_artifact_id: 'str | None' = None) -> 'str'",
+    "artifact_list": "(task_id: 'str | None' = None, path_glob: 'str | None' = None, thread_id: 'str | None' = None) -> 'list[dict]'",
+    "artifact_link": "(child_id: 'str', parent_id: 'str') -> 'bool'",
+    "artifact_lineage": "(artifact_id: 'str') -> 'list[dict]'",
+    "render_inbox": "(realm: 'str' = '', limit: 'int' = 5) -> 'str'",
+    "render_threads": "(realm: 'str' = '', limit: 'int' = 3) -> 'str'"
+  },
+  "row_keys": {
+    "threads": [
+      "created_at",
+      "last_active_at",
+      "metadata_json",
+      "parent_thread_id",
+      "realm",
+      "sealed_at",
+      "status",
+      "thread_id",
+      "title",
+      "topic_fingerprint"
+    ],
+    "thread_sessions": [
+      "client",
+      "ended_at",
+      "last_active_at",
+      "metadata_json",
+      "project_dir",
+      "session_id",
+      "started_at",
+      "status",
+      "thread_id",
+      "transcript_path"
+    ],
+    "thread_leases": [
+      "acquired_at",
+      "expires_at",
+      "generation",
+      "last_heartbeat_at",
+      "session_id",
+      "thread_id"
+    ],
+    "inbox": [
+      "acked_at",
+      "created_at",
+      "delivered_at",
+      "delivery_state",
+      "digest",
+      "event_type",
+      "item_id",
+      "payload_json",
+      "target_realm",
+      "task_id",
+      "thread_id"
+    ],
+    "artifacts": [
+      "artifact_id",
+      "created_at",
+      "kind",
+      "md5",
+      "metadata_json",
+      "mtime",
+      "parent_artifact_id",
+      "path",
+      "size",
+      "task_id",
+      "thread_id"
+    ]
+  },
+  "lease_claim_success": [
+    "claimed",
+    "expires_at",
+    "generation",
+    "session_id",
+    "thread_id"
+  ],
+  "lease_claim_conflict": [
+    "claimed",
+    "expires_at",
+    "generation",
+    "owner_session_id",
+    "reason",
+    "thread_id"
+  ]
+}

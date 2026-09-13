@@ -1,197 +1,66 @@
 #!/usr/bin/env python3
-"""
-task-ledger.db manager: Threads, Inbox, Artifacts.
-Pure stdlib — no external dependencies.
+"""Daemon-owned threads, inbox, artifacts, session bindings and leases.
 
-CLI: python3 -m task_ledger <command> [--<field> <value> ...]
+Pure stdlib; SQLite is imported only by the explicit read-only migration command.
 """
 
 from __future__ import annotations
 
-import argparse
-import hashlib
 import json
-import os
-import sqlite3
-import time
 from pathlib import Path
-from uuid import uuid4
 
-DB_PATH = Path(os.environ.get("CHITTA_TASK_LEDGER", Path.home() / ".claude" / "task-ledger.db"))
-
-_SCHEMA = """
-PRAGMA journal_mode=DELETE;
-PRAGMA foreign_keys=ON;
-PRAGMA busy_timeout=5000;
-
-CREATE TABLE IF NOT EXISTS threads (
-    thread_id        TEXT PRIMARY KEY,
-    title            TEXT NOT NULL,
-    realm            TEXT NOT NULL DEFAULT '',
-    status           TEXT NOT NULL DEFAULT 'active'
-                         CHECK(status IN ('active','sealed','dormant')),
-    topic_fingerprint TEXT,
-    created_at       REAL NOT NULL,
-    last_active_at   REAL NOT NULL,
-    sealed_at        REAL,
-    parent_thread_id TEXT REFERENCES threads(thread_id),
-    metadata_json    TEXT NOT NULL DEFAULT '{}'
-);
-
-CREATE TABLE IF NOT EXISTS inbox (
-    item_id         TEXT PRIMARY KEY,
-    task_id         TEXT NOT NULL DEFAULT '',
-    thread_id       TEXT REFERENCES threads(thread_id),
-    event_type      TEXT NOT NULL,
-    digest          TEXT NOT NULL DEFAULT '',
-    payload_json    TEXT NOT NULL DEFAULT '{}',
-    target_realm    TEXT NOT NULL DEFAULT '',
-    created_at      REAL NOT NULL,
-    delivery_state  TEXT NOT NULL DEFAULT 'pending'
-                        CHECK(delivery_state IN ('pending','delivered','acked','suppressed')),
-    delivered_at    REAL,
-    acked_at        REAL
-);
-
-CREATE TABLE IF NOT EXISTS artifacts (
-    artifact_id        TEXT PRIMARY KEY,
-    task_id            TEXT NOT NULL DEFAULT '',
-    thread_id          TEXT REFERENCES threads(thread_id),
-    path               TEXT NOT NULL,
-    kind               TEXT NOT NULL DEFAULT 'file',
-    mtime              REAL,
-    size               INTEGER,
-    md5                TEXT,
-    created_at         REAL NOT NULL,
-    parent_artifact_id TEXT REFERENCES artifacts(artifact_id),
-    metadata_json      TEXT NOT NULL DEFAULT '{}'
-);
-
-CREATE TABLE IF NOT EXISTS thread_sessions (
-    session_id       TEXT PRIMARY KEY,
-    thread_id        TEXT REFERENCES threads(thread_id),
-    client           TEXT NOT NULL DEFAULT '',
-    project_dir      TEXT NOT NULL DEFAULT '',
-    transcript_path  TEXT NOT NULL DEFAULT '',
-    status           TEXT NOT NULL DEFAULT 'active'
-                         CHECK(status IN ('active','ended','interrupted','completed')),
-    started_at       REAL NOT NULL,
-    last_active_at   REAL NOT NULL,
-    ended_at         REAL,
-    metadata_json    TEXT NOT NULL DEFAULT '{}'
-);
-
-CREATE TABLE IF NOT EXISTS thread_leases (
-    thread_id          TEXT PRIMARY KEY REFERENCES threads(thread_id),
-    session_id         TEXT NOT NULL REFERENCES thread_sessions(session_id),
-    generation         INTEGER NOT NULL DEFAULT 1,
-    acquired_at        REAL NOT NULL,
-    last_heartbeat_at  REAL NOT NULL,
-    expires_at         REAL NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_inbox_state_realm  ON inbox(delivery_state, target_realm);
-CREATE INDEX IF NOT EXISTS idx_inbox_task          ON inbox(task_id);
-CREATE INDEX IF NOT EXISTS idx_artifacts_task      ON artifacts(task_id);
-CREATE INDEX IF NOT EXISTS idx_artifacts_path      ON artifacts(path);
-CREATE INDEX IF NOT EXISTS idx_threads_realm_status ON threads(realm, status);
-CREATE INDEX IF NOT EXISTS idx_thread_sessions_thread ON thread_sessions(thread_id, status);
-CREATE INDEX IF NOT EXISTS idx_thread_sessions_project ON thread_sessions(project_dir, last_active_at);
-CREATE INDEX IF NOT EXISTS idx_thread_leases_session ON thread_leases(session_id);
-"""
+from daemon_client import daemon_call
 
 
-# Rollback journal, not WAL: WAL needs a mmap-shared -shm file, which fails on
-# the NFS home with "locking protocol" (every registry call timed out 2026-08-15
-# to 09-13).
-def connect() -> sqlite3.Connection:
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(DB_PATH), timeout=10)
-    conn.row_factory = sqlite3.Row
-    conn.executescript(_SCHEMA)
-    return conn
+def _new_id() -> str:
+    # UUID support pulls in hashing/SSL on PyPy; only create operations need it.
+    from uuid import uuid4
+
+    return str(uuid4())
 
 
-def _row(r) -> dict | None:
-    return dict(r) if r else None
+def _rpc(op: str, args: dict, default=None):
+    result = daemon_call("ledger_op", {"op": op, "args": args})
+    return result.get("value", default) if isinstance(result, dict) else default
 
 
-def _rows(rs) -> list[dict]:
-    return [dict(r) for r in rs]
-
-
-# ─── Threads ──────────────────────────────────────────────────────────────────
+def _list(op: str, args: dict, limit: int | None = None) -> list[dict]:
+    if limit == 0:
+        return []
+    rows = []
+    while True:
+        page_args = dict(
+            args, limit=100 if limit is None or limit < 0 else min(100, limit - len(rows))
+        )
+        page = _rpc(op, page_args)
+        if not isinstance(page, dict):
+            return []  # Never present a partial list as a complete result.
+        rows.extend(page["rows"])
+        if not page.get("after") or (limit is not None and limit >= 0 and len(rows) >= limit):
+            return rows
+        args = dict(args, after=page["after"])
 
 
 def thread_create(
     title: str, realm: str = "", fingerprint: str | None = None, parent: str | None = None
 ) -> str:
-    tid = str(uuid4())
-    now = time.time()
-    with connect() as conn:
-        conn.execute(
-            "INSERT INTO threads(thread_id,title,realm,topic_fingerprint,created_at,last_active_at,parent_thread_id)"
-            " VALUES(?,?,?,?,?,?,?)",
-            (tid, title, realm, fingerprint, now, now, parent),
-        )
-    return tid
+    return _rpc("thread_create", dict(locals(), id=_new_id()))
 
 
 def thread_list(realm: str | None = None, status: str | None = None, limit: int = 20) -> list[dict]:
-    sql = "SELECT * FROM threads WHERE 1=1"
-    params: list = []
-    if realm is not None:
-        sql += " AND realm=?"
-        params.append(realm)
-    if status is not None:
-        sql += " AND status=?"
-        params.append(status)
-    sql += " ORDER BY last_active_at DESC LIMIT ?"
-    params.append(limit)
-    with connect() as conn:
-        return _rows(conn.execute(sql, params).fetchall())
+    return _list("thread_list", locals(), limit)
 
 
 def thread_get(thread_id: str) -> dict | None:
-    with connect() as conn:
-        return _row(
-            conn.execute("SELECT * FROM threads WHERE thread_id=?", (thread_id,)).fetchone()
-        )
+    return _rpc("thread_get", locals(), None)
 
 
 def thread_seal(thread_id: str, reason: str | None = None) -> bool:
-    now = time.time()
-    with connect() as conn:
-        cur = conn.execute(
-            "UPDATE threads SET status='sealed', sealed_at=?, last_active_at=? WHERE thread_id=?",
-            (now, now, thread_id),
-        )
-        return cur.rowcount > 0
+    return _rpc("thread_seal", locals(), False)
 
 
 def thread_update(thread_id: str, **fields) -> bool:
-    allowed = {
-        "title",
-        "realm",
-        "status",
-        "topic_fingerprint",
-        "last_active_at",
-        "metadata_json",
-        "parent_thread_id",
-    }
-    cols = {k: v for k, v in fields.items() if k in allowed}
-    if not cols:
-        return False
-    set_clause = ", ".join(f"{k}=?" for k in cols)
-    with connect() as conn:
-        cur = conn.execute(
-            f"UPDATE threads SET {set_clause} WHERE thread_id=?",
-            [*cols.values(), thread_id],
-        )
-        return cur.rowcount > 0
-
-
-# ─── Session/thread ownership ────────────────────────────────────────────────
+    return _rpc("thread_update", locals(), False)
 
 
 def session_bind(
@@ -203,88 +72,19 @@ def session_bind(
     status: str = "active",
     metadata: dict | None = None,
 ) -> bool:
-    """Upsert the durable session→thread association used by both frontends."""
-    if not session_id:
-        return False
-    now = time.time()
-    with connect() as conn:
-        # BEGIN IMMEDIATE (same as lease_claim): the metadata read-merge-write
-        # below must not interleave with a concurrent bind for this session.
-        conn.execute("BEGIN IMMEDIATE")
-        existing = conn.execute(
-            "SELECT metadata_json FROM thread_sessions WHERE session_id=?",
-            (session_id,),
-        ).fetchone()
-        merged_metadata: dict = {}
-        if existing:
-            try:
-                merged_metadata = json.loads(existing["metadata_json"] or "{}")
-            except (json.JSONDecodeError, TypeError):
-                merged_metadata = {}
-        if metadata is not None:
-            merged_metadata.update(metadata)
-        conn.execute(
-            "INSERT INTO thread_sessions"
-            "(session_id,thread_id,client,project_dir,transcript_path,status,"
-            " started_at,last_active_at,metadata_json)"
-            " VALUES(?,?,?,?,?,?,?,?,?)"
-            " ON CONFLICT(session_id) DO UPDATE SET"
-            " thread_id=COALESCE(excluded.thread_id,thread_sessions.thread_id),"
-            " client=CASE WHEN excluded.client<>'' THEN excluded.client ELSE thread_sessions.client END,"
-            " project_dir=CASE WHEN excluded.project_dir<>'' THEN excluded.project_dir ELSE thread_sessions.project_dir END,"
-            " transcript_path=CASE WHEN excluded.transcript_path<>'' THEN excluded.transcript_path ELSE thread_sessions.transcript_path END,"
-            " status=excluded.status,last_active_at=excluded.last_active_at,"
-            " ended_at=NULL,metadata_json=excluded.metadata_json",
-            (
-                session_id,
-                thread_id,
-                client,
-                project_dir,
-                transcript_path,
-                status,
-                now,
-                now,
-                json.dumps(merged_metadata),
-            ),
-        )
-    return True
+    return _rpc("session_bind", locals(), False)
 
 
 def session_touch(session_id: str) -> bool:
-    now = time.time()
-    with connect() as conn:
-        cur = conn.execute(
-            "UPDATE thread_sessions SET last_active_at=?,status='active',ended_at=NULL"
-            " WHERE session_id=?",
-            (now, session_id),
-        )
-        conn.execute(
-            "UPDATE thread_leases SET last_heartbeat_at=?,expires_at=? WHERE session_id=?",
-            (now, now + 900.0, session_id),
-        )
-        return cur.rowcount > 0
+    return _rpc("session_touch", locals(), False)
 
 
 def session_close(session_id: str, status: str = "ended") -> bool:
-    if status not in ("ended", "interrupted", "completed"):
-        status = "ended"
-    now = time.time()
-    with connect() as conn:
-        cur = conn.execute(
-            "UPDATE thread_sessions SET status=?,last_active_at=?,ended_at=? WHERE session_id=?",
-            (status, now, now, session_id),
-        )
-        conn.execute("DELETE FROM thread_leases WHERE session_id=?", (session_id,))
-        return cur.rowcount > 0
+    return _rpc("session_close", locals(), False)
 
 
 def session_get(session_id: str) -> dict | None:
-    with connect() as conn:
-        return _row(
-            conn.execute(
-                "SELECT * FROM thread_sessions WHERE session_id=?", (session_id,)
-            ).fetchone()
-        )
+    return _rpc("session_get", locals(), None)
 
 
 def session_list(
@@ -293,101 +93,19 @@ def session_list(
     thread_id: str | None = None,
     limit: int = 100,
 ) -> list[dict]:
-    sql = "SELECT * FROM thread_sessions WHERE 1=1"
-    params: list = []
-    if project_dir is not None:
-        sql += " AND project_dir=?"
-        params.append(project_dir)
-    if status is not None:
-        sql += " AND status=?"
-        params.append(status)
-    if thread_id is not None:
-        sql += " AND thread_id=?"
-        params.append(thread_id)
-    sql += " ORDER BY last_active_at DESC LIMIT ?"
-    params.append(limit)
-    with connect() as conn:
-        return _rows(conn.execute(sql, params).fetchall())
+    return _list("session_list", locals(), limit)
 
 
 def lease_claim(thread_id: str, session_id: str, ttl: int = 900, force: bool = False) -> dict:
-    """Atomically acquire/renew exclusive ownership of a resumable thread."""
-    now = time.time()
-    expires = now + max(30, ttl)
-    with connect() as conn:
-        conn.execute("BEGIN IMMEDIATE")
-        existing = conn.execute(
-            "SELECT * FROM thread_leases WHERE thread_id=?", (thread_id,)
-        ).fetchone()
-        if (
-            existing
-            and existing["session_id"] != session_id
-            and existing["expires_at"] > now
-            and not force
-        ):
-            return {
-                "claimed": False,
-                "reason": "live_owner",
-                "thread_id": thread_id,
-                "owner_session_id": existing["session_id"],
-                "expires_at": existing["expires_at"],
-                "generation": existing["generation"],
-            }
-        same_owner = bool(existing and existing["session_id"] == session_id)
-        generation = (
-            existing["generation"]
-            if same_owner
-            else (existing["generation"] + 1 if existing else 1)
-        )
-        acquired_at = existing["acquired_at"] if same_owner else now
-        conn.execute(
-            "INSERT INTO thread_leases"
-            "(thread_id,session_id,generation,acquired_at,last_heartbeat_at,expires_at)"
-            " VALUES(?,?,?,?,?,?)"
-            " ON CONFLICT(thread_id) DO UPDATE SET"
-            " session_id=excluded.session_id,generation=excluded.generation,"
-            " acquired_at=excluded.acquired_at,last_heartbeat_at=excluded.last_heartbeat_at,"
-            " expires_at=excluded.expires_at",
-            (thread_id, session_id, generation, acquired_at, now, expires),
-        )
-        conn.execute(
-            "UPDATE thread_sessions SET thread_id=?,status='active',last_active_at=?"
-            " WHERE session_id=?",
-            (thread_id, now, session_id),
-        )
-        return {
-            "claimed": True,
-            "thread_id": thread_id,
-            "session_id": session_id,
-            "expires_at": expires,
-            "generation": generation,
-        }
+    return _rpc("lease_claim", locals(), {})
 
 
 def lease_release(session_id: str, thread_id: str | None = None) -> bool:
-    sql = "DELETE FROM thread_leases WHERE session_id=?"
-    params: list = [session_id]
-    if thread_id:
-        sql += " AND thread_id=?"
-        params.append(thread_id)
-    with connect() as conn:
-        cur = conn.execute(sql, params)
-        return cur.rowcount > 0
+    return _rpc("lease_release", locals(), False)
 
 
 def lease_list(active_only: bool = True) -> list[dict]:
-    now = time.time()
-    sql = "SELECT * FROM thread_leases"
-    params: list = []
-    if active_only:
-        sql += " WHERE expires_at>?"
-        params.append(now)
-    sql += " ORDER BY last_heartbeat_at DESC"
-    with connect() as conn:
-        return _rows(conn.execute(sql, params).fetchall())
-
-
-# ─── Inbox ────────────────────────────────────────────────────────────────────
+    return _list("lease_list", locals(), None)
 
 
 def inbox_push(
@@ -398,52 +116,17 @@ def inbox_push(
     thread_id: str | None = None,
     payload: dict | None = None,
 ) -> str:
-    iid = str(uuid4())
-    now = time.time()
-    with connect() as conn:
-        conn.execute(
-            "INSERT INTO inbox(item_id,task_id,thread_id,event_type,digest,"
-            "payload_json,target_realm,created_at) VALUES(?,?,?,?,?,?,?,?)",
-            (
-                iid,
-                task_id,
-                thread_id,
-                event_type,
-                digest,
-                json.dumps(payload or {}),
-                target_realm,
-                now,
-            ),
-        )
-    return iid
+    return _rpc("inbox_push", dict(locals(), id=_new_id()))
 
 
 def inbox_list(
     target_realm: str | None = None, state: str = "pending", limit: int = 50
 ) -> list[dict]:
-    sql = "SELECT * FROM inbox WHERE delivery_state=?"
-    params: list = [state]
-    if target_realm is not None:
-        sql += " AND (target_realm=? OR target_realm='')"
-        params.append(target_realm)
-    sql += " ORDER BY created_at DESC LIMIT ?"
-    params.append(limit)
-    with connect() as conn:
-        return _rows(conn.execute(sql, params).fetchall())
+    return _list("inbox_list", locals(), limit)
 
 
 def inbox_ack(item_id: str, new_state: str = "acked") -> bool:
-    now = time.time()
-    col = "acked_at" if new_state == "acked" else "delivered_at"
-    with connect() as conn:
-        cur = conn.execute(
-            f"UPDATE inbox SET delivery_state=?, {col}=? WHERE item_id=?",
-            (new_state, now, item_id),
-        )
-        return cur.rowcount > 0
-
-
-# ─── Artifacts ────────────────────────────────────────────────────────────────
+    return _rpc("inbox_ack", locals(), False)
 
 
 def artifact_register(
@@ -453,75 +136,46 @@ def artifact_register(
     thread_id: str | None = None,
     parent_artifact_id: str | None = None,
 ) -> str:
-    aid = str(uuid4())
-    now = time.time()
+    args = dict(locals(), id=_new_id())
+    import hashlib
+
     p = Path(path)
-    mtime = size = md5 = None
-    if p.exists():
-        try:
-            st = p.stat()
-            mtime = st.st_mtime
-            if p.is_file():
-                size = st.st_size
-                if size <= 16 * 1024 * 1024:
-                    md5 = hashlib.md5(p.read_bytes()).hexdigest()
-        except OSError:
-            pass
-    with connect() as conn:
-        conn.execute(
-            "INSERT OR REPLACE INTO artifacts"
-            "(artifact_id,task_id,thread_id,path,kind,mtime,size,md5,"
-            "created_at,parent_artifact_id) VALUES(?,?,?,?,?,?,?,?,?,?)",
-            (aid, task_id, thread_id, str(path), kind, mtime, size, md5, now, parent_artifact_id),
-        )
-    return aid
+    args.update(path=str(path), mtime=None, size=None, md5=None)
+    try:
+        st = p.stat()
+        args["mtime"] = st.st_mtime
+        if p.is_file():
+            args["size"] = st.st_size
+            if st.st_size <= 16 * 1024 * 1024:
+                args["md5"] = hashlib.md5(p.read_bytes()).hexdigest()
+    except OSError:
+        pass
+    return _rpc("artifact_register", args)
 
 
 def artifact_list(
     task_id: str | None = None, path_glob: str | None = None, thread_id: str | None = None
 ) -> list[dict]:
-    sql = "SELECT * FROM artifacts WHERE 1=1"
-    params: list = []
-    if task_id:
-        sql += " AND task_id=?"
-        params.append(task_id)
-    if thread_id:
-        sql += " AND thread_id=?"
-        params.append(thread_id)
-    if path_glob:
-        sql += " AND path GLOB ?"
-        params.append(path_glob)
-    sql += " ORDER BY created_at DESC"
-    with connect() as conn:
-        return _rows(conn.execute(sql, params).fetchall())
+    return _list("artifact_list", locals(), None)
 
 
 def artifact_link(child_id: str, parent_id: str) -> bool:
-    with connect() as conn:
-        cur = conn.execute(
-            "UPDATE artifacts SET parent_artifact_id=? WHERE artifact_id=?",
-            (parent_id, child_id),
-        )
-        return cur.rowcount > 0
+    return _rpc("artifact_link", locals(), False)
 
 
 def artifact_lineage(artifact_id: str) -> list[dict]:
-    chain: list[dict] = []
-    current: str | None = artifact_id
-    seen: set[str] = set()
-    with connect() as conn:
-        while current and current not in seen:
-            seen.add(current)
-            row = conn.execute("SELECT * FROM artifacts WHERE artifact_id=?", (current,)).fetchone()
-            if not row:
-                break
-            d = dict(row)
-            chain.append(d)
-            current = d.get("parent_artifact_id")
-    return chain
-
-
-# ─── CLI ──────────────────────────────────────────────────────────────────────
+    rows, seen = [], set()
+    while artifact_id and artifact_id not in seen:
+        page = _rpc("artifact_lineage", {"artifact_id": artifact_id})
+        if not isinstance(page, dict):
+            return []
+        for row in page["rows"]:
+            if row["artifact_id"] in seen:
+                return rows
+            seen.add(row["artifact_id"])
+            rows.append(row)
+        artifact_id = page.get("next_id")
+    return rows
 
 
 def render_inbox(realm: str = "", limit: int = 5) -> str:
@@ -547,9 +201,44 @@ def render_threads(realm: str = "", limit: int = 3) -> str:
     return "\n".join(lines)
 
 
+def migrate(source: str) -> dict:
+    """Import all legacy rows read-only; existing daemon keys always win."""
+    import sqlite3
+    from contextlib import closing
+
+    counts = {}
+    inserted = {}
+    uri = Path(source).expanduser().resolve().as_uri() + "?mode=ro"
+    with closing(sqlite3.connect(uri, uri=True)) as conn:
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA query_only=ON")
+        conn.execute("BEGIN")
+        for table in ("threads", "thread_sessions", "thread_leases", "inbox", "artifacts"):
+            counts[table] = inserted[table] = 0
+            exists = conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)
+            ).fetchone()
+            if not exists:
+                continue
+            for row in conn.execute(f"SELECT * FROM {table}"):
+                result = _rpc("import", {"table": table, "row": dict(row)})
+                if result is None:
+                    raise RuntimeError(
+                        f"daemon import failed at {table} row {counts[table] + 1}; safe to rerun"
+                    )
+                counts[table] += 1
+                inserted[table] += bool(result)
+    return {"rows": counts, "inserted": inserted}
+
+
 def _cli() -> None:
+    import argparse
+
     p = argparse.ArgumentParser(prog="task_ledger")
     sub = p.add_subparsers(dest="cmd", required=True)
+
+    s = sub.add_parser("migrate")
+    s.add_argument("--from", required=True, dest="source")
 
     s = sub.add_parser("thread_create")
     s.add_argument("--title", required=True)
@@ -661,7 +350,9 @@ def _cli() -> None:
     args = p.parse_args()
     result: object = None
 
-    if args.cmd == "thread_create":
+    if args.cmd == "migrate":
+        result = migrate(args.source)
+    elif args.cmd == "thread_create":
         result = thread_create(args.title, args.realm, args.fingerprint, args.parent)
     elif args.cmd == "thread_list":
         result = thread_list(args.realm, args.status, args.limit)

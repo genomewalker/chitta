@@ -158,6 +158,43 @@ after a plugin update, which can replace those symlinks with a fresh clone.
 8. Run `anticipation_predict` for context-based predictions
 9. Output combined context
 
+#### Daemon task ledger
+
+Status 2026-09-13: threads, inbox items, artifacts, session bindings and exclusive
+thread leases are daemon-owned records. Hooks use the shared stdlib socket/HTTP
+client; they no longer open a local SQLite ledger. `task_ledger.py` preserves its
+public API and renderers. Its single `ledger_op` RPC stores atomic row-change
+batches in the Rust event WAL; a snapshot section preserves ledger and native
+session events. Indexed maps are rebuilt on startup. Read pages are capped at 100;
+the Python client follows pages for larger or unlimited lists.
+
+`session_registry.py` calls `session_register`, `session_heartbeat` and
+`session_deregister` directly. Those handlers update durable bindings and leases,
+including when invoked by the private mind's `queue.jsonl` processor. The
+`heartbeat --queued` path only appends a queue item; it performs no RPC. Direct
+registry calls share a 100 ms daemon-wait budget, and individual hook RPCs have a
+75 ms deadline. Unavailable or warming daemons return empty results; registration
+reports `registered:false`. No hook starts a daemon or falls back to SQLite.
+
+The endpoint is `CHITTA_SOCKET_PATH` when explicitly set; otherwise the client
+resolves the socket from `MIND_PATH` / `CHITTA_DB_PATH` / `CHITTA_MIND` and the
+runtime directory. `CHITTA_RPC_PORT` plus optional `CHITTA_RPC_HOST` selects HTTP
+when an explicit socket is absent. Hook tests must isolate these endpoint settings
+as well as HOME, runtime, mind and queue.
+
+Migrate the legacy SQLite file once against the intended daemon:
+
+```bash
+python3 chitta-mcp/task_ledger.py migrate --from ~/.claude/task-ledger.db
+```
+
+Migration opens the source with SQLite URI `mode=ro`, preserving every row's keys,
+nulls, timestamps and metadata. It imports all five tables by stable primary key;
+existing daemon records win, so reruns neither duplicate records nor overwrite
+newer changes. A failure exits nonzero and can be safely resumed. SQLite is used
+only by this explicit migration command; the old ledger-path environment variable
+has no effect on normal operation.
+
 #### Prompt latency investigation and session continuity (2026-09-13)
 
 Proposal `69a8f047e822354f` reported a ~2 s floor despite fast recall lanes.
@@ -239,7 +276,7 @@ retains the median of those observations and every query total. Timings come
 only from the existing `t:` total field; empty, ambiguous, failed, or timed-out
 hook executions fail evaluation rather than becoming zero-ms samples.
 
-The hook runner isolates HOME, runtime, mind, queue, and task ledger, clears both
+The hook runner isolates HOME, runtime, mind, queue, and daemon endpoint, clears both
 HEADLESS aliases, and uses the benchmark's read-only RPC allowlist. Full
 calibration includes the hook panel by default. For hook-only calibration,
 source a frozen replica's env (socket, snapshot ID, replica mind), then use

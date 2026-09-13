@@ -8,6 +8,7 @@ MCP_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(MCP_DIR))
 
 import task_ledger  # noqa: E402
+from fake_ledger import fake_ledger  # noqa: E402
 from thread_inference import (  # noqa: E402
     extract_user_turns,
     fingerprint,
@@ -90,41 +91,34 @@ class TranscriptFormatTests(unittest.TestCase):
         self.assertEqual(snapshot_user_turns(path), ["run tests", "fix stop hook"])
 
     def test_creates_parallel_thread_instead_of_taking_live_lease(self):
-        old_path = task_ledger.DB_PATH
-        with tempfile.TemporaryDirectory() as tmp:
-            task_ledger.DB_PATH = Path(tmp) / "ledger.db"
-            try:
-                texts = [
-                    "implement shared session transcript leases",
-                    "check claude codex session ownership",
-                    "prevent resume of live thread ownership",
-                ]
-                thread_id = task_ledger.thread_create(
-                    "shared session leases",
-                    "project:test",
-                    json.dumps(fingerprint(texts)),
-                )
-                task_ledger.session_bind("claude-owner", thread_id, client="claude")
-                task_ledger.lease_claim(thread_id, "claude-owner")
-                path = self._write(
-                    [{"type": "user", "message": {"content": text}} for text in texts]
-                )
-                result = infer(
-                    path,
-                    "project:test",
-                    session_id="codex-other",
-                    client="codex",
-                    project_dir="/tmp/project",
-                )
-                self.assertEqual(result["action"], "create")
-                self.assertEqual(result["reason"], "matching_thread_locked")
-                self.assertEqual(result["owner_session_id"], "claude-owner")
-                self.assertNotEqual(result["thread_id"], thread_id)
-                self.assertEqual(
-                    task_ledger.session_get("codex-other")["thread_id"], result["thread_id"]
-                )
-            finally:
-                task_ledger.DB_PATH = old_path
+        with fake_ledger():
+            texts = [
+                "implement shared session transcript leases",
+                "check claude codex session ownership",
+                "prevent resume of live thread ownership",
+            ]
+            thread_id = task_ledger.thread_create(
+                "shared session leases",
+                "project:test",
+                json.dumps(fingerprint(texts)),
+            )
+            task_ledger.session_bind("claude-owner", thread_id, client="claude")
+            task_ledger.lease_claim(thread_id, "claude-owner")
+            path = self._write([{"type": "user", "message": {"content": text}} for text in texts])
+            result = infer(
+                path,
+                "project:test",
+                session_id="codex-other",
+                client="codex",
+                project_dir="/tmp/project",
+            )
+            self.assertEqual(result["action"], "create")
+            self.assertEqual(result["reason"], "matching_thread_locked")
+            self.assertEqual(result["owner_session_id"], "claude-owner")
+            self.assertNotEqual(result["thread_id"], thread_id)
+            self.assertEqual(
+                task_ledger.session_get("codex-other")["thread_id"], result["thread_id"]
+            )
 
 
 if __name__ == "__main__":
