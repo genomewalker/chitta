@@ -50,31 +50,77 @@ class Budget:
         log: Path | None = None,
         env: dict | None = None,
         check: bool = True,
+        final_output: Path | None = None,
     ) -> subprocess.CompletedProcess:
         print("$ (cd " + shlex.quote(str(cwd)) + " && " + shlex.join(cmd) + ")", flush=True)
-        timeout = self.remaining()
-        # A private process group lets a timeout stop descendants of this job only.
+        self.remaining()
+        if final_output is not None:
+            # A previous invocation's final message must never complete this one.
+            final_output.unlink(missing_ok=True)
+        output = ""
+        completed_by_file = False
+        stable_signature = None
+        stable_since = time.monotonic()
         with log.open("w") if log else open(os.devnull, "w") as stream:
             process = subprocess.Popen(
                 cmd,
                 cwd=cwd,
                 env=env,
                 text=True,
+                stdin=subprocess.DEVNULL,
                 stdout=stream if log else subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 start_new_session=True,
             )
             try:
-                output, _ = process.communicate(timeout=timeout)
-            except subprocess.TimeoutExpired:
-                os.killpg(process.pid, signal.SIGTERM)
-                try:
-                    process.communicate(timeout=2)
-                except subprocess.TimeoutExpired:
-                    os.killpg(process.pid, signal.SIGKILL)
-                    process.communicate()
+                while True:
+                    timeout = self.remaining()
+                    try:
+                        output, _ = process.communicate(timeout=min(timeout, 0.1))
+                        break
+                    except subprocess.TimeoutExpired:
+                        if process.poll() is not None:
+                            # The leader exited but descendants still hold its
+                            # stdout pipe open; cleanup must not wait on EOF.
+                            break
+                        if final_output is None:
+                            continue
+                        try:
+                            stat = final_output.stat()
+                        except FileNotFoundError:
+                            continue
+                        signature = (stat.st_size, stat.st_mtime_ns)
+                        if signature != stable_signature:
+                            stable_signature = signature
+                            stable_since = time.monotonic()
+                        elif stat.st_size and time.monotonic() - stable_since >= 0.25:
+                            # Codex writes -o after its final answer but can hang
+                            # during MCP shutdown. Allow the write to settle.
+                            completed_by_file = True
+                            break
+            except TimeoutError:
                 raise TimeoutError("cycle budget exhausted during " + cmd[0]) from None
-        result = subprocess.CompletedProcess(cmd, process.returncode, output or "")
+            finally:
+                # Always reap our private group, even if its leader returned:
+                # descendants can survive a successful exec or ignore SIGTERM.
+                def signal_group(sig):
+                    try:
+                        os.killpg(process.pid, sig)
+                    except ProcessLookupError:
+                        pass
+
+                signal_group(signal.SIGTERM)
+                try:
+                    output, _ = process.communicate(timeout=0.2)
+                except subprocess.TimeoutExpired:
+                    pass
+                finally:
+                    signal_group(signal.SIGKILL)
+                    output, _ = process.communicate(timeout=1)
+        returncode = process.returncode
+        if completed_by_file and returncode in (-signal.SIGTERM, -signal.SIGKILL):
+            returncode = 0
+        result = subprocess.CompletedProcess(cmd, returncode, output or "")
         if check and result.returncode:
             raise subprocess.CalledProcessError(result.returncode, cmd, output=result.stdout)
         return result
@@ -163,7 +209,7 @@ def test_python() -> str:
     return sys.executable
 
 
-def implement_command(args, worktree: Path, spec: str) -> list[str]:
+def implement_command(args, worktree: Path, spec: str, output: Path) -> list[str]:
     if args.implementer == "codex":
         return [
             "codex",
@@ -176,6 +222,8 @@ def implement_command(args, worktree: Path, spec: str) -> list[str]:
             args.model,
             "-c",
             "model_reasoning_effort=high",
+            "-o",
+            str(output),
             spec,
         ]
     return ["claude", "-p", spec]
@@ -449,7 +497,7 @@ def run(args) -> int:
     (artifacts / "proposal.json").write_text(json.dumps(proposal.to_dict(), indent=2))
     commands = [
         ["git", "worktree", "add", "-b", branch, str(worktree), base],
-        implement_command(args, worktree, spec),
+        implement_command(args, worktree, spec, artifacts / "implementer-final.txt"),
     ]
     if args.dry_run:
         print("\nSPEC " + str(spec_path) + "\n" + spec)
@@ -491,7 +539,15 @@ def run(args) -> int:
         worktree.parent.mkdir(parents=True, exist_ok=True)
         budget.run(commands[0], repo)
         implementation_env = dict(os.environ, CHITTA_HEADLESS="1", CC_SOUL_HEADLESS="1")
-        budget.run(commands[1], worktree, artifacts / "implementer.log", env=implementation_env)
+        budget.run(
+            commands[1],
+            worktree,
+            artifacts / "implementer.log",
+            env=implementation_env,
+            final_output=(artifacts / "implementer-final.txt")
+            if args.implementer == "codex"
+            else None,
+        )
         if budget.run(
             ["git", "status", "--porcelain", "--untracked-files=all"], worktree
         ).stdout.strip():

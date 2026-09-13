@@ -1,0 +1,30 @@
+[
+  {
+    "stage": "initialize",
+    "seconds": 0.935333420522511
+  },
+  {
+    "stage": "cold",
+    "seconds": 10.847673200070858,
+    "error": false,
+    "bytes": 4257
+  },
+  {
+    "stage": "warm1",
+    "seconds": 0.3732152637094259,
+    "error": false,
+    "bytes": 4176
+  },
+  {
+    "stage": "warm2",
+    "seconds": 0.37371364049613476,
+    "error": false,
+    "bytes": 4177
+  },
+  {
+    "stage": "warm3",
+    "seconds": 0.28417237661778927,
+    "error": false,
+    "bytes": 22
+  }
+]
