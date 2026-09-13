@@ -1,0 +1,3 @@
+Repository-wide Ruff (existing files, outside this task):
+Found 415 errors.
+[*] 143 fixable with the `--fix` option (45 hidden fixes can be enabled with the `--unsafe-fixes` option).

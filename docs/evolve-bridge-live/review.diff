@@ -1,0 +1,27 @@
+diff --git a/hooks/grade-recall.py b/hooks/grade-recall.py
+index ef84cb57..9c3aa6fc 100755
+--- a/hooks/grade-recall.py
++++ b/hooks/grade-recall.py
+@@ -839,6 +839,16 @@ def main():
+         "reports admitted-are-gold precision + gold coverage; exit 1 on kill",
+     )
+     a = ap.parse_args()
++    if CHITTA_EVAL_SOCKET:
++        # A dead replica must abort, not score 0.0 (happened 2026-09-13 when the
++        # replica refused to start mid-save and the grader ran anyway).
++        probe = subprocess.run(
++            _chitta_cli("recall", "--query", "ping", "--limit", "1"),
++            capture_output=True, text=True, timeout=60,
++        )
++        if probe.returncode != 0 or "Cannot connect" in (probe.stdout + probe.stderr):
++            print(f"eval replica at {CHITTA_EVAL_SOCKET} is not reachable; aborting", file=sys.stderr)
++            return 2
+     if a.no_reranker:
+         global _reranker
+         _reranker = False
+@@ -1083,4 +1093,4 @@ def main():
+ 
+ 
+ if __name__ == "__main__":
+-    main()
++    sys.exit(main())
