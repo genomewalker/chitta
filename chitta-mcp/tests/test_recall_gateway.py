@@ -4,9 +4,14 @@ The handler-map snapshot is the guard on that extraction: server.py stays the
 registry, and the set of composite tool names it serves must not drift.
 """
 
+import asyncio
+import json
 import sys
+import threading
+import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 MCP_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(MCP_DIR))
@@ -117,6 +122,114 @@ class RerankConfigTests(unittest.TestCase):
                 del os.environ["CHITTA_RERANK_ONNX_DIR"]
             else:
                 os.environ["CHITTA_RERANK_ONNX_DIR"] = prior
+
+
+class RerankerExecutorTests(unittest.IsolatedAsyncioTestCase):
+    async def test_predict_runs_off_the_event_loop(self):
+        try:
+            import server
+        except ImportError as exc:
+            self.skipTest(f"mcp SDK unavailable: {exc}")
+
+        class FakeReranker:
+            predict_thread = None
+
+            def predict(self, pairs):
+                self.predict_thread = threading.get_ident()
+                return [0.1, 0.9]
+
+        reranker = FakeReranker()
+        candidates = [
+            {"memory_id": "first", "text": "first passage"},
+            {"memory_id": "second", "text": "second passage"},
+        ]
+        loop_thread = threading.get_ident()
+        with (
+            mock.patch.object(server, "get_reranker", return_value=reranker),
+            mock.patch.object(
+                server,
+                "daemon_call",
+                return_value=json.dumps({"results": candidates}),
+            ),
+            mock.patch.object(server, "_sqz_compress", side_effect=lambda text, _name: text),
+        ):
+            output = await server.call_tool(
+                "recall",
+                {"query": "test query", "strategy": "semantic", "limit": 1}
+            )
+
+        self.assertNotEqual(reranker.predict_thread, loop_thread)
+        self.assertEqual(json.loads(output[0].text)["results"][0]["memory_id"], "second")
+
+
+class LoopLagMonitorTests(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        try:
+            import server
+        except ImportError as exc:
+            self.skipTest(f"mcp SDK unavailable: {exc}")
+        self.server = server
+        server._loop_lag_max_ms = 0.0
+        server._loop_lag_over_count = 0
+
+    async def test_monitor_counts_a_deliberate_loop_stall(self):
+        with self.assertLogs("chitta-mcp", level="WARNING"):
+            task = asyncio.create_task(self.server.monitor_loop_lag(interval_ms=5, warn_ms=10))
+            await asyncio.sleep(0.01)
+            time.sleep(0.04)
+            await asyncio.sleep(0.02)
+            await self.server._stop_loop_lag_monitor(task)
+
+        stats = self.server.loop_lag_stats()
+        self.assertGreaterEqual(stats["max_lag_ms"], 20)
+        self.assertGreaterEqual(stats["over_count"], 1)
+
+    async def test_health_check_exposes_loop_lag_counters(self):
+        with (
+            mock.patch.object(self.server, "daemon_call", return_value="daemon healthy"),
+            mock.patch.object(self.server, "_sqz_compress", side_effect=lambda text, _name: text),
+        ):
+            output = await self.server.call_tool("health_check", {})
+
+        text = output[0].text
+        self.assertIn('"mcp_loop_lag"', text)
+        self.assertIn('"max_lag_ms":0.0', text)
+        self.assertIn('"over_count":0', text)
+
+
+class LoopLagConfigTests(unittest.TestCase):
+    def test_legacy_alias_and_chitta_precedence(self):
+        import os
+
+        try:
+            import server
+        except ImportError as exc:
+            self.skipTest(f"mcp SDK unavailable: {exc}")
+        with mock.patch.dict(
+            os.environ,
+            {"CC_SOUL_MCP_LAG_INTERVAL_MS": "17"},
+            clear=True,
+        ):
+            self.assertEqual(
+                server._lag_setting_ms(
+                    "CHITTA_MCP_LAG_INTERVAL_MS", "CC_SOUL_MCP_LAG_INTERVAL_MS", 250
+                ),
+                17,
+            )
+        with mock.patch.dict(
+            os.environ,
+            {
+                "CHITTA_MCP_LAG_INTERVAL_MS": "31",
+                "CC_SOUL_MCP_LAG_INTERVAL_MS": "17",
+            },
+            clear=True,
+        ):
+            self.assertEqual(
+                server._lag_setting_ms(
+                    "CHITTA_MCP_LAG_INTERVAL_MS", "CC_SOUL_MCP_LAG_INTERVAL_MS", 250
+                ),
+                31,
+            )
 
 
 class NumericMemoryIdTests(unittest.TestCase):

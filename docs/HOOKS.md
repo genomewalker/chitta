@@ -1,6 +1,6 @@
 # chitta Hooks System
 
-Status as of 2026-09-02.
+Status as of 2026-09-13.
 
 chitta integrates with Claude Code and Codex through the hooks system, enabling
 automatic context injection and lifecycle management.
@@ -63,7 +63,7 @@ All lifecycle hooks write JSON `hookSpecificOutput` schema on stdout. This is no
 | `pre-compact-hook.sh`   | PreCompact       | Save ledger checkpoint before context compaction                                     |
 | `pre-tool-hook.sh`      | PreToolUse       | Safety checks, file dedup, large-file truncation, Write guards, Agent routing, ScheduleWakeup budgeting |
 | `post-bash-hook.sh`     | PostToolUse:Bash | Check the command result, append a `bash_outcome` event to the outcome ledger        |
-| `outcome-ledger.sh`     | Library          | Fail-open JSONL append of `injected` / `bash_outcome` / `session_end` events         |
+| `outcome-ledger.sh`     | Library          | Fail-open JSONL append of `injected` / `recall_empty` / `bash_outcome` / `session_end` events |
 | `session-end-hook.sh`   | SessionEnd       | Session teardown and the closing ledger event                                        |
 | `resume-inject-hook.sh` | SessionStart:resume | Inject the recap capsule when a session resumes                                   |
 | `compact-restore-hook.sh` | SessionStart:compact | Restore context after a compaction                                             |
@@ -131,6 +131,24 @@ after a plugin update, which can replace those symlinks with a fresh clone.
 **What chitta Does:**
 - **post-bash-hook.sh**: Records significant Edit/Write operations as signals for background learning
 - Note: `capture-hook.sh` is currently disabled (exits immediately). Write safety checks are handled by `pre-tool-hook.sh`, not the post-bash hook.
+
+### Recall scheduling telemetry
+
+The prompt hook appends a compact timing field to its admission summary:
+
+```text
+[admit] C2:KNOWN(55%) sem:1 hyb:1 | drop conf:2 | t:sem=412,hyb=3105!,kw=88,total=3270
+```
+
+Times are wall milliseconds. `!` means that lane either reached `timeout` or
+returned an empty output file. Only attempted lanes are shown; `total` is hook
+wall time measured just before context emission.
+
+The outcome ledger's `injected` event carries the same data as structured
+`lane_ms` and `lane_timeout` objects plus `hook_ms`. If recall completes without
+usable context, including after the cross-realm fallback, the hook appends a
+`recall_empty` event with those timing fields even though it emits no context.
+This keeps empty prompt-hook runs diagnosable without changing fail-open output.
 
 ### PreToolUse
 
@@ -284,6 +302,8 @@ name (see [docs/RENAME.md](RENAME.md)).
 | `CHITTA_LOOP_LIMIT`          | `20`         | ScheduleWakeup iterations before block                                   |
 | `CHITTA_SUBAGENT_BASH_RECALL`| `0`          | `1` = run Bash recall for subagent calls (adds ~2s per call, default off)|
 | `CHITTA_MAX_WAIT`            | `5`          | Max seconds to wait for daemon responses                                 |
+| `CHITTA_MCP_LAG_INTERVAL_MS` | `250`        | MCP asyncio scheduling-delay sampling interval in milliseconds            |
+| `CHITTA_MCP_LAG_WARN_MS`     | `200`        | Scheduling delay that increments `over_count` and logs a warning          |
 | `CHITTA_LEAN`                | `false`      | Ultra-lean context mode (stats only)                                     |
 | `DEBUG_SOUL`                  | `0`          | `1` = enable debug output to stderr                                      |
 | `SUBCONSCIOUS_INTERVAL`       | `60`         | Daemon cycle interval in seconds                                         |
@@ -300,6 +320,9 @@ The user-facing subset, with the old-to-new name mapping, is tabulated in
 [docs/RENAME.md](RENAME.md). Recall-specific knobs — pool depth, the pre-filter,
 lane ablation, the confidence band — are documented on the
 [recall pipeline page](https://genomewalker.github.io/chitta/recall.html).
+The MCP `health_check` tool includes process-local `mcp_loop_lag.max_lag_ms`
+and `mcp_loop_lag.over_count` counters; the two knobs above also honor their
+`CC_SOUL_MCP_LAG_*` aliases.
 
 **Testing manually:** `CHITTA_HOOK_ENFORCE=1 bash hook.sh Read` will NOT work because the prefix assignment is not exported to nested bash. Use `export CHITTA_HOOK_ENFORCE=1` first.
 

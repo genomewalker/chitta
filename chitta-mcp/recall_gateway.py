@@ -11,9 +11,11 @@ without a running chittad:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
-from typing import Any, Protocol
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Callable, Protocol
 
 logger = logging.getLogger("chitta-mcp")
 
@@ -21,6 +23,17 @@ RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 # How many extra candidates to pull before reranking, as a multiple of `limit`.
 RERANK_FETCH_MUL = 4
 RERANK_MAX_LEN = int(os.environ.get("CHITTA_RERANK_MAX_LEN", "128"))
+
+# Cross-encoder inference is CPU-heavy and must never occupy the asyncio event
+# loop. One worker also prevents concurrent MCP sessions from oversubscribing
+# the model's own inference threads and creating a latency cliff.
+_rerank_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="chitta-rerank")
+
+
+async def run_reranker(func: Callable[..., Any], *args: Any) -> Any:
+    """Run model loading or inference on the dedicated serial executor."""
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(_rerank_executor, func, *args)
 
 
 class Reranker(Protocol):
