@@ -241,6 +241,13 @@ start_replica() {
         [[ "$(stat -c %s "$stage_field/segments/$name")" == "$size" ]] || die "copied size mismatch for segments/$name"
         [[ "$(stat -c %s "$LIVE_FIELD/segments/$name")" == "$size" ]] || die "source changed while copying segments/$name"
     done
+    # Loader state markers (field.rs load): without the *.migrated flags the
+    # replica re-marks every memory for re-embedding and its semantic index
+    # is degraded for hours (golden nDCG 0.31 vs 0.49, 2026-09-13).
+    for name in embed_1536_v1.migrated ssl_gloss_v1.migrated lite_encoder.bin; do
+        [[ -f "$LIVE_FIELD/$name" ]] || continue
+        cp --preserve=mode,timestamps "$LIVE_FIELD/$name" "$stage_field/$name"
+    done
     after="$(manifest_fingerprint)" || die "could not re-fingerprint live manifests"
     [[ "$before" == "$after" ]] || die "live manifest changed during the copy; snapshot discarded"
     after_selection="$(select_family)" || die "live family became inconsistent during the copy; snapshot discarded"
