@@ -20,7 +20,7 @@ from uuid import uuid4
 DB_PATH = Path(os.environ.get("CHITTA_TASK_LEDGER", Path.home() / ".claude" / "task-ledger.db"))
 
 _SCHEMA = """
-PRAGMA journal_mode=WAL;
+PRAGMA journal_mode=DELETE;
 PRAGMA foreign_keys=ON;
 PRAGMA busy_timeout=5000;
 
@@ -101,6 +101,9 @@ CREATE INDEX IF NOT EXISTS idx_thread_leases_session ON thread_leases(session_id
 """
 
 
+# Rollback journal, not WAL: WAL needs a mmap-shared -shm file, which fails on
+# the NFS home with "locking protocol" (every registry call timed out 2026-08-15
+# to 09-13).
 def connect() -> sqlite3.Connection:
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(DB_PATH), timeout=10)

@@ -13,7 +13,8 @@ SESSION_ID="$(jq -r '.session_id // empty' <<<"$INPUT" 2>/dev/null || true)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 [[ -f "${SCRIPT_DIR}/lib.sh" ]] && source "${SCRIPT_DIR}/lib.sh"
 if [[ -n "$SESSION_ID" && "$SESSION_ID" != "default" ]]; then
-    if ! printf '%s' "$INPUT" | registry_call 5 close; then
+    # 2 s + the 2 s fallback stays inside the 5 s hook budget in hooks.json.
+    if ! printf '%s' "$INPUT" | registry_call 2 close; then
         timeout "$MAX_WAIT" "$CHITTA_BIN" session_deregister \
             --session_id "$SESSION_ID" >/dev/null 2>&1 || true
     fi

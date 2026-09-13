@@ -84,7 +84,6 @@ registry_call() {
     registry="$plugin_dir/chitta-mcp/session_registry.py"
     [[ -f "$registry" ]] || return 1
     timeout "$t" python3 "$registry" "$subcmd" "$@" >/dev/null 2>&1
-    return 0
 }
 
 # DJB2 hash function (matches C++ implementation in socket_server.hpp)
