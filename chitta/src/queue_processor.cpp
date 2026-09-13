@@ -1,4 +1,5 @@
 #include <chitta/queue_processor.hpp>
+#include <chitta/maintenance_jitter.hpp>
 #include <chitta/rpc/field_handler.hpp>
 #include <chitta/rpc/sandbox.hpp>
 #include <chitta/vak.hpp>
@@ -230,13 +231,20 @@ void QueueProcessor::run() {
     // Span-lane flush cadence: live-path ingest links in RAM only; persist here,
     // off the memory-write hot path (also flushed on daemon close via cf_close).
     auto last_span_flush = std::chrono::steady_clock::now();
+    MaintenanceJitter maintenance_jitter;
+    uint64_t span_sequence = 0;
+    auto next_span_flush = maintenance_jitter.delay(
+        std::chrono::seconds(30), "queue_span_flush", span_sequence++);
 
     while (daemon_running) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-        if (std::chrono::steady_clock::now() - last_span_flush >= std::chrono::seconds(30)) {
+        if (std::chrono::steady_clock::now() - last_span_flush >= next_span_flush) {
             last_span_flush = std::chrono::steady_clock::now();
-            field_store_.span_flush();
+            next_span_flush = maintenance_jitter.delay(
+                std::chrono::seconds(30), "queue_span_flush", span_sequence++);
+            if (!handler_.maintenance_should_skip("queue_span_flush"))
+                field_store_.span_flush();
         }
 
         // Atomically claim queue file via rename (prevents data loss from concurrent writes)

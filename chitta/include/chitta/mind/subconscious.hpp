@@ -14,6 +14,7 @@
 //   - Sleep consolidation (chitta-field encode + snapshot + demotion)
 
 #include <chitta/vak.hpp>
+#include <chitta/maintenance_jitter.hpp>
 #include <string>
 #include <deque>
 #include <thread>
@@ -225,6 +226,9 @@ public:
 
     // Belief maintenance callback: periodic stale demotion + contradiction resolution
     void set_maintenance_callback(std::function<void()> fn) { maintenance_cb_ = std::move(fn); }
+    void set_maintenance_load_probe(std::function<bool(const std::string&)> fn) {
+        maintenance_load_probe_ = std::move(fn);
+    }
 
     // Think callback: called hourly during idle for internal memory synthesis
     void set_think_callback(std::function<void()> fn) { think_callback_ = std::move(fn); }
@@ -243,6 +247,8 @@ private:
     std::shared_mutex* rpc_mutex_{nullptr};
     SubconsciousConfig config_;
     SubconsciousStats stats_;
+    MaintenanceJitter maintenance_jitter_;
+    std::function<bool(const std::string&)> maintenance_load_probe_;
 
     // Threading
     std::thread process_thread_;
@@ -324,6 +330,9 @@ private:
 
     // Periodic tasks
     void run_theme_maintenance();
+    bool maintenance_loaded(const std::string& task) const {
+        return maintenance_load_probe_ && maintenance_load_probe_(task);
+    }
     bool time_for_theme_maintenance() const;
     void run_sleep_consolidation();
     bool time_for_wal_compact() const;

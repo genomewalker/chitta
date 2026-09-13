@@ -495,11 +495,17 @@ if(CHITTA_BUILD_TESTS)
     target_link_libraries(tool_spec_test PRIVATE chitta)
     target_compile_options(tool_spec_test PRIVATE ${CHITTA_WARN_FLAGS})
     add_test(NAME tool_spec_test COMMAND tool_spec_test)
+    add_executable(rpc_work_policy_test src/rpc_work_policy_test.cpp)
+    target_link_libraries(rpc_work_policy_test PRIVATE chitta)
+    add_test(NAME rpc_work_policy_test COMMAND rpc_work_policy_test)
+    add_executable(maintenance_jitter_test src/maintenance_jitter_test.cpp)
+    target_link_libraries(maintenance_jitter_test PRIVATE chitta)
+    add_test(NAME maintenance_jitter_test COMMAND maintenance_jitter_test)
 
     set(CHITTA_TEST_TARGETS
         thread_pool_test llm_probe_test callsite_extract_test
         value_fact_extract_test mdl_gate_test prefilter_keep_test
-        hit_line_test tool_spec_test)
+        hit_line_test tool_spec_test rpc_work_policy_test maintenance_jitter_test)
     foreach(t ${CHITTA_TEST_TARGETS})
         target_compile_options(${t} PRIVATE -UNDEBUG ${CHITTA_WARN_FLAGS})
     endforeach()

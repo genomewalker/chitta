@@ -803,11 +803,19 @@ ToolResult FieldRpcHandler::tool_triplet_supersede(const json& params) {
 ToolResult FieldRpcHandler::tool_graph_traverse(const json& params) {
     std::string start = params.value("start", "");
     if (start.empty()) return ToolResult::error("start is required");
-    std::string edge_types_json = params.contains("edge_types") ? params["edge_types"].dump() : "[]";
+    json bounded_edges = params.value("edge_types", json::array());
+    if (!bounded_edges.is_array()) bounded_edges = json::array();
+    if (bounded_edges.size() > 32) {
+        std::cerr << "[rpc] clamp tool=graph_traverse param=edge_types from="
+                  << bounded_edges.size() << " to=32\n";
+        bounded_edges.erase(bounded_edges.begin() + 32, bounded_edges.end());
+    }
+    std::string edge_types_json = bounded_edges.dump();
     size_t max_hops    = params.value("max_hops",    3);
     size_t max_results = params.value("max_results", 50);
     std::string direction = params.value("direction", "outgoing");
-    std::string raw = field_store_->graph_traverse(start, edge_types_json, max_hops, max_results, direction);
+    std::string raw = field_store_->graph_traverse(
+        start, edge_types_json, max_hops, max_results, direction, 10000);
     auto hits = json::parse(raw, nullptr, false);
     if (hits.is_discarded()) hits = json::array();
     return ToolResult::ok(std::to_string(hits.size()) + " node(s) reachable from " + start,
@@ -817,16 +825,30 @@ ToolResult FieldRpcHandler::tool_graph_traverse(const json& params) {
 ToolResult FieldRpcHandler::tool_graph_pagerank(const json& params) {
     if (!params.contains("seeds") || !params["seeds"].is_array())
         return ToolResult::error("seeds array is required");
-    std::string seeds_json = params["seeds"].dump();
-    std::string edge_types_json = params.contains("edge_types") ? params["edge_types"].dump() : "[]";
+    json bounded_seeds = params["seeds"];
+    if (bounded_seeds.size() > 32) {
+        std::cerr << "[rpc] clamp tool=graph_pagerank param=seeds from="
+                  << bounded_seeds.size() << " to=32\n";
+        bounded_seeds.erase(bounded_seeds.begin() + 32, bounded_seeds.end());
+    }
+    std::string seeds_json = bounded_seeds.dump();
+    json bounded_edges = params.value("edge_types", json::array());
+    if (!bounded_edges.is_array()) bounded_edges = json::array();
+    if (bounded_edges.size() > 32) {
+        std::cerr << "[rpc] clamp tool=graph_pagerank param=edge_types from="
+                  << bounded_edges.size() << " to=32\n";
+        bounded_edges.erase(bounded_edges.begin() + 32, bounded_edges.end());
+    }
+    std::string edge_types_json = bounded_edges.dump();
     float   damping    = params.value("damping",    0.85f);
     uint8_t iterations = params.value("iterations", uint8_t(20));
     size_t  top_k      = params.value("top_k",      size_t(20));
-    std::string raw = field_store_->graph_pagerank(seeds_json, edge_types_json, damping, iterations, top_k);
+    std::string raw = field_store_->graph_pagerank(
+        seeds_json, edge_types_json, damping, iterations, top_k, 512, 20000);
     auto ranked = json::parse(raw, nullptr, false);
     if (ranked.is_discarded()) ranked = json::array();
     return ToolResult::ok(std::to_string(ranked.size()) + " nodes ranked",
-        {{"seeds", params["seeds"]}, {"ranked", ranked}});
+        {{"seeds", bounded_seeds}, {"ranked", ranked}});
 }
 
 ToolResult FieldRpcHandler::tool_list_by_status(const json& params) {

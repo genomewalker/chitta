@@ -92,6 +92,7 @@ public:
                 active_[id] = {id, method, std::chrono::steady_clock::now()};
             }
             tasks_.push({id, client_fd, std::move(task), std::move(on_complete)});
+            pending_tasks_.fetch_add(1, std::memory_order_relaxed);
             queue_size = tasks_.size();
             worker_count = num_workers_.load();
         }
@@ -119,10 +120,7 @@ public:
     }
 
     // Stats
-    size_t pending() const {
-        std::lock_guard<std::mutex> lock(queue_mutex_);
-        return tasks_.size();
-    }
+    size_t pending() const { return pending_tasks_.load(std::memory_order_relaxed); }
 
     size_t active_count() const {
         std::lock_guard<std::mutex> lock(trace_mutex_);
@@ -136,6 +134,9 @@ public:
     size_t max_workers() const {
         return max_workers_;
     }
+
+    const std::atomic<size_t>& pending_counter() const { return pending_tasks_; }
+    const std::atomic<size_t>& active_counter() const { return active_tasks_; }
 
     // Set callback for watchdog escalation (called when operation exceeds critical threshold)
     void set_watchdog_callback(WatchdogCallback cb) {
@@ -174,6 +175,8 @@ private:
                 if (stop_ && tasks_.empty()) return;
                 task = std::move(tasks_.front());
                 tasks_.pop();
+                pending_tasks_.fetch_sub(1, std::memory_order_relaxed);
+                active_tasks_.fetch_add(1, std::memory_order_relaxed);
             }
 
             // Execute work
@@ -195,6 +198,7 @@ private:
                 std::lock_guard<std::mutex> lock(trace_mutex_);
                 active_.erase(task.id);
             }
+            active_tasks_.fetch_sub(1, std::memory_order_relaxed);
 
             // Deliver result
             if (task.on_complete) {
@@ -258,6 +262,8 @@ private:
     std::atomic<bool> stop_;
     std::atomic<uint64_t> next_id_{1};
     std::atomic<size_t> num_workers_{0};
+    std::atomic<size_t> pending_tasks_{0};
+    std::atomic<size_t> active_tasks_{0};
     size_t min_workers_;
     size_t max_workers_;
     size_t max_queue_depth_;

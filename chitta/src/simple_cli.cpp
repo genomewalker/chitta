@@ -31,7 +31,9 @@
 #include <chitta/hint_yantra.hpp>
 #include <chitta/embed_queue.hpp>
 #include <chitta/ops_log.hpp>
+#include <chitta/maintenance_jitter.hpp>
 #include <iostream>
+#include <optional>
 #include <string>
 #include <cstring>
 #include <cstdlib>
@@ -123,14 +125,28 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
     handler.set_distill_model(distill_config.model);
     handler.set_distill_enabled(distill_config.enabled);
 
+    // Construct the pool before background maintenance so every periodic job can
+    // see queued and active RPC load from its first cycle onward.
+    size_t max_queue_depth = 256;
+    if (const char* qd = std::getenv("CHITTA_MAX_QUEUE_DEPTH")) {
+        size_t value = std::strtoul(qd, nullptr, 10);
+        if (value > 0) max_queue_depth = value;
+    }
+    ThreadPool pool(8, 16, max_queue_depth);
+    handler.set_rpc_load_counters(&pool.pending_counter(), &pool.active_counter());
+    MaintenanceJitter maintenance_jitter;
+
     // Start subconscious background processor
     SubconsciousConfig sub_cfg = subconscious_config;
     sub_cfg.quiesce_flag_path = mind_path + "/.quiesce";  // eval freeze flag
     Subconscious subconscious(&field_store, yantra, sub_cfg);
 
-    subconscious.start();
     handler.set_subconscious(&subconscious);
     subconscious.set_rpc_mutex(&handler.rpc_mutex());
+    subconscious.set_maintenance_load_probe([&handler](const std::string& task) {
+        return handler.maintenance_should_skip(task);
+    });
+    subconscious.start();
 
     // HTTP visualization server (optional)
     std::unique_ptr<VizServer> viz_server;
@@ -228,7 +244,8 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
 
         // Wire belief maintenance callback
         subconscious.set_maintenance_callback([&handler]() {
-            handler.run_belief_maintenance();
+            if (!handler.maintenance_should_skip("belief_maintenance"))
+                handler.run_belief_maintenance();
         });
     }
 
@@ -258,6 +275,10 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
     std::atomic<size_t> cycle_count{0};
     std::thread maintenance([&]() {
         auto interval_secs = std::chrono::seconds(interval);
+        uint64_t cycle_sequence = 0;
+        uint64_t foreign_sequence = 0;
+        auto next_cycle_delay = maintenance_jitter.delay(
+            interval_secs, "daemon_cycle", cycle_sequence++);
         auto last_sync = std::chrono::steady_clock::now();
         auto last_embedding_flush = std::chrono::steady_clock::now();
         // Defer first sync_foreign by 60s (startup grace period).
@@ -269,6 +290,8 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
         auto last_binary_check = std::chrono::steady_clock::now();
         auto embedding_flush_interval = std::chrono::seconds(5);   // Flush queued embeddings every 5s
         auto foreign_sync_interval   = std::chrono::seconds(30);  // Ingest peer segment files every 30s
+        auto next_foreign_delay = maintenance_jitter.delay(
+            foreign_sync_interval, "sync_foreign", foreign_sequence++);
         // ceiling: 5s interval + 4-5s sync duration (148-segment WAL backlog) → 80% pool blockage
         // upgrade: adaptive interval (measure sync duration, scale next gap proportionally)
         auto binary_check_interval   = std::chrono::seconds(60);  // Check for updated binary every 60s
@@ -326,10 +349,16 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
             // Skip sync_foreign entirely while compact_wal is running: with 150+ WAL
             // segments each sync takes 4-5s and blocks all pool workers via rpc_mutex_.
             // After compact_wal completes, segment count drops to ~1 and syncs are fast.
-            auto inotify_min_interval = foreign_sync_interval;
+            auto inotify_min_interval = next_foreign_delay;
             bool inotify_ready = seg_event && (now_time - last_foreign_sync >= inotify_min_interval);
             if (!compact_wal_inflight.load(std::memory_order_relaxed) &&
-                (inotify_ready || (now_time - last_foreign_sync >= foreign_sync_interval))) {
+                (inotify_ready || (now_time - last_foreign_sync >= next_foreign_delay))) {
+                if (handler.maintenance_should_skip("sync_foreign")) {
+                    last_foreign_sync = now_time;
+                    next_foreign_delay = maintenance_jitter.delay(
+                        foreign_sync_interval, "sync_foreign", foreign_sequence++);
+                    continue;
+                }
                 try {
                     // Two phases, and the split is load-bearing.
                     //
@@ -362,6 +391,8 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
                 // after this one FINISHES — pool workers always get a free window between syncs.
                 // (Formerly set before sync; with 4s syncs every 5s, pool was blocked 80%.)
                 last_foreign_sync = std::chrono::steady_clock::now();
+                next_foreign_delay = maintenance_jitter.delay(
+                    foreign_sync_interval, "sync_foreign", foreign_sequence++);
             }
 
 #ifdef __linux__
@@ -420,8 +451,11 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
             }
 #endif
 
-            if (now_time - last_sync >= interval_secs) {
+            if (now_time - last_sync >= next_cycle_delay) {
                 last_sync = now_time;
+                next_cycle_delay = maintenance_jitter.delay(
+                    interval_secs, "daemon_cycle", cycle_sequence++);
+                if (handler.maintenance_should_skip("daemon_cycle")) continue;
                 cycle_count++;
 
                 auto cyc_t0 = std::chrono::steady_clock::now();
@@ -496,8 +530,9 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
         // written at most once per minute (init to now-60s so the first drain persists).
         auto last_delta_persist =
             std::chrono::steady_clock::now() - std::chrono::seconds(60);
+        uint64_t poll_sequence = 0;
         while (daemon_running) {
-            if (embed_queue) {
+            if (embed_queue && !handler.maintenance_should_skip("backfill")) {
                 try {
                     std::vector<uint64_t> pending;
                     std::vector<std::string> contents;
@@ -581,7 +616,8 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
             // fire_write_notify() wakes us immediately when a new pending memory arrives.
             {
                 std::unique_lock<std::mutex> lk(embed_cv_mutex);
-                embed_cv.wait_for(lk, std::chrono::seconds(5),
+                embed_cv.wait_for(lk, maintenance_jitter.delay(
+                                       std::chrono::seconds(5), "backfill_poll", poll_sequence++),
                                   [&] { return !daemon_running.load(); });
             }
         }
@@ -594,23 +630,28 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
 
         auto interval_mins = std::chrono::minutes(distill_config.interval_minutes);
         auto last_distill = std::chrono::steady_clock::now();
+        uint64_t distill_sequence = 0;
+        auto next_distill_delay = maintenance_jitter.delay(
+            interval_mins, "distillation", distill_sequence++);
 
         // Initial delay to let things settle — interruptible on shutdown
         for (int _i = 0; _i < 30 && daemon_running; ++_i)
             std::this_thread::sleep_for(std::chrono::seconds(1));
 
-        auto last_busy_skip_start = std::chrono::steady_clock::now();
+        std::optional<std::chrono::steady_clock::time_point> busy_skip_started;
 
         while (daemon_running) {
             std::this_thread::sleep_for(std::chrono::seconds(1));
 
             auto now_time = std::chrono::steady_clock::now();
-            if (now_time - last_distill >= interval_mins) {
+            if (now_time - last_distill >= next_distill_delay) {
                 // Eval quiesce: distillation mid-eval swings golden nDCG ±0.027.
                 if (quiesce_active(mind_path + "/.quiesce")) continue;
                 // Skip if daemon is actively handling queries (prevent blocking)
-                if (!subconscious.is_idle()) {
-                    auto busy_duration = now_time - last_busy_skip_start;
+                const bool load_busy = handler.maintenance_should_skip("distillation");
+                if (!subconscious.is_idle() || load_busy) {
+                    if (!busy_skip_started) busy_skip_started = now_time;
+                    auto busy_duration = now_time - *busy_skip_started;
                     if (busy_duration < std::chrono::minutes(5)) {
                         if (verbose_mode) {
                             std::cerr << "[distill] Skipping - daemon is busy\n";
@@ -621,10 +662,14 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
                         std::cerr << "[distill] Busy-skip cap reached, running distillation anyway\n";
                     }
                     ops_log("[distill] busy-skip cap reached — running while daemon busy");
+                } else {
+                    busy_skip_started.reset();
                 }
-                last_busy_skip_start = now_time;
 
                 last_distill = now_time;
+                busy_skip_started.reset();
+                next_distill_delay = maintenance_jitter.delay(
+                    interval_mins, "distillation", distill_sequence++);
 
                 auto distill_t0 = std::chrono::steady_clock::now();
                 try {
@@ -799,16 +844,6 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
                               queue_path, failed_queue_path,
                               queue_count, queue_distill_count, queue_fail_count);
     if (!no_queue) queue_proc.start();
-
-    // Thread pool for async RPC handling (scales 8-16 workers based on load).
-    // The queue cap sheds load with a JSON-RPC error instead of queuing
-    // unboundedly (lock-convoy defence); tune via CHITTA_MAX_QUEUE_DEPTH.
-    size_t max_queue_depth = 256;
-    if (const char* qd = std::getenv("CHITTA_MAX_QUEUE_DEPTH")) {
-        size_t v = std::strtoul(qd, nullptr, 10);
-        if (v > 0) max_queue_depth = v;
-    }
-    ThreadPool pool(8, 16, max_queue_depth);
 
     // Dedup set for learn_codebase: key = path + "::" + project.
     // Prevents pool saturation when hooks fire multiple index requests for the same path.
