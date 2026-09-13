@@ -7,225 +7,48 @@ execution: direct
 
 # Yajña (यज्ञ) - Autonomous Development Ritual
 
-**Truly autonomous** development loop. Runs continuously until done. NO manual coordination.
+Status as of 2026-09-13: rewritten as constraints. The iteration pseudo-code,
+the validation snippets, and the per-role model table were removed — the model
+plans the loop; this file says what must hold while it runs.
 
-## Critical Rules
+An autonomous development loop over three roles: **hotṛ** researches,
+**adhvaryu** implements, **udgātṛ** validates. Use it for a task list long
+enough that stopping for confirmation between items costs more than it saves.
 
-1. **NEVER ask user for routine decisions** - just do it
-2. **NEVER pause between iterations** - loop automatically
-3. **STOP ONLY for**: Blockers | Completion | User interrupt
-4. **Blockers require user**: Daemon down, permissions, unresolvable errors
+## What must hold
 
-## Pre-Flight Check (REQUIRED)
+- **Do not pause for routine decisions.** The point of the ritual is that it
+  runs unattended. Stop only for a blocker, for completion, or on interrupt.
+- **Every iteration starts with a live daemon.** `health_check` first; an
+  unreachable daemon is a blocker, not something to work around, because the
+  loop's state and memory both live behind it.
+- **Implementation happens in a worktree, never on `main`.** Enter it before the
+  first mutation, leave it on completion or failure, and surface patches as
+  artifacts rather than applying them directly.
+- **Validate that work landed, don't trust the report.** An agent that says it
+  edited a file and a file that changed are different claims. Check the file.
+- **Three strikes ends an iteration.** Same error three times, or a file still
+  missing after three retries, is stagnation — stop and report rather than
+  burning the budget on a loop that has stopped converging.
+- **Address agents to explicit absolute paths.** Vague targets are the dominant
+  cause of an agent editing the wrong file.
 
-Before EVERY iteration, verify daemon is alive:
+Delegation follows the repo-wide policy in `CLAUDE.md`: research cheap,
+implementation to Codex `gpt-6-astra` in the worktree, review in the
+orchestrator. `hooks/pre-tool-hook.sh` enforces the routing, so pass `model`
+only where the default would be wrong.
 
-```javascript
-health = mcp__chitta-mcp__health_check();
-if (health.error || health.status !== "OK") {
-  // BLOCKER - stop and report
-  output("[BLOCKER] Daemon unreachable. Run: pkill -9 chittad && chittad daemon");
-  long_task_event({ event_type: "blocker", description: "Daemon down" });
-  STOP;  // Do not continue
-}
-```
+## Blocker or not
 
-## The Loop (Execute Without Pausing)
+A failing test, a partial result, or a slow task is **not** a blocker — log it and
+keep going. A dead daemon, a permission denial, a critically broken build, or
+three consecutive identical failures **is** — stop, state what is needed, and
+leave the ritual resumable.
 
-```
-WHILE tasks_remain AND no_blocker:
+## Output
 
-  1. PRE-FLIGHT
-     health_check → if fail → STOP with blocker
-
-  2. LOAD CONTEXT (silent, no output)
-     long_task_snapshot
-     read fix_plan.md
-     count remaining tasks
-
-  3. HOTṚ - Research (if needed)
-     Task(Explore) for complex tasks
-     VALIDATE: Did agent find correct files?
-     If wrong files → retry with explicit paths
-
-  4. ADHVARYU - Implement
-     BEFORE ANY CODE CHANGES:
-       a. Call EnterWorktree to create isolated workspace
-       b. All Read/Edit/Write/Bash file mutations must happen in the worktree path
-       c. On completion or failure, call ExitWorktree
-       d. Proposed patches are stored as artifacts, not applied directly to main
-     Task(general-purpose) with EXPLICIT file paths
-     Prompt MUST include: "Edit file X at path Y"
-     VALIDATE: Check file was actually modified
-     If not modified → retry or mark blocker
-
-  5. UDGĀTṚ - Test
-     Task(general-purpose) for validation
-     Syntax checks, tests, verification
-     If FAIL → log, continue (not a blocker)
-
-  6. CHECKPOINT (silent)
-     long_task_update
-     Update fix_plan.md
-
-  7. EVALUATE
-     All done? → COMPLETION
-     Same error 3x? → STAGNATION (blocker)
-     Else → continue loop (NO pause, NO output)
-```
-
-## Agent Prompts Must Be Explicit
-
-**BAD** (vague, leads to wrong files):
-```
-"Add pattern detection to the hooks"
-```
-
-**GOOD** (explicit paths, clear instructions):
-```
-"Edit /home/user/.claude/hooks/prompt-hook.sh
-Add these lines after line 25:
-[exact code]
-Verify the file exists first with: ls -la /home/user/.claude/hooks/"
-```
-
-## Validation After Each Agent
-
-```javascript
-// After Adhvaryu returns
-result = Task({ ... });
-
-// Validate the work
-if (result.includes("Error") || result.includes("not found")) {
-  // Retry with more explicit instructions
-  retry_count++;
-  if (retry_count >= 3) {
-    // BLOCKER
-    long_task_event({ event_type: "blocker", description: result });
-    STOP;
-  }
-  continue;  // Retry this iteration
-}
-
-// Check file was actually modified
-file_check = Bash(`ls -la ${target_file}`);
-if (file_check.error) {
-  // File doesn't exist - agent edited wrong path
-  retry_count++;
-  continue;
-}
-```
-
-## Output Rules
-
-**During loop**: Minimal output. Just status lines:
-```
-━━━ ITERATION 3 ━━━
-[HOTṚ] ✓ Found 2 patterns
-[ADHVARYU] ✓ Modified 3 files
-[UDGĀTṚ] ✓ Tests passing
-[4/7 tasks done]
-```
-
-**On blocker**: Full details + stop:
-```
-━━━ BLOCKER ━━━
-[ERROR] Daemon not responding
-[ACTION] Run: pkill -9 chittad && chittad daemon
-[STATUS] Yajna paused at iteration 3
-```
-
-**On completion**: Summary only:
-```
-━━━ PŪRṆĀHUTI ━━━
-Complete in 5 iterations.
-Files: 8 | Tests: passing | Learnings: 3
-```
-
-## Blocker Conditions
-
-These STOP the loop and require user:
-
-| Condition | Action |
-|-----------|--------|
-| Daemon health_check fails | Stop, show restart command |
-| File not found after 3 retries | Stop, ask user for correct path |
-| Same error 3 consecutive times | Stop, show stagnation |
-| Build/compile fails critically | Stop, show error |
-| Permission denied | Stop, ask user |
-
-## NOT Blockers (Continue Automatically)
-
-| Condition | Action |
-|-----------|--------|
-| Test fails | Log, continue to next task |
-| Agent returns partial result | Use what's there, retry rest |
-| Minor validation warning | Log, continue |
-| Task takes long | Wait, don't timeout |
-
-## Spawn Agents Correctly
-
-**Parallel** (independent tasks, ONE tool call):
-```javascript
-// Send ALL parallel agents in SINGLE message
-Task({ description: "Task 1", prompt: "..." });
-Task({ description: "Task 2", prompt: "..." });
-Task({ description: "Task 3", prompt: "..." });
-// Wait for all, then continue
-```
-
-**Sequential** (dependent):
-```javascript
-result1 = Task({ description: "Task 1", prompt: "..." });
-// Validate result1
-result2 = Task({ description: "Task 2", prompt: `Using ${result1}...` });
-// Validate result2
-```
-
-## Quick Reference
-
-```bash
-/yajna              # Start/continue (runs until done)
-/yajna init GOAL    # New ritual with explicit goal
-/yajna status       # Check progress without running
-/yajna pause        # Stop after current iteration
-```
-
-## Example: Correct Autonomous Flow
-
-```
-User: /yajna init "Add dark mode"
-
-[PRE-FLIGHT] Daemon OK
-[INIT] yajna-myapp-1234
-[PLAN] 4 tasks generated
-
-━━━ ITERATION 1 ━━━
-[HOTṚ] ✓ Found ThemeProvider, CSS variables
-[ADHVARYU] ✓ src/theme/dark.css, src/context/Theme.tsx
-[UDGĀTṚ] ✓ Builds, renders
-[2/4 done]
-
-━━━ ITERATION 2 ━━━
-[ADHVARYU] ✓ Toggle component, localStorage
-[UDGĀTṚ] ✓ Tests passing
-[4/4 done]
-
-━━━ PŪRṆĀHUTI ━━━
-Complete in 2 iterations.
-Files: 4 | Tests: 6 passing
-
-[NO USER INTERACTION NEEDED - FULLY AUTONOMOUS]
-```
-
-## Anti-Patterns (NEVER DO)
-
-❌ "Let me check with you before proceeding..."
-❌ "Should I continue to the next task?"
-❌ "I'll wait for your confirmation..."
-❌ Outputting between every agent call
-❌ Asking which file to edit
-❌ Pausing after each iteration
+Status lines while looping, not commentary: which role ran, what changed, tasks
+remaining. Full detail only on a blocker or at completion.
 
 ## MCP Tools
 

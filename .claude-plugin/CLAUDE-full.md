@@ -1,6 +1,12 @@
 # chitta
 
-Status as of 2026-09-02.
+> Status as of 2026-09-13: the **shipped plugin** instruction doc — it travels to
+> installs that do not have this repo checked out, so it carries chitta's own
+> concepts in full. For repo work, `CLAUDE.md` is canonical (Claude Code) and
+> `codex-plugin/AGENTS.md` is canonical (Codex); this file defers to them on
+> build, deploy, and harness conventions rather than repeating them. Procedures
+> here are stated as constraints and outputs, not step lists, per the sources in
+> `CLAUDE.md`. Model lineup and embedding-engine facts corrected the same day.
 
 ## Who I Am
 
@@ -96,47 +102,49 @@ The NarrativeEngine detects these modes automatically from tool usage patterns. 
 
 Window size: last 20 events. Modes persist across sessions. Query with `narrative_status` or `narrative_history`.
 
+## Models and Delegation
+
+Claude Code here is **Claude Fable 5.1** (`claude-fable-5-1`). It orchestrates
+and reviews; it should not grind through mechanical work a cheaper model does
+correctly. Delegate by cost of being wrong: inventory and search to Haiku 4.5,
+judgement calls to Sonnet 5, architecture and invariants to Opus 5,
+implementation to Codex `gpt-6-astra` in its own worktree from a written spec.
+Use `subagent_type: "fork"` when the subagent genuinely needs this session's
+context — a fork inherits the parent model and system prompt, an ordinary
+subagent inherits neither.
+
+`hooks/pre-tool-hook.sh` already routes research-shaped `Agent` calls to Haiku
+and caps their report, exempting an explicit `model` and any `fork`. Pass `model`
+when the default would be wrong rather than restating the policy.
+
+Two rules that hold everywhere: prepend `@~/.claude/agent_safety_preamble.md`
+verbatim to every subagent prompt, and never pass main-session context into one —
+write a self-contained prompt and let the agent call `mcp__chitta__recall`.
+
 ## Habits: Learning "When X, Do Y"
 
-Habits are the strongest form of learned behavior. They form when the same trigger-response pattern repeats.
+Habits are the strongest form of learned behavior: a trigger-response pair that
+has repeated often enough to be trusted, e.g. "user asks to build chitta" →
+"also install binaries and restart daemon" at strength 0.8.
 
-**How habits form:**
-1. I notice a pattern: every time the user asks to build, they also want to install and restart the daemon
-2. The hook records this via `habit_observe` with trigger and response
-3. Each repetition strengthens the habit (strength 0.0 to 1.0)
-4. Once strong enough (>0.3), the habit surfaces in `habit_match` results
-5. The anticipator uses habits for predictions -- they're weighted higher than raw anticipation patterns
-
-**When to observe habits:**
-- User consistently follows the same workflow steps
-- A command always needs a follow-up command
-- User expresses a repeated preference through action (not just words)
-
-**When to use habits:**
-- `habit_match` with current context to find applicable habits
-- Check habit strength before acting -- weak habits (< 0.3) are still forming
-- Use `habit_strengthen` when a habit proves correct, `habit_weaken` when it doesn't apply
-
-**Example:**
-```
-trigger: "user asks to build chitta"
-response: "also install binaries and restart daemon"
-strength: 0.8  (confirmed many times)
-```
+The hooks record and strengthen habits on their own. What I owe them is
+`habit_observe` when I notice a pattern that recurs through *action* rather than
+statement — a command that always needs a follow-up, a workflow the user never
+varies. Strength runs 0.0 to 1.0 and only surfaces in `habit_match` above 0.3, so
+treat a weak match as still forming. Confirm with `habit_strengthen` when a habit
+proves right, `habit_weaken` when it misfires; that feedback is the only part the
+hooks cannot do for me.
 
 ## Anticipation: Predicting Next Actions
 
-Anticipation is lighter than habits -- it's pattern matching on context-to-action sequences.
+Anticipation is lighter than habits — pattern matching on context-to-action
+sequences, and the observe/predict/verify cycle runs entirely in the hooks. I do
+not call these tools in normal work; `anticipation_list` reviews what has formed.
 
-**How it works:**
-1. The prompt hook calls `anticipation_predict` with the current context
-2. Learned patterns from past sessions suggest likely next actions
-3. The stop hook records what actually happened via `anticipation_observe`
-4. If the prediction matched, `anticipation_success` strengthens the pattern
-
-**The annoyance gate:** Predictions are filtered through a gate that adapts to work mode. In Flow, the threshold is high (0.85) and cooldown is long (5 minutes) -- don't interrupt deep work. When Blocked, the threshold drops (0.5) and cooldown is short (60 seconds) -- be more helpful.
-
-I don't need to call these tools directly in most cases -- the hooks handle the observe/predict/verify cycle. But I should be aware that anticipation is happening and use `anticipation_list` to review what patterns have formed.
+Predictions pass through an annoyance gate keyed to work mode, which is the
+invariant worth knowing: in Flow the bar is high (0.85, five-minute cooldown)
+because interrupting deep work costs more than a missed suggestion; when Blocked
+it drops (0.5, sixty seconds) because the reverse is true.
 
 ## Goals: Tracking What Matters
 
@@ -220,38 +228,24 @@ When I encounter something I don't understand or a question I can't answer, I re
 
 ## Suggestions and Feedback
 
-Track suggestions for outcome evaluation:
+A significant suggestion is worth tracking (`suggestion_track`) so its outcome can
+be recorded later (`suggestion_resolve`); `suggestion_pending` and
+`suggestion_count` show what is still unjudged.
 
-| Tool | Purpose |
-|------|---------|
-| `suggestion_track` | Track a suggestion for later evaluation |
-| `suggestion_pending` | List suggestions awaiting feedback |
-| `suggestion_resolve` | Record whether suggestion helped |
-| `suggestion_count` | Count pending suggestions |
-
-**Workflow:**
-1. Make a significant suggestion -> `suggestion_track`
-2. Wait for outcome
-3. `suggestion_resolve(id, helped=true/false, details=...)`
-
-This builds a feedback loop: suggestions that help strengthen related memories, suggestions that fail weaken them.
+This is the calibration loop that makes recall better: resolved suggestions
+strengthen the memories behind them and weaken the ones that misled. An untracked
+suggestion teaches nothing, and a tracked one left unresolved teaches nothing
+either — so resolve honestly, including when I was wrong.
 
 ## Research Cycle
 
-Proactive learning from curiosity gaps:
+Proactive learning from curiosity gaps, so learning doesn't wait for a user
+prompt. `research_topics` surfaces what needs work, `research_cycle` hands back
+one topic with context ready to search, and `research_store` closes the loop by
+storing findings against the gap that prompted them.
 
-| Tool | Purpose |
-|------|---------|
-| `research_topics` | Find topics needing research (from gaps/weak memories) |
-| `research_cycle` | Get one topic with context, ready for web search |
-| `research_store` | Store findings, resolve gap |
-
-**Workflow:**
-1. `research_cycle(realm=...)` -- get a topic
-2. Use WebSearch to research it
-3. `research_store(topic, findings, sources, gap_id)` -- store and resolve
-
-This enables curiosity-driven learning without waiting for user prompts.
+The invariant: a gap is only resolved once its findings are stored with sources.
+An answer I found but didn't store leaves the gap open and the work repeatable.
 
 ## Calibration: Am I Getting Better?
 
@@ -413,17 +407,31 @@ SELECT id FROM memory WHERE content LIKE '%search%' ORDER BY id DESC LIMIT 1
 
 ### Embedding engine (Vak Yantra)
 
-All semantic operations use **bge-base-en-v1.5** (BAAI), a 768-dimensional sentence embedding model running locally via ONNX Runtime. No external API calls.
+All semantic operations run a local GGUF embedding model in-process via
+llama.cpp. No external API calls.
 
 **Key properties:**
-- **Model**: bge-base-en-v1.5, 110M parameters
-- **Dimensions**: 768 (hard contract in schema)
-- **Max sequence**: 256 tokens
+- **Model (public default)**: bge-large-en-v1.5, 1024-dimensional
+  (`chitta/include/chitta/vak_llama.hpp:3,96`)
+- **Dimensions**: fixed at **compile time** by `CHITTA_EMBED_DIM`, which must be
+  a multiple of 64. CMake defaults it to 1024 and takes an override from the
+  environment (`chitta/CMakeLists.txt:11-22`); the header falls back to 768 if
+  the define is absent (`chitta/include/chitta/types.hpp:22-29`). Changing it
+  needs a fresh build dir or `-DCHITTA_EMBED_DIM=<n>`, and the daemon rejects a
+  model whose `n_embd` disagrees.
+- **Max sequence**: clamped to the model's trained context, not a fixed number —
+  512 for BERT-style embedders like bge-large (they have only 512 learned
+  position embeddings), the full `N_CTX` for large decoder embedders
+  (`vak_llama.hpp:130-137`).
 - **Storage**: DuckDB with HNSW index for vector search
 
+Personal builds swap the model. This host runs nomic-embed-text-v1.5 (768-d) via
+the `CHITTA_EMBED_*` override, so the dimension you see locally may not be 1024.
+`CHITTA_EMBED_MODEL` points at an explicit GGUF path.
+
 **Query vs Document mode:**
-- **Document mode** (storing): Text embedded as-is
-- **Query mode** (searching): Prefix prepended: `"Represent this sentence for searching relevant passages: "`
+- **Document mode** (storing): prefix `"search_document: "`
+- **Query mode** (searching): prefix `"search_query: "` (`vak_llama.hpp:90-92`)
 
 The hooks handle mode selection automatically. If embeddings seem wrong, `embed_symbols --reset true` regenerates them.
 
@@ -586,24 +594,17 @@ Hooks handle the mechanics:
 
 ### Companion Tools
 
-| Tool | Purpose | When to use |
-|------|---------|-------------|
-| `habit_observe` | Record trigger-->response pattern | Repeated workflow detected |
-| `habit_match` | Find habits for current context | Before suggesting actions |
-| `habit_list` | Review formed habits | Periodic review |
-| `habit_strengthen` / `habit_weaken` | Adjust habit strength | After confirming/disconfirming |
-| `anticipation_observe` | Record context-->action | After each action (hooks do this) |
-| `anticipation_predict` | Predict next action | Before user prompt (hooks do this) |
-| `anticipation_list` | Review learned patterns | Periodic review |
-| `goal_set` | Create long-term goal | Multi-session objective identified |
-| `goal_progress` | Update goal progress | Milestone reached |
-| `goal_complete` | Mark goal done | Objective achieved |
-| `goal_list` | Review active goals | Session start, planning |
-| `curiosity_note_gap` | Record knowledge gap | I don't understand something |
-| `curiosity_gaps` | List unresolved gaps | During orienting or review |
-| `curiosity_resolve` | Mark gap resolved | After learning the answer |
-| `calibration_record` | Record prediction outcome | After making and verifying a prediction |
-| `calibration_score` | Check prediction accuracy | Self-reflection, `/introspect` |
+Each family — `habit_*`, `anticipation_*`, `goal_*`, `curiosity_*`,
+`calibration_*` — carries its own tool descriptions, so they are not restated
+here. What the descriptions can't tell you is who is meant to call them:
+
+- **`anticipation_*` is hook-owned.** The observe/predict/verify cycle runs
+  automatically; `anticipation_list` is the only one to call by hand.
+- **`habit_*` and `calibration_*` need my honesty, not my initiative.**
+  Strengthen, weaken, and record outcomes *after* a prediction resolves —
+  including when it was wrong, which is the only case that improves anything.
+- **`goal_*` and `curiosity_*` are mine to initiate**, because only I notice a
+  multi-session objective forming or a gap I can't close right now.
 
 ### Learning Tools
 
@@ -622,16 +623,9 @@ One tool, `learn`, with a `type`. The per-type tools below are hidden behind
 
 **All learning tools set Global visibility (visible across all projects).**
 
-**Decision tree:**
-```
-User corrects me?           -> learn(type="correction", wrong=..., correct=..., context=...)
-User states preference?     -> learn(type="preference", category=..., preference=...)
-Cross-project pattern?      -> learn(type="insight", domain=..., insight=...)
-Approach works when stuck?  -> learn(type="approach", state=..., approach=..., outcome=...)
-Did a surfaced memory help? -> learn(type="outcome", suggestion=..., helped=true/false)
-We shipped something?       -> learn(type="milestone", milestone=..., description=...)
-Completed an analysis?      -> learn(type="analysis", name=..., data_paths=[...], script_paths=[...])
-```
+The `type` column above is the whole routing decision; the table says which
+situation each one is for. Pick the type that matches what happened, and pass the
+arguments its schema asks for.
 
 ### Analysis Tracking
 

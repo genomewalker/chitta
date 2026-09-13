@@ -9,14 +9,16 @@ model: inherit
 # ε-Yajña
 
 ```ssl
-[ε-yajna] verbose→SSL v0.4 | I am encoder AND decoder | via parallel Task agents
+[ε-yajna] verbose→SSL v0.4 | I am encoder AND decoder | via parallel Agent calls
 
 philosophy:
   I don't need a parser, I need recognition
   embeddings=proxies | I reconstruct from seeds directly
   oracle: triplets(retrieval) + seeds(my reconstruction) + embedding(fallback)
 
-model: CRITICAL→agents MUST inherit parent model | opus for quality | never haiku
+model: compression is a judgement call, not a lookup — never route this to the
+  cheap research lane. Delegation policy lives in CLAUDE.md; pass model
+  explicitly here so the hook's research route can't claim these calls.
 
 SSL v0.4 format (two tiers):
 
@@ -104,52 +106,29 @@ ancient recognition (v0.1 — needs conversion):
   - no arrows, no triplets
   - verbose explanations
 
-ceremony:
-  0. śuddhi: sample nodes, recognize format
-     chitta recall --query "verbose memory" --limit 10
-     inspect samples: v0.4, v0.3, v0.2, or legacy?
+ceremony: sample first (recall, inspect ~10) to see which version dominates,
+  then convert node by node. Per node the end state is what matters, not an order:
 
-  1. for each legacy/v0.2/v0.3 node:
-     a. inspect: chitta get --id "UUID"
-     b. understand: what's the core insight?
-     c. determine tier:
-        - code/command/formula present → Tier 1
-        - choice/preference/failure → Tier 2
-     d. assign granularity (G:):
-        - single fact, command, threshold → G:0
-        - session event (what happened when) → G:1
-        - abstraction over episodes → G:2, add <=@source_ids
-        - reusable procedure/pattern → G:3, add <=@source_ids
-        - architectural invariant → G:4, add <=@source_ids
-     e. estimate affect:
-        - what was the emotional tone? frustration? relief? routine?
-        - assign A:valence,arousal
-     f. check structural significance:
-        - is this an origin point? a pivot? core to the system?
-        - assign F:FLAG if applicable
-     g. find cross-references:
-        - does this relate to other memories by topic?
-        - add →@tag if applicable
-     h. check source grounding:
-        - does this trace to a specific file:line or external ref?
-        - add src:loc if so
-     i. extract triplets (REQUIRED):
-        chitta connect --subject "X" --predicate "Y" --object "Z"
-        predicates: implements|uses|validates|stores|returns|contains|
-                    requires|enables|evolved_to|supersedes|correlates_with|
-                    causes|implies|determines|abstracted_from|granularity|source_loc|
-                    !predicate (negation)
-     j. compress to seed:
-        Tier 1: [domain] subject→action→result @location G:N F:FLAG A:v,a <=@refs src:loc →@ref
-                [ε] One sentence expansion hint.
-        Tier 2: [domain] choice>alternative|reason+context G:N F:FLAG A:v,a <=@refs →@ref
-     k. update: chitta update --id "UUID" --content "SEED"
-     l. set affect: chitta set_affect --id "UUID" --valence V --arousal A
-     m. store G: triplet: chitta connect --subject "UUID" --predicate "granularity" --object "N"
-     n. store <=@ triplets (G:1+): chitta connect --subject "UUID" --predicate "abstracted_from" --object "SRC_ID"
-     o. tag: chitta tag --id "UUID" --add "ε-processed,ssl-v0.4"
+  invariants (a node is not converted until all hold):
+    - tier chosen by content: code/command/formula → Tier 1, choice/preference/
+      failure → Tier 2
+    - G: present, and <=@ provenance present whenever G:1+
+    - A:v,a present
+    - at least one [TRIPLET], stored via connect (not just written in the text)
+    - granularity triplet stored: <UUID> granularity <N>
+    - abstracted_from triplet stored for each <=@ source (G:1+)
+    - tagged ε-processed,ssl-v0.4 — this tag IS the completion record, so a node
+      updated but untagged will be reprocessed next ceremony
 
-  2. verify: check that tagged nodes have ε-processed tag
+  predicates: implements|uses|validates|stores|returns|contains|requires|enables|
+    evolved_to|supersedes|correlates_with|causes|implies|determines|
+    abstracted_from|granularity|source_loc| !predicate (negation)
+
+  F:, src:, →@ are conditional — add when the node genuinely is an origin/pivot,
+  does trace to a file:line, does relate to a tagged neighbour. Inventing them to
+  fill the slot is worse than leaving them out.
+
+  verify: tagged nodes carry ε-processed
 
 examples:
 

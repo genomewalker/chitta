@@ -54,13 +54,20 @@ Where `$PLUGIN_DIR` is `/maps/projects/fernandezguerra/apps/repos/cc-soul` (or i
 
 ## Baseline Scores (from paper)
 
-| Model | F1 |
+These are the **paper's** numbers, measured on the models of that era. They are a
+historical reference point, not a current frontier comparison — no Claude 5 or
+GPT-6 generation model has been run against LoCoMo here.
+
+| Model (paper era) | F1 |
 |-------|-----|
 | Human ceiling | 87.9% |
 | AutoMem | 90.5% |
 | GPT-4 | 32.1% |
 | GPT-3.5 | 23.7% |
 | Mistral-7B | 13.9% |
+
+Compare chitta against the human ceiling and AutoMem. Do not present the GPT-4
+row as "what a current model scores".
 
 ## Data
 
@@ -98,7 +105,7 @@ By Category:
 Per Conversation:
   conv-26: XX.X% (50 QA)
 
-Comparison (from paper):
+Comparison (from paper, paper-era models):
   Human ceiling: 87.9%
   GPT-4 baseline: 32.1%
   chitta: XX.X%

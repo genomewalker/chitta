@@ -494,12 +494,21 @@ case "$MATCHER" in
 
         # Route search/lookup/research agents to haiku + inject ≤200 word limit.
         # Uses updatedInput (no deny+retry round trip). Bypass: CHITTA_AGENT_NO_FORCE=1.
-        if [[ -z "$agent_model" && "${CHITTA_AGENT_NO_FORCE:-${CC_SOUL_AGENT_NO_FORCE:-0}}" != "1" ]]; then
+        #
+        # Two hard exemptions:
+        #   1. An explicit .model is never rewritten. Any value the Agent tool accepts
+        #      (sonnet|opus|haiku|fable) passes through untouched — asking for fable
+        #      on a research agent is a deliberate choice, not a mistake to correct.
+        #   2. subagent_type "fork" is never rewritten. A fork inherits the parent
+        #      model by definition (the Agent tool ignores `model` for forks), so
+        #      stamping haiku on it would silently contradict the tool contract.
+        if [[ -z "$agent_model" && "$_subtype" != "fork" \
+              && "${CHITTA_AGENT_NO_FORCE:-${CC_SOUL_AGENT_NO_FORCE:-0}}" != "1" ]]; then
             if echo "${_subtype} ${_desc}" | grep -qiE '(explore|search|find|research|grep|glob|read|locate|list|lookup|where|enumerate|check if)'; then
                 _prompt=$(echo "$STDIN_DATA" | jq -r '.tool_input.prompt // empty')
                 _updated=$(echo "$STDIN_DATA" | jq --arg p "Report in ≤200 words.\n\n${_prompt}" \
                     '.tool_input | .model = "haiku" | .prompt = $p')
-                printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":"[token-route] lookup→haiku + ≤200 word limit","updatedInput":%s}}\n' "$_updated"
+                printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":"[token-route] lookup→haiku (4.5) + ≤200 word limit. Pass model=sonnet when the agent must reason, model=opus for architecture, model=fable to match the orchestrator; subagent_type=fork always inherits fable.","updatedInput":%s}}\n' "$_updated"
                 exit 0
             fi
         fi

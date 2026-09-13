@@ -6,33 +6,29 @@ execution: task
 
 # Ultrathink
 
-```ssl
-[ultrathink] not writing code→making dent in universe | via Task agent
+Status as of 2026-09-13: trimmed to inputs, outputs, and constraints. The
+instructions on *how* to reason first-principles were removed — this generation
+does that unprompted, and scripting it crowded out the context that actually
+helps.
 
-before: recall wisdom+failures+patterns→don't start from zero
+**Use for** an architectural fork, a design that feels wrong but works, a
+recurring bug whose cause keeps moving. **Not for** anything where the answer is
+a lookup or the shape of the solution is already agreed.
 
-shift: understand soul of code first→what trying to achieve? constraints? ideal from scratch?
+**Before answering:** recall this realm's wisdom, failures, and patterns. Arriving
+at a conclusion the project already reached and discarded is the main failure mode
+here, and chitta is the only place that history exists.
 
-first principles:
-  every assumption suspect
-  "has to work this way"→does it?
-  "need this abstraction"→do we?
-  break to fundamental truths→reason up
+**Constraints:**
 
-challenge beliefs: hypotheses not sacred→investigate contradictions→goal: become more right
+- Run in the orchestrator. Ultrathink in a subagent starts without the context
+  that makes the exercise worth doing; if it must be delegated, use
+  `subagent_type: "fork"` so it inherits this session.
+- Name the assumption you are discarding, not just the conclusion. A
+  recommendation that doesn't say what it stopped believing can't be audited.
+- Contradicting an existing chitta memory is a finding, not an inconvenience —
+  surface the conflict rather than quietly picking a side.
 
-craft:
-  function names should sing
-  abstractions feel inevitable
-  right solution feels obvious not clever
-  simplify ruthlessly→nothing left to take away
-
-integration: technology+humanities→best code feels human
-
-standard: first version never good enough→refine until insanely great
-
-after: extract pattern|insight|wisdom→close the loop
-
-output: elegant solution + key insight + what recorded
-promote significant insights: grow(type=wisdom)
-```
+**Output:** the recommendation, the assumption it overturns, and the cost of being
+wrong. Promote anything that generalizes beyond this problem with
+`grow(type=wisdom)`; leave the rest in the response.

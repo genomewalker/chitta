@@ -1,66 +1,94 @@
 # chitta
 
-> Status as of 2026-09-02: project renamed cc-soul → chitta (repo
-> `genomewalker/chitta`, old URL redirects); `CC_SOUL_*` env vars still
-> honored via the alias shim in `hooks/lib.sh` — see `docs/RENAME.md`.
+Persistent memory for coding agents: a C++ daemon (`chittad`) over a Rust store,
+an MCP server, and shell hooks that inject context into Claude Code and Codex.
+
+> Status as of 2026-09-13: **this file is canonical for Claude Code.**
+> `codex-plugin/AGENTS.md` is canonical for Codex; `CLAUDE.lean.md` and
+> `.claude-plugin/CLAUDE-full.md` are the lean and shipped-plugin variants and
+> defer here. Rewritten as constraints rather than procedure, and trimmed to
+> non-obvious gotchas, per the sources at the bottom.
+>
+> Renamed cc-soul → chitta on 2026-09-02. `CC_SOUL_*` env names still work via
+> the alias shim in `hooks/lib.sh` (`CHITTA_*` wins if both are set).
+
+## Who does what
+
+Claude Code here is **Claude Fable 5.1** (`claude-fable-5-1`). It orchestrates
+and reviews; it should not grind through mechanical work a cheaper model does
+correctly. Delegate by cost of being wrong, not by size of the task:
+
+- **Inventory, search, "where is X"** → Haiku 4.5 (`model: "haiku"`).
+- **Needs a judgement call** → Sonnet 5. **Architecture or an invariant** → Opus 5.
+- **Implementation** → Codex `gpt-6-astra`, one git worktree per stream, driven by
+  a written spec. Codex writes, Fable reviews the diff, Fable decides what merges.
+- **Needs this session's context** → `subagent_type: "fork"` (inherits Fable's
+  model, system prompt, and this file; ordinary subagents inherit none of it).
+
+`hooks/pre-tool-hook.sh` already routes research-shaped `Agent` calls to Haiku
+and caps their report; it exempts an explicit `model` and any `fork`. Don't
+restate the policy in a skill — pass `model` when the default would be wrong.
+
+Reasoning effort defaults to `high` (levels `low|medium|high|xhigh|max`). Prompts
+tuned for an older model are worth re-sweeping; this generation needs fewer
+instructions, not more. Don't leave the lead session blocked on a subagent.
+
+**Two rules that hold everywhere, stated once:**
+
+1. Prepend `@~/.claude/agent_safety_preamble.md` verbatim to every subagent
+   prompt. Subagents are read-only unless the task says otherwise.
+2. Never pass main-session context into a subagent prompt. Write a self-contained
+   prompt and let the agent call `mcp__chitta__recall` for what it needs.
 
 ## Build & deploy
+
 ```bash
 cd chitta && cmake --build build --parallel
 install -m 0755 ../bin/chittad ~/.claude/bin/chittad
 install -m 0755 ../bin/chitta  ~/.claude/bin/chitta
-# chitta_hintd exists only when built with CHITTA_WITH_LLAMA_CPP=ON
 [ -f ../bin/chitta_hintd ] && install -m 0755 ../bin/chitta_hintd ~/.claude/bin/chitta_hintd
 systemctl --user restart chittad
 systemctl --user try-restart chitta-hintd 2>/dev/null || true
-bash scripts/dev-install.sh   # restarts stdio MCP instances + the chitta-mcp-http unit (never pkill the --http one: Codex uses it)
+bash scripts/dev-install.sh
 ```
-`install` = atomic rename. Never `cp` over running binary → ETXTBSY.
 
-## Dev install (editable — repo IS the live plugin)
-> Status as of 2026-09-02: single sync owner — `dev-install.sh` symlinks own
-> `~/.claude/hooks/*.sh` and the marketplace `chitta-mcp/*.py`;
-> `sync-installed-hooks.sh` owns the versioned plugin cache and the Codex
-> cache. `sync-installed-hooks.sh` never overwrites a destination that is
-> already a symlink resolving into this repo — it detects and skips those
-> (`[owner:symlink] ... not copying`), so it can no longer silently turn a
-> dev symlink back into a stale copy. Always run `dev-install.sh` after
-> editing hooks or MCP python: it symlinks, then calls
-> `sync-installed-hooks.sh` itself so the plugin cache is refreshed in the
-> same step — a bare `sync-installed-hooks.sh` alone only backstops
-> non-symlinked (plugin-disabled) installs and the cache/Codex destinations.
+- `install`, never `cp`: `cp` over a running binary gives ETXTBSY. `install` is an
+  atomic rename.
+- `chitta_hintd` exists only in a `CHITTA_WITH_LLAMA_CPP=ON` build.
+- **Never `pkill` the `--http` MCP process.** Codex connects to it on port 9481;
+  SIGTERM reads as a clean exit, so `Restart=on-failure` won't revive it — that
+  left port 9481 dead from 2026-09-02 to 09-08. `dev-install.sh` skips `--http`
+  and restarts the unit through systemd.
+- Embedding dimension is fixed at **compile time** (`CHITTA_EMBED_DIM`, multiple
+  of 64, CMake default 1024 for bge-large-en-v1.5). Changing it needs a fresh
+  build dir; the daemon rejects a model whose `n_embd` disagrees.
 
-The live plugin loads **hooks + MCP python from `~/.claude/hooks/*` and
-`~/.claude/plugins/marketplaces/genomewalker-chitta/chitta-mcp/*`** (or the
-pre-rename `genomewalker-cc-soul` marketplace dir, if that's what's still
-installed) — NOT from this repo directly. `scripts/dev-install.sh` symlinks
-those live paths back at
-this repo so `edit repo → restart service → live`, one source of truth, no drift.
-```bash
-bash scripts/dev-install.sh   # symlinks hooks + MCP *.py to this repo; refreshes
-                               # plugin cache + Codex cache; restarts MCP
-```
-- Hooks are live immediately (bash re-reads per invocation). MCP python needs the
-  MCP restart (the script does `pkill -f "chitta-m[c]p"`).
-- Binaries are the exception: keep the `build → install` (atomic) flow above —
-  symlinking a running binary risks ETXTBSY.
-- ⚠️ The marketplace is a **git checkout** that a plugin update can re-clone,
-  replacing the symlinks with a stale copy (this is what caused the
-  `server.py` dual-copy drift). Re-run `dev-install.sh` after any plugin update.
-- `scripts/sync-installed-hooks.sh --check` reports drift without writing
-  anything; it still catches real plugin-cache/Codex drift (it only skips
-  destinations that are dev-install symlinks, where drift is structurally
-  impossible) — safe to run any time, including mid-edit.
+## Dev install: the repo IS the live plugin
+
+The live plugin loads hooks and MCP python from `~/.claude/hooks/*` and the
+marketplace checkout, never from this repo directly. `scripts/dev-install.sh`
+symlinks those paths back here, so editing the repo is editing the live plugin.
+
+- Run `dev-install.sh` after touching hooks or MCP python. It symlinks, then
+  calls `sync-installed-hooks.sh` for the plugin and Codex caches in the same
+  step. Hooks go live on the next invocation; MCP python needs the restart.
+- **A plugin update re-clones the marketplace and replaces the symlinks with a
+  stale copy.** This is what caused the `server.py` dual-copy drift. Re-run
+  `dev-install.sh` after any plugin update.
+- `sync-installed-hooks.sh --check` reports drift without writing, and is safe
+  mid-edit. It skips destinations that are already dev-install symlinks.
 
 ## Release
+
 `./scripts/release.sh patch|minor|major -y`
 
-⚠️ **Rollback floor: chitta-field v2.1.0.** Snapshots are written in the V23
-sectioned format since v2.1.0 — older daemons can't read the magic. Rollback
-below v2.1.0 only works while a pre-V23 snapshot family still exists on disk
-(`prune_old_snapshots` keeps 2 families, so ~2 save cycles after upgrade).
+⚠️ **Rollback floor: chitta-field v2.1.0.** Snapshots use the V23 sectioned
+format since v2.1.0 and older daemons can't read the magic. Rolling back below
+v2.1.0 only works while a pre-V23 snapshot family is still on disk, and
+`prune_old_snapshots` keeps two families — roughly two save cycles.
 
-## Key files
+## Orientation
+
 | | Path |
 |---|---|
 | Daemon | `chitta/src/simple_cli.cpp` |
@@ -69,25 +97,17 @@ below v2.1.0 only works while a pre-V23 snapshot family still exists on disk
 | MCP | `chitta-mcp/server.py` |
 | Hooks | `hooks/*.sh` |
 
-## Code-intel hook enforcement
-`hooks/pre-tool-hook.sh` logs every Read/Edit decision to
-`$MIND/.hook_shadow.jsonl` (shadow mode, default). Fields:
-`tool,file,lines,indexed,decision,reason,enforced`.
+Hook behaviour, the full `CHITTA_*` table, and the Read/Edit enforcement rules
+live in `docs/HOOKS.md` — the hooks enforce themselves, so this file doesn't
+restate them. Review the decision log with `./scripts/hook-stats.sh`.
 
-Enforce mode auto-activates once shadow log has ≥100 entries AND is
-≥3 days old — no manual env flip needed.
+⚠️ Setting a `CHITTA_*` var as a command prefix (`CHITTA_HOOK_ENFORCE=1 bash
+hook.sh`) does **not** reach a nested bash. `export` it first.
 
-| Env (`CC_SOUL_*` still honored) | Effect |
-|---|---|
-| `CHITTA_HOOK_ENFORCE=1` | Force enforce on early (skip wait) |
-| `CHITTA_HOOK_ENFORCE=0` | Force shadow only (disable enforcement) |
-| `CHITTA_ALLOW_READ=1`   | Bypass Read deny for this session |
-| `CHITTA_AGENT_NO_FORCE=1` | Disable haiku-force on research subagents (advisory only) |
-| `CHITTA_AGENT_WARN=N` | Subagent count to warn at (default 20) |
-| `CHITTA_AGENT_LIMIT=N` | Subagent count for hard advisory (default 50) |
-| `CHITTA_SUBAGENT_BASH_RECALL=1` | Run Bash recall for subagent calls too (adds 2s/call) |
-| `CHITTA_ALLOW_READ=1` | Bypass Read dedup deny for this session (also bypasses indexed-large deny) |
+## Codex
 
-Review data: `./scripts/hook-stats.sh` (decisions, reasons, tool split, enforce-status).
+Conventions, the `codex exec` invocation, sandbox flags, and MCP wiring live in
+`codex-plugin/AGENTS.md`. One thing that bites from this side: `~/.codex/config.toml`
+defaults to `gpt-5.6-sol` at `xhigh`, so pass `-m gpt-6-astra` explicitly.
 
-⚠️ **Testing manually**: `CHITTA_HOOK_ENFORCE=1 bash hook.sh Read` won't work — the prefix-assignment isn't exported to nested bash. Use `export CHITTA_HOOK_ENFORCE=1` first.
+Sources for this pass, with the primary-source URLs, are in `docs/HOOKS.md`.

@@ -7,37 +7,43 @@ execution: task
 
 # Antahkarana
 
-For the philosophical basis of these six voices — why they're structured this way and how they emerge from retrieval design — see [[../vedanta/antahkarana]] in the vedanta skill graph.
+Status as of 2026-09-13: trimmed to the voices, the constraints, and the output.
+The step list and the per-skill model table were removed — routing is policy in
+`CLAUDE.md`, enforced by `hooks/pre-tool-hook.sh`.
 
-```ssl
-[antahkarana] multi-perspective debate | via parallel Task agents
+For the philosophical basis of these six voices — why they're structured this way
+and how they emerge from retrieval design — see [[../vedanta/antahkarana]] in the
+vedanta skill graph.
 
-voices:
-  manas: quick intuition, practical, "what feels right?"
-  buddhi: analytical, evidence-based, "what does data say?"
-  ahamkara: risk-aware, protective, "what could go wrong?"
-  chitta: memory, patterns, "what worked before?"
-  vikalpa: creative, exploratory, "what if we tried...?"
-  sakshi: neutral witness, synthesizer
+Use when one question needs genuinely different viewpoints: a decision with no
+obvious right answer, or an approach you're stuck on. Distinct from yajña, which
+coordinates *tasks* rather than perspectives on a single question.
 
-when: complex decisions | need diverse viewpoints | stuck on approach
+## The voices
 
-execution:
-  1. narrate(action=start, title="antahkarana: [question]")→THREAD_ID
-  2. spawn voices in parallel, each reasons from their perspective
-  3. each writes to chitta: observe(tags="thread:<id>,voice:<name>")
-  4. brahman (main) synthesizes: recall_by_tag→find convergence+divergence
-  5. narrate(action=end)
+| Voice | Asks |
+|---|---|
+| manas | What feels right? Quick, practical intuition |
+| buddhi | What does the evidence say? Analytical |
+| ahamkara | What could go wrong? Risk-aware, protective |
+| chitta | What worked before? Memory and pattern |
+| vikalpa | What if we tried…? Creative, exploratory |
+| sakshi | Neutral witness; synthesizes the rest |
 
-output:
-## Antahkarana: [Question]
-### Voices
-- Manas: [intuition]
-- Buddhi: [analysis]
-- Ahamkara: [risks]
-- Chitta: [patterns]
-### Synthesis
-[where voices converge | where they diverge | recommendation]
+## What must hold
 
-vs yajña: antahkarana=perspectives on one question | yajña=coordination of tasks
-```
+- **Voices run in parallel and independently.** A voice that has read another's
+  answer is no longer a separate perspective, and the whole value is independence.
+- **Each voice writes to chitta** tagged `thread:<id>,voice:<name>`, so the
+  synthesis reads from memory rather than from a context window that may have
+  dropped an early voice.
+- **Sakshi's synthesis stays in the orchestrator.** It needs every voice at once.
+- **Report divergence, don't resolve it away.** Where the voices disagree is the
+  finding. A synthesis that reads as unanimous has usually just lost information.
+
+## Output
+
+Each voice's position in a line or two, then the synthesis: where they converge,
+where they genuinely conflict, and a recommendation that says which risk it
+accepts. Bracket the run with `narrate(action=start|end)` so the thread is
+resumable.

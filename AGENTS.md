@@ -1,64 +1,52 @@
 # AGENTS.md
 
-Instructions for AI coding agents (OpenAI Codex, GitHub Copilot, Cursor,
-Windsurf, Amp, Devin) working in this repository. See <https://agentsmd.io>.
+chitta: persistent memory for coding agents — a C++ daemon over a Rust store, an
+MCP server, and shell hooks that inject context into Claude Code and Codex.
+
+## Hard constraints
+
+First on the page on purpose: Codex truncates the combined `AGENTS.md` bytes
+silently once past `project_doc_max_bytes`, dropping the end of the file
+(#13386, #37956).
+
+1. **Never `pkill` the `--http` MCP process** — it is Codex's own transport on port
+   9481 and does not self-restart. Use `bash scripts/dev-install.sh`.
+2. **Implementation happens in its own git worktree, never on `main`.** One
+   worktree per stream; never two streams in one checkout.
+3. **`install`, never `cp`, over a running binary** — `cp` gives ETXTBSY.
+4. **Write state to files, not to context.** The spec plus `Plan.md` and
+   `Documentation.md` in the worktree are the source of truth for a long run.
+5. **Keep tool output short** — `head`/`tail`/`--quiet`, never `cat` a large log.
+6. **`codex exec` needs `</dev/null`**, or it blocks waiting on stdin.
+7. **Prepend `@~/.claude/agent_safety_preamble.md`** verbatim to any agent you
+   spawn. Read-only unless the task says otherwise.
+
+> Status as of 2026-09-13: **`codex-plugin/AGENTS.md` is canonical for Codex** —
+> the `codex exec` invocation, effort and approval flags, MCP wiring, and known
+> Codex defects. Open it before working here; Codex auto-loads this git-root file
+> but not the plugin copy. `CLAUDE.md` is canonical for Claude Code and holds the
+> model split and build gotchas. Sources: `docs/HOOKS.md`, plus Codex GitHub
+> issues #13386, #37956, #34289, #26602, #41378, #41600, #43194, #43335, #42449,
+> #44305 (Sept 2026), cited in `codex-plugin/AGENTS.md`.
+
+chitta's MCP tools are namespaced `mcp__chitta__*`, not `mcp__chitta-mcp__*`.
+`grow` and `connect` sit behind the `advanced` gateway.
+
+Codex `PostToolUse` carries no exit code (#34289), so chitta records Codex bash
+outcomes as `exit_code: null` plus a `likely_fail` text heuristic; consumers never
+read null as success. Report your own failures explicitly.
 
 <!-- BEGIN sqz-agents-guidance (auto-installed by sqz init; remove this block to disable) -->
 
-## sqz — Token-Optimized CLI Output
+## sqz — token-optimized CLI output
 
-When running shell commands whose output may be long (directory listings,
-git log/diff, test runners, build logs, `docker ps`, `kubectl get`, etc.),
-pipe the output through `sqz compress` to reduce token consumption.
+Pipe long command output through `sqz compress` (`cmd 2>&1 | sqz compress`) —
+it typically saves 60-90% of tokens while preserving paths and identifiers. Skip
+it for interactive commands, compound commands with shell operators, and output
+already only a few lines. If `sqz` is not on PATH, run commands normally.
 
-`sqz` is a stdin-to-stdout compressor, not a command wrapper. The correct
-usage is to pipe the command's output into `sqz compress`:
-
-```bash
-# Instead of:     Use:
-git status        git status 2>&1 | /home/kbd606/.claude/bin/sqz compress
-cargo test        cargo test 2>&1 | /home/kbd606/.claude/bin/sqz compress
-git log -10       git log -10 2>&1 | /home/kbd606/.claude/bin/sqz compress
-docker ps         docker ps 2>&1 | /home/kbd606/.claude/bin/sqz compress
-ls -la            ls -la 2>&1 | /home/kbd606/.claude/bin/sqz compress
-```
-
-The `2>&1` captures stderr too, which is useful for commands like `cargo
-test` where diagnostics go to stderr. `sqz compress` filters and compresses
-the combined output while preserving filenames, paths, and identifiers.
-It typically saves 60-90% tokens on verbose commands.
-
-Do NOT pipe output for:
-- Interactive commands (`vim`, `ssh`, `python`, REPLs)
-- Compound commands with shell operators (`cmd && other`, `cmd > file.txt`,
-  `cmd; other`) — run those directly
-- Short commands whose output is already a few lines
-
-If `sqz` is not on PATH, run commands normally.
-
-The `sqz-mcp` MCP server is also available — Codex reads it from
-`~/.codex/config.toml` under `[mcp_servers.sqz]`. It exposes three
-tools: `compress` (the default pipeline), `passthrough` (return text
-unchanged — the escape hatch below), and `expand` (resolve a
-`§ref:HASH§` token back to the original bytes).
-
-## Escape hatch — when sqz output confuses you
-
-If you see a `§ref:HASH§` token and can't parse it, or compressed
-output is leading you to make lots of small retries instead of one
-big request, use one of these:
-
-- **`/home/kbd606/.claude/bin/sqz expand <prefix>`** — resolve a dedup ref back to the
-  original bytes. Accepts bare hex (`sqz expand a1b2c3d4`) or the full
-  token pasted verbatim (`sqz expand §ref:a1b2c3d4§`).
-- **`SQZ_NO_DEDUP=1`** — set this env var for one command to disable
-  dedup: `SQZ_NO_DEDUP=1 git status 2>&1 | sqz compress`. You'll get
-  the full compressed output with no `§ref:…§` tokens.
-- **`--no-cache`** — same opt-out as a CLI flag:
-  `git status 2>&1 | sqz compress --no-cache`.
-
-If you're using the MCP server, the `passthrough` tool returns raw
-text and the `expand` tool resolves refs — call them when you need
-data sqz hasn't touched.
+The `sqz-mcp` server exposes `compress`, `passthrough`, and `expand`. A
+`§ref:HASH§` token is a dedup reference: resolve it with `sqz expand <prefix>`, or
+set `SQZ_NO_DEDUP=1` for one command to opt out.
 
 <!-- END sqz-agents-guidance -->

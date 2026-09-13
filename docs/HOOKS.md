@@ -5,6 +5,38 @@ Status as of 2026-09-13.
 chitta integrates with Claude Code and Codex through the hooks system, enabling
 automatic context injection and lifecycle management.
 
+**This page is the enforcement reference.** A hook is a deterministic gate;
+`CLAUDE.md` and `AGENTS.md` therefore point here rather than restating hook rules
+as prose. Per the [Claude Code memory
+doc](https://code.claude.com/docs/en/memory), "to block an action regardless…
+use a PreToolUse hook" — CLAUDE.md instructions "are not a hard enforcement
+layer." When a convention needs to actually hold, add it here, not there.
+
+**Sources for the 2026-09-13 documentation pass** (all verified that day):
+Anthropic, *The new rules of context engineering for Claude 5 generation models*
+(claude.com/blog, 2026-07-24);
+[Claude Code memory](https://code.claude.com/docs/en/memory) (target under 200
+lines per CLAUDE.md; imports expand inline and do not save context);
+[Prompting Claude Fable 5.1](https://platform.claude.com/docs/en/about-claude/models/prompting-claude-fable-5-1)
+(effort default `high`, levels `low|medium|high|xhigh|max`; re-sweep per model
+generation);
+[Agent Skills best practices](https://platform.claude.com/docs/en/agents/agent-skills/best-practices)
+(`name` ≤64 chars, `description` ≤1024 chars in third person stating what and
+when, SKILL.md body under 500 lines, match freedom to fragility);
+Codex [AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md)
+(combined `project_doc_max_bytes` 32 KiB; global, then git-root, then cwd, closer
+files overriding) and its approvals reference;
+`gpt-6-astra` (openai.com/index/gpt-6-astra, 2026-09-04).
+
+Community-verified Codex defects, GitHub issues Sept 2026, cited in
+`codex-plugin/AGENTS.md`: #13386 and #37956 (doc truncation is silent and drops
+the end of the file, so the project keeps combined `AGENTS.md` bytes under ~10 KB
+and puts critical rules first); #34289 (no `PostToolUse` exit code, see the
+PostToolUse warning above); #26602 (`-a/--ask-for-approval` must precede `exec`);
+#41378 (`bearer_token_env_var` propagation); #41600 (streamable-HTTP session
+leak); #43194, #43335, #42449 (context-management state loss — worktree files, not
+model memory, hold run state); #44305 (tool-output amplification).
+
 ---
 
 ## Table of Contents
@@ -132,6 +164,30 @@ after a plugin update, which can replace those symlinks with a fresh clone.
 - **post-bash-hook.sh**: Records significant Edit/Write operations as signals for background learning
 - Note: `capture-hook.sh` is currently disabled (exits immediately). Write safety checks are handled by `pre-tool-hook.sh`, not the post-bash hook.
 
+**Codex exit codes are unknown, not zero.** Codex `PostToolUse` fires for failures
+too, but its payload carries no exit code and `PostToolUseFailure` never fires
+(Codex issue #34289). The tell is the payload shape: `tool_response` is the
+aggregated output **string** rather than an object, which is how
+`post-bash-hook.sh:44` detects a Codex call.
+
+For that shape the hook records `"exit_code": null` in the `bash_outcome` ledger
+event — explicitly unknown — and adds `"likely_fail": true` when the output text
+matches a failure heuristic (`No such file`, `command not found`, `Permission
+denied`, a Python traceback, `fatal:`, `FAILED`, a non-zero `Exit code N`).
+
+Consumers must treat null as unknown and never as success. Both already do:
+`chitta-mcp/outcome_ledger.py` counts only entries whose `exit_code` is not null
+and declines to issue a verdict for a window in which nothing is known, and
+`chitta-mcp/saddle_detector.py` has a `failed()` helper that falls back to
+`likely_fail` when the code is null. `hooks/tests/test_post_bash_payloads.sh`
+covers all three Codex cases (null exit recorded, failure text flagged, clean
+output not flagged).
+
+Before this, a missing field defaulted to 0 and every Codex failure was booked as
+a success — the same defect class the comment at `post-bash-hook.sh:33-35` records
+for Claude Code, where the hook saw only exit 0 for ten days until
+`PostToolUseFailure` was registered.
+
 ### Recall scheduling telemetry
 
 The prompt hook appends a compact timing field to its admission summary:
@@ -220,7 +276,15 @@ Detects trackable commands (`sbatch`, `srun`, `nohup`, python scripts, bash scri
 
 ### Agent Matcher
 
-1. **Haiku routing**: Agents whose prompt matches search/research patterns are rerouted to `claude-haiku-4-5` with a ≤200 word limit injected. Bypass with `CHITTA_AGENT_NO_FORCE=1`.
+1. **Haiku routing**: Agents whose `subagent_type` or `description` matches
+   search/research patterns are rerouted to Haiku 4.5 (`claude-haiku-4-5`) with a
+   ≤200 word limit injected. Two cases are never rewritten:
+   - an Agent call that already carries an explicit `model` (`sonnet`, `opus`,
+     `haiku`, or `fable` — all four pass through untouched);
+   - `subagent_type: "fork"`, because a fork inherits the parent model by
+     definition and the Agent tool ignores `model` for forks.
+
+   Bypass the routing entirely with `CHITTA_AGENT_NO_FORCE=1`.
 2. **Subagent count tracking**: Increments a per-session counter.
    - Warns at `CHITTA_AGENT_WARN` (default: 20).
    - Hard advisory at `CHITTA_AGENT_LIMIT` (default: 50).
@@ -295,7 +359,7 @@ name (see [docs/RENAME.md](RENAME.md)).
 | `CHITTA_ALLOW_READ`          | `0`          | `1` = bypass Read deny and indexed-large deny for this session           |
 | `CHITTA_DEEP_SEARCH`         | `0`          | `1` = allow root-wide `find` (removes `-maxdepth 3` scoping)             |
 | `CHITTA_STRICT_MODE`         | `0`          | `1` = enforce symbol-level flow for indexed files                        |
-| `CHITTA_AGENT_NO_FORCE`      | `0`          | `1` = disable haiku routing for search/research agents                   |
+| `CHITTA_AGENT_NO_FORCE`      | `0`          | `1` = disable Haiku routing for search/research agents (explicit `model` and `subagent_type: fork` are exempt regardless) |
 | `CHITTA_AGENT_WARN`          | `20`         | Subagent count at which a warning is issued                              |
 | `CHITTA_AGENT_LIMIT`         | `50`         | Subagent count at which a hard advisory fires                            |
 | `CHITTA_LOOP_WARN`           | `10`         | ScheduleWakeup iterations before warning                                 |
