@@ -150,6 +150,12 @@ usable context, including after the cross-realm fallback, the hook appends a
 `recall_empty` event with those timing fields even though it emits no context.
 This keeps empty prompt-hook runs diagnosable without changing fail-open output.
 
+Set `CHITTA_RECALL_LANES_RPC=1` to replace the prompt hook's six recall CLI
+processes with one `recall_lanes` RPC. The switch defaults off while latency is
+measured. Ablated lanes are omitted from the request, the cross-realm `xr` lane
+remains a separate fallback, and an unavailable or invalid fan-in response
+falls open to the original process fan-out for that prompt.
+
 ### PreToolUse
 
 Handled by `pre-tool-hook.sh`. See the [full section below](#pretooluse--pre-tool-hooksh).

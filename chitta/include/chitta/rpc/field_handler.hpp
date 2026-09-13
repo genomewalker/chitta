@@ -335,6 +335,7 @@ public:
             "graph_traverse", "graph_pagerank", "get", "get_embeddings",
             "expand_memory", "query", "list_by_status", "list_memories_brief",
             "recall_by_priority", "memory_type_stats", "smart_recall", "hybrid_recall",
+            "recall_lanes",
             "recall_session", "recall_spreading", "structured_recall", "route_stats",
             "ask", "expand_query", "recall_last_action", "recall_failure_pattern",
             "recall_causal_antecedent", "recall_hdcbind", "recall_counterfactual",
@@ -497,7 +498,8 @@ public:
                 // Temporal-phrase parse (recall only, deterministic, no LLM):
                 // "last week"/"in June" → ts window gate + stripped query for
                 // embedding. No phrase → parse returns empty → behavior unchanged.
-                if (name == "recall" && !q.empty() && field_store_ && !args.contains("_twindow")) {
+                if ((name == "recall" || name == "recall_lanes") && !q.empty()
+                    && field_store_ && !args.contains("_twindow")) {
                     int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
                         std::chrono::system_clock::now().time_since_epoch()).count();
                     time_t tt = time(nullptr);

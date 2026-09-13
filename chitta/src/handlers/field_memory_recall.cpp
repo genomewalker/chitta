@@ -5,7 +5,9 @@
 #include <atomic>
 #include <cstdlib>
 #include <filesystem>
+#include <future>
 #include "chitta/hit_line.hpp"
+#include "chitta/recall_lanes.hpp"
 #include "chitta/speech_act.hpp"
 #include "chitta/ssl_gloss.hpp"
 
@@ -1539,6 +1541,137 @@ ToolResult FieldRpcHandler::tool_smart_recall(const json& params) {
     auto result = ToolResult::ok(ss.str(), {{"results", results}, {"intent", is_code ? "code" : "semantic"}});
     fire_recall_callback(results, 1);
     return result;
+}
+
+ToolResult FieldRpcHandler::tool_recall_lanes(const json& params) {
+    const std::string query = params.value("query", "");
+    if (query.empty()) return ToolResult::error("query is required");
+    const std::string ctx_query = params.value("ctx_query", query);
+    const std::string realm = params.value("realm", "");
+
+    static const std::array<std::string, 6> kLaneOrder = {
+        "sem", "ctx", "hyb", "kw", "corr", "corrk"};
+    std::unordered_set<std::string> selected;
+    if (params.contains("lanes")) {
+        if (!params["lanes"].is_array())
+            return ToolResult::error("lanes must be an array");
+        for (const auto& lane : params["lanes"]) {
+            if (!lane.is_string()) return ToolResult::error("lane names must be strings");
+            const std::string name = lane.get<std::string>();
+            if (std::find(kLaneOrder.begin(), kLaneOrder.end(), name) == kLaneOrder.end())
+                return ToolResult::error("unknown recall lane: " + name);
+            selected.insert(name);
+        }
+    } else {
+        selected.insert(kLaneOrder.begin(), kLaneOrder.end());
+    }
+
+    const json limits = params.value("limits", json::object());
+    if (!limits.is_object()) return ToolResult::error("limits must be an object");
+    auto lane_limit = [&](const std::string& lane, int fallback) -> std::optional<size_t> {
+        json args{{"limit", fallback}};
+        auto it = limits.find(lane);
+        if (it != limits.end()) {
+            if (!it->is_number_integer() && !it->is_number_unsigned()) return std::nullopt;
+            args["limit"] = *it;
+        }
+        // Compatibility for direct JSON callers that prefer sem_limit, etc.
+        const std::string alias = lane + "_limit";
+        auto alias_it = params.find(alias);
+        if (alias_it != params.end()) {
+            if (!alias_it->is_number_integer() && !alias_it->is_number_unsigned())
+                return std::nullopt;
+            args["limit"] = *alias_it;
+        }
+        args = rpc::clamp_read_arguments("recall_lanes." + lane, std::move(args));
+        return static_cast<size_t>(args["limit"].get<int64_t>());
+    };
+
+    long budget_override = 0;
+    if (params.contains("budget_ms")) {
+        if (!params["budget_ms"].is_number_integer()
+            && !params["budget_ms"].is_number_unsigned())
+            return ToolResult::error("budget_ms must be a positive integer");
+        if (params["budget_ms"].is_number_unsigned()) {
+            const auto raw = params["budget_ms"].get<uint64_t>();
+            budget_override = raw > static_cast<uint64_t>(LONG_MAX)
+                ? LONG_MAX : static_cast<long>(raw);
+        } else {
+            budget_override = params["budget_ms"].get<long>();
+        }
+        if (budget_override <= 0)
+            return ToolResult::error("budget_ms must be a positive integer");
+    }
+
+    struct LaneCall {
+        std::string name;
+        json args;
+        long budget_ms;
+    };
+    std::vector<LaneCall> calls;
+    calls.reserve(kLaneOrder.size());
+    const long global_budget = rpc_budget_.budget_ms();
+    auto add = [&](const std::string& name, json args, int default_limit,
+                   long default_budget) -> bool {
+        if (!selected.count(name)) return true;
+        if (name != "corrk") {
+            auto limit = lane_limit(name, default_limit);
+            if (!limit) return false;
+            args["limit"] = *limit;
+        }
+        if (params.contains("_preembedding") && name != "sem" && name != "ctx"
+            && name != "corrk")
+            args["_preembedding"] = params["_preembedding"];
+        if (params.contains("_twindow") && name != "sem" && name != "ctx"
+            && name != "corrk")
+            args["_twindow"] = params["_twindow"];
+        const long requested = budget_override > 0 ? budget_override : default_budget;
+        calls.push_back({name, std::move(args), std::min(requested, global_budget)});
+        return true;
+    };
+
+    if (!add("sem", {{"query", query}, {"realm", realm}}, 6, 2000)
+        || !add("ctx", {{"query", ctx_query}, {"realm", realm}}, 4, 2000)
+        || !add("hyb", {{"query", query}, {"realm", realm}, {"strategy", "hybrid"}}, 5, 3000)
+        || !add("kw", {{"query", query}, {"realm", realm}, {"strategy", "keyword"}}, 3, 2000)
+        || !add("corr", {{"query", query}, {"tag", "correction"}, {"include_global", true}}, 3, 2000)
+        || !add("corrk", {{"text", query}}, 0, 2000))
+        return ToolResult::error("lane limits must be integers");
+
+    const auto total_started = std::chrono::steady_clock::now();
+    std::vector<std::future<RecallLaneOutput>> futures;
+    futures.reserve(calls.size());
+    // The dispatcher already permits these same handlers to overlap as separate
+    // read RPCs. Keep one outer shared rpc_mutex_ lock while the Rust store's
+    // component RwLocks synchronize the internal workers.
+    for (const auto& call : calls) {
+        futures.push_back(std::async(std::launch::async, [this, call] {
+            const auto started = std::chrono::steady_clock::now();
+            auto budget_scope = rpc_budget_.measure("recall_lanes." + call.name,
+                                                    call.budget_ms);
+            ToolResult result;
+            if (call.name == "sem" || call.name == "ctx")
+                result = tool_smart_recall(call.args);
+            else if (call.name == "corrk")
+                result = tool_correction_check(call.args);
+            else
+                result = tool_recall(call.args);
+            const long elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - started).count();
+            return RecallLaneOutput{call.name, result.text, result.structured,
+                                    elapsed, elapsed > call.budget_ms};
+        }));
+    }
+
+    std::vector<RecallLaneOutput> outputs;
+    outputs.reserve(futures.size());
+    for (auto& future : futures) outputs.push_back(future.get());
+    const long total_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - total_started).count();
+    json response = assemble_recall_lanes(outputs, total_ms);
+    return ToolResult::ok("Recall lanes: " + std::to_string(outputs.size())
+                              + " completed in " + std::to_string(total_ms) + "ms",
+                          response);
 }
 
 ToolResult FieldRpcHandler::tool_recall_session(const json& params) {
