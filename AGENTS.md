@@ -18,8 +18,11 @@ silently once past `project_doc_max_bytes`, dropping the end of the file
    `Documentation.md` in the worktree are the source of truth for a long run.
 5. **Keep tool output short** — `head`/`tail`/`--quiet`, never `cat` a large log.
 6. **`codex exec` needs `</dev/null`**, or it blocks waiting on stdin.
-7. **Prepend `@~/.claude/agent_safety_preamble.md`** verbatim to any agent you
-   spawn. Read-only unless the task says otherwise.
+7. **Paste the contents of `~/.claude/agent_safety_preamble.md`** (the file's
+   text, not the `@` reference — you cannot resolve imports) at the top of any
+   agent prompt you spawn. Read-only unless the task says otherwise.
+8. **Never install binaries, restart services, or touch `~/.claude`/`~/.codex`**
+   from a stream. Deployment belongs to the orchestrator after review.
 
 > Status as of 2026-09-13: **`codex-plugin/AGENTS.md` is canonical for Codex** —
 > the `codex exec` invocation, effort and approval flags, MCP wiring, and known
@@ -40,13 +43,8 @@ read null as success. Report your own failures explicitly.
 
 ## sqz — token-optimized CLI output
 
-Pipe long command output through `sqz compress` (`cmd 2>&1 | sqz compress`) —
-it typically saves 60-90% of tokens while preserving paths and identifiers. Skip
-it for interactive commands, compound commands with shell operators, and output
-already only a few lines. If `sqz` is not on PATH, run commands normally.
-
-The `sqz-mcp` server exposes `compress`, `passthrough`, and `expand`. A
-`§ref:HASH§` token is a dedup reference: resolve it with `sqz expand <prefix>`, or
-set `SQZ_NO_DEDUP=1` for one command to opt out.
+A PreToolUse hook already pipes `Bash` output through `sqz compress`; do not add
+`| sqz compress` by hand. A `§ref:HASH§` token is a dedup reference: resolve it
+with `sqz expand <prefix>`, or prefix one command with `SQZ_NO_DEDUP=1`.
 
 <!-- END sqz-agents-guidance -->

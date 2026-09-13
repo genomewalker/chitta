@@ -447,7 +447,9 @@ else
     # each duration includes scheduler wait with no added start-clock process.
     _LANE_FANOUT_T0=$_RECALL_FANOUT_T0
     _lanes_rpc_ok=0
-    if [[ "${CHITTA_RECALL_LANES_RPC:-0}" == "1" ]]; then
+    # Default ON since 2026-09-13: bench (3 queries × 20 runs/arm) median 1496→1201 ms,
+    # p95 3208→3087, 0 empties both arms; fail-open fallback to the six-process path.
+    if [[ "${CHITTA_RECALL_LANES_RPC:-${CC_SOUL_RECALL_LANES_RPC:-1}}" == "1" ]]; then
         _rpc_lane_names=()
         for _rpc_lane in sem hyb kw corr; do
             _lane_ablated "$_rpc_lane" || _rpc_lane_names+=("$_rpc_lane")

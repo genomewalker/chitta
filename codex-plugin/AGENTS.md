@@ -20,6 +20,10 @@ the end of the file (#13386, #37956). Anything that must survive lives up here.
    in 11 minutes (#44305).
 6. **Redirect stdin.** `codex exec` blocks on an open stdin ("Reading additional
    input from stdin…"), so `</dev/null` or detach.
+7. **Paste the contents of `~/.claude/agent_safety_preamble.md`** (you cannot
+   resolve `@` imports) at the top of any agent prompt you spawn.
+8. **Streams never install, restart, deploy, or touch `~/.claude`/`~/.codex`.**
+   Commit on your branch; the orchestrator deploys after review.
 
 > Status as of 2026-09-13: **canonical for Codex.** `CLAUDE.md` is canonical for
 > Claude Code; the git-root `AGENTS.md` is a short pointer here. Codex loads
@@ -79,13 +83,48 @@ an object) and records `"exit_code": null` plus `"likely_fail": true` when the
 output reads like a failure. Consumers never treat null as success. That flag is
 text matching, not authority — state failures explicitly in your own report.
 
-## Build & deploy
+## Working in a worktree (what a stream may do)
+
+Bootstrap, from the repo root the orchestrator gives you:
 
 ```bash
-cd chitta && cmake --build build --parallel
-install -m 0755 ../bin/chittad ~/.claude/bin/chittad
-install -m 0755 ../bin/chitta  ~/.claude/bin/chitta
-[ -f ../bin/chitta_hintd ] && install -m 0755 ../bin/chitta_hintd ~/.claude/bin/chitta_hintd
+git worktree add -b <branch> /projects/caeg/scratch/kbd606/tmp/codex-wt-<name> main
+cd /projects/caeg/scratch/kbd606/tmp/codex-wt-<name> && git submodule update --init chitta-field
+# Rust first (only if chitta-field/ changed); the wrapper pins CPython and the embed identity
+export LIBRARY_PATH=/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/lib:$LIBRARY_PATH
+export LD_LIBRARY_PATH=/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/lib:$LD_LIBRARY_PATH
+(cd chitta-field && ./build.sh build --release)   # then verify target/release/.chitta-embed-identity is unchanged
+# C++ (only if chitta/ or chitta-field/ changed), built INSIDE the worktree:
+cmake -S chitta -B chitta/build -DBLAS_openblas_LIBRARY=/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/lib/libopenblas.so \
+  -DBLAS_LIBRARIES=/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/lib/libopenblas.so   # plus the CHITTA_* values from the main checkout's chitta/build/CMakeCache.txt
+cmake --build chitta/build --parallel 8 && (cd chitta/build && ctest)
+```
+
+Tests (all must pass before you commit): `bash -n` every changed shell file;
+`for t in hooks/tests/*.sh; do bash "$t"; done`;
+`cd chitta-mcp && /maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/bin/python3 -m unittest discover tests`
+(server.py needs CPython ≥ 3.10; plain `python3` here is PyPy 3.9 — keep
+`from __future__ import annotations` so hook modules still import there);
+`cd benchmarks/smriti && … -m unittest discover -s tests -t .`;
+`ruff check` on touched Python. Contracts frozen by tests: RPC names/params/JSON
+shapes, the `#<id> [pct%] [type] …` recall line, snapshot/WAL formats.
+
+Evals live in `docs/EVALS.md`: golden set `hooks/grade-recall.py`, SMRITI
+`benchmarks/smriti/`, the frozen replica `scripts/eval-replica.sh`, noise bands
+`benchmarks/noise.json` (accept = Δ beyond 2 sd). Paths in
+`benchmarks/EVAL_IMMUTABLE.txt` are off-limits to a stream; CI fails the branch.
+A stream never installs, restarts, or deploys — see constraint 8; the
+orchestrator builds again on `main` and deploys after review. Streams run in
+parallel only on disjoint file sets; if your spec's scope overlaps another
+stream's, stop and say so.
+
+## Build & deploy (orchestrator only)
+
+```bash
+cd chitta && cmake --build build --parallel && cd ..
+install -m 0755 bin/chittad ~/.claude/bin/chittad
+install -m 0755 bin/chitta  ~/.claude/bin/chitta
+[ -f bin/chitta_hintd ] && install -m 0755 bin/chitta_hintd ~/.claude/bin/chitta_hintd
 systemctl --user restart chittad
 systemctl --user try-restart chitta-hintd 2>/dev/null || true
 bash scripts/dev-install.sh
