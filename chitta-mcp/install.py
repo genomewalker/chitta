@@ -227,6 +227,26 @@ def _is_cc_soul_hook_command(cmd: str, hooks_dir: Path) -> bool:
     )
 
 
+
+def _strip_plugin_entry(text: str, name: str) -> str:
+    """Drop the [plugins."<name>@<marketplace>"] table: its header and the
+    `key = value` lines directly under it. Stops at the next header, a blank
+    line, or a comment so foreign blocks (cc-clip's notify marker) survive."""
+    header = f'[plugins."{name}@{MARKETPLACE}"]'
+    if header not in text:
+        return text
+    out, skip = [], False
+    for line in text.split("\n"):
+        if line.strip() == header:
+            skip = True
+            continue
+        if skip and (line.startswith("[") or line.startswith("#") or not line.strip()):
+            skip = False
+        if skip:
+            continue
+        out.append(line)
+    return "\n".join(out)
+
 def _install_codex():
     source = _plugin_source_dir()
     if not source.is_dir():
@@ -276,10 +296,15 @@ def _install_codex():
         if "hooks" not in features_section:
             text = text.replace("[features]", "[features]\nhooks = true")
 
+    text = _strip_plugin_entry(text, LEGACY_PLUGIN_NAME)
     if f"{PLUGIN_NAME}@{MARKETPLACE}" not in text:
         text += f'\n[plugins."{PLUGIN_NAME}@{MARKETPLACE}"]\nenabled = true\n'
 
     config.write_text(text)
+    legacy_dest = _codex_home() / "plugins" / "cache" / MARKETPLACE / LEGACY_PLUGIN_NAME / "local"
+    if legacy_dest.is_dir():
+        shutil.rmtree(legacy_dest)
+        print(f"  Codex: removed legacy install {legacy_dest}")
 
     # Generate hooks.json
     codex_hooks = _generate_codex_hooks(hooks_dir)
@@ -381,23 +406,10 @@ def _uninstall_codex():
     if config.is_file():
         text = config.read_text()
         for name in (PLUGIN_NAME, LEGACY_PLUGIN_NAME):
-            if f"{name}@{MARKETPLACE}" not in text:
-                continue
-            lines = text.split("\n")
-            out, skip = [], False
-            for line in lines:
-                if f'plugins."{name}@{MARKETPLACE}"' in line:
-                    skip = True
-                    continue
-                if skip and (line.startswith("[") or not line.strip()):
-                    if not line.strip():
-                        continue
-                    skip = False
-                if skip:
-                    continue
-                out.append(line)
-            text = "\n".join(out)
-            print("  Codex: removed config entry")
+            stripped = _strip_plugin_entry(text, name)
+            if stripped != text:
+                text = stripped
+                print("  Codex: removed config entry")
         config.write_text(text)
     return True
 
