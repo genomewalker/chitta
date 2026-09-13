@@ -1,0 +1,396 @@
+#!/usr/bin/env bash
+# Manage a read-mostly chitta daemon from a manifest-committed snapshot.
+set -euo pipefail
+
+EVAL_MIND="${CHITTA_EVAL_MIND:-/projects/caeg/scratch/kbd606/tmp/chitta-eval-mind}"
+LIVE_MIND="${CHITTA_LIVE_MIND:-${HOME}/.claude/mind}"
+LIVE_FIELD="$LIVE_MIND/chitta-field"
+EVAL_FIELD="$EVAL_MIND/chitta-field"
+PID_FILE="$EVAL_MIND/replica.pid"
+ENV_FILE="$EVAL_MIND/replica.env"
+LOG_FILE="$EVAL_MIND/replica.log"
+CHITTAD_BIN="${CHITTAD_BIN:-${HOME}/.claude/bin/chittad}"
+CHITTA_BIN="${CHITTA_BIN:-${HOME}/.claude/bin/chitta}"
+EMBED_MODEL="${CHITTA_EVAL_EMBED_MODEL:-/maps/projects/caeg/people/kbd606/models/nomic-embed-text-v1.5.gguf}"
+EVAL_PORT="${CHITTA_EVAL_PORT:-7433}"
+START_TIMEOUT="${CHITTA_EVAL_START_TIMEOUT:-600}"
+ACTIVE_TMP_MAX_AGE="${CHITTA_EVAL_TMP_MAX_AGE:-600}"
+
+die() { printf 'eval-replica: ERROR: %s\n' "$*" >&2; exit 1; }
+usage() { printf 'usage: %s start|stop|status|snapshot-id\n' "${0##*/}" >&2; exit 2; }
+require_file() { [[ -f "$1" ]] || die "required file not found: $1"; }
+
+validate_paths() {
+    local eval_real live_real home_real
+    eval_real="$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$EVAL_MIND")"
+    live_real="$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$LIVE_MIND")"
+    home_real="$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$HOME")"
+    [[ "$EVAL_MIND" == /* ]] || die "CHITTA_EVAL_MIND must be an absolute path"
+    [[ "$eval_real" != "/" && "$eval_real" != "$home_real" ]] || die "unsafe CHITTA_EVAL_MIND: $EVAL_MIND"
+    [[ "$eval_real" != "$live_real" ]] || die "eval mind must not be the live mind: $EVAL_MIND"
+}
+
+manifest_fingerprint() {
+    python3 - "$LIVE_FIELD" <<'PY'
+import hashlib
+import pathlib
+import sys
+
+root = pathlib.Path(sys.argv[1])
+digest = hashlib.sha256()
+found = False
+for path in (root / "MANIFEST.1", root / "MANIFEST.2"):
+    if path.is_file():
+        found = True
+        digest.update(path.name.encode())
+        digest.update(path.read_bytes())
+if not found:
+    raise SystemExit("no MANIFEST.1 or MANIFEST.2 found")
+print(digest.hexdigest())
+PY
+}
+
+# Emit the newest manifest family for which every recorded file has the
+# committed byte size. This mirrors Manifest::validated_snapshot_path().
+select_family() {
+    python3 - "$LIVE_FIELD" <<'PY'
+import json
+import pathlib
+import re
+import sys
+
+root = pathlib.Path(sys.argv[1])
+candidates = []
+manifest_errors = []
+for manifest_path in (root / "MANIFEST.1", root / "MANIFEST.2"):
+    if not manifest_path.is_file():
+        continue
+    try:
+        manifest = json.loads(manifest_path.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        manifest_errors.append(f"{manifest_path.name}: {exc}")
+        continue
+    if manifest.get("magic") != "CHITTA_FIELD_MANIFEST_V1":
+        manifest_errors.append(f"{manifest_path.name}: wrong manifest magic")
+        continue
+    if manifest.get("format_version") != 1:
+        manifest_errors.append(f"{manifest_path.name}: unsupported format_version")
+        continue
+    families = list((manifest.get("families") or {}).values())
+    if manifest.get("checkpoints"):
+        families.append(manifest["checkpoints"])
+    for family in families:
+        candidates.append((family.get("snapshot_seqno", -1), manifest_path, family))
+
+if not candidates:
+    detail = "; ".join(manifest_errors) or "no committed checkpoint entries"
+    raise SystemExit(f"no usable manifest: {detail}")
+
+failures = []
+seen = set()
+for seqno, manifest_path, family in sorted(candidates, key=lambda item: item[0], reverse=True):
+    snapshot = family.get("snapshot") or {}
+    snapshot_name = snapshot.get("name", "")
+    if snapshot_name in seen:
+        continue
+    seen.add(snapshot_name)
+    match = re.fullmatch(r"chitta\.([0-9A-Fa-f]+)\.snapshot", snapshot_name)
+    if not match:
+        failures.append(f"{manifest_path.name}: unsafe snapshot name {snapshot_name!r}")
+        continue
+    refs = [snapshot, *(family.get("sidecars") or [])]
+    checked = []
+    bad = None
+    for ref in refs:
+        name = ref.get("name", "")
+        expected = ref.get("size_bytes")
+        if not name or pathlib.Path(name).name != name or not isinstance(expected, int):
+            bad = f"invalid file reference {ref!r}"
+            break
+        path = root / name
+        try:
+            actual = path.stat().st_size
+        except OSError:
+            bad = f"missing {name}"
+            break
+        if actual != expected:
+            bad = f"size mismatch for {name}: expected {expected}, got {actual}"
+            break
+        checked.append((name, expected))
+    if bad:
+        failures.append(f"{snapshot_name}: {bad}")
+        continue
+
+    snapshot_id = match.group(1).lower()
+    print(f"ID\t{snapshot_id}")
+    print(f"SEQNO\t{seqno}")
+    print(f"MANIFEST\t{manifest_path.name}")
+    for name, size in checked:
+        print(f"FILE\t{name}\t{size}")
+    cortex = root / f"cortex.{snapshot_id}.snapshot"
+    if cortex.is_file():
+        print(f"CORTEX\t{cortex.name}\t{cortex.stat().st_size}")
+    raise SystemExit(0)
+
+detail = "; ".join(failures[:8])
+raise SystemExit(f"no consistent snapshot family: {detail}")
+PY
+}
+
+assert_not_mid_save() {
+    local snapshot_id="$1"
+    python3 - "$LIVE_FIELD" "$snapshot_id" "$ACTIVE_TMP_MAX_AGE" <<'PY'
+import pathlib
+import re
+import sys
+import time
+
+root = pathlib.Path(sys.argv[1])
+snapshot_id = sys.argv[2]
+max_age = int(sys.argv[3])
+now = time.time()
+active = []
+patterns = (
+    re.compile(r"MANIFEST\.[12]\.tmp$"),
+    re.compile(r"chitta\..+\.(?:snapshot|emb|hdc|bin|mu|hnsw|delta\.hnsw|realm_hnsw|pld|rsf|sup\.json|shdr)\.tmp$"),
+    re.compile(r"cortex\..+\.tmp$"),
+)
+for path in root.iterdir():
+    if not path.is_file() or not any(pattern.fullmatch(path.name) for pattern in patterns):
+        continue
+    selected = path.name.startswith(f"chitta.{snapshot_id}.") or path.name == f"cortex.{snapshot_id}.tmp"
+    manifest_tmp = path.name.startswith("MANIFEST.")
+    if selected or manifest_tmp or now - path.stat().st_mtime <= max_age:
+        active.append(path.name)
+if active:
+    raise SystemExit("snapshot save appears active (temporary files present): " + ", ".join(sorted(active)))
+PY
+}
+
+socket_hash() {
+    python3 - "$EVAL_MIND" <<'PY'
+import sys
+
+value = 5381
+for byte in sys.argv[1].encode():
+    value = ((value << 5) + value + byte) & 0xFFFFFFFF
+print(value)
+PY
+}
+
+replica_socket() { printf '%s/run/chitta/chitta-%s.sock\n' "$EVAL_MIND" "$(socket_hash)"; }
+
+pid_is_ours() {
+    local pid="$1" arg next_is_path=0 saw_daemon=0 saw_path=0 first=1
+    [[ "$pid" =~ ^[0-9]+$ && -r "/proc/$pid/cmdline" ]] || return 1
+    while IFS= read -r -d '' arg; do
+        if (( first )); then
+            [[ "${arg##*/}" == "chittad" ]] || return 1
+            first=0
+        fi
+        if (( next_is_path )); then
+            [[ "$arg" == "$EVAL_MIND" ]] && saw_path=1
+            next_is_path=0
+        elif [[ "$arg" == "--path" ]]; then
+            next_is_path=1
+        elif [[ "$arg" == "daemon" ]]; then
+            saw_daemon=1
+        fi
+    done < "/proc/$pid/cmdline"
+    (( saw_daemon && saw_path ))
+}
+
+running_pid() {
+    [[ -f "$PID_FILE" ]] || return 1
+    local pid
+    read -r pid < "$PID_FILE" || return 1
+    kill -0 "$pid" 2>/dev/null || return 1
+    pid_is_ours "$pid" || return 2
+    printf '%s\n' "$pid"
+}
+
+load_replica_env() {
+    [[ -f "$ENV_FILE" ]] || die "replica metadata not found: $ENV_FILE"
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"
+}
+
+write_replica_env() {
+    local pid="$1" snapshot_id="$2" snapshot_seqno="$3" socket="$4" tmp="$ENV_FILE.tmp"
+    {
+        printf 'CHITTA_EVAL_MIND=%q\n' "$EVAL_MIND"
+        printf 'CHITTA_EVAL_SOCKET=%q\n' "$socket"
+        printf 'CHITTA_EVAL_PORT=%q\n' "$EVAL_PORT"
+        printf 'CHITTA_EVAL_SNAPSHOT_ID=%q\n' "$snapshot_id"
+        printf 'CHITTA_EVAL_SNAPSHOT_SEQNO=%q\n' "$snapshot_seqno"
+        printf 'CHITTA_EVAL_PID=%q\n' "$pid"
+    } > "$tmp"
+    mv "$tmp" "$ENV_FILE"
+}
+
+status_probe() {
+    local socket="$1"
+    "$CHITTA_BIN" --socket-path "$socket" recall --query ping --limit 1 --no-learn
+}
+
+snapshot_id_command() {
+    if [[ -f "$ENV_FILE" ]]; then
+        load_replica_env
+        [[ -n "${CHITTA_EVAL_SNAPSHOT_ID:-}" ]] || die "replica.env has no snapshot id"
+        printf '%s\n' "$CHITTA_EVAL_SNAPSHOT_ID"
+        return
+    fi
+    [[ -d "$LIVE_FIELD" ]] || die "live store directory not found: $LIVE_FIELD"
+    local selection snapshot_id=""
+    selection="$(select_family)" || die "unable to select a snapshot family"
+    while IFS=$'\t' read -r kind value _; do
+        [[ "$kind" == "ID" ]] && snapshot_id="$value"
+    done <<< "$selection"
+    [[ -n "$snapshot_id" ]] || die "snapshot selection returned no id"
+    printf '%s\n' "$snapshot_id"
+}
+
+start_replica() {
+    local pid rc
+    if pid="$(running_pid)"; then
+        load_replica_env
+        printf 'eval replica already running (pid=%s, snapshot=%s)\n' "$pid" "$CHITTA_EVAL_SNAPSHOT_ID"
+        status_probe "$CHITTA_EVAL_SOCKET"
+        return
+    else
+        rc=$?
+        (( rc != 2 )) || die "pidfile $PID_FILE points to a process that is not this replica"
+    fi
+    [[ ! -f "$PID_FILE" ]] || rm -f "$PID_FILE"
+    require_file "$CHITTAD_BIN"
+    require_file "$CHITTA_BIN"
+    require_file "$EMBED_MODEL"
+    require_file /bin/true
+    command -v setsid >/dev/null || die "required command not found: setsid"
+    [[ "$EVAL_PORT" =~ ^[0-9]+$ ]] && (( EVAL_PORT > 0 && EVAL_PORT < 65536 )) || die "invalid CHITTA_EVAL_PORT: $EVAL_PORT"
+    [[ "$START_TIMEOUT" =~ ^[0-9]+$ ]] || die "invalid CHITTA_EVAL_START_TIMEOUT: $START_TIMEOUT"
+    [[ -d "$LIVE_FIELD" ]] || die "live store directory not found: $LIVE_FIELD"
+
+    local before selection snapshot_id="" snapshot_seqno="" manifest_name=""
+    local kind name size stage stage_field after socket runtime_dir old_field i
+    local -a family_files=() family_sizes=()
+    before="$(manifest_fingerprint)" || die "could not fingerprint live manifests"
+    selection="$(select_family)" || die "unable to select a snapshot family"
+    while IFS=$'\t' read -r kind name size; do
+        case "$kind" in
+            ID) snapshot_id="$name" ;;
+            SEQNO) snapshot_seqno="$name" ;;
+            MANIFEST) manifest_name="$name" ;;
+            FILE|CORTEX) family_files+=("$name"); family_sizes+=("$size") ;;
+        esac
+    done <<< "$selection"
+    [[ -n "$snapshot_id" && -n "$snapshot_seqno" && -n "$manifest_name" ]] || die "incomplete snapshot selection"
+    assert_not_mid_save "$snapshot_id" || die "refusing to copy while the live store may be saving"
+
+    mkdir -p "${EVAL_MIND%/*}"
+    stage="$(mktemp -d "${EVAL_MIND}.stage.XXXXXX")"
+    stage_field="$stage/chitta-field"
+    mkdir -p "$stage_field"
+    trap 'rm -rf "${stage:-}"' EXIT
+    printf 'copying snapshot %s (seqno=%s, files=%s)\n' "$snapshot_id" "$snapshot_seqno" "${#family_files[@]}"
+    for ((i = 0; i < ${#family_files[@]}; i++)); do
+        name="${family_files[$i]}"
+        size="${family_sizes[$i]}"
+        cp --reflink=auto --preserve=mode,timestamps "$LIVE_FIELD/$name" "$stage_field/$name"
+        [[ "$(stat -c %s "$stage_field/$name")" == "$size" ]] || die "copied size mismatch for $name"
+        [[ "$(stat -c %s "$LIVE_FIELD/$name")" == "$size" ]] || die "source changed while copying $name"
+    done
+    cp --preserve=mode,timestamps "$LIVE_FIELD/$manifest_name" "$stage_field/$manifest_name"
+    after="$(manifest_fingerprint)" || die "could not re-fingerprint live manifests"
+    [[ "$before" == "$after" ]] || die "live manifest changed during the copy; snapshot discarded"
+    assert_not_mid_save "$snapshot_id" || die "a live snapshot save began during the copy; snapshot discarded"
+
+    mkdir -p "$EVAL_MIND"
+    old_field="$EVAL_MIND/chitta-field.previous.$$"
+    [[ ! -e "$old_field" ]] || rm -rf "$old_field"
+    [[ ! -d "$EVAL_FIELD" ]] || mv "$EVAL_FIELD" "$old_field"
+    mv "$stage_field" "$EVAL_FIELD"
+    rmdir "$stage"
+    stage=""
+    [[ ! -d "$old_field" ]] || rm -rf "$old_field"
+    trap - EXIT
+
+    runtime_dir="$EVAL_MIND/run"
+    mkdir -p "$runtime_dir/chitta"
+    socket="$(replica_socket)"
+    rm -f "$socket"
+    # The daemon's quiesce gate suppresses periodic theme/belief/learning
+    # passes that have no individual CLI switches. CHITTA_NO_QUEUE prevents
+    # this scratch daemon from consuming the live hooks' shared queue.
+    touch "$EVAL_MIND/.quiesce"
+    : > "$LOG_FILE"
+    XDG_RUNTIME_DIR="$runtime_dir" CHITTA_RPC_PORT="$EVAL_PORT" \
+        CHITTA_NO_QUEUE=1 CHITTA_HINT_ENRICHER=/bin/true \
+        nohup setsid "$CHITTAD_BIN" daemon --path "$EVAL_MIND" --foreground \
+            --no-autonomous --no-distill --distill-interval 60 --no-enrich \
+            --no-hygiene --no-embed-interval --embed-model "$EMBED_MODEL" \
+            --rpc-port "$EVAL_PORT" >> "$LOG_FILE" 2>&1 &
+    pid=$!
+    printf '%s\n' "$pid" > "$PID_FILE"
+    write_replica_env "$pid" "$snapshot_id" "$snapshot_seqno" "$socket"
+    printf 'started pid=%s socket=%s rpc_port=%s\n' "$pid" "$socket" "$EVAL_PORT"
+
+    local deadline=$((SECONDS + START_TIMEOUT))
+    while (( SECONDS < deadline )); do
+        if ! kill -0 "$pid" 2>/dev/null; then
+            printf '%s\n' '--- replica.log ---' >&2
+            tail -80 "$LOG_FILE" >&2 || true
+            rm -f "$PID_FILE"
+            die "replica exited before becoming ready"
+        fi
+        if status_probe "$socket" >/dev/null 2>&1; then
+            printf 'ready snapshot=%s seqno=%s\n' "$snapshot_id" "$snapshot_seqno"
+            return
+        fi
+        sleep 2
+    done
+    kill "$pid" 2>/dev/null || true
+    rm -f "$PID_FILE"
+    printf '%s\n' '--- replica.log ---' >&2
+    tail -80 "$LOG_FILE" >&2 || true
+    die "replica did not become ready within ${START_TIMEOUT}s"
+}
+
+stop_replica() {
+    local pid rc
+    if pid="$(running_pid)"; then
+        :
+    else
+        rc=$?
+        (( rc != 2 )) || die "pidfile $PID_FILE points to a process that is not this replica"
+        [[ ! -f "$PID_FILE" ]] || rm -f "$PID_FILE"
+        printf '%s\n' 'eval replica is not running'
+        return
+    fi
+    printf 'stopping pid=%s\n' "$pid"
+    kill "$pid"
+    local deadline=$((SECONDS + 60))
+    while kill -0 "$pid" 2>/dev/null && (( SECONDS < deadline )); do sleep 1; done
+    kill -0 "$pid" 2>/dev/null && die "pid $pid did not stop after SIGTERM"
+    rm -f "$PID_FILE"
+    printf '%s\n' 'stopped'
+}
+
+status_replica() {
+    local pid
+    pid="$(running_pid)" || die "eval replica is not running"
+    load_replica_env
+    printf 'pid=%s snapshot=%s socket=%s rpc_port=%s\n' \
+        "$pid" "$CHITTA_EVAL_SNAPSHOT_ID" "$CHITTA_EVAL_SOCKET" "$CHITTA_EVAL_PORT"
+    status_probe "$CHITTA_EVAL_SOCKET"
+}
+
+validate_paths
+
+case "${1:-}" in
+    start) start_replica ;;
+    stop) stop_replica ;;
+    status) status_replica ;;
+    snapshot-id) snapshot_id_command ;;
+    *) usage ;;
+esac

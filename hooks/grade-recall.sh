@@ -5,13 +5,14 @@ set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Eval quiesce: freeze the daemon's periodic store mutation (distill,
-# consolidation, ...) for the duration of the run — mid-eval distillation
-# swings golden nDCG by ±0.027, swamping any small effect. The daemon
-# ignores flags older than 30 min, so a crashed run can't freeze it.
-quiesce="${MIND:-$HOME/.claude/mind}/.quiesce"
-touch "$quiesce"
-trap 'rm -f "$quiesce"' EXIT
+# The frozen replica has no background work to quiesce. Preserve the live
+# daemon's legacy quiesce behavior when no replica socket was requested.
+quiesce=""
+if [[ -z "${CHITTA_EVAL_SOCKET:-}" ]]; then
+    quiesce="${MIND:-$HOME/.claude/mind}/.quiesce"
+    touch "$quiesce"
+    trap 'rm -f "$quiesce"' EXIT
+fi
 
 out="$(python3 "$here/grade-recall.py" "$@")" || rc=$? || true
 rc="${rc:-0}"
@@ -21,9 +22,14 @@ score="$(printf '%s\n' "$out" | sed -n 's/^SCORE=//p' | tail -1)"
 date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 if [ -n "$score" ]; then
+    socket_args=()
+    if [[ -n "${CHITTA_EVAL_SOCKET:-}" ]]; then
+        socket_args+=(--socket-path "$CHITTA_EVAL_SOCKET")
+    fi
     chitta remember \
         --content "[done] grade-recall baseline score:$score date:$date" \
-        --kind signal --realm cc-soul --tags "grader,baseline,provenance" || true
+        --kind signal --realm cc-soul --tags "grader,baseline,provenance" \
+        "${socket_args[@]}" || true
 fi
 
 exit "$rc"

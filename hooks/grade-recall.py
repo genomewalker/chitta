@@ -24,6 +24,7 @@ import argparse
 import json
 import math
 import os
+import shlex
 import subprocess
 import sys
 import urllib.request
@@ -59,13 +60,12 @@ def s_entropy_from_embeddings(result_ids):
         return 0.0 if _HAS_NUMPY else None
     try:
         out = subprocess.run(
-            [
-                "chitta",
+            _chitta_cli(
                 "get_embeddings",
                 "--ids",
                 json.dumps([str(i) for i in result_ids]),
                 "--json",
-            ],
+            ),
             capture_output=True,
             text=True,
             timeout=30,
@@ -374,6 +374,40 @@ GOLDEN_SET = [
 RESULTS_PATH = Path(__file__).resolve().parent / "grade-recall-results.json"
 GOLD_IDS_PATH = Path(__file__).resolve().parent / "grade-recall-goldids.json"
 
+CHITTA_EVAL_SOCKET = os.environ.get("CHITTA_EVAL_SOCKET")
+
+
+def _chitta_cli(*args: str) -> list[str]:
+    """Build a chitta command, pinning every eval call to the replica socket."""
+    cmd = ["chitta", *args]
+    if CHITTA_EVAL_SOCKET:
+        cmd += ["--socket-path", CHITTA_EVAL_SOCKET]
+    return cmd
+
+
+def _replica_snapshot_id() -> str | None:
+    explicit = os.environ.get("CHITTA_EVAL_SNAPSHOT_ID")
+    if explicit:
+        return explicit
+    if not CHITTA_EVAL_SOCKET:
+        return None
+    eval_mind = Path(
+        os.environ.get(
+            "CHITTA_EVAL_MIND", "/projects/caeg/scratch/kbd606/tmp/chitta-eval-mind"
+        )
+    )
+    try:
+        lines = (eval_mind / "replica.env").read_text().splitlines()
+        value = next(
+            line.split("=", 1)[1]
+            for line in lines
+            if line.startswith("CHITTA_EVAL_SNAPSHOT_ID=")
+        )
+        values = shlex.split(value)
+        return values[0] if values else None
+    except (OSError, StopIteration, ValueError):
+        return None
+
 GREEN = "\033[32m"
 RED = "\033[31m"
 YELLOW = "\033[33m"
@@ -415,6 +449,8 @@ def _recall_full(query: str, limit: int, strategy: str = "") -> dict:
         cmd[-1:-1] = extra
     if strategy:
         cmd += ["--strategy", strategy]
+    if CHITTA_EVAL_SOCKET:
+        cmd += ["--socket-path", CHITTA_EVAL_SOCKET]
     try:
         out = subprocess.run(cmd, capture_output=True, text=True, timeout=60, env=env)
         parsed = json.loads(out.stdout)
@@ -463,7 +499,12 @@ def _rank_rrf(query: str, limit: int) -> tuple[list[dict], list[float] | None]:
     return _rerank_pool(query, pool, limit)
 
 
-_CHITTA_RPC_PORT = int(os.environ.get("CHITTA_RPC_PORT", "7432"))
+_CHITTA_RPC_PORT = int(
+    os.environ.get(
+        "CHITTA_EVAL_PORT" if CHITTA_EVAL_SOCKET else "CHITTA_RPC_PORT",
+        "7433" if CHITTA_EVAL_SOCKET else "7432",
+    )
+)
 
 
 def _chitta_rpc(tool: str, args: dict) -> dict:
@@ -512,7 +553,10 @@ def _graph_hop(seed_ids: list[str], max_hops: int = 2, max_nodes: int = 30) -> s
 def _fetch_memory(mid: str) -> dict | None:
     try:
         out = subprocess.run(
-            ["chitta", "get", "--id", mid, "--json"], capture_output=True, text=True, timeout=10
+            _chitta_cli("get", "--id", mid, "--json"),
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         d = json.loads(out.stdout)
         return {
@@ -954,6 +998,8 @@ def main():
 
     report = {
         "ts": ts,
+        "replica_snapshot_id": _replica_snapshot_id(),
+        "replica_socket": CHITTA_EVAL_SOCKET,
         "canonical_baseline": "v6/reranker/limit=10 (frozen 2026-07-07)",
         "is_canonical_run": canonical,
         "version": GOLDEN_VERSION,
@@ -982,8 +1028,7 @@ def main():
                 f"nDCG={r['ndcg']:.3f} gold_score={r.get('gold_max_score') or 'n/a'}"
             )
             subprocess.run(
-                [
-                    "chitta",
+                _chitta_cli(
                     "remember",
                     "--content",
                     gap_content,
@@ -995,7 +1040,7 @@ def main():
                     "gap,abstain,grader",
                     "--visibility",
                     "1",
-                ],
+                ),
                 capture_output=True,
                 timeout=10,
             )
