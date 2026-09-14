@@ -85,7 +85,7 @@ cycle `N+1`, `--explore-quota 0.3` forces a hypothesis if fewer than
 `ceil(0.3*(N+1))` prior-plus-current choices would be hypotheses. This guarantees
 the quota at each prefix when hypotheses exist, including the first cycle.
 Missing hypothesis cards produce a warning and retain exploration debt.
-`python3 -m evolve.select --dry-run` prints rankings independently (set
+`python3 -m evolve.selector --dry-run` prints rankings independently (set
 `PYTHONPATH=chitta-mcp`). `--c` controls the UCB exploration coefficient.
 
 ## Forward bets and novelty

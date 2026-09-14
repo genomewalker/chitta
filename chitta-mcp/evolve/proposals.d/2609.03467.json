@@ -1,0 +1,42 @@
+{
+  "id": "2609.03467",
+  "title": "When Users Don't Ask: Benchmarking Context-Driven Memory Retrieval in Conversational Agents",
+  "mechanism": "Add a multi-facet query-rewriting pre-step in recall_gateway that expands implicit/composed queries into 2-4 explicit sub-queries before RRF merge, targeting the retrieval gap the paper shows on implicit/composed conversational queries",
+  "expected_gain": {
+    "metric": "recall nDCG@20 on implicit/composed query subset",
+    "delta": 0.03,
+    "confidence": 0.2,
+    "rationale": "chitta's hybrid RRF already merges semantic+typed+spreading+session lanes and reranks, but has no query-rewriting stage, so implicit/composed queries (paper's main gap) aren't reformulated before lane dispatch"
+  },
+  "cost": {
+    "effort_h": 6,
+    "blast_radius": "chitta-mcp/server.py handle_recall_gateway, handle_recall_smart"
+  },
+  "evidence": [
+    {
+      "source": "https://arxiv.org/abs/2609.03467",
+      "claim": "paper finds conversational framing exposes retrieval gaps especially on implicit and composed queries"
+    },
+    {
+      "source": "https://arxiv.org/abs/2609.03467",
+      "claim": "multi-facet query rewriting narrows the gap for raw-turn memory but not abstractive memory"
+    },
+    {
+      "source": "https://arxiv.org/abs/2609.03467",
+      "claim": "strong retrieval does not fully translate into response quality (silent grounding on implicit queries)"
+    }
+  ],
+  "source": "https://arxiv.org/abs/2609.03467",
+  "already_have": false,
+  "kind": "sota-card",
+  "inventory": {
+    "path": "/projects/caeg/scratch/kbd606/tmp/chitta-truth-inventory.md",
+    "sha256": "6a2b73d936ff564571596f34659e799a58314c568673f3561f831fa6fc8150b1"
+  },
+  "created_at": "2026-09-14T04:40:49.301379+00:00",
+  "memory": {
+    "id": "12797685911265476621",
+    "realm": "project:chitta-evolve",
+    "type": "episode"
+  }
+}

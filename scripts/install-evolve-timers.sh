@@ -43,7 +43,7 @@ EOF
 }
 
 unit nightly "gather + rank (dry run)" \
-  "$PY chitta-mcp/evolve/sota_watch.py --max-papers 3 </dev/null; bash scripts/evolve-cycle.sh --dry-run </dev/null" \
+  "(cd chitta-mcp && $PY -m evolve.sota_watch --max-papers 3 </dev/null); bash scripts/evolve-cycle.sh --dry-run </dev/null" \
   "*-*-* 02:30"
 unit weekly "one full cycle (human merge)" \
   "bash scripts/evolve-cycle.sh --implementer codex --model gpt-6-astra --real-eval --open-pr --max-minutes 240 </dev/null" \

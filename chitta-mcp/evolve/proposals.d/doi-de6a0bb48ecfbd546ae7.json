@@ -1,0 +1,34 @@
+{
+  "id": "doi-de6a0bb48ecfbd546ae7",
+  "title": "Consistent Conversational State for Virtual Agents: Slot-Based Memory for Accurate Fact Retrieval",
+  "mechanism": "At write time, classify each new fact into a typed (entity, attribute) slot and enforce single-current-value-per-slot by overwriting/superseding prior fill instead of appending a new memory row alongside it; retrieval then reads slot state directly rather than re-ranking multiple candidate facts.",
+  "expected_gain": {
+    "metric": "LongMemEval longmemeval_s accuracy (%)",
+    "delta": 2.0,
+    "confidence": 0.2,
+    "rationale": "chitta already has triplet_supersede for versioned (s,r,o) overwrite and detect_contradictions/resolve_contradiction for post-hoc cleanup, but nothing forces write-time slot uniqueness before contradictory value_facts are stored, so retrieval can still surface stale/conflicting facts the RRF merge doesn't resolve; enforcing slot schema at ingest is a smaller structural add on top of existing machinery, not a new capability."
+  },
+  "cost": {
+    "effort_h": 6.0,
+    "blast_radius": "chitta-field distill/store write path (value_facts + triplet ingestion), field_distill.cpp dedup logic, contradiction detection hooks"
+  },
+  "evidence": [
+    {
+      "source": "https://doi.org/10.1145/3806774.3832787",
+      "claim": "Paper proposes slot-based memory for virtual agents to keep conversational fact state consistent (title/abstract only, no benchmark numbers available in fetched text)."
+    }
+  ],
+  "source": "https://doi.org/10.1145/3806774.3832787",
+  "already_have": false,
+  "kind": "sota-card",
+  "inventory": {
+    "path": "/projects/caeg/scratch/kbd606/tmp/chitta-truth-inventory.md",
+    "sha256": "6a2b73d936ff564571596f34659e799a58314c568673f3561f831fa6fc8150b1"
+  },
+  "created_at": "2026-09-14T04:40:25.172519+00:00",
+  "memory": {
+    "id": "12797685911265476619",
+    "realm": "project:chitta-evolve",
+    "type": "episode"
+  }
+}

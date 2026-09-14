@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evolve.proposals import candidate  # noqa: E402
-from evolve.select import choose, rank  # noqa: E402
+from evolve.selector import choose, rank  # noqa: E402
 
 
 class SelectTests(unittest.TestCase):

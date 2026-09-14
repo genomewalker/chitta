@@ -1,0 +1,38 @@
+{
+  "id": "2609.08599",
+  "title": "Graph-Based Personalized Memory for LLM Agents: Representation, Evolution, Retrieval, and Evaluation",
+  "mechanism": "Add an explicit typed-relation user/preference subgraph layer on top of chitta's existing triplet store: represent user attributes/preferences/constraints as first-class nodes with typed edges (has_preference, contradicts, supersedes) and evidence links back to source episodes, then retrieve via graph traversal instead of RRF over flat memory lanes for personalization-shaped queries",
+  "expected_gain": {
+    "metric": "longmemeval_s accuracy (%, 50-item set)",
+    "delta": 2.0,
+    "confidence": 0.15,
+    "rationale": "chitta already has triplets, graph_pagerank, graph_traverse, and contradiction detection (detect_contradictions/resolve_contradiction) per inventory §5-6; gap is a personalization-specific typed schema (preference/constraint edge types) and a retrieval path that routes to graph traversal instead of the current hybrid RRF default, not the underlying graph primitives"
+  },
+  "cost": {
+    "effort_h": 6.0,
+    "blast_radius": "chitta-mcp/server.py recall gateway (new strategy=graph_personal option), chitta/src/handlers/field_memory_recall.cpp triplet schema, no daemon storage-format change expected"
+  },
+  "evidence": [
+    {
+      "source": "https://arxiv.org/abs/2609.08599",
+      "claim": "Survey frames graph-based memory as explicit typed relations + temporal context + evidence links, organized around representation/evolution/retrieval/evaluation lifecycle stages"
+    },
+    {
+      "source": "https://arxiv.org/abs/2609.08599",
+      "claim": "Paper says fragmentation exists between personalized-agent memory work and generic graph memory frameworks"
+    }
+  ],
+  "source": "https://arxiv.org/abs/2609.08599",
+  "already_have": false,
+  "kind": "sota-card",
+  "inventory": {
+    "path": "/projects/caeg/scratch/kbd606/tmp/chitta-truth-inventory.md",
+    "sha256": "6a2b73d936ff564571596f34659e799a58314c568673f3561f831fa6fc8150b1"
+  },
+  "created_at": "2026-09-14T04:40:00.010991+00:00",
+  "memory": {
+    "id": "12797685911265476617",
+    "realm": "project:chitta-evolve",
+    "type": "episode"
+  }
+}

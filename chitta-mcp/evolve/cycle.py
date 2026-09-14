@@ -19,7 +19,7 @@ from pathlib import Path
 
 from . import bets
 from .proposals import dedupe, gather, normalize, number, persist
-from .select import choose, history, rank, table
+from .selector import choose, history, rank, table
 from .store import MemoryStore, body
 
 FROZEN = (
