@@ -262,6 +262,17 @@ print(text.strip())
 # raises the admission floor to the C2 KNOWN cut.
 _QTOK=$(printf '%s' "$CLEAN_QUERY" | tr '[:upper:]' '[:lower:]' | grep -oE '[a-z0-9][a-z0-9_>/-]{3,}' | sort -u)
 _QTOK_N=$(printf '%s\n' "$_QTOK" | grep -c . || true)
+# Distinctive subset: generic English/dev words anchor nothing ("manage better
+# short messages query" shares "query" with half the store). Only these tokens
+# may vouch for a candidate when the C2 band says the turn is UNKNOWN.
+_GENERIC_TOKENS=" about after again also always another anything around because been before being better between both build called change changed changes check code come could current data does doing done each either else enough error even every everything file files find first fix from give going good great have help here high into issue just keep know last later less like line lines list little long look made make makes making manage many maybe mean message messages might more most much must need needs never next nothing only other others over please point problem project query question really right same seems short should show simple since small some something start still stuff sure take than that their them then there these they thing things think this those three through time today tried true type under unrelated until update used user uses using very want wants well were what when where whether which while will with within without work working works would write wrong your "
+_QTOK_DISTINCT=""
+for _tok in $_QTOK; do
+    [[ "$_GENERIC_TOKENS" == *" $_tok "* ]] && continue
+    if [[ ${#_tok} -lt 5 ]] && ! [[ "$_tok" =~ [0-9_/\>-] ]]; then continue; fi
+    _QTOK_DISTINCT+="$_tok"$'\n'
+done
+_QTOK_DISTINCT=$(printf '%s' "$_QTOK_DISTINCT" | sort -u)
 _QTOK_MIN="${CHITTA_MIN_QUERY_TOKENS:-${CC_SOUL_MIN_QUERY_TOKENS:-1}}"
 if [[ "${_QTOK_N:-0}" -lt "$_QTOK_MIN" ]]; then
     _NO_TOPIC_LANES=1
@@ -819,11 +830,11 @@ while IFS= read -r line; do
     # (nack-worthy wrong corrections) isn't offset by a small-realm hit.
     if [[ "${CHITTA_UNKNOWN_SILENCE:-${CC_SOUL_UNKNOWN_SILENCE:-1}}" == "1" && -n "${_c2_pct:-}" && "$_c2_pct" -lt 81 ]]; then
         _unk_shares=0
-        if [[ "${_QTOK_N:-0}" -gt 0 ]]; then
+        if [[ -n "${_QTOK_DISTINCT:-}" ]]; then
             _unk_ctok=$(printf '%s' "$line" | tr '[:upper:]' '[:lower:]' | \
                          grep -oE '[a-z0-9][a-z0-9_>/-]{3,}' | sort -u)
             if [[ -n "$_unk_ctok" ]] && \
-               comm -12 <(printf '%s\n' "$_QTOK") <(printf '%s\n' "$_unk_ctok") | grep -q .; then
+               comm -12 <(printf '%s\n' "$_QTOK_DISTINCT") <(printf '%s\n' "$_unk_ctok") | grep -q .; then
                 _unk_shares=1
             fi
         fi

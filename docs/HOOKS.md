@@ -540,6 +540,7 @@ name, except the new explicit `CHITTA_ALLOW_MCP_KILL` bypass
 | `CHITTA_MAX_WAIT`            | `5`          | Max seconds to wait for daemon responses                                 |
 | `CHITTA_CACHE_TTL_MIN`       | `60`         | Prompt-cache TTL in minutes; the `[cache-expired]` banner fires only past it (was a fixed 5 min) |
 | `CHITTA_MIN_QUERY_TOKENS`    | `1`          | Turns with fewer content tokens (4+ chars) than this run only the correction lanes; "Do all"/"Status" no longer pull random rows. A single-token turn raises the admission floor to 70 |
+| (no knob)                     | built in     | UNKNOWN-band anchor: a hybrid/keyword row is admitted only if it shares a *distinctive* turn token (5+ chars, not in the generic-word list in `prompt-core.sh`); "manage better short messages" anchors nothing, "session registry sqlite" does |
 | `CHITTA_PRETOOL_MIN_SIM`     | `0.6`        | `pre-tool-hook` "BEFORE RUNNING" injection requires this semantic similarity; the tag fallback (similarity 0) is never injected |
 | `CHITTA_SOCKET_PATH`         | derived      | Daemon socket override, honoured by the CLI and by `get_socket_path` in every hook; the SMRITI runner and `eval-replica.sh` set it so hooks talk to the frozen replica |
 | `CHITTA_QUEUE`               | `<mind>/queue.jsonl` | Fire-and-forget write queue shared by hooks, MCP and the daemon; derived from the mind dir (`/tmp` does not persist across nodes). `CHITTA_QUEUE_PATH` is a legacy alias, `CHITTA_NO_QUEUE=1` disables consumption |
