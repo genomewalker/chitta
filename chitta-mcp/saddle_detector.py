@@ -191,11 +191,15 @@ def load_tail(ledger: str | os.PathLike, session: str, minutes: float) -> list[d
             continue
         try:
             row = json.loads(line)
-            if (isinstance(row, dict) and row.get("session_id") == session
-                    and row.get("event") == "bash_outcome"
-                    and isinstance(row.get("ts"), (int, float))
-                    and now - minutes * 60000 <= row["ts"] <= now
-                    and isinstance(row.get("cmd_head"), str) and row["cmd_head"].strip()):
+            if (
+                isinstance(row, dict)
+                and row.get("session_id") == session
+                and row.get("event") == "bash_outcome"
+                and isinstance(row.get("ts"), (int, float))
+                and now - minutes * 60000 <= row["ts"] <= now
+                and isinstance(row.get("cmd_head"), str)
+                and row["cmd_head"].strip()
+            ):
                 events.append(row)
         except (ValueError, TypeError):
             continue
@@ -216,9 +220,12 @@ def open_saddle(events: list[dict], args) -> dict | None:
                 groups.append({"shape": shape, "fails": [row]})
         elif row.get("exit_code") in (0, "0"):
             groups = [g for g in groups if g not in matches]
-    candidates = [g for g in groups if len(g["fails"]) >= args.min_fails
-                  and (args.cmd is None or similar(
-                      g["shape"], normalize(args.cmd), args.similarity))]
+    candidates = [
+        g
+        for g in groups
+        if len(g["fails"]) >= args.min_fails
+        and (args.cmd is None or similar(g["shape"], normalize(args.cmd), args.similarity))
+    ]
     if not candidates:
         return None
     group = max(candidates, key=lambda g: g["fails"][-1]["ts"])
@@ -226,12 +233,21 @@ def open_saddle(events: list[dict], args) -> dict | None:
     identity = f"{args.session}:{first['ts']}:{group['shape']}"
     excerpt = " ".join(str(last.get("stderr_head") or "error unavailable").split())[:160]
     n = len(group["fails"])
-    message = (f"[saddle] this command shape failed {n}× in {args.minutes:g} min "
-               f"(last: {excerpt}). Change approach or read the error before retrying.")
-    return {"saddle_id": identity,
-            "start_ts": first["ts"], "end_ts": last["ts"], "n_fails": n,
-            "escaped": False, "cmd_head": first["cmd_head"][:80],
-            "stderr_head": excerpt, "window_minutes": args.minutes, "message": message}
+    message = (
+        f"[saddle] this command shape failed {n}× in {args.minutes:g} min "
+        f"(last: {excerpt}). Change approach or read the error before retrying."
+    )
+    return {
+        "saddle_id": identity,
+        "start_ts": first["ts"],
+        "end_ts": last["ts"],
+        "n_fails": n,
+        "escaped": False,
+        "cmd_head": first["cmd_head"][:80],
+        "stderr_head": excerpt,
+        "window_minutes": args.minutes,
+        "message": message,
+    }
 
 
 def check(events: list[dict], args) -> int:
@@ -248,8 +264,16 @@ def check(events: list[dict], args) -> int:
             if episode["saddle_id"] in handle.read().splitlines():
                 return 1
             handle.write(episode["saddle_id"] + "\n")
-        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
-                                                "additionalContext": episode["message"]}}))
+        print(
+            json.dumps(
+                {
+                    "hookSpecificOutput": {
+                        "hookEventName": "PreToolUse",
+                        "additionalContext": episode["message"],
+                    }
+                }
+            )
+        )
     else:
         print(json.dumps(episode))
     return 0
@@ -262,8 +286,15 @@ def main(argv: list[str] | None = None) -> int:
     if argv and argv[0] == "check" and "--help" not in argv:
         from types import SimpleNamespace
 
-        values = dict(session="", cmd=None, ledger=DEFAULT_LEDGER, min_fails=3,
-                      minutes=7.0, similarity=0.8, notice_file=None)
+        values = dict(
+            session="",
+            cmd=None,
+            ledger=DEFAULT_LEDGER,
+            min_fails=3,
+            minutes=7.0,
+            similarity=0.8,
+            notice_file=None,
+        )
         tokens = iter(argv[1:])
         try:
             for token in tokens:

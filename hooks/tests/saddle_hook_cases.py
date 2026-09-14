@@ -1,4 +1,5 @@
 """Isolated integration cases; commands are hook input and never executed."""
+
 from __future__ import annotations
 
 import importlib.util
@@ -22,32 +23,52 @@ def main():
         base = Path(tmp)
         mind = base / "home/.claude/mind"
         mind.mkdir(parents=True)
-        env = dict(os.environ, HOME=str(base / "home"), CHITTA_DB_PATH=str(mind),
-                   MIND_PATH=str(mind), XDG_RUNTIME_DIR=str(base / "run"),
-                   CHITTA_QUEUE=str(base / "queue"), CHITTA_SOCKET_PATH=str(base / "absent.sock"),
-                   CHITTA_PLUGIN_DIR=str(ROOT), CHITTA_BIN="/bin/true")
+        env = dict(
+            os.environ,
+            HOME=str(base / "home"),
+            CHITTA_DB_PATH=str(mind),
+            MIND_PATH=str(mind),
+            XDG_RUNTIME_DIR=str(base / "run"),
+            CHITTA_QUEUE=str(base / "queue"),
+            CHITTA_SOCKET_PATH=str(base / "absent.sock"),
+            CHITTA_PLUGIN_DIR=str(ROOT),
+            CHITTA_BIN="/bin/true",
+        )
         for key in ("CHITTA_HEADLESS", "CC_SOUL_HEADLESS"):
             env.pop(key, None)
         ledger = mind / "outcome_ledger.jsonl"
         now = int(time.time() * 1000)
-        rows = [dict(ts=now - (3 - i) * 60000, session_id="test-saddle", event="bash_outcome",
-                     cmd_head=f"curl https://broken.test/retry/{i}", exit_code=1,
-                     stderr_head='curl: "connection refused"') for i in range(3)]
+        rows = [
+            dict(
+                ts=now - (3 - i) * 60000,
+                session_id="test-saddle",
+                event="bash_outcome",
+                cmd_head=f"curl https://broken.test/retry/{i}",
+                exit_code=1,
+                stderr_head='curl: "connection refused"',
+            )
+            for i in range(3)
+        ]
 
         def write(events):
             ledger.write_text("".join(json.dumps(e) + "\n" for e in events))
 
         def pre(cmd="curl https://broken.test/retry/9", session="test-saddle", extra_env=None):
-            result = subprocess.run(["bash", str(ROOT / "hooks/pre-tool-hook.sh"), "Bash"],
-                                    input=json.dumps({"session_id": session, "tool_input": {"command": cmd}}),
-                                    text=True, capture_output=True, env=extra_env or env, timeout=3)
+            result = subprocess.run(
+                ["bash", str(ROOT / "hooks/pre-tool-hook.sh"), "Bash"],
+                input=json.dumps({"session_id": session, "tool_input": {"command": cmd}}),
+                text=True,
+                capture_output=True,
+                env=extra_env or env,
+                timeout=3,
+            )
             assert result.returncode == 0, result.stderr
             return result.stdout
 
         write(rows)
         notice = json.loads(pre())["hookSpecificOutput"]
         assert "3× in 7 min" in notice["additionalContext"]
-        assert 'connection refused' in notice["additionalContext"]
+        assert "connection refused" in notice["additionalContext"]
         assert "permissionDecision" not in notice
         assert not pre().strip(), "same saddle must not repeat"
         assert not pre("git status --short").strip(), "unrelated command"
@@ -56,8 +77,13 @@ def main():
         write(rows)
         assert not pre().strip(), "fourth failure must retain saddle ID"
 
-        args = SimpleNamespace(cmd="curl https://broken.test/retry/9", min_fails=3,
-                               similarity=0.8, session="test-saddle", minutes=7)
+        args = SimpleNamespace(
+            cmd="curl https://broken.test/retry/9",
+            min_fails=3,
+            similarity=0.8,
+            session="test-saddle",
+            minutes=7,
+        )
         unknown = dict(rows[-1], ts=now, exit_code=None, likely_fail=False)
         assert saddle.open_saddle(rows + [unknown], args)
         success = dict(unknown, exit_code=0)
@@ -73,12 +99,15 @@ def main():
         assert not pre().strip(), "missing ledger fails open"
 
         # A large irrelevant prefix must not turn each check into a full scan.
-        ledger.write_bytes(b'x' * (2 * 1024 * 1024) + b'\n' + b''.join(
-            (json.dumps(r) + "\n").encode() for r in rows))
+        ledger.write_bytes(
+            b"x" * (2 * 1024 * 1024)
+            + b"\n"
+            + b"".join((json.dumps(r) + "\n").encode() for r in rows)
+        )
         assert len(saddle.load_tail(ledger, "test-saddle", 7)) == 4
 
         # Existing code-intel advice and the saddle must form one JSON output.
-        inline = "python -c 'open(\"x\",\"w\")'"
+        inline = 'python -c \'open("x","w")\''
         write([dict(r, cmd_head=inline) for r in rows[:3]])
         combined = json.loads(pre(inline))["hookSpecificOutput"]["additionalContext"]
         assert "[saddle]" in combined and "[code-intel]" in combined
@@ -87,10 +116,20 @@ def main():
         # The hook's pre-existing notification cleanup is replaced by a shell stub.
         write(rows[:3])
         (mind / ".hb_test-saddle").touch()
-        result = subprocess.run(["bash", "-c", 'pkill() { :; }; export -f pkill; source "$1"',
-                                 "stop-test", str(ROOT / "hooks/stop-core.sh")],
-                                input=json.dumps({"session_id": "test-saddle"}), env=env,
-                                capture_output=True, text=True, timeout=3)
+        result = subprocess.run(
+            [
+                "bash",
+                "-c",
+                'pkill() { :; }; export -f pkill; source "$1"',
+                "stop-test",
+                str(ROOT / "hooks/stop-core.sh"),
+            ],
+            input=json.dumps({"session_id": "test-saddle"}),
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
         assert result.returncode == 0, result.stderr
         assert "[saddle]" in result.stderr
         events = [json.loads(line) for line in ledger.read_text().splitlines()]
@@ -117,19 +156,26 @@ def main():
                 started = time.perf_counter()
                 assert not pre().strip()
                 timings[arm].append((time.perf_counter() - started) * 1000)
-        stats = {arm: {"median_ms": round(statistics.median(values), 2),
-                       "p95_ms": round(sorted(values)[23], 2)}
-                 for arm, values in timings.items()}
-        stats["incremental_median_ms"] = round(stats["no_saddle"]["median_ms"] -
-                                                stats["baseline"]["median_ms"], 2)
+        stats = {
+            arm: {
+                "median_ms": round(statistics.median(values), 2),
+                "p95_ms": round(sorted(values)[23], 2),
+            }
+            for arm, values in timings.items()
+        }
+        stats["incremental_median_ms"] = round(
+            stats["no_saddle"]["median_ms"] - stats["baseline"]["median_ms"], 2
+        )
         # The task budgets added overhead; report full-hook tails separately.
         added = [on - off for on, off in zip(timings["no_saddle"], timings["baseline"])]
         stats["incremental_p95_ms"] = round(sorted(added)[23], 2)
         assert stats["incremental_p95_ms"] < 150, stats
         assert stats["no_saddle"]["median_ms"] < 150, stats
         print("PreToolUse 25 runs/arm: " + json.dumps(stats))
-        print("PASS: saddle notices, dedupe, time/session/shape gates, Codex unknowns, "
-              "Stop telemetry, malformed/bounded ledger, timeout, latency")
+        print(
+            "PASS: saddle notices, dedupe, time/session/shape gates, Codex unknowns, "
+            "Stop telemetry, malformed/bounded ledger, timeout, latency"
+        )
 
 
 if __name__ == "__main__":
