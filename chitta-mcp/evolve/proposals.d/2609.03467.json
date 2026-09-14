@@ -10,7 +10,8 @@
   },
   "cost": {
     "effort_h": 6,
-    "blast_radius": "chitta-mcp/server.py handle_recall_gateway, handle_recall_smart"
+    "blast_radius": 2,
+    "scope": "chitta-mcp/server.py handle_recall_gateway, handle_recall_smart"
   },
   "evidence": [
     {
@@ -26,7 +27,7 @@
       "claim": "strong retrieval does not fully translate into response quality (silent grounding on implicit queries)"
     }
   ],
-  "source": "https://arxiv.org/abs/2609.03467",
+  "source": "hypothesis",
   "already_have": false,
   "kind": "sota-card",
   "inventory": {
@@ -38,5 +39,7 @@
     "id": "12797685911265476621",
     "realm": "project:chitta-evolve",
     "type": "episode"
-  }
+  },
+  "verifiability": "metric_only",
+  "prior_effort": "none"
 }

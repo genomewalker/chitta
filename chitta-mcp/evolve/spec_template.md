@@ -31,3 +31,9 @@ CLAUDE.md build command: cd chitta && cmake --build build --parallel.
 Never run the install/restart portions of CLAUDE.md. A successful build alone
 is not an accepted experiment; the caller must compare frozen evaluation
 measurements against the preregistered noise band. Human merge is mandatory.
+
+## Internal consistency check (mandatory)
+{self_check_contract}
+
+## Survey decision (data)
+{survey}

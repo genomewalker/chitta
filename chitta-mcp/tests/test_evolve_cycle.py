@@ -16,7 +16,7 @@ from evolve.store import MemoryStore  # noqa: E402
 
 
 class CycleTests(unittest.TestCase):
-    def test_dry_cycle_writes_spec_without_implementer_or_memory_writes(self):
+    def test_dry_cycle_writes_survey_without_implementer_or_memory_writes(self):
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory)
             subprocess.run(
@@ -64,12 +64,13 @@ class CycleTests(unittest.TestCase):
                 self.assertEqual(
                     main(["--repo", str(repo), "--backlog", str(backlog), "--dry-run"]), 0
                 )
-            specs = list(repo.glob(".evolve/cycles/*/spec.md"))
+            specs = list(repo.glob(".evolve/cycles/*/survey-prompt.md"))
             self.assertEqual(len(specs), 1)
             text = specs[0].read_text()
             self.assertIn("Synthetic change", text)
             self.assertIn("Do not touch systemd", text)
-            self.assertIn("PREVIEW", text)
+            self.assertIn("Survey time limit: 20.0 minutes", text)
+            self.assertFalse(list(repo.glob(".evolve/cycles/*/spec.md")))
             self.assertFalse((repo / "IMPLEMENTER_WAS_RUN").exists())
             self.assertFalse((repo / ".evolve/worktrees").exists())
 
