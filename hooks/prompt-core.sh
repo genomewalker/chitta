@@ -255,6 +255,20 @@ print(text.strip())
 " 2>/dev/null || echo "$QUERY")
 [[ -z "$CLEAN_QUERY" ]] && exit 0
 
+# Distinctive tokens of the cleaned turn, computed once. A turn with no content
+# token ("Do all", "Status", "ok") has nothing to search for: every topic lane
+# would return near-random high-similarity rows (seen 2026-09-14). Only the
+# correction lanes run for such turns; a single-token turn keeps the lanes but
+# raises the admission floor to the C2 KNOWN cut.
+_QTOK=$(printf '%s' "$CLEAN_QUERY" | tr '[:upper:]' '[:lower:]' | grep -oE '[a-z0-9][a-z0-9_>/-]{3,}' | sort -u)
+_QTOK_N=$(printf '%s\n' "$_QTOK" | grep -c . || true)
+_QTOK_MIN="${CHITTA_MIN_QUERY_TOKENS:-${CC_SOUL_MIN_QUERY_TOKENS:-1}}"
+if [[ "${_QTOK_N:-0}" -lt "$_QTOK_MIN" ]]; then
+    _NO_TOPIC_LANES=1
+elif [[ "${_QTOK_N:-0}" -eq 1 && "$MIN_CONFIDENCE" -lt 70 ]]; then
+    MIN_CONFIDENCE=70
+fi
+
 # Save cleaned message for Stop hook compliance detection (no system markup pollution)
 mkdir -p "$MIND_PATH"
 _prev_turn=$(cat "$MIND_PATH/.last_user_message" 2>/dev/null || true)
@@ -422,6 +436,8 @@ RLM_MODE="${CHITTA_RLM_MODE:-${CC_SOUL_RLM_MODE:-}}"
 # fallback, which runs even in RLM_MODE.
 _ABLATE_LANES_RAW="${CHITTA_ABLATE_LANES:-${CC_SOUL_ABLATE_LANES:-}}"
 _ABLATE_LANES=",${_ABLATE_LANES_RAW},"
+# A turn without content tokens keeps only the correction lanes (see _QTOK_N).
+[[ "${_NO_TOPIC_LANES:-0}" == "1" ]] && _ABLATE_LANES="${_ABLATE_LANES}sem,hyb,kw,ctx,xr,"
 _lane_ablated() { [[ "$_ABLATE_LANES" == *",$1,"* ]]; }
 
 _RECALL_TELEMETRY_ACTIVE=1
@@ -557,7 +573,7 @@ PY
                          --limit 3 --realm "$REALM"
         fi
         if ! _lane_ablated corr; then
-            _launch_lane corr "$MAX_WAIT" "$CHITTA_BIN" recall --query "$QUERY" --tag "correction" --limit 3 --include-global true
+            _launch_lane corr "$MAX_WAIT" "$CHITTA_BIN" recall --query "$QUERY" --tag "correction" --limit 3 --realm "$REALM" --include-global true
         fi
         # DETERMINISTIC correction lane (capability #2). Unlike the fuzzy --tag lane
         # above (which ranks corrections by cosine and drops the right one ~99% of
@@ -729,8 +745,7 @@ _cand_reason=(); _cand_line=()
 # (the dominant bucket, 25/54) has zero shared entity with the turn, while every
 # USED memory echoes the turn's entities. Shadow-join with the used-signal
 # validates the gate before it's allowed to drop live context.
-_QTOK=$(printf '%s' "$CLEAN_QUERY" | tr '[:upper:]' '[:lower:]' | grep -oE '[a-z0-9][a-z0-9_>/-]{3,}' | sort -u)
-_QTOK_N=$(printf '%s\n' "$_QTOK" | grep -c . || true)
+# (_QTOK/_QTOK_N are computed right after CLEAN_QUERY.)
 
 # A terse negation is usually a correction of the immediately preceding turn,
 # not a request for topic search. Broad recall here reinforces the negated noun

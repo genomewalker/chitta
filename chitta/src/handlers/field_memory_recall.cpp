@@ -1644,7 +1644,7 @@ ToolResult FieldRpcHandler::tool_recall_lanes(const json& params) {
         || !add("ctx", {{"query", ctx_query}, {"realm", realm}}, 4, 2000)
         || !add("hyb", {{"query", query}, {"realm", realm}, {"strategy", "hybrid"}}, 5, 3000)
         || !add("kw", {{"query", query}, {"realm", realm}, {"strategy", "keyword"}}, 3, 2000)
-        || !add("corr", {{"query", query}, {"tag", "correction"}, {"include_global", true}}, 3, 2000)
+        || !add("corr", {{"query", query}, {"realm", realm}, {"tag", "correction"}, {"include_global", true}}, 3, 2000)
         || !add("corrk", {{"text", query}}, 0, 2000))
         return ToolResult::error("lane limits must be integers");
 

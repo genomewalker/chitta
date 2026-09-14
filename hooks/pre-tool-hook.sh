@@ -351,8 +351,12 @@ case "$MATCHER" in
             # "No fallback unfiltered recall" intent below, which the old else-branch violated.
             if [[ -n "$_recall_realm" ]]; then
                 for tag in ${tags//,/ }; do
-                    result=$(timeout 2 "$CHITTA_BIN" recall --query "$escaped_query" --tag "$tag" --realm "$_recall_realm" --limit 1 --text-only 2>/dev/null | head -c 400)
-                    [[ -n "$result" && "$result" != *"No memories"* ]] && memories="$memories$result\n"
+                    # A tag filter with a canned query returns the nearest tagged row no
+                    # matter how far it is; the tag fallback even reports similarity 0.
+                    # Inject only rows the semantic leg actually matched.
+                    result=$(timeout 2 "$CHITTA_BIN" recall --json --query "$escaped_query" --tag "$tag" --realm "$_recall_realm" --limit 1 2>/dev/null \
+                        | jq -r --argjson min "${CHITTA_PRETOOL_MIN_SIM:-0.6}" '.results[]? | select((.similarity // 0) >= $min) | .text' 2>/dev/null | head -c 400)
+                    [[ -n "$result" ]] && memories="$memories$result\n"
                 done
             fi
             # No fallback unfiltered recall — avoids cross-domain memory bleed
