@@ -69,6 +69,7 @@ int cf_set_epistemic_status(struct CfHandle* h, uint64_t memory_id, uint8_t epis
 int cf_set_affect(struct CfHandle* h, uint64_t memory_id, float valence, float arousal);
 int64_t cf_compact_wal(struct CfHandle* h);
 size_t  cf_wal_segment_count(const struct CfHandle* h);
+char* cf_wal_status(const struct CfHandle* h);
 int     cf_maybe_compact_wal(struct CfHandle* h, size_t threshold);
 int64_t cf_prune_episodes(struct CfHandle* h, uint64_t max_age_days, size_t max_count);
 uint64_t cf_promote_staged_memories(struct CfHandle* h);
@@ -464,6 +465,14 @@ public:
     }
 
     /// Count WAL segment files.
+    std::string wal_status_json() const {
+        char* raw = cf_wal_status(handle_);
+        if (!raw) return "{}";
+        std::string result(raw);
+        cf_free_string(raw);
+        return result;
+    }
+
     size_t wal_segment_count() const {
         return cf_wal_segment_count(handle_);
     }
