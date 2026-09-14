@@ -222,11 +222,12 @@ def codex_binary() -> str:
         return explicit
     found = shutil.which("codex")
     if found and "node_modules/@openai/codex" not in os.path.realpath(found):
-        return found
+        # Leave it to the child's PATH (tests put a stub codex first there).
+        return "codex"
     local = Path.home() / ".local" / "bin" / "codex"
     if os.access(local, os.X_OK):
         return str(local)
-    return found or "codex"
+    return "codex"
 
 
 def implement_command(args, worktree: Path, spec: str, output: Path) -> list[str]:
