@@ -1,6 +1,6 @@
 {
   "name": "chitta",
-  "version": "5.71.0",
+  "version": "5.72.0",
   "description": "Persistent memory and code intelligence for Codex. Learns preferences, remembers codebases, anticipates needs. 150+ tools. Local-first.",
   "author": {
     "name": "Antonio Fernandez-Guerra",
