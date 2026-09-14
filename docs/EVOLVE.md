@@ -54,6 +54,37 @@ remain for review; the runner does not delete implementation worktrees.
 > Until then `CHITTA_MDL_GATE` stays shadow-only.
 >
 > The cycle resolves the Codex CLI as `CHITTA_CODEX_BIN`, else `~/.local/bin/codex`, else PATH: the bioinfo conda env carries an npm `@openai/codex` 0.151.0 that rejects `gpt-6-astra`.
+> Status as of 2026-09-14 — **MDL gate remains shadow-only.** The historical native
+> tap accepted 0/237 learnings; its same-session pool never engaged in the 12
+> post-deploy rows. The corpus experiment preserves `accept`, `saving`,
+> `evidence_bytes`, and `pool_chunks`, and adds `accept_corpus`, `saving_corpus`,
+> `corpus_chunks`, `corpus_bytes`, and `baseline_bytes`. Corpus saving is
+> `cost(corpus | baseline) - cost(corpus | baseline + learning) - |learning|`,
+> accepting at the existing inclusive 64-byte margin. Each conversation is
+> compressed independently, excluding the producing chunk and overlapping retries.
+> `CHITTA_MDL_CORPUS_CHUNKS` defaults to 8 and `CHITTA_MDL_CORPUS_BYTES` to 524288;
+> at most 64 realm/mind rings are retained. The baseline is recent same-realm
+> learning text filling zlib's 32 KiB dictionary window; older text outside that
+> window is not represented. New episodes retain source path/range, truncation,
+> size and CRC32 descriptors; bootstrap reconstructs matching transcript text
+> when files remain available. Legacy episodes without descriptors stay cold.
+> Within the current source scope bootstrap runs on first distiller construction;
+> a daemon-start hook is still pending. Synthetic 8-chunk / 31,695-byte corpus:
+> recurring fact +223 bytes (accept), local paraphrase +16 (reject), known fact
+> -146 (reject). One-hour wall-clock replay on a private copy of eval snapshot
+> `bbcaed33` (sequence 206208172, manifest generation 38047), with gemma4:26b:
+> old **0/224**, corpus **0/224**; 168 candidates had all eight corpus chunks,
+> and corpus savings ranged from -269 to -58 bytes. Fourteen of 54 completed
+> passes failed before successful distillation; 21 deduplicated learnings were
+> outside the shadow denominator. Nine rows after the cutoff were excluded.
+> The 224 rows cover 229 reported stored learnings: five missing verdicts are
+> unknown. Byte-truncated UTF-8 previews now serialize with replacement rather
+> than dropping the entire row; that logging fix postdates this replay.
+> Inputs were CLI copies split near 4 KiB, with two oversized turns omitted by
+> the read API; source timestamps were unavailable. This is not a verified
+> source-time hour or strictly post-snapshot cohort. The requested nonzero real
+> acceptance rate was **not demonstrated**. `CHITTA_MDL_GATE` still leaves
+> storage unchanged; this experiment is not gating-ready.
 
 ## Proposal sources and scoring
 

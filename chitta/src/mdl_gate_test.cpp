@@ -16,7 +16,76 @@ static void expect(bool ok, const std::string& label) {
     if (!ok) ++failures;
 }
 
-int main() {
+
+static void corpus_tests() {
+    using namespace chitta::mdl;
+    const std::string fact = "RPC retries use three attempts with a 250 millisecond initial delay, "
+        "doubling after each timeout; a successful response resets the retry counter.";
+    const std::vector<std::string> topics = {
+        "The parser preserves quoted paths and reports the physical input line for malformed records.",
+        "The build directory belongs to this checkout so generated headers match its compiler flags.",
+        "The search result includes the source document and the timestamp of its most recent update.",
+        "The worker checks cancellation between batches and finishes the transaction already in flight.",
+        "The scheduler tracks pending requests separately from completed jobs and failed submissions.",
+        "A missing optional configuration file uses defaults; malformed explicit settings produce an error.",
+        "The report lists changed records in chronological order and keeps the original identifier.",
+        "The reader opens a stable snapshot before following new entries from the append-only journal."};
+    std::vector<std::string> corpus;
+    for (size_t i = 0; i < 8; ++i) {
+        std::string text = "[user]\nPlease review the implementation for session " + std::to_string(i) + ".\n";
+        for (size_t j = 0; text.size() < 3800; ++j) {
+            text += (j % 2 ? "[user]\nCan you also explain this case? " : "[assistant]\nI checked the next case. ");
+            text += topics[(i + j * 3) % topics.size()] + " Case " + std::to_string(i * 101 + j) + ".\n";
+        }
+        if (i % 2 == 0) text += "[assistant]\n" + fact + "\n";
+        if (i == 1) text += "[user]\nFor this temporary export, label the output folder amber-marigold-47.\n";
+        corpus.push_back(text);
+    }
+    size_t bytes = 0; for (const auto& c : corpus) bytes += c.size();
+    auto recurring = judge_corpus(fact, corpus);
+    auto local = judge_corpus("Name this temporary export directory amber-marigold-47.", corpus);
+    auto known = judge_corpus(fact, corpus, "Operational guidance:\n" + fact);
+    std::cout << "corpus: chunks=" << corpus.size() << " bytes=" << bytes << "\n";
+    expect(recurring.accept, "recurring fact accepted: saving=" + std::to_string(recurring.saving));
+    expect(!local.accept, "local paraphrase rejected: saving=" + std::to_string(local.saving));
+    expect(!known.accept, "baseline-known fact rejected: saving=" + std::to_string(known.saving));
+    expect(recurring.saving == recurring.c_e - recurring.c_we, "raw learning charge included");
+    expect(judge_corpus(fact, corpus, "", recurring.saving).accept &&
+           !judge_corpus(fact, corpus, "", recurring.saving + 1).accept, "inclusive margin boundary");
+    expect(!judge_corpus(fact, {}).accept && !judge_corpus("", corpus).accept, "empty corpus/learning rejected");
+    auto long_baseline = std::string(kChunkBytes * 2, 'x') + fact;
+    expect(!judge_corpus(fact, corpus, long_baseline).accept, "known fact in oversized dictionary rejected");
+    CorpusRing ring;
+    CorpusRing::Key key{"mind", "realm"};
+    expect(ring.observe(key, {"s0", 0, 10, corpus[0]}).empty(), "empty bootstrap excludes producer");
+    auto prior = ring.observe(key, {"s1", 0, 10, corpus[1]});
+    expect(prior == std::vector<std::string>{corpus[0]}, "cross-session prior evidence");
+    expect(ring.observe(key, {"s1", 0, 10, corpus[1]}) == prior, "retry does not earn recurrence");
+    expect(ring.observe(key, {"s1", 5, 15, corpus[2]}) == prior, "overlap excluded");
+    expect(ring.observe({"mind", "other"}, {"s2", 0, 10, corpus[2]}).empty(), "realm isolation");
+    expect(ring.observe({"other", "realm"}, {"s2", 0, 10, corpus[2]}).empty(), "mind isolation");
+    for (size_t i = 0; i < 8; ++i) ring.observe(key, {"new" + std::to_string(i), 0, 10, corpus[i]});
+    expect(ring.observe(key, {"next", 0, 10, "next"}).size() == 8, "last eight chunks before inserting producer");
+    auto bounded = ring.observe(key, {"small", 0, 10, "small"}, 8, 20);
+    size_t kept = 0; for (const auto& c : bounded) kept += c.size();
+    expect(kept <= 20, "byte cap trims old chunks");
+    ring.observe(key, {"huge", 0, 10, std::string(30, 'x')}, 8, 20);
+    bounded = ring.observe(key, {"probe", 0, 10, "probe"}, 8, 20);
+    expect(bounded.size() == 2, "oversized source skipped, not truncated");
+    expect(ring.observe(key, {"off", 0, 10, "off"}, 0).empty(), "zero chunks disables history");
+    setenv("CHITTA_MDL_CORPUS_CHUNKS", "-1", 1);
+    expect(corpus_chunk_limit() == 8, "invalid chunk setting defaults");
+    setenv("CHITTA_MDL_CORPUS_BYTES", "999999999", 1);
+    expect(corpus_byte_limit() == 8 * 1024 * 1024, "byte configuration bounded");
+    unsetenv("CHITTA_MDL_CORPUS_CHUNKS"); unsetenv("CHITTA_MDL_CORPUS_BYTES");
+}
+
+int main(int argc, char** argv) {
+    if (argc == 2 && std::string(argv[1]) == "--corpus") {
+        corpus_tests();
+        return failures == 0 ? 0 : 1;
+    }
+
     // Deflate's ~32KB back-reference window already captures dense self-repetition
     // for free (see mdl_gate.hpp's module comment), so a compressive case needs the
     // fact to recur *sparsely*, once per otherwise-varied evidence chunk, spanning
