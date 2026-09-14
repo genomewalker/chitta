@@ -68,6 +68,7 @@ SOCKET_PATH=$(get_socket_path)
 # Parse JSON input
 # Claude Code provides: session_id, transcript_path, source (startup|resume|clear|compact)
 INPUT=$(cat)
+exec </dev/null  # stdin consumed; children must not inherit the still-open hook pipe (chitta CLI blocks on it)
 SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty')
 TRANSCRIPT_PATH=$(echo "$INPUT" | jq -r '.transcript_path // empty')
 HOOK_SOURCE=$(echo "$INPUT" | jq -r '.source // "startup"')

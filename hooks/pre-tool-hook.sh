@@ -22,6 +22,7 @@ MATCHER="${1:-}"
 
 CHITTA_BIN="${CHITTA_BIN:-$HOME/.claude/bin/chitta}"
 STDIN_DATA=$(cat)
+exec </dev/null  # stdin consumed; children must not inherit the still-open hook pipe (chitta CLI blocks on it)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib.sh" 2>/dev/null || true

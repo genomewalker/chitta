@@ -21,6 +21,7 @@ source "${SCRIPT_DIR}/lib.sh" 2>/dev/null || true
 
 # Read stdin (PostToolUse gets tool result)
 STDIN_DATA=$(cat)
+exec </dev/null  # stdin consumed; children must not inherit the still-open hook pipe (chitta CLI blocks on it)
 # Debug: `touch $MIND_PATH/.dump_bash_payload` to append raw payloads to
 # $MIND_PATH/bash_payload_dump.jsonl (schema drift diagnosis). Fail-open.
 [[ -f "$MIND_PATH/.dump_bash_payload" ]] && printf '%s\n' "$STDIN_DATA" >> "$MIND_PATH/bash_payload_dump.jsonl" 2>/dev/null || true

@@ -213,6 +213,7 @@ realm_detect_once() {
 
 # Parse input - Claude Code sends JSON with session_id and prompt (gracefully handle malformed input)
 INPUT=$(cat)
+exec </dev/null  # stdin consumed; children must not inherit the still-open hook pipe (chitta CLI blocks on it)
 # Try to extract session_id from JSON first (most reliable source)
 SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null || echo "")
 # Fall back to registry lookup if not in JSON
