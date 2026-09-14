@@ -28,7 +28,10 @@ class CycleProcessTests(unittest.TestCase):
             try:
                 if status.read_text().split()[2] == "Z":
                     return
-            except FileNotFoundError:
+            except (FileNotFoundError, ProcessLookupError):
+                # /proc entry vanished between the exists check and the read
+                # (seen on the CI runner): the process is gone, which is what
+                # we are asserting.
                 return
             time.sleep(0.01)
         self.fail(f"process {pid} still running")
