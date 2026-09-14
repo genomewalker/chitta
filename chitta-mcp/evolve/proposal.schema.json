@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Chitta evolution mechanism card",
   "type": "object",
-  "required": ["id", "title", "mechanism", "expected_gain", "cost", "evidence", "source"],
+  "required": ["id", "title", "mechanism", "expected_gain", "cost", "evidence", "source", "verifiability", "prior_effort"],
   "properties": {
     "id": {"type": "string", "minLength": 1},
     "title": {"type": "string", "minLength": 1},
@@ -25,6 +25,19 @@
       }
     },
     "evidence": {"type": "array"},
-    "source": {"enum": ["telemetry", "memory", "hypothesis"]}
+    "source": {"enum": ["telemetry", "memory", "hypothesis"]},
+    "verifiability": {
+      "enum": ["self_verifying", "metric_only", "judgement"],
+      "default": "metric_only"
+    },
+    "prior_effort": {
+      "enum": ["none", "some", "exhausted"],
+      "default": "none"
+    },
+    "internal_evidence": {
+      "type": "boolean",
+      "readOnly": true,
+      "description": "Derived: nonempty evidence with every source telemetry, ledger, or memory."
+    }
   }
 }

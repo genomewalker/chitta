@@ -3,14 +3,15 @@
   "title": "Graph-Based Personalized Memory for LLM Agents: Representation, Evolution, Retrieval, and Evaluation",
   "mechanism": "Add an explicit typed-relation user/preference subgraph layer on top of chitta's existing triplet store: represent user attributes/preferences/constraints as first-class nodes with typed edges (has_preference, contradicts, supersedes) and evidence links back to source episodes, then retrieve via graph traversal instead of RRF over flat memory lanes for personalization-shaped queries",
   "expected_gain": {
-    "metric": "longmemeval_s accuracy (%, 50-item set)",
-    "delta": 2.0,
+    "metric": "longmemeval_s_accuracy",
+    "delta": 0.02,
     "confidence": 0.15,
     "rationale": "chitta already has triplets, graph_pagerank, graph_traverse, and contradiction detection (detect_contradictions/resolve_contradiction) per inventory §5-6; gap is a personalization-specific typed schema (preference/constraint edge types) and a retrieval path that routes to graph traversal instead of the current hybrid RRF default, not the underlying graph primitives"
   },
   "cost": {
     "effort_h": 6.0,
-    "blast_radius": "chitta-mcp/server.py recall gateway (new strategy=graph_personal option), chitta/src/handlers/field_memory_recall.cpp triplet schema, no daemon storage-format change expected"
+    "blast_radius": 3,
+    "scope": "chitta-mcp/server.py recall gateway (new strategy=graph_personal option), chitta/src/handlers/field_memory_recall.cpp triplet schema, no daemon storage-format change expected"
   },
   "evidence": [
     {
@@ -22,7 +23,7 @@
       "claim": "Paper says fragmentation exists between personalized-agent memory work and generic graph memory frameworks"
     }
   ],
-  "source": "https://arxiv.org/abs/2609.08599",
+  "source": "hypothesis",
   "already_have": false,
   "kind": "sota-card",
   "inventory": {
@@ -34,5 +35,7 @@
     "id": "12797685911265476617",
     "realm": "project:chitta-evolve",
     "type": "episode"
-  }
+  },
+  "verifiability": "metric_only",
+  "prior_effort": "none"
 }

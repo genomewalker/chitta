@@ -14,6 +14,10 @@ from pathlib import Path
 
 from .store import MemoryStore, body
 
+VERIFIABILITY = {"self_verifying": 1.0, "metric_only": 0.7, "judgement": 0.35}
+PRIOR_EFFORT = {"none": 1.0, "some": 0.6, "exhausted": 0.15}
+INTERNAL_SOURCES = {"telemetry", "ledger", "memory"}
+
 
 @dataclass(frozen=True)
 class Proposal:
@@ -24,9 +28,20 @@ class Proposal:
     cost: dict
     evidence: list
     source: str
+    verifiability: str = "metric_only"
+    prior_effort: str = "none"
+
+    @property
+    def internal_evidence(self) -> bool:
+        return bool(self.evidence) and all(
+            isinstance(item, dict)
+            and isinstance(item.get("source"), str)
+            and item["source"] in INTERNAL_SOURCES
+            for item in self.evidence
+        )
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        return dict(asdict(self), internal_evidence=self.internal_evidence)
 
 
 def stable_id(title: str, mechanism: str) -> str:
@@ -73,14 +88,22 @@ def normalize(card: dict) -> Proposal:
     source = str(card["source"])
     if source not in ("telemetry", "memory", "hypothesis"):
         raise ValueError("source must be telemetry, memory or hypothesis")
+    verifiability = card.get("verifiability", "metric_only")
+    prior_effort = card.get("prior_effort", "none")
+    if not isinstance(verifiability, str) or verifiability not in VERIFIABILITY:
+        raise ValueError("invalid verifiability")
+    if not isinstance(prior_effort, str) or prior_effort not in PRIOR_EFFORT:
+        raise ValueError("invalid prior_effort")
     return Proposal(
         stable_id(title, mechanism),
         title,
         mechanism,
         {"metric": str(gain["metric"]), "delta": delta, "confidence": confidence},
-        {"effort_h": effort, "blast_radius": blast},
+        dict(cost, effort_h=effort, blast_radius=blast),
         card["evidence"],
         source,
+        verifiability,
+        prior_effort,
     )
 
 
@@ -92,6 +115,10 @@ def dedupe(proposals: list[Proposal]) -> list[Proposal]:
             evidence = prior.evidence + [e for e in proposal.evidence if e not in prior.evidence]
             card = prior.to_dict()
             card["evidence"] = evidence
+            levels = list(PRIOR_EFFORT)
+            card["prior_effort"] = max(
+                (prior.prior_effort, proposal.prior_effort), key=levels.index
+            )
             proposal = normalize(card)
         merged[proposal.id] = proposal
     return sorted(merged.values(), key=lambda p: p.id)
@@ -112,7 +139,10 @@ def candidate(
             mechanism=mechanism,
             expected_gain=dict(metric=metric, delta=delta, confidence=confidence),
             cost=dict(effort_h=2, blast_radius=1),
-            evidence=evidence,
+            evidence=[
+                dict(item, source=item.get("source", source)) if isinstance(item, dict) else item
+                for item in evidence
+            ],
             source=source,
         )
     )

@@ -1,7 +1,10 @@
-# Autonomous evolution — 2026-09-13
+# Autonomous evolution — 2026-09-14
 
-The loop is **propose → preregister a bet → implement in an isolated worktree →
-gates → frozen replica measurements → verdict memory → optional branch/PR →
+Status 2026-09-14: history-aware selection, bounded candidate survey, and mandatory
+committed SELF_CHECK verification are implemented; deployment remains human-owned.
+
+The loop is **propose → rank → survey in an isolated worktree → choose →
+preregister a bet → implement → SELF_CHECK → gates → frozen replica measurements → verdict memory → optional branch/PR →
 human merge**. Paired baseline and candidate measurements happen after gates;
 only the preregistered prediction is included in the implementer's spec. The package is stdlib-only, with postponed
 annotations, and imports on PyPy 3.9 and CPython 3.12.
@@ -14,8 +17,9 @@ EVOLVE_PYTHON=/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/bin/pyt
 ```
 
 A preview gathers real sources, reads experiment history, runs an available
-immutability check, prints the ranked backlog, writes a spec under
-`.evolve/cycles/<cycle-id>/spec.md`, and prints planned commands. It does not
+immutability check, prints the ranked backlog and survey prompt, and writes
+`survey-prompt.md` and `survey-candidates.json` under `.evolve/cycles/<cycle-id>/`.
+It stops before generating an implementation spec. It does not
 register memories, create a worktree, invoke an implementer, evaluate, or push.
 `--backlog /path/cards.json` supplies a JSON array instead of source gathering;
 stored proposals are still merged. `CHITTA_BIN` can select a CLI stub for tests.
@@ -31,9 +35,11 @@ scripts/evolve-cycle.sh --real-eval --open-pr
 
 Codex defaults to `-m gpt-6-astra -c model_reasoning_effort=high`, with
 `exec -C <worktree> --approve-for-me --skip-git-repo-check`. `--model` overrides
-the model. Claude uses `claude -p` with the worktree as its working directory.
+the model. Claude uses `claude -p --output-format json` with the worktree as its working
+directory; the runner extracts the final `result` string. Codex final messages
+come only from its `-o` file, never from terminal logs.
 Both receive the written spec as one argument, without shell interpolation.
-A cycle creates `evolve/auto-<UTC-date-time>-<proposal-id>` from a pinned `main`
+A cycle creates `evolve/auto-<UTC-date-time>-survey` from a pinned `main`
 commit under `.evolve/worktrees/`. Branches, specs, logs and verdict artifacts
 remain for review; the runner does not delete implementation worktrees.
 
@@ -55,8 +61,29 @@ remain for review; the runner does not delete implementation worktrees.
   [example](../chitta-mcp/evolve/proposals.d/README.md). Hypothesis cards use
   `source: "hypothesis"`.
 
-One `Proposal` holds id, title, mechanism, expected gain, cost, evidence and
-source. IDs hash normalized title plus mechanism, so duplicate observations
+One `Proposal` holds id, title, mechanism, expected gain, cost, evidence, source,
+`verifiability`, and `prior_effort`. New cards require the last two fields in the
+schema; normalization supplies `metric_only` and `none` for old cards. The derived
+`internal_evidence` boolean is true for nonempty evidence only when **every**
+item explicitly names `source: telemetry`, `ledger`, or `memory`. Unknown sources,
+empty evidence, papers, and URLs receive no internal bonus; a card cannot set
+this boolean directly. Generated internal observations carry their provenance.
+
+| Field | Values and utility factors | Meaning |
+|---|---|---|
+| `verifiability` / V | `self_verifying`: 1.0; `metric_only`: 0.7; `judgement`: 0.35 | An internal consistency check falsifies the mechanism; only a replica delta can establish it; or a human must read it. |
+| `prior_effort` / P | `none`: 1.0; `some`: 0.6; `exhausted`: 0.15 | Failed effort on this exact mechanism, with history as a floor. |
+| `internal_evidence` / I | true: 1.2; false: 1.0 | Prefer evidence already inside the artifact. |
+
+The three literature cards are explicitly classified: query rewriting and typed
+preference graphs are `metric_only/none`; slot uniqueness is
+`self_verifying/none` because multiple current values in one slot violate the
+mechanism itself. All three have external evidence. Their numeric blast radii
+are 2, 3, and 3 respectively, with named code paths preserved in `cost.scope`.
+The two 2-percentage-point accuracy priors are represented as fractional 0.02.
+These are card priors, subject to history, not claims that the ideas succeeded.
+
+ IDs hash normalized title plus mechanism, so duplicate observations
 merge their evidence. Production cycles persist JSON bodies as `signal`
 memories tagged `proposal`, exclusively in `project:chitta-evolve`.
 Evolution memories are read with paginated `list_memories_brief` to avoid
@@ -67,7 +94,7 @@ coerces a leading `{` into an object instead of the required string.
 The score is:
 
 ```
-abs(expected_delta) * confidence / (effort_h * blast_radius)
+abs(expected_delta) * confidence / (effort_h * blast_radius) * V * P * I
     + c * sqrt(log(N + 1) / (tries + 1))
 ```
 
@@ -79,14 +106,56 @@ nDCG with 0.3 confidence. RPC overrun and saddle candidates use a 0.1 prior.
 Owners should refine mechanism cards before trusting utility estimates across
 unlike metrics. Raw counter gains are not directly comparable to rate gains.
 
-`N` and `tries` count prior verdicts, including rejects and inconclusive cycles;
+`N` and `tries` count prior implementation choices, including rejects and
+inconclusive cycles; null-choice surveys do not spend the exploration quota;
 repeated cycle IDs count once. Deterministic ID ordering breaks ties. Before
 cycle `N+1`, `--explore-quota 0.3` forces a hypothesis if fewer than
 `ceil(0.3*(N+1))` prior-plus-current choices would be hypotheses. This guarantees
 the quota at each prefix when hypotheses exist, including the first cycle.
 Missing hypothesis cards produce a warning and retain exploration debt.
-`python3 -m evolve.selector --dry-run` prints rankings independently (set
+Exhausted ideas are excluded from exploitation even if their raw UCB score is
+highest; they can win only as hypotheses through the exploration quota. The
+survey shortlist obeys the same eligibility rule, so surveying cannot bypass it.
+`python3 -m evolve.selector --dry-run` prints rankings and each proposal's V/P/I factors and effective effort independently (set
 `PYTHONPATH=chitta-mcp`). `--c` controls the UCB exploration coefficient.
+
+## Survey and effort history
+
+`--top-k` (default 3) sends the highest-ranked eligible proposals to the selected
+implementer, before any forward bet or implementation spec. `--survey-minutes`
+(default 20) is included in `--max-minutes`, capped by the remaining cycle budget.
+The read-only survey inspects each candidate's named code paths, starts with our
+code/telemetry/ledger/memory before literature, and stops after the shortlist or
+when its deadline approaches. It must reserve time to report a decision:
+
+```json
+{"chosen": "canonical-id", "abandoned": [{"id": "other-id", "reason": "check is too costly"}], "tractability": 0.8}
+```
+
+Only this JSON object (optionally in a single `json` fence) is accepted. All
+nonchosen IDs must occur exactly once with reasons, the chosen ID must be in the
+shortlist, and tractability must be a finite JSON number in [0,1]. A null choice
+requires zero tractability. Unknown IDs, duplicates, missing reasons, trailing
+prose, timeout, or edits/commits during the survey stop implementation. Malformed
+or timed-out surveys are inconclusive and do not manufacture effort evidence.
+
+The runner saves the prompt, candidates, raw final output, and parsed
+`survey.json`; the verdict memory embeds the survey. Only after a valid choice
+does it register a bet and write `spec.md`/`proposal.json` for that candidate.
+A null choice ends as `skipped:no_tractable_candidate`, without a bet or spec.
+Each abandoned candidate gets a `prior_effort_updates` entry bumped one level
+(`none → some → exhausted`, capped). These updates live in verdict history;
+the card files are not rewritten by a cycle.
+
+Selection always reads `history()`, even when a card declares `prior_effort`.
+One refuted verdict/resolution for the same whitespace/case-normalized mechanism
+sets at least `some`; two or more set `exhausted`. New verdicts retain the
+mechanism so changing a title/ID does not erase failed effort; old verdicts fall
+back to canonical proposal ID. A refuted bet resolution counts even if the
+cycle was accepted or inconclusive. A compile failure or rejection alone does
+not establish that the mechanism was refuted. Duplicate cycle IDs count once;
+null-survey effort bumps also contribute. Card effort and recorded bumps are
+floors that history cannot lower.
 
 ## Forward bets and novelty
 
@@ -115,6 +184,28 @@ Verdicts link proposal memory, canonical proposal ID and bet ID, with the base
 commit, branch, spec digest, measured deltas and resolution.
 
 ## Evaluation and gates
+
+Every generated implementation spec requires **one internal consistency test**
+that would fail if the mechanism were wrong, under the touched module's `tests/`
+or `test/` directory. The implementer must run it, explain the falsification, and
+name it on exactly one line in its final message:
+
+```text
+SELF_CHECK: chitta-mcp/tests/test_example.py::ExampleTests::test_consistency
+```
+
+The test ID is a repository-relative file plus `::` plus the test symbol. Python
+functions use `test_name`, methods use `ClassName::test_name`, C++ tests use their function name or GoogleTest `Suite.TestName`, and Rust/shell
+tests use the function name. Native test files use .c/.cc/.cpp/.cxx/.rs/.sh;
+new C++ checks can be ordinary test functions without adding a test framework. The runner checks
+that the test exists, its declaration/body intersects the committed diff, and
+its module also has a changed non-test path. An unchanged test, a name in a
+comment, a test in another module, or an absent/ambiguous SELF_CHECK cannot count.
+The artifact records the verified ID. Missing proof forces
+`inconclusive:no_self_check` regardless of the replica delta and prevents
+publication. This structural check does not prove that a test's assertions
+capture the mechanism; the implementer and human review still own that judgment.
+The existing `verdict_for` measurement rules otherwise remain unchanged.
 
 The runner refuses to proceed if `scripts/check-eval-immutable.sh` exists and
 fails, both before selection and after implementation. With no helper it warns

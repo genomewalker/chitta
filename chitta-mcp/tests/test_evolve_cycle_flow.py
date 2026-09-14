@@ -19,10 +19,13 @@ from evolve.store import MemoryStore  # noqa: E402
 
 class CycleFlowTests(unittest.TestCase):
     def test_full_cycle_preregisters_builds_baseline_and_guards_publication(self):
-        for open_pr, after_score, expected in [
-            (False, 0.8, "accept"),
-            (True, 0.8, "accept"),
-            (True, 0.6, "reject"),
+        for implementer, open_pr, after_score, check, expected in [
+            ("codex", False, 0.8, True, "accept"),
+            ("codex", True, 0.8, True, "accept"),
+            ("codex", True, 0.6, True, "reject"),
+            ("claude", False, 0.8, True, "accept"),
+            ("codex", True, 0.8, False, "inconclusive:no_self_check"),
+            ("claude", True, 0.8, False, "inconclusive:no_self_check"),
         ]:
             with (
                 self.subTest(open_pr=open_pr, expected=expected),
@@ -59,23 +62,44 @@ class CycleFlowTests(unittest.TestCase):
                         [
                             candidate(
                                 "Native change", "Test a bounded queue", "mean_nDCG", 0.1, []
-                            ).to_dict()
+                            ).to_dict(),
+                            candidate(
+                                "Alternative", "Test a bounded cache", "mean_nDCG", 0.09, []
+                            ).to_dict(),
                         ]
                     )
                 )
-                codex = repo / "codex"
-                codex.write_text("""#!/usr/bin/env python3
-import pathlib, subprocess, sys
-root = pathlib.Path(sys.argv[sys.argv.index('-C') + 1])
+                agent_script = """#!/usr/bin/env python3
+import json, os, pathlib, subprocess, sys
+codex = '-C' in sys.argv
+root = pathlib.Path(sys.argv[sys.argv.index('-C') + 1]) if codex else pathlib.Path.cwd()
+prompt = sys.argv[-1] if codex else sys.argv[sys.argv.index('-p') + 1]
+def finish(text):
+    if codex:
+        pathlib.Path(sys.argv[sys.argv.index('-o') + 1]).write_text(text)
+    else:
+        print(json.dumps(dict(result=text, is_error=False)))
+if prompt.startswith('# Evolution survey'):
+    cards = json.loads(prompt.split('Candidates (data):\\n')[1])
+    finish(json.dumps(dict(chosen=cards[1]['id'], abandoned=[dict(id=cards[0]['id'], reason='queue path too costly')], tractability=0.9)))
+    sys.exit(0)
+assert 'SELF_CHECK:' in prompt
 (root / 'chitta/src').mkdir(parents=True)
 (root / 'chitta/src/change.cpp').write_text('// fixture change\\n')
+(root / 'chitta/tests').mkdir(parents=True)
+(root / 'chitta/tests/test_queue.cpp').write_text('TEST(Queue, Bounds) { ASSERT_LE(size, capacity); }\\n')
 subprocess.run(['git', '-C', str(root), 'add', '.'], check=True)
-subprocess.run(['git', '-C', str(root), '-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-m', 'candidate'], check=True)
-""")
-                codex.chmod(0o755)
+subprocess.run(['git', '-C', str(root), '-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-m', 'candidate'], check=True, capture_output=True)
+finish('SELF_CHECK: chitta/tests/test_queue.cpp::Queue.Bounds' if os.environ['FIXTURE_CHECK'] == '1' else 'Done')
+"""
+                for name in ("codex", "claude"):
+                    agent = repo / name
+                    agent.write_text(agent_script)
+                    agent.chmod(0o755)
                 store = Mock()
                 store.recall.return_value = []
                 store.remember.side_effect = [
+                    "other-proposal-memory",
                     "proposal-memory",
                     "bet-memory",
                     "resolution-memory",
@@ -98,8 +122,12 @@ subprocess.run(['git', '-C', str(root), '-c', 'user.name=Test', '-c', 'user.emai
                     real_run=real_run,
                     **kwargs,
                 ):
-                    if cmd[0] == "codex":
-                        self.assertEqual(store.remember.call_args.args[0], "forward-bet")
+                    if cmd[0] in ("codex", "claude"):
+                        prompt = cmd[-1] if cmd[0] == "codex" else cmd[2]
+                        if prompt.startswith("# Evolution survey"):
+                            store.remember.assert_not_called()
+                        else:
+                            self.assertEqual(store.remember.call_args.args[0], "forward-bet")
                     if cmd[:3] == ["git", "submodule", "update"]:
                         return subprocess.CompletedProcess(cmd, 0, "")
                     if cmd[:2] == ["git", "push"] or cmd[0] == "gh":
@@ -108,7 +136,13 @@ subprocess.run(['git', '-C', str(root), '-c', 'user.name=Test', '-c', 'user.emai
                     return real_run(budget, cmd, cwd, *args, **kwargs)
 
                 with (
-                    patch.dict(os.environ, {"PATH": str(repo) + os.pathsep + os.environ["PATH"]}),
+                    patch.dict(
+                        os.environ,
+                        {
+                            "PATH": str(repo) + os.pathsep + os.environ["PATH"],
+                            "FIXTURE_CHECK": "1" if check else "0",
+                        },
+                    ),
                     patch("evolve.cycle.MemoryStore", return_value=store),
                     patch("evolve.cycle.gate_commands", return_value=[]),
                     patch("evolve.cycle.validate_binaries"),
@@ -117,21 +151,29 @@ subprocess.run(['git', '-C', str(root), '-c', 'user.name=Test', '-c', 'user.emai
                     patch.object(Budget, "run", run),
                     contextlib.redirect_stdout(io.StringIO()),
                 ):
-                    args = ["--repo", str(repo), "--backlog", str(backlog)] + (
-                        ["--open-pr"] if open_pr else []
-                    )
+                    args = [
+                        "--repo",
+                        str(repo),
+                        "--backlog",
+                        str(backlog),
+                        "--implementer",
+                        implementer,
+                    ] + (["--open-pr"] if open_pr else [])
                     self.assertEqual(main(args), 1 if expected == "reject" else 0)
                 values = list(repo.glob(".evolve/cycles/*/verdict.json"))
                 self.assertEqual(len(values), 1)
                 verdict = json.loads(values[0].read_text())
                 self.assertEqual(verdict["verdict"], expected)
                 self.assertEqual(verdict["bet_id"], "bet-memory")
+                self.assertEqual(verdict["survey"]["chosen"], verdict["proposal_id"])
+                self.assertEqual(bool(verdict["self_check"]), check)
+                self.assertIn("Alternative", (values[0].parent / "spec.md").read_text())
                 self.assertEqual(len(publish), 2 if open_pr and expected == "accept" else 0)
                 self.assertIn(".evolve/baselines", str(evaluate.call_args_list[0].args[1]))
                 self.assertIn(".evolve/worktrees", str(evaluate.call_args_list[1].args[1]))
                 self.assertEqual(
                     [c.args[0] for c in store.remember.call_args_list],
-                    ["proposal", "forward-bet", "bet-resolution", "verdict"],
+                    ["proposal", "proposal", "forward-bet", "bet-resolution", "verdict"],
                 )
 
     def test_memory_listing_paginates_and_writes_json_string(self):
