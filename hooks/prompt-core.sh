@@ -1624,8 +1624,13 @@ fi
 if [[ -n "$OUTPUT" && $COUNT -gt 0 ]]; then
     # #5: sqz intra-turn dedup — collapse repeated memory text seen earlier this session.
     # Only applies within this single turn's recall batch; cross-turn suppression is #1.
+    # Opt-in only (CHITTA_SQZ_DEDUP=1): sqz's dedup replaces a memory line it has
+    # seen before with a "§ref:HASH§" token the model cannot expand from a hook,
+    # so the injected context silently loses the memory. This was masked for
+    # weeks by sqz's broken session store (every call failed open) and surfaced
+    # on 2026-09-14 the moment the store was repaired.
     _SQZ_BIN="${HOME}/.claude/bin/sqz"
-    if [[ -x "$_SQZ_BIN" ]]; then
+    if [[ "${CHITTA_SQZ_DEDUP:-0}" == "1" && -x "$_SQZ_BIN" ]]; then
         OUTPUT=$(printf '%s' "$OUTPUT" | "$_SQZ_BIN" compress --cmd soul 2>/dev/null || printf '%s' "$OUTPUT")
     fi
     _append "[soul]"$'\n'
