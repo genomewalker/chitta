@@ -13,7 +13,15 @@ if [[ "${1:-}" != --session-start-worker ]]; then
     printf -v _budget '%d.%03d' "$((HOOK_BUDGET_MS / 1000))" "$((HOOK_BUDGET_MS % 1000))"
     _trace=()
     [[ $- == *x* ]] && _trace=(-x)
-    timeout --signal=KILL "$_budget" bash "${_trace[@]}" "${BASH_SOURCE[0]}" --session-start-worker "$_ld" "$PPID"
+    timeout --signal=KILL "$_budget" bash "${_trace[@]}" "${BASH_SOURCE[0]}" --session-start-worker "$_ld" "$PPID" > "$_ld/out"
+    _rc=$?
+    if [[ -s "$_ld/out" ]]; then
+        cat "$_ld/out"
+    elif [[ "$_rc" -ne 0 ]]; then
+        # Every lane timed out (daemon busy or node saturated): say so instead of
+        # printing nothing, so the model knows context was not loaded.
+        printf '[chitta] session context unavailable (hook budget %s ms exceeded, daemon busy); run /recap once it responds.\n' "$HOOK_BUDGET_MS"
+    fi
     exit 0
 fi
 _ld="$2"

@@ -191,3 +191,24 @@ per-split scoring and resume identity, sample statistics and echo isolation,
 synthetic Git commits that exercise the approval rule, and read-only task mining.
 Existing harness unit tests use a fake memory CLI and ledger; no live daemon is
 required. CI also imports the new modules at the Python 3.9 deployment floor.
+
+## Utility posteriors: when to flip `CHITTA_UTILITY_RECALL`
+
+> Status as of 2026-09-14: still **off**. Per-memory Beta posteriors only became
+> meaningful on 2026-09-13, when `post-bash-hook.sh` started receiving Claude
+> Code's `PostToolUseFailure` payloads and Codex's exit-less shape; everything
+> recorded before that is success-only and must not be trusted.
+
+Flip procedure (earliest 2026-09-21, one week of real failure data):
+
+```bash
+# 1. how much failure signal exists now
+python3 chitta-mcp/outcome_ledger.py report | head -20
+# 2. recompute posteriors from the ledger and apply them (rows before 2026-09-13
+#    carry no failures; `credit` never counts an unknown exit as success)
+python3 chitta-mcp/outcome_ledger.py credit --apply
+# 3. compare golden and SMRITI on the frozen replica with the flag on vs off
+CHITTA_UTILITY_RECALL=1 bash scripts/eval-noise.sh --agent claude-code --tasks 3 --trials 3 --output /projects/caeg/scratch/kbd606/tmp/noise-utility-on.json
+# 4. accept only if smriti.on.sr / golden.ndcg improve beyond benchmarks/noise.json bands; then set the flag in the chittad drop-in and restart
+```
+

@@ -8,6 +8,29 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 > reconstructed from `git log` between tags; patch releases are grouped under
 > their minor version (`## [5.x.y]`) with per-release dates on one line.
 
+## [5.72.0] - 2026-09-14
+
+### Daemon / store
+- Recall read path no longer writes: access touches accumulate and drain every 5 s; WAL fsync is timer-based (200 ms) with durable ops explicit; TurboQuant index rebuilds on the maintenance thread. Twelve concurrent `recall_lanes`: 1.7–3.6 s → 0.23–0.54 s.
+- Embedding context pool (`CHITTA_EMBED_CONTEXTS`, default 4) and query-embedding LRU cache.
+- Task ledger (threads, inbox, artifacts, session bindings, leases) moved from `~/.claude/task-ledger.db` (NFS sqlite) into the daemon (`ledger_op` RPC) with an idempotent `task_ledger.py migrate`.
+- Queue lives at `<mind>/queue.jsonl`; tag recall is a hard filter with realm applied after; correction lane realm-scoped; MDL small-evidence pooling (shadow).
+- Daemon output kept in `~/.claude/mind/chittad.log` (user journal unreadable on the cluster).
+
+### Hooks
+- SessionStart lanes run concurrently (5.7–7.2 s → ~0.7–1.5 s) with a fallback line when every lane times out; SessionEnd fits its 5 s budget.
+- Prompt hook: in-process realm detection; zero-distinctive-token turns skip topic lanes; UNKNOWN-band candidates need a distinctive turn token; keyword rows need two distinctive tokens or BM25 ≥ 60; pre-tool "BEFORE RUNNING" needs 0.6 similarity; hard guard against killing the `--http` MCP process.
+- Hooks honour `CHITTA_SOCKET_PATH`; failed commands recorded via `PostToolUseFailure`; Codex exit-less shape recorded as unknown.
+
+### MCP
+- Cold recall 10.8 s → 1.1 s (no Transformers import); streamable-HTTP sessions expire idle (30 min) and are capped (64); evolve runner reaps Codex.
+
+### Evolve
+- Proposal cards carry `verifiability`, `prior_effort`, `internal_evidence`; selector weights them; every cycle requires a `SELF_CHECK` test and runs a bounded survey phase first; nightly/weekly timers; `select.py` renamed `selector.py`.
+
+### Eval
+- Frozen replica copies loader markers, records its own pid, retries copies that race a save; real-agent noise calibration in `benchmarks/noise.json`; `hook_total_ms` metric.
+
 ## [5.71.0] - 2026-09-02
 
 ### Changed — project renamed `cc-soul` → `chitta`

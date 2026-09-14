@@ -43,6 +43,16 @@ A cycle creates `evolve/auto-<UTC-date-time>-survey` from a pinned `main`
 commit under `.evolve/worktrees/`. Branches, specs, logs and verdict artifacts
 remain for review; the runner does not delete implementation worktrees.
 
+> Status as of 2026-09-14 — **MDL gate is not gating-ready.** The native shadow tap
+> has judged 237 learnings since 2026-09-02 and accepted 0 (savings −33…−68
+> bytes even for 18 KB evidence); the small-evidence pooling shipped on
+> 2026-09-13 never engaged (`pool_chunks` = 0 in all 12 post-deploy rows) because
+> the distiller sees one chunk per session. The two-part zlib cost model
+> against the *same* chunk cannot reward a learning that compresses future
+> chunks. Next proposal: score a learning by the bytes it saves across the
+> realm's recent N chunks (corpus dictionary), not the chunk that produced it.
+> Until then `CHITTA_MDL_GATE` stays shadow-only.
+
 ## Proposal sources and scoring
 
 * Telemetry reads `~/.claude/mind/outcome_ledger.jsonl`: empty recall divided by

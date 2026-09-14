@@ -539,7 +539,8 @@ name, except the new explicit `CHITTA_ALLOW_MCP_KILL` bypass
 | `CHITTA_SUBAGENT_BASH_RECALL`| `0`          | `1` = run Bash recall for subagent calls (adds ~2s per call, default off)|
 | `CHITTA_MAX_WAIT`            | `5`          | Max seconds to wait for daemon responses                                 |
 | `CHITTA_CACHE_TTL_MIN`       | `60`         | Prompt-cache TTL in minutes; the `[cache-expired]` banner fires only past it (was a fixed 5 min) |
-| `CHITTA_MIN_QUERY_TOKENS`    | `1`          | Turns with fewer content tokens (4+ chars) than this run only the correction lanes; "Do all"/"Status" no longer pull random rows. A single-token turn raises the admission floor to 70 |
+| `CHITTA_MIN_QUERY_TOKENS`    | `1`          | Turns with fewer *distinctive* tokens (5+ chars, not in the generic-word list) than this run only the correction lanes; "Do all", "is it working now", "what else is missing" pull nothing. Exactly one distinctive token raises the admission floor to 70 |
+| `CHITTA_KW_SINGLE_TOKEN_MIN` | `60`         | Keyword rows need this BM25 confidence when the turn has fewer than two distinctive tokens |
 | (no knob)                     | built in     | UNKNOWN-band anchor: a hybrid/keyword row is admitted only if it shares a *distinctive* turn token (5+ chars, not in the generic-word list in `prompt-core.sh`); "manage better short messages" anchors nothing, "session registry sqlite" does |
 | `CHITTA_PRETOOL_MIN_SIM`     | `0.6`        | `pre-tool-hook` "BEFORE RUNNING" injection requires this semantic similarity; the tag fallback (similarity 0) is never injected |
 | `CHITTA_SOCKET_PATH`         | derived      | Daemon socket override, honoured by the CLI and by `get_socket_path` in every hook; the SMRITI runner and `eval-replica.sh` set it so hooks talk to the frozen replica |

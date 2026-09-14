@@ -278,7 +278,7 @@ _QTOK_N=$(printf '%s\n' "$_QTOK" | grep -c . || true)
 # Distinctive subset: generic English/dev words anchor nothing ("manage better
 # short messages query" shares "query" with half the store). Only these tokens
 # may vouch for a candidate when the C2 band says the turn is UNKNOWN.
-_GENERIC_TOKENS=" about after again also always another anything around because been before being better between both build called change changed changes check code come could current data does doing done each either else enough error even every everything file files find first fix from give going good great have help here high into issue just keep know last later less like line lines list little long look made make makes making manage many maybe mean message messages might more most much must need needs never next nothing only other others over please point problem project query question really right same seems short should show simple since small some something start still stuff sure take than that their them then there these they thing things think this those three through time today tried true type under unrelated until update used user uses using very want wants well were what when where whether which while will with within without work working works would write wrong your "
+_GENERIC_TOKENS=" perfect missing else please thanks thank great done ready working broken wrong correct fine okay again still also need want check status update issue problem think know maybe sure whats what's hello there anything everything something nothing already yet already once twice around later earlier today tomorrow yesterday tonight morning evening about after again also always another anything around because been before being better between both build called change changed changes check code come could current data does doing done each either else enough error even every everything file files find first fix from give going good great have help here high into issue just keep know last later less like line lines list little long look made make makes making manage many maybe mean message messages might more most much must need needs never next nothing only other others over please point problem project query question really right same seems short should show simple since small some something start still stuff sure take than that their them then there these they thing things think this those three through time today tried true type under unrelated until update used user uses using very want wants well were what when where whether which while will with within without work working works would write wrong your "
 _QTOK_DISTINCT=""
 for _tok in $_QTOK; do
     [[ "$_GENERIC_TOKENS" == *" $_tok "* ]] && continue
@@ -286,10 +286,13 @@ for _tok in $_QTOK; do
     _QTOK_DISTINCT+="$_tok"$'\n'
 done
 _QTOK_DISTINCT=$(printf '%s' "$_QTOK_DISTINCT" | sort -u)
+_QTOK_DISTINCT_N=$(printf '%s\n' "$_QTOK_DISTINCT" | grep -c . || true)
 _QTOK_MIN="${CHITTA_MIN_QUERY_TOKENS:-${CC_SOUL_MIN_QUERY_TOKENS:-1}}"
-if [[ "${_QTOK_N:-0}" -lt "$_QTOK_MIN" ]]; then
+# Gate on DISTINCTIVE tokens: "is it working now" has four tokens and nothing
+# to anchor on; its hybrid rows were 70% [operational] notes about "working".
+if [[ "${_QTOK_DISTINCT_N:-0}" -lt "$_QTOK_MIN" ]]; then
     _NO_TOPIC_LANES=1
-elif [[ "${_QTOK_N:-0}" -eq 1 && "$MIN_CONFIDENCE" -lt 70 ]]; then
+elif [[ "${_QTOK_DISTINCT_N:-0}" -eq 1 && "$MIN_CONFIDENCE" -lt 70 ]]; then
     MIN_CONFIDENCE=70
 fi
 
@@ -862,6 +865,11 @@ while IFS= read -r line; do
         elif [[ "$reason" == "kw" || "$reason" == "hyb" || "$reason" == "xr" ]]; then
             [[ "$_unk_shares" -eq 0 ]] && { ((++_drop_unk)); continue; }
         fi
+    fi
+    # A keyword row that rides on ONE distinctive token ("missing" in "what else
+    # is missing") is a literal-word coincidence unless BM25 is confident.
+    if [[ "$reason" == "kw" && "${_QTOK_DISTINCT_N:-0}" -lt 2 && "$conf" -lt "${CHITTA_KW_SINGLE_TOKEN_MIN:-60}" ]]; then
+        ((++_drop_conf)); continue
     fi
 
     # Skip episode thinking-blocks — internal reasoning traces, never useful as injected context
