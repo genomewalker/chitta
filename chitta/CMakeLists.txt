@@ -520,12 +520,24 @@ if(CHITTA_BUILD_TESTS)
     target_link_libraries(maintenance_jitter_test PRIVATE chitta)
     add_test(NAME maintenance_jitter_test COMMAND maintenance_jitter_test)
 
+    add_executable(embed_cache_test src/embed_cache_test.cpp)
+    target_include_directories(embed_cache_test PRIVATE "${CHITTA_FIELD_INCLUDE}")
+    target_link_libraries(embed_cache_test PRIVATE chitta)
+    add_test(NAME embed_cache_test COMMAND embed_cache_test)
+    if(CHITTA_WITH_LLAMA_CPP)
+        add_executable(embed_pool_test src/embed_pool_test.cpp)
+        target_link_libraries(embed_pool_test PRIVATE chitta llama ggml Threads::Threads)
+        target_compile_options(embed_pool_test PRIVATE -UNDEBUG ${CHITTA_WARN_FLAGS})
+        add_test(NAME embed_pool_test COMMAND embed_pool_test)
+        set_tests_properties(embed_pool_test PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 180)
+    endif()
+
     set(CHITTA_TEST_TARGETS
         task_ledger_test
         thread_pool_test llm_probe_test callsite_extract_test
         value_fact_extract_test mdl_gate_test prefilter_keep_test
         hit_line_test tool_spec_test rpc_work_policy_test recall_lanes_test
-        maintenance_jitter_test)
+        maintenance_jitter_test embed_cache_test)
     foreach(t ${CHITTA_TEST_TARGETS})
         target_compile_options(${t} PRIVATE -UNDEBUG ${CHITTA_WARN_FLAGS})
     endforeach()
