@@ -8,6 +8,8 @@
 #include <cstdio>
 #include <cmath>
 #include <mutex>
+#include <array>
+#include <semaphore>
 #include <atomic>
 #include <thread>
 #include <chrono>
@@ -58,7 +60,8 @@ public:
 
     Artha transform(const std::string& vak, EmbedMode mode) override {
         Vector v = embed_one(add_prefix(vak, mode), mode == EmbedMode::Query);
-        return Artha{std::move(v), ready_ ? 1.0f : 0.0f, vak};
+        const bool valid = std::any_of(v.data.begin(), v.data.end(), [](float x) { return x != 0.0f; });
+        return Artha{std::move(v), valid ? 1.0f : 0.0f, vak};
     }
 
     std::vector<Artha> transform_batch(const std::vector<std::string>& vaks) override {
@@ -73,18 +76,36 @@ public:
     }
 
 private:
+    friend struct LlamaYantraTestAccess;
     std::string    model_path_;
     bool           ready_  = false;
     bool           gpu_    = false;
     int            n_embd_ = 0;
     int            n_ctx_eff_ = N_CTX;  // effective context = min(N_CTX, model trained ctx)
     llama_model*   model_  = nullptr;
-    llama_context* ctx_    = nullptr;
-    mutable std::mutex mtx_;  // llama_context is NOT thread-safe
-    // Recall-priority gate for the single llama context. Recall query embeds must not
-    // queue behind a burst of background document embeds (distill/embed_loop/backfill),
-    // which was the recall-starvation point the rpc_mutex priority gate never covered.
-    mutable std::atomic<int> query_waiters_{0};
+    struct Context {
+        llama_context* ctx = nullptr;
+        std::mutex mutex;  // A llama_context is never used by two callers at once.
+    };
+    std::array<Context, 16> contexts_;
+    std::counting_semaphore<16> available_{0};
+    size_t context_count_ = 0;
+    std::atomic<int> query_waiters_{0};
+
+    static int configured_contexts() {
+        const char* env = std::getenv("CHITTA_EMBED_CONTEXTS");
+        if (!env || !*env) return 4;
+        char* end = nullptr;
+        long n = std::strtol(env, &end, 10);
+        return end == env || *end ? 4 : static_cast<int>(std::clamp(n, 1L, 16L));
+    }
+
+    // Return the context before its permit, including on decode failure/exception.
+    struct Lease {
+        std::unique_lock<std::mutex> lock;
+        std::counting_semaphore<16>& available;
+        ~Lease() { lock.unlock(); available.release(); }
+    };
 
     static std::string add_prefix(const std::string& text, EmbedMode mode) {
         if (mode == EmbedMode::Query) return "search_query: "    + text;
@@ -151,47 +172,63 @@ private:
             int nt = std::atoi(t);
             if (nt > 0) { cparams.n_threads = nt; cparams.n_threads_batch = nt; }
         }
-        ctx_ = llama_init_from_model(model_, cparams);
-        if (!ctx_) return false;
+        for (int i = 0; i < configured_contexts(); ++i) {
+            auto* ctx = llama_init_from_model(model_, cparams);
+            if (!ctx) return false;  // Constructor cleanup frees even a partial pool.
+            contexts_[context_count_++].ctx = ctx;
+        }
+        available_.release(context_count_);
+        log("[llama-embed] contexts=" + std::to_string(context_count_) +
+            " threads/context=" + std::to_string(cparams.n_threads));
 
         gpu_ = llama_supports_gpu_offload() && (N_GPU_LAYERS > 0);
         return true;
     }
 
     void cleanup() {
-        if (ctx_)   { llama_free(ctx_);         ctx_   = nullptr; }
+        for (auto& context : contexts_) {
+            if (context.ctx) { llama_free(context.ctx); context.ctx = nullptr; }
+        }
+        context_count_ = 0;
         if (model_) { llama_model_free(model_); model_ = nullptr; }
         // Do NOT call llama_backend_free() — it's process-global; freeing here risks
         // double-free if the yantra is replaced/reconstructed during the daemon lifetime.
         ready_ = false;
     }
 
-    // high_prio (recall query embeds) take the context ahead of background document
-    // embeds. A query registers as a waiter and blocks on the mutex; background embeds
-    // never queue on the mutex while a query waits — they try_lock and back off between
-    // attempts — so a recall waits at most one in-flight forward pass, not the whole
-    // background burst. ceiling: unbroken recall traffic defers background embeds
-    // indefinitely (same posture as the embed_loop recall gate); backlog drains in gaps.
+    // Query waiters claim permits ahead of background work. Sustained recall can
+    // defer documents indefinitely; background queues drain between recall bursts.
     Vector embed_one(const std::string& text, bool high_prio) {
-        std::unique_lock<std::mutex> lock(mtx_, std::defer_lock);
+        if (!ready_ || !model_) return {};
         if (high_prio) {
             query_waiters_.fetch_add(1, std::memory_order_acq_rel);
-            lock.lock();
+            available_.acquire();
             query_waiters_.fetch_sub(1, std::memory_order_acq_rel);
         } else {
             for (;;) {
-                while (query_waiters_.load(std::memory_order_acquire) > 0)
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                if (lock.try_lock()) {
+                if (query_waiters_.load(std::memory_order_acquire) == 0
+                    && available_.try_acquire()) {
                     if (query_waiters_.load(std::memory_order_acquire) == 0) break;
-                    lock.unlock();  // a query arrived after try_lock — yield to it
+                    available_.release();
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
         }
-        Vector v;  // default: zero vector
-        if (!ready_ || !ctx_ || !model_) return v;
+        // A permit guarantees a free context, but another admitted caller may
+        // win a try_lock while we scan. Retry the scan rather than queue on it.
+        for (;;) {
+            for (size_t i = 0; i < context_count_; ++i) {
+                std::unique_lock<std::mutex> lock(contexts_[i].mutex, std::try_to_lock);
+                if (!lock.owns_lock()) continue;
+                Lease lease{std::move(lock), available_};
+                return embed_context(text, contexts_[i].ctx);
+            }
+            std::this_thread::yield();
+        }
+    }
 
+    Vector embed_context(const std::string& text, llama_context* ctx) {
+        Vector v;
         const llama_vocab* vocab = llama_model_get_vocab(model_);
 
         // Tokenize — add_special=true so BOS/EOS are added per model config.
@@ -213,10 +250,10 @@ private:
         toks.resize(n);
 
         // Clear KV cache between sequences — essential for pooled embeddings.
-        llama_memory_clear(llama_get_memory(ctx_), false);
+        llama_memory_clear(llama_get_memory(ctx), false);
 
         llama_batch batch = llama_batch_get_one(toks.data(), (int)toks.size());
-        if (llama_decode(ctx_, batch) != 0) {
+        if (llama_decode(ctx, batch) != 0) {
             // Edge-case input (e.g. empty/oversized batch): drop this embedding and
             // return the zero vector. Do NOT rebuild the context here — a per-item
             // context reinit rebuilt the whole llama ctx under the embed mutex and
@@ -229,8 +266,8 @@ private:
         }
 
         // Prefer pooled sequence embedding; fall back to per-token mean if unavailable.
-        const float* emb = llama_get_embeddings_seq(ctx_, 0);
-        if (!emb) emb = llama_get_embeddings(ctx_);
+        const float* emb = llama_get_embeddings_seq(ctx, 0);
+        if (!emb) emb = llama_get_embeddings(ctx);
         if (!emb) return v;
 
         v.data.assign(emb, emb + EMBED_DIM);

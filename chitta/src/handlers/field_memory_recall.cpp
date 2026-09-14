@@ -1629,6 +1629,9 @@ ToolResult FieldRpcHandler::tool_recall_lanes(const json& params) {
             if (!limit) return false;
             args["limit"] = *limit;
         }
+        // sem/ctx call smart_recall, which ignores _preembedding and embeds
+        // expand_query(query).vec. Keep those semantics: that string may differ
+        // from the dispatcher's time-stripped query; embed_query caches it exactly.
         if (params.contains("_preembedding") && name != "sem" && name != "ctx"
             && name != "corrk")
             args["_preembedding"] = params["_preembedding"];

@@ -34,6 +34,8 @@
 #include <fstream>
 #include <algorithm>
 #include <mutex>
+#include <list>
+#include <future>
 #include <shared_mutex>
 #include <atomic>
 #include <optional>
@@ -70,6 +72,89 @@ inline std::string display_path(const std::string& file_path) {
     }
     return basename;
 }
+
+// Exact query strings, including their whitespace/case, identify query-mode vectors.
+// In-flight requests share a future; inference never holds the LRU mutex.
+class QueryEmbeddingCache {
+public:
+    explicit QueryEmbeddingCache(size_t capacity = configured_capacity()) : capacity_(capacity) {}
+
+    static size_t configured_capacity() {
+        const char* env = std::getenv("CHITTA_EMBED_CACHE");
+        if (!env || !*env) return 512;
+        char* end = nullptr;
+        long n = std::strtol(env, &end, 10);
+        return end == env || *end || n < 0 ? 512 : static_cast<size_t>(n);
+    }
+
+    template<class Compute>
+    std::vector<float> get(const std::string& query, Compute compute) {
+        if (query.empty()) return {};
+        if (capacity_ == 0) {
+            misses_.fetch_add(1, std::memory_order_relaxed);
+            return compute();
+        }
+        std::shared_future<std::vector<float>> pending;
+        std::promise<std::vector<float>> promise;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            auto cached = entries_.find(query);
+            if (cached != entries_.end()) {
+                hits_.fetch_add(1, std::memory_order_relaxed);
+                lru_.splice(lru_.begin(), lru_, cached->second);
+                return cached->second->second;
+            }
+            auto flight = flights_.find(query);
+            if (flight != flights_.end()) {
+                coalesced_.fetch_add(1, std::memory_order_relaxed);
+                pending = flight->second;
+            } else {
+                misses_.fetch_add(1, std::memory_order_relaxed);
+                flights_.emplace(query, promise.get_future().share());
+            }
+        }
+        if (pending.valid()) return pending.get();
+        try {
+            auto value = compute();
+            {
+                std::lock_guard<std::mutex> lock(mutex_);
+                // Failures must be retried; never retain an empty fallback.
+                if (!value.empty()) {
+                    lru_.emplace_front(query, value);
+                    try { entries_.emplace(query, lru_.begin()); }
+                    catch (...) { lru_.pop_front(); throw; }
+                    if (entries_.size() > capacity_) {
+                        entries_.erase(lru_.back().first);
+                        lru_.pop_back();
+                    }
+                }
+                promise.set_value(value);
+                flights_.erase(query);
+            }
+            return value;
+        } catch (...) {
+            std::lock_guard<std::mutex> lock(mutex_);
+            promise.set_exception(std::current_exception());
+            flights_.erase(query);
+            throw;
+        }
+    }
+
+    json stats() const {
+        return {{"capacity", capacity_},
+                {"hits", hits_.load(std::memory_order_relaxed)},
+                {"misses", misses_.load(std::memory_order_relaxed)},
+                {"coalesced", coalesced_.load(std::memory_order_relaxed)}};
+    }
+
+private:
+    const size_t capacity_;
+    std::mutex mutex_;
+    std::list<std::pair<std::string, std::vector<float>>> lru_;
+    std::unordered_map<std::string, decltype(lru_)::iterator> entries_;
+    std::unordered_map<std::string, std::shared_future<std::vector<float>>> flights_;
+    std::atomic<uint64_t> hits_{0}, misses_{0}, coalesced_{0};
+};
 
 class FieldRpcHandler {
 public:
@@ -210,6 +295,7 @@ public:
             {"pool_active",      pool_active},
             {"pool_pending",     pool_pending},
             {"rpc_over_budget",  rpc_budget_.over_budget_count()},
+            {"embed_cache", query_embed_cache_.stats()},
         };
         std::string text = "Status: ok\nchitta-field daemon healthy\n  memories : ~"
                            + std::to_string(mem) + "\n";
@@ -525,14 +611,9 @@ public:
                     }
                 }
                 if (!q.empty()) {
-                    std::vector<float> emb;
-                    if (embed_queue_) {
-                        emb = embed_queue_->query(q, std::chrono::milliseconds(50));
-                        if (emb.empty()) embed_queue_->enqueue_write(q); // async cache warm
-                    } else if (yantra_) {
-                        Artha a = yantra_->transform(q, EmbedMode::Query);
-                        if (a.certainty > 0.0f) emb = a.nu.data;
-                    }
+                    auto emb = embed_query(q);
+                    if (emb.empty() && embed_queue_)
+                        embed_queue_->enqueue_write(q); // preserve async cache warm
                     if (!emb.empty()) args["_preembedding"] = emb;
                 }
             }
@@ -578,6 +659,8 @@ public:
             if (_was_write && field_store_) {
                 field_store_->sync();
             }
+            if (name == "health_check" && !result.is_error)
+                result.structured["embed_cache"] = query_embed_cache_.stats();
             return make_tool_response(id, result);
         }
         return rpc::make_error(id, -32601, "Unknown method: " + method);
@@ -600,6 +683,7 @@ private:
     RecallCallback recall_callback_;
     WriteNotifyCallback write_notify_fn_;
     EmbedQueue* embed_queue_ = nullptr;
+    QueryEmbeddingCache query_embed_cache_;
     std::string mind_path_;                  // base mind dir (parent of chitta-field)
 
     mutable std::shared_mutex rpc_mutex_;    // Reads share, writes exclusive; see is_read_only_tool()
@@ -654,17 +738,16 @@ private:
         return (a.certainty > 0.0f) ? a.nu.data : std::vector<float>{};
     }
 
-    // Read-path embed: await via queue (≤50ms), fall to BM25 on miss.
-    // ceiling: 2000ms caused pool workers to block 2s each on cold cache —
-    // 16 workers × 2s = 32s of wasted pool capacity per recall burst.
-    // upgrade: per-query dedup map so N concurrent callers share one GPU call.
+    // Read-path cache covers both dispatcher pre-embedding and internal lanes.
+    // The queue retains its existing 50ms fallback; direct inference uses the pool.
     std::vector<float> embed_query(const std::string& query) {
-        if (query.empty()) return {};
-        if (embed_queue_)
-            return embed_queue_->query(query, std::chrono::milliseconds(50));
-        if (!yantra_) return {};
-        Artha a = yantra_->transform(query, EmbedMode::Query);
-        return (a.certainty > 0.0f) ? a.nu.data : std::vector<float>{};
+        return query_embed_cache_.get(query, [&] {
+            if (embed_queue_)
+                return embed_queue_->query(query, std::chrono::milliseconds(50));
+            if (!yantra_) return std::vector<float>{};
+            Artha a = yantra_->transform(query, EmbedMode::Query);
+            return (a.certainty > 0.0f) ? a.nu.data : std::vector<float>{};
+        });
     }
 
     // ── ID extraction helpers ───────────────────────────────────────────────
