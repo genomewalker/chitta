@@ -190,9 +190,22 @@ realm_detect_once() {
     if [[ -z "$_REALM_CACHE" && -n "${CHITTA_REALM:-}" ]]; then
         _REALM_CACHE="$CHITTA_REALM"
     fi
+    # Same rules as the CLI's realm_detect (.cc-soul-realm file, else the git
+    # top-level name) but in-process: the 1 s CLI call timed out on a busy NFS
+    # node and the old fallback made the whole turn global ("brahman"), which
+    # is exactly the cross-realm leak seen 2026-09-14 09:57.
     if [[ -z "$_REALM_CACHE" ]]; then
-        _REALM_CACHE=$(timeout 1 "$CHITTA_BIN" realm_detect 2>/dev/null | tr -d '"' \
-                       | grep -oE '[a-z][a-z0-9_]*:[A-Za-z0-9_./-]+' | head -1)
+        local _dir="${CWD:-$PWD}"
+        if [[ -r "$_dir/.cc-soul-realm" ]]; then
+            read -r _REALM_CACHE < "$_dir/.cc-soul-realm" || true
+        fi
+        if [[ -z "$_REALM_CACHE" ]]; then
+            while [[ -n "$_dir" && "$_dir" != "/" ]]; do
+                if [[ -e "$_dir/.git" ]]; then _REALM_CACHE="project:${_dir##*/}"; break; fi
+                _dir="${_dir%/*}"
+            done
+        fi
+        _REALM_CACHE=$(printf '%s' "$_REALM_CACHE" | grep -oE '^[a-z][a-z0-9_]*:[A-Za-z0-9_./-]+' | head -1)
         [[ -z "$_REALM_CACHE" ]] && _REALM_CACHE="brahman"
     fi
     REALM="$_REALM_CACHE"
