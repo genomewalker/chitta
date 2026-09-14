@@ -1608,7 +1608,22 @@ int main(int argc, char* argv[]) {
         // MCP mode: connect to daemon via socket, forward JSON-RPC
         chitta::SocketClient client(socket_path);
 
-        if (!client.connect()) {
+        // Auto-starting a daemon from a client is how a SECOND chittad ended up on
+        // the live mind dir on 2026-09-14 (the socket was slow, not absent) and
+        // compacted away the running daemon's WAL segment. The systemd unit owns
+        // the daemon; opt back in with CHITTA_CLI_AUTOSTART=1 for ad-hoc setups.
+        const char* autostart_env = std::getenv("CHITTA_CLI_AUTOSTART");
+        const bool autostart = autostart_env && std::string(autostart_env) == "1";
+        if (!client.connect() && !autostart) {
+            nlohmann::json error;
+            error["jsonrpc"] = "2.0";
+            error["error"]["code"] = -32603;
+            error["error"]["message"] = "chittad is not reachable at " + socket_path + " (auto-start disabled; start the daemon or set CHITTA_CLI_AUTOSTART=1)";
+            error["id"] = nullptr;
+            std::cout << error.dump() << std::endl;
+            return 1;
+        }
+        if (!client.connected()) {
             // Try to auto-start the daemon
             std::string chittad_path;
             if (const char* home = std::getenv("HOME")) {
