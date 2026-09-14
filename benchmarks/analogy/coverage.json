@@ -1,0 +1,118 @@
+{
+  "snapshot_id": "bbcaed33",
+  "socket": "/projects/caeg/scratch/kbd606/tmp/chitta-eval-mind/run/chitta/chitta-2511933830.sock",
+  "tasks": [
+    {
+      "id": "retrieval-meaning-to-words",
+      "grounded_facts": 2,
+      "missing_facts": []
+    },
+    {
+      "id": "retrieval-words-to-meaning",
+      "grounded_facts": 2,
+      "missing_facts": []
+    },
+    {
+      "id": "bridge-to-daemon-implementation",
+      "grounded_facts": 3,
+      "missing_facts": []
+    },
+    {
+      "id": "daemon-to-bridge-implementation",
+      "grounded_facts": 2,
+      "missing_facts": []
+    },
+    {
+      "id": "mcp-to-store-dependency",
+      "grounded_facts": 2,
+      "missing_facts": []
+    },
+    {
+      "id": "store-to-mcp-dependency",
+      "grounded_facts": 2,
+      "missing_facts": []
+    },
+    {
+      "id": "prompt-to-store-mechanism",
+      "grounded_facts": 4,
+      "missing_facts": []
+    },
+    {
+      "id": "store-to-prompt-mechanism",
+      "grounded_facts": 2,
+      "missing_facts": []
+    },
+    {
+      "id": "bridge-to-prompt-mechanism",
+      "grounded_facts": 2,
+      "missing_facts": []
+    },
+    {
+      "id": "prompt-to-bridge-mechanism",
+      "grounded_facts": 2,
+      "missing_facts": []
+    },
+    {
+      "id": "embedding-to-daemon-mechanism",
+      "grounded_facts": 2,
+      "missing_facts": []
+    },
+    {
+      "id": "daemon-to-embedding-mechanism",
+      "grounded_facts": 3,
+      "missing_facts": []
+    },
+    {
+      "id": "recall-to-store-mechanism",
+      "grounded_facts": 4,
+      "missing_facts": []
+    },
+    {
+      "id": "store-to-recall-mechanism",
+      "grounded_facts": 3,
+      "missing_facts": []
+    },
+    {
+      "id": "closed-thread-cleanup-forward",
+      "probe_and_expected_present": [
+        true,
+        true
+      ]
+    },
+    {
+      "id": "closed-thread-cleanup-reverse",
+      "probe_and_expected_present": [
+        true,
+        true
+      ]
+    },
+    {
+      "id": "tool-overhead-reduction-forward",
+      "probe_and_expected_present": [
+        true,
+        true
+      ]
+    },
+    {
+      "id": "tool-overhead-reduction-reverse",
+      "probe_and_expected_present": [
+        true,
+        true
+      ]
+    },
+    {
+      "id": "preembedding-before-lock-forward",
+      "probe_and_expected_present": [
+        true,
+        true
+      ]
+    },
+    {
+      "id": "preembedding-before-lock-reverse",
+      "probe_and_expected_present": [
+        true,
+        true
+      ]
+    }
+  ]
+}

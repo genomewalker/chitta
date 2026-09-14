@@ -951,3 +951,26 @@ stat ~/.claude/mind/.hook_shadow.jsonl
 Enforcement auto-activates when the shadow log reaches ≥100 entries AND is ≥3 days old. Use `CHITTA_HOOK_ENFORCE=1` to force it on early, or `CHITTA_HOOK_ENFORCE=0` to keep it in shadow mode.
 
 2026-09-14 — Read-path scratch A/B (133,673 memories): recall_lanes median total 1/6/12 callers 1044/1233.5/1644.5 → 572/96.5/94.5 ms; hook off median/p95 1113/6031 → 788/1803 ms, on 1210/2094 → 871/4268 ms (15 runs/arm, zero empties); zero recall-worker fdatasync calls; active stacks show no fsync/Turbo convoy (isolated shared waits 1/0/1); on-arm hook p95 regressed.
+
+2026-09-14 — Saddle advisory wired into Bash PreToolUse and Stop. After existing
+safety/find checks and task pre-staging, `saddle_detector.py check --session SID
+--cmd COMMAND` reads at most the last 1 MiB of the outcome ledger, selecting this
+session's failures from the last seven minutes. Three similar failures trigger
+one additionalContext notice per saddle ID in `$CHITTA_DB_PATH/.saddle_<sid>`
+(default mind: `~/.claude/mind`). A matching explicit success closes the saddle;
+unknown Codex exit codes count only when likely_fail is true and otherwise never
+close it. Post-Bash now stores a 160-byte stderr/output excerpt for failures.
+Both checks use `timeout -s KILL 0.3s python3 -S`, including interpreter startup,
+and fail open. Stop prints one summary line and appends a `saddle` event before
+transcript/daemon early exits; available persisted summaries include that line.
+Very busy ledgers can evict relevant events from the bounded tail; failed or
+budget-expired checks emit nothing. The detector does not invoke recall_analogy.
+
+2026-09-14 — Saddle hook isolated timing, final 25 interleaved runs/arm, both
+headless aliases unset, benign non-trackable Bash command and no live RPC:
+no-ledger baseline median/p95 45.16/65.80 ms; populated no-saddle full PreToolUse
+143.81/179.68 ms; added median 98.65 ms, paired added p95 123.79 ms. The 150 ms
+added-overhead gate passes, as does the full-hook median gate; full-hook p95 is
+179.68 ms and is not a sub-150 ms tail-latency guarantee. Regression coverage is
+`hooks/tests/test_saddle_hook.sh` (shape/session/time, Codex unknowns, dedupe,
+combined advisories, Stop telemetry, malformed/bounded ledger and timeout).

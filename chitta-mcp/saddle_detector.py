@@ -8,7 +8,7 @@ window of one session. The agent is oscillating around a dead end. That is the
 moment a memory (a gotcha, a correction) has the highest expected utility, so
 it is the natural trigger for recall instead of injecting on every prompt.
 
-Read-only. Stdlib only. Usage:
+Stdlib only. Read-only unless --notice-file is supplied. Usage:
     python3 saddle_detector.py report [--ledger PATH] [--min-fails 3]
                                       [--window 8] [--similarity 0.8] [--json]
     python3 saddle_detector.py check  --session ID [--ledger PATH] ...
@@ -18,18 +18,15 @@ Read-only. Stdlib only. Usage:
 
 from __future__ import annotations
 
-import argparse
 import json
 import os
 import re
 import sys
-from collections import defaultdict
-from difflib import SequenceMatcher
-from pathlib import Path
+import time
 
-DEFAULT_LEDGER = (
-    Path(os.environ.get("CHITTA_DB_PATH", os.path.expanduser("~/.claude/mind")))
-    / "outcome_ledger.jsonl"
+DEFAULT_LEDGER = os.path.join(
+    os.environ.get("CHITTA_DB_PATH", os.path.expanduser("~/.claude/mind")),
+    "outcome_ledger.jsonl",
 )
 
 _NUM = re.compile(r"\d+")
@@ -39,10 +36,13 @@ _WS = re.compile(r"\s+")
 def failed(r: dict) -> bool:
     """Codex PostToolUse payloads carry no exit code: the hook records
     exit_code=null plus a likely_fail text heuristic. Unknown means unknown."""
-    code = r.get("exit_code", 0)
+    code = r.get("exit_code")
     if code is None:
         return bool(r.get("likely_fail"))
-    return int(code) != 0
+    try:
+        return int(code) != 0
+    except (ValueError, TypeError):
+        return False
 
 
 def normalize(head: str) -> str:
@@ -54,10 +54,14 @@ def normalize(head: str) -> str:
 def similar(a: str, b: str, threshold: float) -> bool:
     if a == b:
         return True
+    from difflib import SequenceMatcher
+
     return SequenceMatcher(None, a, b).ratio() >= threshold
 
 
-def load(ledger: Path) -> dict[str, list[dict]]:
+def load(ledger: str | os.PathLike) -> dict[str, list[dict]]:
+    from collections import defaultdict
+
     by_session: dict[str, list[dict]] = defaultdict(list)
     with open(ledger, encoding="utf-8", errors="replace") as f:
         for line in f:
@@ -96,10 +100,11 @@ def find_episodes(events: list[dict], min_fails: int, window: int, threshold: fl
             if not similar(anchor, normalize(r2.get("cmd_head", "")), threshold):
                 continue
             end_idx = i2
-            if not failed(r2):
+            if r2.get("exit_code") in (0, "0"):
                 escaped = True
                 break
-            fails.append(i2)
+            if failed(r2):
+                fails.append(i2)
         if len(fails) < min_fails:
             continue
         used.update(fails)
@@ -168,22 +173,119 @@ def report(by_session: dict[str, list[dict]], args) -> dict:
     }
 
 
-def check(by_session: dict[str, list[dict]], args) -> int:
-    evs = by_session.get(args.session, [])
-    eps = find_episodes(evs, args.min_fails, args.window, args.similarity)
-    if not eps:
+def load_tail(ledger: str | os.PathLike, session: str, minutes: float) -> list[dict]:
+    """Bound hook IO to 1 MiB; discard a partial first/last JSONL record."""
+    now = time.time() * 1000
+    with open(ledger, "rb") as handle:
+        size = handle.seek(0, 2)
+        offset = max(0, size - 1024 * 1024)
+        handle.seek(offset)
+        data = handle.read()
+    lines = data.split(b"\n")
+    if offset:
+        lines = lines[1:]
+    events = []
+    session_bytes = session.encode()
+    for line in lines[:-1]:
+        if b"bash_outcome" not in line or session_bytes not in line:
+            continue
+        try:
+            row = json.loads(line)
+            if (isinstance(row, dict) and row.get("session_id") == session
+                    and row.get("event") == "bash_outcome"
+                    and isinstance(row.get("ts"), (int, float))
+                    and now - minutes * 60000 <= row["ts"] <= now
+                    and isinstance(row.get("cmd_head"), str) and row["cmd_head"].strip()):
+                events.append(row)
+        except (ValueError, TypeError):
+            continue
+    return sorted(events, key=lambda row: row["ts"])
+
+
+def open_saddle(events: list[dict], args) -> dict | None:
+    # Build episodes anchored on the first failure, so another retry does not
+    # change the saddle ID. Other command shapes can be interleaved.
+    groups = []
+    for row in events:
+        shape = normalize(row["cmd_head"])
+        matches = [g for g in groups if similar(g["shape"], shape, args.similarity)]
+        if failed(row):
+            if matches:
+                matches[0]["fails"].append(row)
+            else:
+                groups.append({"shape": shape, "fails": [row]})
+        elif row.get("exit_code") in (0, "0"):
+            groups = [g for g in groups if g not in matches]
+    candidates = [g for g in groups if len(g["fails"]) >= args.min_fails
+                  and (args.cmd is None or similar(
+                      g["shape"], normalize(args.cmd), args.similarity))]
+    if not candidates:
+        return None
+    group = max(candidates, key=lambda g: g["fails"][-1]["ts"])
+    first, last = group["fails"][0], group["fails"][-1]
+    identity = f"{args.session}:{first['ts']}:{group['shape']}"
+    excerpt = " ".join(str(last.get("stderr_head") or "error unavailable").split())[:160]
+    n = len(group["fails"])
+    message = (f"[saddle] this command shape failed {n}× in {args.minutes:g} min "
+               f"(last: {excerpt}). Change approach or read the error before retrying.")
+    return {"saddle_id": identity,
+            "start_ts": first["ts"], "end_ts": last["ts"], "n_fails": n,
+            "escaped": False, "cmd_head": first["cmd_head"][:80],
+            "stderr_head": excerpt, "window_minutes": args.minutes, "message": message}
+
+
+def check(events: list[dict], args) -> int:
+    episode = open_saddle(events, args)
+    if episode is None:
         return 1
-    last = eps[-1]
-    # The session is "in" the saddle only if the episode is still open (not
-    # escaped) and its last failure is the session's most recent bash event.
-    tail = [r for r in evs if r.get("event") == "bash_outcome"]
-    if last["escaped"] or not tail or tail[-1]["ts"] > last["end_ts"]:
-        return 1
-    print(json.dumps(last))
+    if args.notice_file:
+        # Serialize concurrent retries without waiting on another hook process.
+        import fcntl
+
+        with open(args.notice_file, "a+") as handle:
+            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            handle.seek(0)
+            if episode["saddle_id"] in handle.read().splitlines():
+                return 1
+            handle.write(episode["saddle_id"] + "\n")
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
+                                                "additionalContext": episode["message"]}}))
+    else:
+        print(json.dumps(episode))
     return 0
 
 
 def main(argv: list[str] | None = None) -> int:
+    argv = sys.argv[1:] if argv is None else argv
+    # argparse/pathlib pull in much of the stdlib on PyPy. Keep the hook's
+    # small fixed option set independent of the offline report parser.
+    if argv and argv[0] == "check" and "--help" not in argv:
+        from types import SimpleNamespace
+
+        values = dict(session="", cmd=None, ledger=DEFAULT_LEDGER, min_fails=3,
+                      minutes=7.0, similarity=0.8, notice_file=None)
+        tokens = iter(argv[1:])
+        try:
+            for token in tokens:
+                if token == "--json":
+                    continue
+                key, sep, value = token.partition("=")
+                key = key.removeprefix("--").replace("-", "_")
+                if not token.startswith("--") or key not in values:
+                    return 2
+                values[key] = value if sep else next(tokens)
+            values["minutes"] = float(values["minutes"])
+            values["similarity"] = float(values["similarity"])
+            values["min_fails"] = int(values["min_fails"])
+            args = SimpleNamespace(**values)
+            if not args.session or not 0 < args.minutes < float("inf") or args.min_fails < 1:
+                return 2
+            return check(load_tail(args.ledger, args.session, args.minutes), args)
+        except (OSError, ValueError, TypeError, StopIteration):
+            return 2
+    import argparse
+    from pathlib import Path
+
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -194,13 +296,21 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--similarity", type=float, default=0.8)
     ap.add_argument("--session", default="")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--cmd", default=None, help="check: proposed command shape")
+    ap.add_argument("--minutes", type=float, default=7, help="check: recent time window")
+    ap.add_argument("--notice-file", type=Path, help="check: dedupe and emit hook JSON")
     args = ap.parse_args(argv)
     if not args.ledger.exists():
         print(f"no ledger at {args.ledger}", file=sys.stderr)
         return 2
-    by_session = load(args.ledger)
     if args.mode == "check":
-        return check(by_session, args)
+        if not args.session or args.minutes <= 0 or args.min_fails < 1:
+            return 2
+        try:
+            return check(load_tail(args.ledger, args.session, args.minutes), args)
+        except (OSError, ValueError, TypeError):
+            return 2
+    by_session = load(args.ledger)
     out = report(by_session, args)
     if args.json:
         print(json.dumps(out, indent=1))

@@ -1,0 +1,751 @@
+{
+  "version": 1,
+  "created": "2026-09-14",
+  "grounding_source": "Live chitta query_graph --subject/--object and get --id, read-only; exact subject/object filtering removes graph-query collisions. Labels frozen before recall_analogy evaluation.",
+  "tasks": [
+    {
+      "id": "retrieval-meaning-to-words",
+      "style": "proportional",
+      "query": "HNSW:semantic-proximity :: BM25:? (captures)",
+      "params": {
+        "mode": "proportional",
+        "a": "HNSW",
+        "b": "semantic-proximity",
+        "c": "BM25"
+      },
+      "expected": [
+        {
+          "answer": "lexical-match"
+        }
+      ],
+      "grounding": [
+        {
+          "id": 125831449,
+          "object": "semantic-proximity",
+          "predicate": "captures",
+          "subject": "HNSW",
+          "weight": 1.0
+        },
+        {
+          "id": 125831450,
+          "object": "lexical-match",
+          "predicate": "captures",
+          "subject": "BM25",
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "retrieval-words-to-meaning",
+      "style": "proportional",
+      "query": "BM25:lexical-match :: HNSW:? (captures)",
+      "params": {
+        "mode": "proportional",
+        "a": "BM25",
+        "b": "lexical-match",
+        "c": "HNSW"
+      },
+      "expected": [
+        {
+          "answer": "semantic-proximity"
+        }
+      ],
+      "grounding": [
+        {
+          "id": 125831450,
+          "object": "lexical-match",
+          "predicate": "captures",
+          "subject": "BM25",
+          "weight": 1.0
+        },
+        {
+          "id": 125831449,
+          "object": "semantic-proximity",
+          "predicate": "captures",
+          "subject": "HNSW",
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "bridge-to-daemon-implementation",
+      "style": "proportional",
+      "query": "chitta-bridge:diff-based editing :: chittad:? (implements)",
+      "params": {
+        "mode": "proportional",
+        "a": "chitta-bridge",
+        "b": "diff-based editing",
+        "c": "chittad"
+      },
+      "expected": [
+        {
+          "answer": "observe-handler"
+        },
+        {
+          "answer": "GroupStats via reservoir sampling"
+        }
+      ],
+      "grounding": [
+        {
+          "id": 671071,
+          "object": "diff-based editing",
+          "predicate": "implements",
+          "subject": "chitta-bridge",
+          "weight": 1.0
+        },
+        {
+          "id": 794640,
+          "object": "observe-handler",
+          "predicate": "implements",
+          "subject": "chittad",
+          "weight": 1.0
+        },
+        {
+          "id": 794743,
+          "object": "GroupStats via reservoir sampling",
+          "predicate": "implements",
+          "subject": "chittad",
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "daemon-to-bridge-implementation",
+      "style": "proportional",
+      "query": "chittad:observe-handler :: chitta-bridge:? (implements)",
+      "params": {
+        "mode": "proportional",
+        "a": "chittad",
+        "b": "observe-handler",
+        "c": "chitta-bridge"
+      },
+      "expected": [
+        {
+          "answer": "diff-based editing"
+        }
+      ],
+      "grounding": [
+        {
+          "id": 794640,
+          "object": "observe-handler",
+          "predicate": "implements",
+          "subject": "chittad",
+          "weight": 1.0
+        },
+        {
+          "id": 671071,
+          "object": "diff-based editing",
+          "predicate": "implements",
+          "subject": "chitta-bridge",
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "mcp-to-store-dependency",
+      "style": "proportional",
+      "query": "chitta-mcp:chittad-rpc-port :: chitta-field:? (depends_on)",
+      "params": {
+        "mode": "proportional",
+        "a": "chitta-mcp",
+        "b": "chittad-rpc-port",
+        "c": "chitta-field"
+      },
+      "expected": [
+        {
+          "answer": "cc-soul"
+        }
+      ],
+      "grounding": [
+        {
+          "id": 126367929,
+          "object": "chittad-rpc-port",
+          "predicate": "depends_on",
+          "subject": "chitta-mcp",
+          "weight": 1.0
+        },
+        {
+          "id": 1082601,
+          "object": "cc-soul",
+          "predicate": "depends_on",
+          "subject": "chitta-field",
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "store-to-mcp-dependency",
+      "style": "proportional",
+      "query": "chitta-field:cc-soul :: chitta-mcp:? (depends_on)",
+      "params": {
+        "mode": "proportional",
+        "a": "chitta-field",
+        "b": "cc-soul",
+        "c": "chitta-mcp"
+      },
+      "expected": [
+        {
+          "answer": "chittad-rpc-port"
+        }
+      ],
+      "grounding": [
+        {
+          "id": 1082601,
+          "object": "cc-soul",
+          "predicate": "depends_on",
+          "subject": "chitta-field",
+          "weight": 1.0
+        },
+        {
+          "id": 126367929,
+          "object": "chittad-rpc-port",
+          "predicate": "depends_on",
+          "subject": "chitta-mcp",
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "prompt-to-store-mechanism",
+      "style": "proportional",
+      "query": "prompt-hook:query-dependent-recall :: chitta-field:? (uses)",
+      "params": {
+        "mode": "proportional",
+        "a": "prompt-hook",
+        "b": "query-dependent-recall",
+        "c": "chitta-field"
+      },
+      "expected": [
+        {
+          "answer": "OpLog"
+        },
+        {
+          "answer": "modern-Hopfield-energy-function"
+        },
+        {
+          "answer": "DAM+Graph-Laplacian"
+        }
+      ],
+      "grounding": [
+        {
+          "id": 791186,
+          "object": "query-dependent-recall",
+          "predicate": "uses",
+          "subject": "prompt-hook",
+          "weight": 1.0
+        },
+        {
+          "id": 788286,
+          "object": "OpLog",
+          "predicate": "uses",
+          "subject": "chitta-field",
+          "weight": 1.0
+        },
+        {
+          "id": 125834776,
+          "object": "modern-Hopfield-energy-function",
+          "predicate": "uses",
+          "subject": "chitta-field",
+          "weight": 1.0
+        },
+        {
+          "id": 125834805,
+          "object": "DAM+Graph-Laplacian",
+          "predicate": "uses",
+          "subject": "chitta-field",
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "store-to-prompt-mechanism",
+      "style": "proportional",
+      "query": "chitta-field:OpLog :: prompt-hook:? (uses)",
+      "params": {
+        "mode": "proportional",
+        "a": "chitta-field",
+        "b": "OpLog",
+        "c": "prompt-hook"
+      },
+      "expected": [
+        {
+          "answer": "query-dependent-recall"
+        }
+      ],
+      "grounding": [
+        {
+          "id": 788286,
+          "object": "OpLog",
+          "predicate": "uses",
+          "subject": "chitta-field",
+          "weight": 1.0
+        },
+        {
+          "id": 791186,
+          "object": "query-dependent-recall",
+          "predicate": "uses",
+          "subject": "prompt-hook",
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "bridge-to-prompt-mechanism",
+      "style": "proportional",
+      "query": "chitta-bridge:haiku-coding-preamble :: prompt-hook:? (uses)",
+      "params": {
+        "mode": "proportional",
+        "a": "chitta-bridge",
+        "b": "haiku-coding-preamble",
+        "c": "prompt-hook"
+      },
+      "expected": [
+        {
+          "answer": "query-dependent-recall"
+        }
+      ],
+      "grounding": [
+        {
+          "id": 793888,
+          "object": "haiku-coding-preamble",
+          "predicate": "uses",
+          "subject": "chitta-bridge",
+          "weight": 1.0
+        },
+        {
+          "id": 791186,
+          "object": "query-dependent-recall",
+          "predicate": "uses",
+          "subject": "prompt-hook",
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "prompt-to-bridge-mechanism",
+      "style": "proportional",
+      "query": "prompt-hook:query-dependent-recall :: chitta-bridge:? (uses)",
+      "params": {
+        "mode": "proportional",
+        "a": "prompt-hook",
+        "b": "query-dependent-recall",
+        "c": "chitta-bridge"
+      },
+      "expected": [
+        {
+          "answer": "haiku-coding-preamble"
+        }
+      ],
+      "grounding": [
+        {
+          "id": 791186,
+          "object": "query-dependent-recall",
+          "predicate": "uses",
+          "subject": "prompt-hook",
+          "weight": 1.0
+        },
+        {
+          "id": 793888,
+          "object": "haiku-coding-preamble",
+          "predicate": "uses",
+          "subject": "chitta-bridge",
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "embedding-to-daemon-mechanism",
+      "style": "proportional",
+      "query": "chitta:BGE-base-en-v1.5 :: chittad:? (uses)",
+      "params": {
+        "mode": "proportional",
+        "a": "chitta",
+        "b": "BGE-base-en-v1.5",
+        "c": "chittad"
+      },
+      "expected": [
+        {
+          "answer": "GroupStats for spectral reporting"
+        }
+      ],
+      "grounding": [
+        {
+          "id": 789023,
+          "object": "BGE-base-en-v1.5",
+          "predicate": "uses",
+          "subject": "chitta",
+          "weight": 1.0
+        },
+        {
+          "id": 794656,
+          "object": "GroupStats for spectral reporting",
+          "predicate": "uses",
+          "subject": "chittad",
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "daemon-to-embedding-mechanism",
+      "style": "proportional",
+      "query": "chittad:GroupStats for spectral reporting :: chitta:? (uses)",
+      "params": {
+        "mode": "proportional",
+        "a": "chittad",
+        "b": "GroupStats for spectral reporting",
+        "c": "chitta"
+      },
+      "expected": [
+        {
+          "answer": "BGE-base-en-v1.5"
+        },
+        {
+          "answer": "C2-metacognition"
+        }
+      ],
+      "grounding": [
+        {
+          "id": 794656,
+          "object": "GroupStats for spectral reporting",
+          "predicate": "uses",
+          "subject": "chittad",
+          "weight": 1.0
+        },
+        {
+          "id": 789023,
+          "object": "BGE-base-en-v1.5",
+          "predicate": "uses",
+          "subject": "chitta",
+          "weight": 1.0
+        },
+        {
+          "id": 126036457,
+          "object": "C2-metacognition",
+          "predicate": "uses",
+          "subject": "chitta",
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "recall-to-store-mechanism",
+      "style": "proportional",
+      "query": "recall:chitta :: chitta-field:? (uses)",
+      "params": {
+        "mode": "proportional",
+        "a": "recall",
+        "b": "chitta",
+        "c": "chitta-field"
+      },
+      "expected": [
+        {
+          "answer": "OpLog"
+        },
+        {
+          "answer": "modern-Hopfield-energy-function"
+        },
+        {
+          "answer": "DAM+Graph-Laplacian"
+        }
+      ],
+      "grounding": [
+        {
+          "id": 791165,
+          "object": "chitta",
+          "predicate": "uses",
+          "subject": "recall",
+          "weight": 1.0
+        },
+        {
+          "id": 788286,
+          "object": "OpLog",
+          "predicate": "uses",
+          "subject": "chitta-field",
+          "weight": 1.0
+        },
+        {
+          "id": 125834776,
+          "object": "modern-Hopfield-energy-function",
+          "predicate": "uses",
+          "subject": "chitta-field",
+          "weight": 1.0
+        },
+        {
+          "id": 125834805,
+          "object": "DAM+Graph-Laplacian",
+          "predicate": "uses",
+          "subject": "chitta-field",
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "store-to-recall-mechanism",
+      "style": "proportional",
+      "query": "chitta-field:OpLog :: recall:? (uses)",
+      "params": {
+        "mode": "proportional",
+        "a": "chitta-field",
+        "b": "OpLog",
+        "c": "recall"
+      },
+      "expected": [
+        {
+          "answer": "chitta"
+        },
+        {
+          "answer": "predicate \"tagged\" for filtering"
+        }
+      ],
+      "grounding": [
+        {
+          "id": 788286,
+          "object": "OpLog",
+          "predicate": "uses",
+          "subject": "chitta-field",
+          "weight": 1.0
+        },
+        {
+          "id": 791165,
+          "object": "chitta",
+          "predicate": "uses",
+          "subject": "recall",
+          "weight": 1.0
+        },
+        {
+          "id": 791190,
+          "object": "predicate \"tagged\" for filtering",
+          "predicate": "uses",
+          "subject": "recall",
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "closed-thread-cleanup-forward",
+      "style": "structural",
+      "query": "Find a memory with the same relation pattern as #5904846082218656180: closed-thread-cleanup.",
+      "params": {
+        "mode": "structural",
+        "memory_id": 5904846082218656180
+      },
+      "expected": [
+        {
+          "id": "5904846082218656181"
+        }
+      ],
+      "grounding": [
+        {
+          "id": 125784500,
+          "object": "chitta",
+          "predicate": "cites",
+          "subject": "5904846082218656180",
+          "weight": 1.0
+        },
+        {
+          "id": 125784502,
+          "object": "chitta",
+          "predicate": "cites",
+          "subject": "5904846082218656181",
+          "weight": 1.0
+        }
+      ],
+      "probe_content": "[refactor] closed-rtk-cruft-thread @chitta\n[refactor] closed-rtk-cruft-thread @chitta",
+      "expected_content": "[refactor] closed-stale-plan-thread @chitta\n[refactor] closed-stale-plan-thread @chitta",
+      "rationale": "Human-selected related memories sharing outgoing cites/tagged relations; this is a relevance label, not an exhaustive graph-isomorphism assertion."
+    },
+    {
+      "id": "closed-thread-cleanup-reverse",
+      "style": "structural",
+      "query": "Find a memory with the same relation pattern as #5904846082218656181: closed-thread-cleanup.",
+      "params": {
+        "mode": "structural",
+        "memory_id": 5904846082218656181
+      },
+      "expected": [
+        {
+          "id": "5904846082218656180"
+        }
+      ],
+      "grounding": [
+        {
+          "id": 125784500,
+          "object": "chitta",
+          "predicate": "cites",
+          "subject": "5904846082218656180",
+          "weight": 1.0
+        },
+        {
+          "id": 125784502,
+          "object": "chitta",
+          "predicate": "cites",
+          "subject": "5904846082218656181",
+          "weight": 1.0
+        }
+      ],
+      "probe_content": "[refactor] closed-stale-plan-thread @chitta\n[refactor] closed-stale-plan-thread @chitta",
+      "expected_content": "[refactor] closed-rtk-cruft-thread @chitta\n[refactor] closed-rtk-cruft-thread @chitta",
+      "rationale": "Human-selected related memories sharing outgoing cites/tagged relations; this is a relevance label, not an exhaustive graph-isomorphism assertion."
+    },
+    {
+      "id": "tool-overhead-reduction-forward",
+      "style": "structural",
+      "query": "Find a memory with the same relation pattern as #5951830413096779859: tool-overhead-reduction.",
+      "params": {
+        "mode": "structural",
+        "memory_id": 5951830413096779859
+      },
+      "expected": [
+        {
+          "id": "5951830413096779864"
+        }
+      ],
+      "grounding": [
+        {
+          "id": 668132,
+          "object": "cc-soul",
+          "predicate": "cites",
+          "subject": "5951830413096779859",
+          "weight": 1.0
+        },
+        {
+          "id": 668152,
+          "object": "cc-soul",
+          "predicate": "cites",
+          "subject": "5951830413096779864",
+          "weight": 1.0
+        }
+      ],
+      "probe_content": "[optimization] tool-reduction→fewer-tools-per-request→lower-baseline-overhead @cc-soul\n[optimization] tool-reduction→fewer-tools-per-request→lower-baseline-overhead @cc-soul",
+      "expected_content": "[token-optimization] tool-reduction→reduce-baseline-per-request-overhead @cc-soul\n[token-optimization] tool-reduction→reduce-baseline-per-request-overhead @cc-soul",
+      "rationale": "Human-selected related memories sharing outgoing cites/tagged relations; this is a relevance label, not an exhaustive graph-isomorphism assertion."
+    },
+    {
+      "id": "tool-overhead-reduction-reverse",
+      "style": "structural",
+      "query": "Find a memory with the same relation pattern as #5951830413096779864: tool-overhead-reduction.",
+      "params": {
+        "mode": "structural",
+        "memory_id": 5951830413096779864
+      },
+      "expected": [
+        {
+          "id": "5951830413096779859"
+        }
+      ],
+      "grounding": [
+        {
+          "id": 668132,
+          "object": "cc-soul",
+          "predicate": "cites",
+          "subject": "5951830413096779859",
+          "weight": 1.0
+        },
+        {
+          "id": 668152,
+          "object": "cc-soul",
+          "predicate": "cites",
+          "subject": "5951830413096779864",
+          "weight": 1.0
+        }
+      ],
+      "probe_content": "[token-optimization] tool-reduction→reduce-baseline-per-request-overhead @cc-soul\n[token-optimization] tool-reduction→reduce-baseline-per-request-overhead @cc-soul",
+      "expected_content": "[optimization] tool-reduction→fewer-tools-per-request→lower-baseline-overhead @cc-soul\n[optimization] tool-reduction→fewer-tools-per-request→lower-baseline-overhead @cc-soul",
+      "rationale": "Human-selected related memories sharing outgoing cites/tagged relations; this is a relevance label, not an exhaustive graph-isomorphism assertion."
+    },
+    {
+      "id": "preembedding-before-lock-forward",
+      "style": "structural",
+      "query": "Find a memory with the same relation pattern as #17481394094545567813: preembedding-before-lock.",
+      "params": {
+        "mode": "structural",
+        "memory_id": 17481394094545567813
+      },
+      "expected": [
+        {
+          "id": "17584756257800060930"
+        }
+      ],
+      "grounding": [
+        {
+          "id": 2029637,
+          "object": "chitta",
+          "predicate": "tagged",
+          "subject": "17481394094545567813",
+          "weight": 1.0
+        },
+        {
+          "id": 2029747,
+          "object": "chitta",
+          "predicate": "tagged",
+          "subject": "17584756257800060930",
+          "weight": 1.0
+        },
+        {
+          "id": 2029636,
+          "object": "cc-soul",
+          "predicate": "tagged",
+          "subject": "17481394094545567813",
+          "weight": 1.0
+        },
+        {
+          "id": 2029746,
+          "object": "cc-soul",
+          "predicate": "tagged",
+          "subject": "17584756257800060930",
+          "weight": 1.0
+        }
+      ],
+      "probe_content": "MILESTONE v5.21.66 — Daemon Lock Starvation Fix (2026-05-18)\n\nRoot cause: embed_ssl_aware() / embed_text() ran INSIDE rpc_mutex_ exclusive lock for remember/observe/grow/learn* handlers. At 75% CPU load each embedding took 30–60s, holding the write lock the entire time and starving all concurrent readers (health_check queued 20+ min, pool saturated at 2 workers).\n\nFixes:\n- field_handler.hpp handle(): pre-embed write tools BEFORE acquiring rpc_mutex_ exclusively. For remember: embed_ssl_aware(content). For observe: embed_text(to_ssl_format(content, category)). For grow: embed_text(to_ssl_format(content, type) or titled form). For learn*: embed_ssl_aware(content). Passes result as _preembedding in args.\n- tool_remember / tool_observe / tool_grow: check params[\"_preembedding\"] first, skip re-embed if present.\n- ThreadPool(2, 16) → ThreadPool(8, 16): pool starts with 8 workers providing spare capacity.\n\nKey insight: yantra_->transform() is pure CPU with no field_store_ access — safe to call outside any lock.",
+      "expected_content": "MILESTONE v5.21.68 — Pre-embed All Write Handlers (2026-05-18)\n\nCompleted the pre-embed-before-lock pattern for ALL medium-frequency write handlers. Total handlers fixed across v5.21.66–68: 15.\n\nFull list of handlers now pre-embedding outside rpc_mutex_:\n- remember, observe, grow, learn/learn_correction/learn_milestone/learn_outcome (v5.21.66)\n- suggestion_track, anticipation_observe, create_episode (v5.21.67)\n- update, consolidation_merge, curiosity_note_gap, propose_change, profile_update, profile_observe, goal_set, reconsolidate (v5.21.68)\n\nPattern in field_handler.hpp handle(): compute embedding from args before unique_lock<shared_mutex>. Each handler checks params.contains(\"_preembedding\") and skips re-embed if present.\n\nRemaining intentional exceptions (batch/long-running, exclusive lock expected):\n- compact_context, import_soul, extract_symbols, learn_codebase\n\nResult: rpc_mutex_ write lock held only for actual store mutations, not ML inference.",
+      "rationale": "Human-selected related memories sharing outgoing cites/tagged relations; this is a relevance label, not an exhaustive graph-isomorphism assertion."
+    },
+    {
+      "id": "preembedding-before-lock-reverse",
+      "style": "structural",
+      "query": "Find a memory with the same relation pattern as #17584756257800060930: preembedding-before-lock.",
+      "params": {
+        "mode": "structural",
+        "memory_id": 17584756257800060930
+      },
+      "expected": [
+        {
+          "id": "17481394094545567813"
+        }
+      ],
+      "grounding": [
+        {
+          "id": 2029637,
+          "object": "chitta",
+          "predicate": "tagged",
+          "subject": "17481394094545567813",
+          "weight": 1.0
+        },
+        {
+          "id": 2029747,
+          "object": "chitta",
+          "predicate": "tagged",
+          "subject": "17584756257800060930",
+          "weight": 1.0
+        },
+        {
+          "id": 2029636,
+          "object": "cc-soul",
+          "predicate": "tagged",
+          "subject": "17481394094545567813",
+          "weight": 1.0
+        },
+        {
+          "id": 2029746,
+          "object": "cc-soul",
+          "predicate": "tagged",
+          "subject": "17584756257800060930",
+          "weight": 1.0
+        }
+      ],
+      "probe_content": "MILESTONE v5.21.68 — Pre-embed All Write Handlers (2026-05-18)\n\nCompleted the pre-embed-before-lock pattern for ALL medium-frequency write handlers. Total handlers fixed across v5.21.66–68: 15.\n\nFull list of handlers now pre-embedding outside rpc_mutex_:\n- remember, observe, grow, learn/learn_correction/learn_milestone/learn_outcome (v5.21.66)\n- suggestion_track, anticipation_observe, create_episode (v5.21.67)\n- update, consolidation_merge, curiosity_note_gap, propose_change, profile_update, profile_observe, goal_set, reconsolidate (v5.21.68)\n\nPattern in field_handler.hpp handle(): compute embedding from args before unique_lock<shared_mutex>. Each handler checks params.contains(\"_preembedding\") and skips re-embed if present.\n\nRemaining intentional exceptions (batch/long-running, exclusive lock expected):\n- compact_context, import_soul, extract_symbols, learn_codebase\n\nResult: rpc_mutex_ write lock held only for actual store mutations, not ML inference.",
+      "expected_content": "MILESTONE v5.21.66 — Daemon Lock Starvation Fix (2026-05-18)\n\nRoot cause: embed_ssl_aware() / embed_text() ran INSIDE rpc_mutex_ exclusive lock for remember/observe/grow/learn* handlers. At 75% CPU load each embedding took 30–60s, holding the write lock the entire time and starving all concurrent readers (health_check queued 20+ min, pool saturated at 2 workers).\n\nFixes:\n- field_handler.hpp handle(): pre-embed write tools BEFORE acquiring rpc_mutex_ exclusively. For remember: embed_ssl_aware(content). For observe: embed_text(to_ssl_format(content, category)). For grow: embed_text(to_ssl_format(content, type) or titled form). For learn*: embed_ssl_aware(content). Passes result as _preembedding in args.\n- tool_remember / tool_observe / tool_grow: check params[\"_preembedding\"] first, skip re-embed if present.\n- ThreadPool(2, 16) → ThreadPool(8, 16): pool starts with 8 workers providing spare capacity.\n\nKey insight: yantra_->transform() is pure CPU with no field_store_ access — safe to call outside any lock.",
+      "rationale": "Human-selected related memories sharing outgoing cites/tagged relations; this is a relevance label, not an exhaustive graph-isomorphism assertion."
+    }
+  ]
+}

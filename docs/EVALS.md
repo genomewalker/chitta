@@ -212,3 +212,18 @@ CHITTA_UTILITY_RECALL=1 bash scripts/eval-noise.sh --agent claude-code --tasks 3
 # 4. accept only if smriti.on.sr / golden.ndcg improve beyond benchmarks/noise.json bands; then set the flag in the chittad drop-in and restart
 ```
 
+
+2026-09-14 — Analogy lane smoke set: `benchmarks/analogy/tasks.json` has 20
+handwritten, live-triplet-grounded queries (14 proportional, six structural),
+with labels frozen before evaluation. On frozen replica bbcaed33, manifest
+38047, every grounding fact and probe/expected memory was independently verified
+present (`coverage.json`). Default `run.py` invokes `chitta recall_analogy --json`
+through CHITTA_EVAL_SOCKET, with a 2 s cap: hit@1=0/20, hit@3=0/20, median
+7.058 ms, **20 CLI command-rejection errors** (`results.json`); that latency is
+client rejection, not retrieval. A separate `--transport rpc` diagnostic on the
+same socket yielded hit@1=0/20, hit@3=0/20, median 8.259 ms, zero timeouts:
+10 proportional calls returned unrelated candidates, four were empty, and six
+structural calls reported the lane unavailable (`results-rpc.json`). Errors count
+as misses; the diagnostic excludes CLI startup. **hit@3=0.00 < 0.30: the analogy
+lane is not ready for a hook.** No lane tuning or immutable eval edits were made.
+These correlated forward/reverse smoke tasks do not establish broad accuracy.
