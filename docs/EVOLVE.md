@@ -52,6 +52,8 @@ remain for review; the runner does not delete implementation worktrees.
 > chunks. Next proposal: score a learning by the bytes it saves across the
 > realm's recent N chunks (corpus dictionary), not the chunk that produced it.
 > Until then `CHITTA_MDL_GATE` stays shadow-only.
+>
+> The cycle resolves the Codex CLI as `CHITTA_CODEX_BIN`, else `~/.local/bin/codex`, else PATH: the bioinfo conda env carries an npm `@openai/codex` 0.151.0 that rejects `gpt-6-astra`.
 
 ## Proposal sources and scoring
 
