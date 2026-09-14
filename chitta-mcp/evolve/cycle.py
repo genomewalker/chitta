@@ -215,14 +215,18 @@ def codex_binary() -> str:
     """The Codex CLI to run. PATH order is not trustworthy here: the bioinfo conda
     env ships an npm @openai/codex (0.151.0) that rejects gpt-6-astra, and a
     manual cycle launched with that env first failed its survey on 2026-09-14.
-    Prefer CHITTA_CODEX_BIN, then the user's dev build in ~/.local/bin."""
+    CHITTA_CODEX_BIN wins; otherwise the PATH result unless it is that npm
+    build, in which case the user's dev build in ~/.local/bin is used."""
     explicit = os.environ.get("CHITTA_CODEX_BIN")
     if explicit:
         return explicit
+    found = shutil.which("codex")
+    if found and "node_modules/@openai/codex" not in os.path.realpath(found):
+        return found
     local = Path.home() / ".local" / "bin" / "codex"
     if os.access(local, os.X_OK):
         return str(local)
-    return shutil.which("codex") or "codex"
+    return found or "codex"
 
 
 def implement_command(args, worktree: Path, spec: str, output: Path) -> list[str]:
