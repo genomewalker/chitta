@@ -161,6 +161,9 @@ ToolResult FieldRpcHandler::tool_health_check(const json& params) {
         {"rpc_over_budget",  rpc_budget_.over_budget_count()},
     };
 
+    // New FFI diagnostic; recall response schemas stay unchanged.
+    out["wal"] = json::parse(field_store_->wal_status_json());
+
     json stats_j;
     try {
         stats_j = json::parse(get_memory_stats_cached(field_store_));

@@ -948,3 +948,5 @@ stat ~/.claude/mind/.hook_shadow.jsonl
 ```
 
 Enforcement auto-activates when the shadow log reaches ≥100 entries AND is ≥3 days old. Use `CHITTA_HOOK_ENFORCE=1` to force it on early, or `CHITTA_HOOK_ENFORCE=0` to keep it in shadow mode.
+
+2026-09-14 — Read-path scratch A/B (133,673 memories): recall_lanes median total 1/6/12 callers 1044/1233.5/1644.5 → 572/96.5/94.5 ms; hook off median/p95 1113/6031 → 788/1803 ms, on 1210/2094 → 871/4268 ms (15 runs/arm, zero empties); zero recall-worker fdatasync calls; active stacks show no fsync/Turbo convoy (isolated shared waits 1/0/1); on-arm hook p95 regressed.
