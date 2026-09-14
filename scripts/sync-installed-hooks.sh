@@ -62,16 +62,24 @@ done < "$HOOK_MANIFEST"
 # This destination is never symlinked by dev-install.sh — sync-installed-
 # hooks.sh owns it outright.
 installed_json="$HOME/.claude/plugins/installed_plugins.json"
-claude_root=""
+# Every Claude plugin cache that can still execute our hooks: the current key,
+# the pre-rename key, and any leftover cache directory on disk. A session that
+# started under the old name keeps running from the old directory for its whole
+# life (seen 2026-09-14: that copy was frozen at 09-02 and every hook fix since
+# was invisible to it), so all of them are synced, not just the first match.
+claude_roots=()
 if [[ -f "$installed_json" ]]; then
-    # Prefer the renamed plugin key; fall back to the pre-rename one so
-    # installs that haven't reinstalled under the new name still sync.
-    claude_root=$(jq -r '
-      (.plugins["chitta@genomewalker-chitta"] // .plugins["cc-soul@genomewalker-cc-soul"] // [])[]?
-      | select(.scope == "user") | .installPath
-    ' "$installed_json" | tail -1)
+    while IFS= read -r p; do [[ -n "$p" && -d "$p" ]] && claude_roots+=("$p"); done < <(jq -r '
+      [.plugins["chitta@genomewalker-chitta"], .plugins["cc-soul@genomewalker-cc-soul"]] | flatten
+      | .[]? | select(.scope == "user") | .installPath
+    ' "$installed_json" 2>/dev/null)
 fi
-if [[ -n "$claude_root" && -d "$claude_root" ]]; then
+for legacy in "$HOME"/.claude/plugins/cache/genomewalker-cc-soul/cc-soul/*/ "$HOME"/.claude/plugins/cache/genomewalker-chitta/chitta/*/; do
+    [[ -d "$legacy/hooks" ]] || continue
+    legacy="${legacy%/}"
+    case " ${claude_roots[*]} " in *" $legacy "*) ;; *) claude_roots+=("$legacy") ;; esac
+done
+for claude_root in "${claude_roots[@]}"; do
     echo "[cc-soul] owner: $claude_root/{hooks,chitta-mcp}/* (plugin cache — sync-installed-hooks.sh owns this outright)"
     while IFS= read -r script; do
         [[ -z "$script" || "$script" == \#* ]] && continue
@@ -80,10 +88,10 @@ if [[ -n "$claude_root" && -d "$claude_root" ]]; then
     sync_one "$HOOKS_SRC/hooks.json" "$claude_root/hooks/hooks.json" 0644
     for module in session_registry.py resume_selector.py task_ledger.py \
                   thread_inference.py resume_capsule.py mdl_gate.py \
-                  outcome_ledger.py; do
-        sync_one "$ROOT_DIR/chitta-mcp/$module" "$claude_root/chitta-mcp/$module" 0755
+                  outcome_ledger.py daemon_client.py; do
+        [[ -f "$ROOT_DIR/chitta-mcp/$module" ]] && sync_one "$ROOT_DIR/chitta-mcp/$module" "$claude_root/chitta-mcp/$module" 0755
     done
-fi
+done
 
 # Codex hook commands point at ROOT_DIR, while its cached skills need their own
 # refresh so both frontends follow the same recap/resume ownership protocol.
