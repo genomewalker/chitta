@@ -81,6 +81,9 @@ char*    cf_query_cross_harness_conflicts(const struct CfHandle* h, const char* 
 char*    cf_symbol_stale_for_memory(const struct CfHandle* h, uint64_t memory_id);
 char*    cf_memory_claim_info(const struct CfHandle* h, uint64_t memory_id, int64_t now_ms);
 
+char* cf_memory_breakdown(struct CfHandle* h);
+int cf_recall_profile_enabled();
+
 // Affective recall FFI
 int cf_recall_semantic_ctx(struct CfHandle* h,
     const float* query_embedding, size_t embedding_len,
@@ -2202,6 +2205,16 @@ public:
     }
 
     /// 3. Aggregate memory stats. Returns JSON with count_by_kind, avg_confidence, etc.
+    bool recall_profile_enabled() const { return cf_recall_profile_enabled() != 0; }
+
+    std::string memory_breakdown() {
+        char* raw = cf_memory_breakdown(handle_);
+        if (!raw) return "{}";
+        std::string result(raw);
+        cf_free_string(raw);
+        return result;
+    }
+
     std::string memory_stats(const std::string& realm = "") {
         std::vector<uint8_t> buf(65536);
         size_t written = 0;

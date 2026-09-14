@@ -1,0 +1,7 @@
+[
+  {
+    "file": "chitta-field/target/release/build/chitta-field-7e79a88839808d95/out/embed_config.rs",
+    "dim": 768,
+    "model": "nomic-embed-text-v1.5"
+  }
+]

@@ -1,0 +1,4 @@
+*.log
+__pycache__/
+results-pilot.json
+table-pilot.md

@@ -1,0 +1,46 @@
+{
+  "schema_differences": [
+    "/recall_lanes/result/structured/lanes/ctx/results/0/affect",
+    "/recall_lanes/result/structured/lanes/sem/results/0/affect"
+  ],
+  "methods": {
+    "hybrid": {
+      "matching": 20,
+      "samples": 20,
+      "before_variants": 1,
+      "after_variants": 1
+    },
+    "keyword": {
+      "matching": 20,
+      "samples": 20,
+      "before_variants": 1,
+      "after_variants": 1
+    },
+    "fused": {
+      "matching": 20,
+      "samples": 20,
+      "before_variants": 1,
+      "after_variants": 1
+    },
+    "smart": {
+      "matching": 8,
+      "samples": 20,
+      "before_variants": 4,
+      "after_variants": 3
+    },
+    "recall_lanes": {
+      "matching": 3,
+      "samples": 20,
+      "before_variants": 4,
+      "after_variants": 5
+    }
+  },
+  "top_level_structured_keys_equal": {
+    "recall": true,
+    "smart_recall": true,
+    "hybrid_recall": true,
+    "recall_keyword": true,
+    "recall_lanes": true
+  },
+  "strict_equal": false
+}

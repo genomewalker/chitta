@@ -101,6 +101,11 @@ std::string get_spectral_stats_cached(FieldStore* store) {
 ToolResult FieldRpcHandler::tool_health_check(const json& params) {
     if (!field_store_) return ToolResult::error("chitta-field store unavailable");
 
+    if (params.value("memory_breakdown", false)) {
+        const auto breakdown = json::parse(field_store_->memory_breakdown());
+        return ToolResult::ok("memory_breakdown " + breakdown.dump() + "\n", breakdown);
+    }
+
     // Fast path (default): only emit cheap fields. This is what hooks poll
     // every few seconds — full O(N) state scan + spectral stats can take
     // 15-30s under writer contention and stacks concurrent clients, which
@@ -140,6 +145,9 @@ ToolResult FieldRpcHandler::tool_health_check(const json& params) {
         };
         return ToolResult::ok(ss.str(), out);
     }
+
+    const auto breakdown = json::parse(field_store_->memory_breakdown());
+    ss << "memory_breakdown " << breakdown.dump() << "\n";
 
     // Details path: O(N) scans — only when explicitly requested.
     size_t mem_count = field_store_->memory_count();

@@ -1,0 +1,42 @@
+{
+  "rust": {
+    "build": "passed",
+    "tests_passed": 277,
+    "tests_ignored": 2,
+    "tests_failed": 0,
+    "seconds": 44.84
+  },
+  "cpp": {
+    "build": "passed",
+    "ctest_passed": 18,
+    "ctest_failed": 0,
+    "seconds": 18.56
+  },
+  "hooks": {
+    "scripts_passed": 15,
+    "session_cards_fixtures": 6,
+    "note": "self-isolating cards rerun without conflicting outer socket override"
+  },
+  "smriti": {
+    "passed": 46
+  },
+  "mcp": {
+    "run": 130,
+    "errors": 1,
+    "failure": "unmodified create_http_session_manager expects _session_owners absent in SDK 1.27.2"
+  },
+  "identity": {
+    "initial_worktree_stamp": "absent",
+    "final_worktree_stamp": "absent",
+    "compiled_dim": 768,
+    "compiled_model": "nomic-embed-text-v1.5",
+    "matches_production_identity": true
+  },
+  "primary_before": "results-before.json",
+  "primary_after": "results-primed.json",
+  "clean_restart": "results-clean-final.json",
+  "strict_comparison_exit": 1,
+  "ruff": "passed",
+  "shell_syntax": "passed",
+  "diff_check": "passed"
+}

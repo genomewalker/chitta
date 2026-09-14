@@ -47,6 +47,7 @@
 #include <chrono>
 #include <atomic>
 #include <fstream>
+#include <future>
 #include <sstream>
 #include <filesystem>
 #include <nlohmann/json.hpp>
@@ -82,6 +83,8 @@ void daemon_signal_handler(int sig) {
     std::cerr << "[daemon] Signal " << sig << " received, shutting down\n";
     daemon_running = false;
 }
+
+static const auto process_started = std::chrono::steady_clock::now();
 
 int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* embed_queue,
                int interval,
@@ -886,6 +889,9 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
     std::cerr << "[daemon] chitta-field active: " << field_store.memory_count()
               << " memories, " << field_store.symbol_count() << " symbols\n";
 
+    std::cerr << "[daemon] ready ms=" << std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - process_started).count() << "\n";
+
     // Main loop - handle socket I/O (never blocks on RPC)
     auto last_stats = std::chrono::steady_clock::now();
     while (daemon_running) {
@@ -1667,7 +1673,19 @@ int main(int argc, char* argv[]) {
     std::exception_ptr load_ex;
     std::thread loader([&]() {
         try {
+            // Prime model kernels on the queue's owning thread while the store
+            // loads. Join before clearing warming_up; no memory/query state is learned.
+            auto encoder_warm = std::async(std::launch::async, [&]() {
+                if (command != "daemon") return;
+                const auto started = std::chrono::steady_clock::now();
+                const auto vector = embed_queue.query("search_query: memory startup", std::chrono::seconds(5));
+                std::cerr << "[daemon] load phase=embed_kernel ms="
+                          << std::chrono::duration_cast<std::chrono::milliseconds>(
+                                 std::chrono::steady_clock::now() - started).count()
+                          << " ready=" << (vector.size() == EMBED_DIM) << "\n";
+            });
             field_store_ptr = std::make_unique<FieldStore>(field_path, field_path);
+            encoder_warm.get();
         } catch (...) {
             load_ex = std::current_exception();
         }

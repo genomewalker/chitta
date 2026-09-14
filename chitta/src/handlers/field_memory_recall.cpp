@@ -14,6 +14,31 @@
 #include "../../include/chitta/rpc/field_handler.hpp"
 
 namespace {
+class RecallStageTimer {
+    bool enabled_;
+    const char* stage_;
+    std::chrono::steady_clock::time_point start_;
+    void emit() const {
+        if (enabled_) {
+            std::ostringstream line;
+            line << "[chitta-recall] stage=" << stage_ << " us="
+                 << std::chrono::duration_cast<std::chrono::microseconds>(
+                        std::chrono::steady_clock::now() - start_).count()
+                 << " thread=" << std::this_thread::get_id() << "\n";
+            std::cerr << line.str();
+        }
+    }
+public:
+    RecallStageTimer(bool enabled, const char* stage) : enabled_(enabled), stage_(stage) {
+        if (enabled_) start_ = std::chrono::steady_clock::now();
+    }
+    ~RecallStageTimer() { emit(); }
+    void next(const char* stage) {
+        emit(); stage_ = stage;
+        if (enabled_) start_ = std::chrono::steady_clock::now();
+    }
+};
+
 // Parse "YYYY-MM-DD" → Unix epoch ms, or 0 on failure.
 int64_t parse_date_ms(const std::string& s) {
     if (s.size() < 10) return 0;
@@ -395,6 +420,7 @@ ToolResult FieldRpcHandler::tool_flush_embeddings(const json& /*params*/) {
 }
 
 ToolResult FieldRpcHandler::tool_recall(const json& params) {
+    RecallStageTimer profile(field_store_ && field_store_->recall_profile_enabled(), "setup");
     std::string query = params.value("query", "");
     if (query.empty()) return ToolResult::error("query is required");
 
@@ -497,6 +523,7 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
     if (!tagged_field_hits.empty()) {
         hits = window_gate(std::move(tagged_field_hits));
     } else if (strategy == "keyword") {
+        profile.next("keyword");
         hits = window_gate(field_store_->recall_keyword(query, pool_limit, realm, no_learn));
     } else if (expand && query_has_entities(query)) {
         std::vector<std::string> forms = {query, query}; // original 2× = boosted weight
@@ -522,6 +549,7 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
             base_emb = params["_preembedding"].get<std::vector<float>>();
         // Only attempt semantic lanes if we have a working embedding (base_emb non-empty).
         // When yantra is unavailable, skip SSL-variant embed calls (each costs a full timeout).
+        profile.next("semantic_lanes");
         if (!base_emb.empty()) {
             for (const auto& f : forms) {
                 auto emb = (f == query) ? base_emb : embed_query(f);
@@ -529,13 +557,16 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
                 rrf_lane(window_gate(field_store_->recall(emb, lane_depth, realm, no_learn)));
             }
         }
+        profile.next("keyword");
         // BM25 lane
         rrf_lane(window_gate(field_store_->recall_keyword(query, lane_depth, realm, no_learn)));
+        profile.next("hdc");
         // HDC lane (skipped when disable_hdc=true for ablation/benchmarking)
         if (!params.value("disable_hdc", false)) {
             rrf_lane(window_gate(field_store_->recall_hdc(query, lane_depth, realm)));
         }
 
+        profile.next("bridge_fusion");
         // Lane-0 atom bridge: record the RRF leader's rare co-atom partners with a
         // normalized saturating-IDF weight. The RRF position-based fusion above
         // buries a keyword-absent partner under the keyword-matching crowd; the
@@ -639,6 +670,7 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
     }
 
     // Filter orphaned HNSW entries (deleted payloads with lingering vectors) and
+    profile.next("rescore");
     // quarantine [gap] memories: they're epistemic-gap markers for the dream
     // engine (which reads them via direct recall_keyword("[gap]") calls in
     // field_misc_sadhana.cpp, bypassing this tool), and they literally embed
@@ -991,6 +1023,7 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
         }
     }
 
+    profile.next("prefilter");
     // ── Recall-biased pre-filter: wide pool → cheap over-selection ──────────
     // Runs AFTER every scoring stage and BEFORE the MMR/limit truncation (and
     // before the MCP's cross-encoder, which reranks whatever this returns), so
@@ -1111,6 +1144,7 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
     }
 
     bool explain = params.value("explain", false);
+    profile.next("result_metadata");
     json results_json = hits_to_results_json(hits, explain);
 
     // Abstain signal: if no candidate clears the calibrated relevance bar, say so honestly
@@ -1141,7 +1175,9 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
     // C2 self-monitoring (prompt-core.sh) bins this into KNOWN/THIN/UNKNOWN.
     if (!hits.empty()) ss << " (maxrel " << static_cast<int>(max_rel * 100) << "%)";
     ss << ":\n";
+    profile.next("format");
     format_hits(ss, results_json, query, {.show_date = true, .link_atoms = true});
+    profile.next("spans");
 
     // Co-present the Span Lane: a separate, capped, realm-scoped block of verbatim
     // transcript atoms. Disjoint from distilled memories above — no RRF fusion, no

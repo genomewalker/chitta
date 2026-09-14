@@ -1,0 +1,19 @@
+{
+  "hooks/tests/test_analogy_eval.sh": 0,
+  "hooks/tests/test_eval_replica.sh": 0,
+  "hooks/tests/test_hook_names.sh": 0,
+  "hooks/tests/test_lib_ingest_metric.sh": 0,
+  "hooks/tests/test_mcp_kill_guard.sh": 0,
+  "hooks/tests/test_noise_hook_metric.sh": 0,
+  "hooks/tests/test_outcome_ledger.sh": 0,
+  "hooks/tests/test_post_bash_payloads.sh": 0,
+  "hooks/tests/test_prompt_core_lanes.sh": 0,
+  "hooks/tests/test_prompt_core_query_gate.sh": 0,
+  "hooks/tests/test_registry_call.sh": 0,
+  "hooks/tests/test_saddle_hook.sh": 0,
+  "hooks/tests/test_session_start_cards.sh": 0,
+  "hooks/tests/test_session_start_concurrency.sh": 0,
+  "hooks/tests/test_socket_hash.sh": 0,
+  "mcp": 1,
+  "smriti": 0
+}
