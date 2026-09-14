@@ -42,6 +42,20 @@ fi
 # turn (2 python3 spawns + sqlite opens) is far more often than needed — skip
 # while the last one is still under 120s old.
 _PLUGIN_DIR="$(resolve_cc_soul_root 2>/dev/null || dirname "$SCRIPT_DIR")"
+# Record open saddles even when the transcript or daemon is unavailable.
+_SADDLE_SUMMARY=""
+if [[ "$STOP_HOOK_ACTIVE" != "true" && "$SESSION_ID" != "unknown" && "$SESSION_ID" =~ ^[a-zA-Z0-9_-]+$ \
+      && -s "$MIND_PATH/outcome_ledger.jsonl" ]]; then
+    _saddle=$(timeout -s KILL 0.3s python3 -S "$_PLUGIN_DIR/chitta-mcp/saddle_detector.py" \
+        check --session "$SESSION_ID" --ledger "$MIND_PATH/outcome_ledger.jsonl" 2>/dev/null) && {
+        _SADDLE_SUMMARY=$(printf '%s' "$_saddle" | jq -r '.message // empty' 2>/dev/null)
+        [[ -n "$_SADDLE_SUMMARY" ]] && printf '%s\n' "$_SADDLE_SUMMARY" >&2
+        source "${SCRIPT_DIR}/outcome-ledger.sh" 2>/dev/null
+        _saddle_event=$(printf '%s' "$_saddle" | jq -c '. + {event:"saddle"}' 2>/dev/null)
+        ledger_append "$_saddle_event" "$SESSION_ID" 2>/dev/null || true
+    }
+fi
+
 if [[ "$SESSION_ID" != "unknown" ]]; then
     _HB_MARKER="${MIND_PATH}/.hb_${SESSION_ID}"
     _HB_AGE=999999
@@ -290,6 +304,7 @@ _next_line=$(echo "$RESPONSE" | grep -iEm1 'next[: ].{10,}|TODO[: ].{10,}' | hea
 _snap_text=""
 [[ -n "$_last_user" ]] && _snap_text="Goal: ${_last_user}"
 [[ -n "$_next_line" ]] && _snap_text="${_snap_text}\nNext: ${_next_line}"
+[[ -n "$_SADDLE_SUMMARY" ]] && _snap_text="${_snap_text}"$'\n'"$_SADDLE_SUMMARY"
 _updated=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
 queue_write "ledger_save" "$(jq -n \
@@ -864,6 +879,7 @@ snapshot=$(echo "$ASSISTANT_TEXT" | grep -v '^$' | tail -20 | head -c 1000)
 if [[ "$TURNS" =~ ^[0-9]+$ && "$TURNS" -ge 3 ]]; then
     SUMMARY="[session:$SESSION_ID] ${mood}→${TURNS} turns"
     [[ -n "$TOOLS_USED" ]] && SUMMARY="$SUMMARY | tools: ${TOOLS_USED:0:100}"
+    [[ -n "$_SADDLE_SUMMARY" ]] && SUMMARY="${SUMMARY}"$'\n'"$_SADDLE_SUMMARY"
     emit_event "" "session_summary" "hook_regex" "$SUMMARY" "0.5" "end-of-session summary" "$REALM"
     echo "[soul] +session-summary: ${SUMMARY:0:60}" >&2
 else

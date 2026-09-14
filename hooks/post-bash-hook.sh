@@ -67,7 +67,11 @@ if [[ -n "$command" && -f "${SCRIPT_DIR}/outcome-ledger.sh" ]]; then
     _lg_cmd=$(printf '%s' "${command:0:80}" | jq -Rs . 2>/dev/null)
     _lg_exit="${exit_code:-0}"; [[ "${exit_known:-1}" == "0" ]] && _lg_exit="null"
     _lg_extra=""; [[ "${likely_fail:-0}" == "1" ]] && _lg_extra=',"likely_fail":true'
-    ledger_append "{\"event\":\"bash_outcome\",\"exit_code\":${_lg_exit},\"cmd_head\":${_lg_cmd:-\"\"}${_lg_extra}}" "$_lg_sid" 2>/dev/null || true
+    _lg_stderr='""'
+    if [[ "${exit_code:-0}" != "0" || "${likely_fail:-0}" == "1" ]]; then
+        _lg_stderr=$(printf '%s' "${stderr:-${_err:-$output}}" | head -c 160 | jq -Rs . 2>/dev/null)
+    fi
+    ledger_append "{\"stderr_head\":${_lg_stderr:-\"\"},\"event\":\"bash_outcome\",\"exit_code\":${_lg_exit},\"cmd_head\":${_lg_cmd:-\"\"}${_lg_extra}}" "$_lg_sid" 2>/dev/null || true
 fi
 
 # Normalize command to first word (basename only)

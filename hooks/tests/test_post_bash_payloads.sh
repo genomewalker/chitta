@@ -19,6 +19,7 @@ check "failure event records exit 2" "$(grep t-fail "$T/outcome_ledger.jsonl")" 
 
 printf '%s' '{"hook_event_name":"PostToolUseFailure","session_id":"t-fail-noexit","tool_name":"Bash","tool_input":{"command":"true"},"error":"Command was killed"}' \
   | bash "$hook" >/dev/null 2>&1 || true
+check "failure captures stderr excerpt" "$(grep '"t-fail"' "$T/outcome_ledger.jsonl")" '"stderr_head":"ls: cannot access /nope"'
 check "failure without exit code defaults to 1" "$(grep t-fail-noexit "$T/outcome_ledger.jsonl")" '"exit_code":1'
 
 printf '%s' '{"hook_event_name":"PostToolUse","session_id":"t-ok","tool_name":"Bash","tool_input":{"command":"echo hi"},"tool_response":{"stdout":"hi","stderr":"","interrupted":false}}' \
@@ -37,6 +38,7 @@ check "codex string response records null exit" "$(grep t-codex-fail "$T/outcome
 check "codex failure text sets likely_fail" "$(grep t-codex-fail "$T/outcome_ledger.jsonl")" '"likely_fail":true'
 printf '%s' '{"hook_event_name":"PostToolUse","session_id":"t-codex-ok","tool_name":"Bash","tool_input":{"command":"echo hi"},"tool_response":"hi\n"}' \
   | bash "$hook" >/dev/null 2>&1 || true
+check "codex failure captures output excerpt" "$(grep t-codex-fail "$T/outcome_ledger.jsonl")" 'No such file or directory'
 check "codex clean output has no likely_fail" "$(grep t-codex-ok "$T/outcome_ledger.jsonl" | grep -c likely_fail)" '0'
 
 exit $fail

@@ -1,0 +1,219 @@
+{
+  "timestamp": "2026-09-14T11:01:26.203138+00:00",
+  "socket": "/projects/caeg/scratch/kbd606/tmp/chitta-eval-mind/run/chitta/chitta-2511933830.sock",
+  "snapshot_id": "bbcaed33",
+  "transport": "cli",
+  "cli": "/home/kbd606/.claude/bin/chitta",
+  "tasks_sha256": "1ff54c6f18bf7d487112fea6786c60d659c7a95b4d96a8ef4f78bd34bb6a494e",
+  "timeout_seconds": 2,
+  "scoring": "Exact answer (case-insensitive) or exact memory ID; errors/timeouts are misses. Median includes every attempted query and CLI startup.",
+  "summary": {
+    "tasks": 20,
+    "hit_at_1": 0.0,
+    "hit_at_3": 0.0,
+    "median_latency_ms": 7.058,
+    "errors": 20,
+    "empty": 0
+  },
+  "by_style": {
+    "proportional": {
+      "tasks": 14,
+      "hit_at_1": 0.0,
+      "hit_at_3": 0.0,
+      "median_latency_ms": 7.205,
+      "errors": 14,
+      "empty": 0
+    },
+    "structural": {
+      "tasks": 6,
+      "hit_at_1": 0.0,
+      "hit_at_3": 0.0,
+      "median_latency_ms": 6.481,
+      "errors": 6,
+      "empty": 0
+    }
+  },
+  "ready_for_hook": false,
+  "results": [
+    {
+      "id": "retrieval-meaning-to-words",
+      "style": "proportional",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 8.074,
+      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
+      "results": []
+    },
+    {
+      "id": "retrieval-words-to-meaning",
+      "style": "proportional",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 7.25,
+      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
+      "results": []
+    },
+    {
+      "id": "bridge-to-daemon-implementation",
+      "style": "proportional",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 10.157,
+      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
+      "results": []
+    },
+    {
+      "id": "daemon-to-bridge-implementation",
+      "style": "proportional",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 11.012,
+      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
+      "results": []
+    },
+    {
+      "id": "mcp-to-store-dependency",
+      "style": "proportional",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 7.611,
+      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
+      "results": []
+    },
+    {
+      "id": "store-to-mcp-dependency",
+      "style": "proportional",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 6.955,
+      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
+      "results": []
+    },
+    {
+      "id": "prompt-to-store-mechanism",
+      "style": "proportional",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 7.16,
+      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
+      "results": []
+    },
+    {
+      "id": "store-to-prompt-mechanism",
+      "style": "proportional",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 8.869,
+      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
+      "results": []
+    },
+    {
+      "id": "bridge-to-prompt-mechanism",
+      "style": "proportional",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 6.495,
+      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
+      "results": []
+    },
+    {
+      "id": "prompt-to-bridge-mechanism",
+      "style": "proportional",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 6.661,
+      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
+      "results": []
+    },
+    {
+      "id": "embedding-to-daemon-mechanism",
+      "style": "proportional",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 12.894,
+      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
+      "results": []
+    },
+    {
+      "id": "daemon-to-embedding-mechanism",
+      "style": "proportional",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 6.74,
+      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
+      "results": []
+    },
+    {
+      "id": "recall-to-store-mechanism",
+      "style": "proportional",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 6.786,
+      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
+      "results": []
+    },
+    {
+      "id": "store-to-recall-mechanism",
+      "style": "proportional",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 6.818,
+      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
+      "results": []
+    },
+    {
+      "id": "closed-thread-cleanup-forward",
+      "style": "structural",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 9.017,
+      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
+      "results": []
+    },
+    {
+      "id": "closed-thread-cleanup-reverse",
+      "style": "structural",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 6.321,
+      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
+      "results": []
+    },
+    {
+      "id": "tool-overhead-reduction-forward",
+      "style": "structural",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 9.532,
+      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
+      "results": []
+    },
+    {
+      "id": "tool-overhead-reduction-reverse",
+      "style": "structural",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 6.641,
+      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
+      "results": []
+    },
+    {
+      "id": "preembedding-before-lock-forward",
+      "style": "structural",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 6.313,
+      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
+      "results": []
+    },
+    {
+      "id": "preembedding-before-lock-reverse",
+      "style": "structural",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 5.739,
+      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
+      "results": []
+    }
+  ]
+}

@@ -253,12 +253,13 @@ case "$MATCHER" in
         command=$(echo "$STDIN_DATA" | jq -r '.tool_input.command // empty')
         [[ -z "$command" ]] && exit 0
 
+        _bash_advisory=""
         # Advisory: nudge away from temp patch scripts toward file_patch.
         if echo "$command" | grep -qE '(python3?|bash)\s+(/tmp/|/maps/[^[:space:]]*/scratch/)[^[:space:]]+\.(py|sh)'; then
-            printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":"[code-intel] Temp patch script detected. Use the Edit tool directly — no script needed."}}\n'
+            _bash_advisory="[code-intel] Temp patch script detected. Use the Edit tool directly — no script needed."
         elif echo "$command" | grep -qE "python3?\s+-c\s+['\"]" && \
              echo "$command" | grep -qE "(open\([^)]*['\"][wa]['\"]|\.write_text\(|Path\([^)]*\)\.write\()"; then
-            printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":"[code-intel] Inline Python file-write detected. Use the Edit tool directly."}}\n'
+            _bash_advisory="[code-intel] Inline Python file-write detected. Use the Edit tool directly."
         fi
 
         # Stage 1a: Safety blocks
@@ -297,6 +298,34 @@ case "$MATCHER" in
             timeout 3 python3 "$_MCP_DIR/provenance.py" snapshot                 --cwd "$_cwd_pre" --out "$_MIND_PATH/.fs_snapshot_${_task_id}" >/dev/null 2>&1 || true
         fi
         # ── End task ledger pre-stage ─────────────────────────────────────────
+
+        # Advisory only: include interpreter startup in the 300 ms budget.
+        # The helper emits JSON only after a successful, deduplicated check.
+        _saddle_mind="${CHITTA_DB_PATH:-${HOME}/.claude/mind}"
+        _saddle_root="${CHITTA_PLUGIN_DIR:-${CC_SOUL_PLUGIN_DIR:-$SCRIPT_DIR/..}}"
+        [[ -f "$_saddle_root/chitta-mcp/saddle_detector.py" ]] || _saddle_root=$(resolve_cc_soul_root 2>/dev/null)
+        if [[ -s "$_saddle_mind/outcome_ledger.jsonl" ]]; then
+            _saddle_sid=$(printf '%s' "$STDIN_DATA" | jq -r '.session_id // empty' 2>/dev/null)
+            if [[ "$_saddle_sid" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+                _saddle_notice=$(timeout -s KILL 0.3s python3 -S "$_saddle_root/chitta-mcp/saddle_detector.py" \
+                    check --session "$_saddle_sid" --cmd "$command" \
+                    --ledger "$_saddle_mind/outcome_ledger.jsonl" \
+                    --notice-file "$_saddle_mind/.saddle_${_saddle_sid}" 2>/dev/null) && {
+                    if [[ -n "$_bash_advisory" ]]; then
+                        printf '%s' "$_saddle_notice" | jq --arg advisory "$_bash_advisory" '
+                            .hookSpecificOutput.additionalContext += ("\n" + $advisory)'
+                    else
+                        printf '%s\n' "$_saddle_notice"
+                    fi
+                    exit 0
+                }
+            fi
+        fi
+
+        if [[ -n "$_bash_advisory" ]]; then
+            jq -nc --arg context "$_bash_advisory" \
+                '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:$context}}'
+        fi
 
         # Stage 2: Soul memory — surface corrections/gotchas
         # Skip for subagent calls by default (saves 2s timeout per tool call).
