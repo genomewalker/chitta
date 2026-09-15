@@ -237,9 +237,14 @@ start_replica() {
     for ((i = 0; i < ${#wal_files[@]}; i++)); do
         name="${wal_files[$i]}"
         size="${wal_sizes[$i]}"
-        cp --reflink=auto --preserve=mode,timestamps "$LIVE_FIELD/segments/$name" "$stage_field/segments/$name"
+        # The live segment grows while we copy (hooks append continuously), so
+        # take exactly the prefix the selector saw. WAL replay truncates a torn
+        # tail at the last good record (log.rs), so a prefix cut is a valid
+        # store state; a `cp` + size check raced and failed twice on 2026-09-15.
+        head -c "$size" "$LIVE_FIELD/segments/$name" > "$stage_field/segments/$name"
+        touch -r "$LIVE_FIELD/segments/$name" "$stage_field/segments/$name"
         [[ "$(stat -c %s "$stage_field/segments/$name")" == "$size" ]] || die "copied size mismatch for segments/$name"
-        [[ "$(stat -c %s "$LIVE_FIELD/segments/$name")" == "$size" ]] || die "source changed while copying segments/$name"
+        [[ "$(stat -c %s "$LIVE_FIELD/segments/$name")" -ge "$size" ]] || die "source shrank while copying segments/$name"
     done
     # Loader state markers (field.rs load): without the *.migrated flags the
     # replica re-marks every memory for re-embedding and its semantic index
@@ -251,7 +256,11 @@ start_replica() {
     after="$(manifest_fingerprint)" || die "could not re-fingerprint live manifests"
     [[ "$before" == "$after" ]] || die "live manifest changed during the copy; snapshot discarded"
     after_selection="$(select_family)" || die "live family became inconsistent during the copy; snapshot discarded"
-    [[ "$selection" == "$after_selection" ]] || die "live family files changed during the copy; snapshot discarded"
+    # WAL sizes legitimately grow during the copy (the prefix copied above is
+    # the frozen state); everything else in the selection must be unchanged.
+    [[ "$(sed -E 's/^(WAL[[:space:]]+[^[:space:]]+)[[:space:]]+[0-9]+$/\1/' <<< "$selection")" == \
+       "$(sed -E 's/^(WAL[[:space:]]+[^[:space:]]+)[[:space:]]+[0-9]+$/\1/' <<< "$after_selection")" ]] \
+        || die "live family files changed during the copy; snapshot discarded"
     assert_not_mid_save "$snapshot_id" || die "a live snapshot save began during the copy; snapshot discarded"
 
     # There is no read-only cf_open/CLI validator: cf_open creates a WAL and may

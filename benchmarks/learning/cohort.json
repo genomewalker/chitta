@@ -1,0 +1,99 @@
+{
+  "cut_store": {
+    "files": {
+      "MANIFEST.1": {
+        "sha256": "8b47d269158ace4399e16369042808e3ed17ada1b0d9a0ec100dfd16fd8cc8f9",
+        "size": 5906802
+      },
+      "MANIFEST.2": {
+        "sha256": "03c41737c9008beec29687e6e9a414c07b7168ef13e1fb05761ca12909fad57a",
+        "size": 5906773
+      },
+      "chitta.da86decb.bin": {
+        "sha256": "cd4a654538b811b2275bc776f58df086fa59792334d0251ed6aefd349db5126a",
+        "size": 14019944
+      },
+      "chitta.da86decb.emb": {
+        "sha256": "25aa736a43a68b203b00ebe9f84695c556e8c805eb25997faf372caf41bb140a",
+        "size": 415205576
+      },
+      "chitta.da86decb.hdc": {
+        "sha256": "d55f06c560de125f973a9dd07c169004d93a9a3d7270b1be3f85e9a30b0787cd",
+        "size": 149921104
+      },
+      "chitta.da86decb.lsh": {
+        "sha256": "1b263919115da1b2c596ed2c30968090cd14ab75209ef6ee2fb8ebcbd27ef401",
+        "size": 3235472
+      },
+      "chitta.da86decb.organs": {
+        "sha256": "9c2cfc2f4e6962fbc44f5f25cca16e83d4d2574cb0b8dfa47599c13729adbc96",
+        "size": 36838693
+      },
+      "chitta.da86decb.pld": {
+        "sha256": "b7382131195653f8b353756c8020dc089e929e9b044bcf426f98916d04b5d5b1",
+        "size": 78268512
+      },
+      "chitta.da86decb.shdr": {
+        "sha256": "677444446b2ba3e58f543bce4e3ff8576191961966c26241fc0e1664d60d3f86",
+        "size": 81
+      },
+      "chitta.da86decb.snapshot": {
+        "sha256": "ff2a4a74569dc358a83743df74da370425fdbb575e68f5e051b32db26b87beb5",
+        "size": 876913170
+      },
+      "chitta.da86decb.sup.json": {
+        "sha256": "e15eefe601560432059a632c5129427c8a96bd82300c075dc81553119d158877",
+        "size": 22902397
+      },
+      "chitta.da86decb.turbo": {
+        "sha256": "56521bf311d62e298e08673e1bd65e9d95bdb359c4a0764da7429afd0022671d",
+        "size": 52311666
+      },
+      "chitta.da86decb.turbo.meta": {
+        "sha256": "80727027eed521f2aa5ba2b1f2b6e7477365f6f394f4b3a2d4536601207b983a",
+        "size": 1078576
+      },
+      "cortex.da86decb.snapshot": {
+        "sha256": "3a0c5b18a37f7d5a86b6a55079a8fbd59b9752c82154b99177e629261c35eceb",
+        "size": 212566479
+      },
+      "embed_1536_v1.migrated": {
+        "sha256": "a4c3ed04a95a3da14a9d235c83d868bed7c0f45cf7f3faa751ee8f50598d2211",
+        "size": 4
+      },
+      "lite_encoder.bin": {
+        "sha256": "7aaf74db88ff398fa70c0f46f1e249f88bde58f75ebc202a84369cf85e5ba6c7",
+        "size": 11472131
+      },
+      "seen_offsets.da86decb.json": {
+        "sha256": "76153ac8c8e89d7aa94f927388998dd59cf29da3393617973ddaf4a018115012",
+        "size": 164
+      },
+      "segments/da86decb_000000000001.seg": {
+        "sha256": "d782cdb9cf432fa4eea03b5d23704027df601304908a91689c2102012d0f49eb",
+        "size": 2208802
+      },
+      "segments/dd11e389_000000000001.seg": {
+        "sha256": "8cd4dc6487accab3e40e910f7d00827b1f58868a960e5e4f6ff8f72169cbb225",
+        "size": 56
+      },
+      "ssl_gloss_v1.migrated": {
+        "sha256": "a4c3ed04a95a3da14a9d235c83d868bed7c0f45cf7f3faa751ee8f50598d2211",
+        "size": 4
+      }
+    },
+    "fully_hashed": true,
+    "mind": "/maps/projects/caeg/scratch/kbd606/tmp/learning-cut-20260915",
+    "selection": {
+      "generation": "39285",
+      "header_seqno": "206502617",
+      "id": "da86decb",
+      "seqno": "206502617"
+    },
+    "sha256": "795653503362d2a20fadb359454eac4d9b13c50e66dca5cffb835a6bf4709e30"
+  },
+  "cut_timestamp_ms": 1789506106539,
+  "preview": false,
+  "realm": "project:cc-soul",
+  "schema": 2
+}
