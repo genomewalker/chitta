@@ -1,0 +1,40 @@
+{
+  "base": "15882c02",
+  "bash_n": "PASS: scripts/eval-learning.sh",
+  "eval_immutable": {
+    "command": "bash scripts/check-eval-immutable.sh main HEAD",
+    "result": "PASS"
+  },
+  "hook_shell_tests": {
+    "logs": "/tmp/learning-followup-hooks.KPEia4",
+    "result": "PASS",
+    "tests": 18,
+    "unchanged": true,
+    "isolation": "fresh HOME, mind, queue, runtime and socket for each script"
+  },
+  "learning_unittest": {"result": "PASS", "tests": 31},
+  "mcp_unittest": {
+    "result": "PASS", "tests": 127, "unchanged": true,
+    "log": "/tmp/learning-followup-mcp.log"
+  },
+  "smriti_unittest": {
+    "result": "PASS", "tests": 46, "unchanged": true,
+    "log": "/tmp/learning-followup-smriti.log"
+  },
+  "model_calls": 0,
+  "official_cohort_frozen": false,
+  "isolation": {
+    "strict": "actual preflight refuses namespace creation (ENOSPC); absent-bwrap refusal also unit-tested",
+    "home-audit": "screening mode; permission settings and post-hoc audit; no OS isolation",
+    "claude_permission_enforcement": "not exercised by the trusted dry-run stub"
+  },
+  "python": "/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/bin/python3",
+  "ruff_check": "PASS",
+  "ruff_format_check": "PASS",
+  "shellcheck": {
+    "executable": "/tmp/learning-shellcheck/shellcheck",
+    "installation": false,
+    "result": "PASS",
+    "version": "0.11.0"
+  }
+}

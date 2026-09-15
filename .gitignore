@@ -145,3 +145,6 @@ chitta/build-cuda/
 
 # Isolated evolution cycle artifacts and worktrees
 /.evolve/
+
+# Learning experiment logs and replicas stay outside version control
+/benchmarks/learning/results/

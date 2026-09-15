@@ -2,6 +2,8 @@
 
 Status as of 2026-09-13
 
+2026-09-15: Automatic-learning harness built; official cohort and prospective panel remain unfrozen — [protocol](../benchmarks/learning/protocol.md).
+
 The evolution loop is propose → implement in an isolated worktree → gates →
 evaluate against a frozen-snapshot replica → verdict → human merge. Evaluation
 changes need a separate, explicit approval. Nothing here starts a daemon, merges,

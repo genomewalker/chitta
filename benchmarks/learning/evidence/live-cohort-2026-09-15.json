@@ -1,0 +1,74 @@
+{
+  "ambiguous_population": {
+    "access_count_missing": 0,
+    "arm_a_recall_exposure": {
+      "required_after_exclusion": 0,
+      "share": null,
+      "status": "not measured: diagnostic has no arm A"
+    },
+    "count": 4288,
+    "creation_date_histogram": {
+      "before_2026-03-26": 0,
+      "on_or_after_2026-03-26": 4288,
+      "unknown": 0
+    },
+    "historical_access_count": 5203492,
+    "historical_access_share": 0.6109719147397275,
+    "historical_total_access_count": 8516745,
+    "kinds": {
+      "alias": 124,
+      "belief": 9,
+      "decision": 2,
+      "failure": 6,
+      "insight": 36,
+      "milestone": 67,
+      "operational": 6,
+      "preference": 32,
+      "question": 2,
+      "result": 6,
+      "signal": 154,
+      "task": 3,
+      "wisdom": 3841
+    }
+  },
+  "classification_counts": {
+    "ambiguous": 4288,
+    "excluded": 9115,
+    "included": 1897
+  },
+  "completed_timestamp_ms": 1789492803140,
+  "counts": {
+    "ambiguous": 4288,
+    "native_learning": 1876,
+    "native_learning_unexpected_kind": 21,
+    "native_value_fact": 7619,
+    "other_source": 209,
+    "preserved": 1287
+  },
+  "cut_timestamp_ms": 1789492803140,
+  "diagnostic_only": true,
+  "enumeration_stable": false,
+  "included": 1897,
+  "official_cohort_frozen": false,
+  "realm": "project:cc-soul",
+  "records": 15300,
+  "report_path": "/tmp/learning-live-cohort-followup-final.json",
+  "report_sha256": "5e10a846328de92b3489dd9aef13bca524d0fb972c587acf34d5fa0d3efa9699",
+  "store_manifest_sha256": {
+    "MANIFEST.1": "a6d2971721c740c75a678b0ad04c997fcb034056b6b216152608439adb1cca22",
+    "MANIFEST.2": "8aceb8065073774627356b861a62dd5516f2b043163e17d9d875aefb8a1083d9"
+  },
+  "store_selection": {
+    "generation": "39172",
+    "header_seqno": "206479738",
+    "id": "d988865c",
+    "seqno": "206479738"
+  },
+  "supplemental_provenance_errors": 0,
+  "unexpected_native_kinds": {
+    "alias": 11,
+    "signal": 10
+  },
+  "unresolved": 0,
+  "unresolved_reasons": {}
+}

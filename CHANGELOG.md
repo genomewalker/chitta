@@ -11,6 +11,13 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 ## [Unreleased]
 
 ### Added
+- Automatic-learning experiment harness: provenance-based cohort classification,
+  prospective task/grader freezes, isolated paired replica trials (strict bwrap
+  mode or `home-audit` with post-hoc voiding), exposure checks, deterministic
+  grading and fixture-only dry runs (`benchmarks/learning/protocol.md`).
+- Daemon startup caches derived search state across restarts (normalized
+  embeddings, event-tape organs, quantized index): clean start 27 s → 13 s,
+  optional sidecars, rollback-safe.
 - Stigmergic artifact traces, after SwarmWorld (arXiv:2608.26081) measured
   ~95% of first reuse through observing an artifact rather than being told:
   `pre-tool-hook` adds `[traces]` on the first Read of a file per session
