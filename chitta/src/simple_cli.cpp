@@ -1695,7 +1695,9 @@ int main(int argc, char* argv[]) {
             std::cerr << "[daemon] Another daemon is running (socket in use)\n";
             return 1;
         }
-        std::cerr << "[socket_server] Listening (warming up) on " << sock_path << "\n";
+        std::cerr << "[socket_server] Listening (warming up) on " << sock_path
+                  << " since_start=" << std::chrono::duration_cast<std::chrono::milliseconds>(
+                         std::chrono::steady_clock::now() - process_started).count() << "ms\n";
     }
 
     std::atomic<bool> load_done{false};
@@ -1713,7 +1715,13 @@ int main(int argc, char* argv[]) {
                                  std::chrono::steady_clock::now() - started).count()
                           << " ready=" << (vector.size() == EMBED_DIM) << "\n";
             });
+            const auto store_started = std::chrono::steady_clock::now();
             field_store_ptr = std::make_unique<FieldStore>(field_path, field_path);
+            std::cerr << "[daemon] load phase=field_store ms="
+                      << std::chrono::duration_cast<std::chrono::milliseconds>(
+                             std::chrono::steady_clock::now() - store_started).count()
+                      << " since_start=" << std::chrono::duration_cast<std::chrono::milliseconds>(
+                             std::chrono::steady_clock::now() - process_started).count() << "\n";
             encoder_warm.get();
         } catch (...) {
             load_ex = std::current_exception();
