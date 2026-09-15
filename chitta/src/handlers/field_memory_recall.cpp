@@ -589,7 +589,7 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
             std::vector<std::pair<uint64_t, float>> lead(rrf_scores.begin(), rrf_scores.end());
             const size_t kAnchors = std::min<size_t>(5, lead.size());
             std::partial_sort(lead.begin(), lead.begin() + kAnchors, lead.end(),
-                              [](auto& a, auto& b) { return a.second > b.second; });
+                              [](auto& a, auto& b) { return a.second > b.second || (a.second == b.second && a.first < b.first); });
             const float norm = std::log(static_cast<float>(field_store_->memory_count()) + 1.0f);
             for (size_t a = 0; a < kAnchors; ++a) {
                 auto br = field_store_->bridge_lane(lead[a].first, realm, 16);
@@ -600,7 +600,7 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
                     // A partner already present keeps its own hit; we only add the
                     // bridge's vote+boost to it.
                     if (!best_hit.count(bids[i])) {
-                        std::string content = field_store_->get_content(bids[i]);
+                        std::string content = field_store_->get_content(bids[i], false);
                         if (content.empty()) continue;
                         FieldRecallHit h;
                         h.memory_id = bids[i];
@@ -727,7 +727,7 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
             if (hits.empty()) {
                 for (uint64_t tid : tagged_ids) {
                     if (hits.size() >= limit) break;
-                    std::string content = field_store_->get_content(tid);
+                    std::string content = field_store_->get_content(tid, false);
                     if (content.empty()) continue;
                     std::string meta_json = field_store_->get_memory_metadata(tid);
                     FieldRecallHit h;
@@ -772,7 +772,7 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
             }
             std::sort(hits.begin(), hits.end(),
                       [](const FieldRecallHit& a, const FieldRecallHit& b) {
-                          return a.score > b.score;
+                          return a.score > b.score || (a.score == b.score && a.memory_id < b.memory_id);
                       });
         }
     }
@@ -898,7 +898,7 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
             }
             std::sort(hits.begin(), hits.end(),
                       [](const FieldRecallHit& a, const FieldRecallHit& b) {
-                          return a.score > b.score;
+                          return a.score > b.score || (a.score == b.score && a.memory_id < b.memory_id);
                       });
         }
     }
@@ -978,7 +978,7 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
                 float contrib = lane_w * (1.0f / (kPPRRRF + rank++));
                 if (by_id.find(mid) != by_id.end()) { fused[mid] += contrib; continue; }
                 // Inject: hydrate the graph-reached memory (semantic_score 0).
-                std::string content = field_store_->get_content(mid);
+                std::string content = field_store_->get_content(mid, false);
                 if (content.empty() || content.rfind("[gap]", 0) == 0) continue;
                 FieldRecallHit h;
                 h.memory_id      = mid;
