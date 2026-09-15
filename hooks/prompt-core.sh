@@ -149,25 +149,14 @@ _recall_telemetry_finish() {
         return "$_exit_status"
     fi
     if [[ "$_RECALL_CONTEXT_EMITTED" -eq 1 && -n "$_LEDGER_OUTPUT" ]]; then
-        _lg_evt=$(printf '%s' "$_LEDGER_OUTPUT" | python3 -c '
-import json, re, sys
-
-lanes = {}
-for line in sys.stdin:
-    match = re.match(r"\[(\w+)\]#(\d+)", line)
-    if match:
-        lanes.setdefault(match.group(1), []).append(match.group(2))
-ids = sorted({memory_id for values in lanes.values() for memory_id in values})
-if ids:
-    print(json.dumps({
-        "event": "injected",
-        "ids": ids,
-        "lanes": lanes,
-        "lane_ms": json.loads(sys.argv[1]),
-        "lane_timeout": json.loads(sys.argv[2]),
-        "hook_ms": int(sys.argv[3]),
-    }))
-' "$_LANE_MS_JSON" "$_LANE_TIMEOUT_JSON" "$_HOOK_ELAPSED_MS" 2>/dev/null)
+        _lg_evt=$(printf '%s' "$_LEDGER_OUTPUT" | jq -Rsc \
+            --argjson ms "$_LANE_MS_JSON" --argjson timeouts "$_LANE_TIMEOUT_JSON" \
+            --argjson elapsed "$_HOOK_ELAPSED_MS" '
+            [split("\n")[] | capture("^\\[(?<lane>\\w+)\\]#(?<id>\\d+)")] |
+            reduce .[] as $m ({}; .[$m.lane] += [$m.id]) |
+            . as $lanes | [ .[][] ] | unique | select(length > 0) |
+            {event:"injected", ids:., lanes:$lanes, lane_ms:$ms,
+             lane_timeout:$timeouts, hook_ms:$elapsed}' 2>/dev/null)
         [[ -n "$_lg_evt" ]] && ledger_append "$_lg_evt" "$SESSION_ID"
     elif [[ "$_RECALL_EMPTY" -eq 1 ]]; then
         ledger_append "{\"event\":\"recall_empty\",\"lane_ms\":${_LANE_MS_JSON},\"lane_timeout\":${_LANE_TIMEOUT_JSON},\"hook_ms\":${_HOOK_ELAPSED_MS}}" "$SESSION_ID"
@@ -259,8 +248,7 @@ trap '_recall_telemetry_finish; rm -rf "$_ld"' EXIT
 # A prompt is authoritative proof that this frontend session is alive. Refresh
 # both the Chitta session heartbeat and any thread lease, independent of whether
 # this is a Claude or Codex adapter invocation. Rate-limited: the daemon's
-# liveness TTL is 900s, so a heartbeat every single turn (2 python3 spawns +
-# sqlite opens) is far more often than needed — skip while the last one is
+# liveness TTL is 900s, so skip while the last successful heartbeat is
 # still under 120s old.
 if [[ "$SESSION_ID" != "unknown" ]]; then
     _HB_MARKER="${MIND_PATH}/.hb_${SESSION_ID}"
@@ -268,7 +256,7 @@ if [[ "$SESSION_ID" != "unknown" ]]; then
     [[ -f "$_HB_MARKER" ]] && _HB_AGE=$(( $(date +%s) - $(stat -c %Y "$_HB_MARKER" 2>/dev/null || echo 0) ))
     if [[ "$_HB_AGE" -ge 120 ]]; then
         (
-            printf '%s' "$INPUT" | registry_call 1 heartbeat --queued && touch "$_HB_MARKER"
+            session_heartbeat "$SESSION_ID" "$INPUT" && touch "$_HB_MARKER"
         ) >"$_ld/heartbeat" 2>/dev/null &
     fi
 fi
@@ -276,12 +264,7 @@ fi
 # Strip system markup (task-notifications, system-reminders, command blocks) to get real user intent.
 # When a message is purely system markup (e.g. task-notification firing UserPromptSubmit),
 # skip all processing — no soul context needed.
-CLEAN_QUERY=$(echo "$QUERY" | python3 -c "
-import sys, re
-text = sys.stdin.read()
-text = re.sub(r'<(task-notification|system-reminder|command-name|command-message|local-command-\w+)[^>]*>.*?</\1>', '', text, flags=re.DOTALL|re.IGNORECASE)
-print(text.strip())
-" 2>/dev/null || echo "$QUERY")
+CLEAN_QUERY=$(printf '%s\n' "$QUERY" | clean_query 2>/dev/null || printf '%s' "$QUERY")
 [[ -z "$CLEAN_QUERY" ]] && exit 0
 
 # Distinctive tokens of the cleaned turn, computed once. A turn with no content
@@ -419,7 +402,7 @@ fi
 # Skip daemon-dependent operations immediately if daemon is not running.
 # v6.0: route Retrieve event into interaction ledger via durable queue (file-based, no daemon needed)
 if [[ -n "${SESSION_ID:-}" && "$SESSION_ID" != "unknown" ]]; then
-    _lq=$(printf '%s' "$QUERY" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))' 2>/dev/null || echo '""')
+    _lq=$(printf '%s' "$QUERY" | jq -Rs . 2>/dev/null || echo '""')
     queue_write "ledger_append" "{\"kind\":\"Retrieve\",\"session_id\":\"${SESSION_ID}\",\"payload\":{\"Retrieve\":{\"query\":${_lq},\"strategy\":\"prompt_hook\",\"limit\":0,\"refs\":[]}}}"
 fi
 
@@ -545,43 +528,29 @@ else
                   --limits "{\"sem\":6,\"ctx\":4,\"hyb\":${HYB_LANE_LIMIT},\"kw\":3,\"corr\":3}")
         [[ -n "$CTX_QUERY" ]] && _rpc_cmd+=(--ctx-query "$CTX_QUERY")
         if timeout "$((MAX_WAIT + 1))" "${_rpc_cmd[@]}" >"$_ld/rpc.json" 2>/dev/null; then
-            _rpc_requested=$(IFS=,; printf '%s' "${_rpc_lane_names[*]}")
-            if python3 - "$_ld/rpc.json" "$_ld" "$_rpc_requested" >"$_ld/rpc.stats" <<'PY'
-import json
-import pathlib
-import sys
-
-source, lane_dir, requested = sys.argv[1:]
-allowed = {"sem", "ctx", "hyb", "kw", "corr", "corrk"}
-names = requested.split(",") if requested else []
-if any(name not in allowed for name in names):
-    raise SystemExit(1)
-try:
-    payload = json.loads(pathlib.Path(source).read_text())
-    lanes = payload["lanes"]
-except (OSError, ValueError, KeyError, TypeError):
-    raise SystemExit(1)
-validated = []
-for name in names:
-    try:
-        lane = lanes[name]
-        text = lane["text"]
-        ms = lane["ms"]
-        timed_out = lane["timed_out"]
-        results = lane["results"]
-    except (KeyError, TypeError):
-        raise SystemExit(1)
-    if not isinstance(text, str) or not isinstance(ms, int) or ms < 0:
-        raise SystemExit(1)
-    if not isinstance(timed_out, bool) or not isinstance(results, list):
-        raise SystemExit(1)
-    validated.append((name, text, ms, timed_out))
-lane_path = pathlib.Path(lane_dir)
-for name, text, ms, timed_out in validated:
-    (lane_path / name).write_text(text)
-    print(f"{name}\t{ms}\t{'true' if timed_out else 'false'}")
-PY
-            then
+            # Validate every requested lane before writing any lane file. NUL
+            # framing retains tabs, newlines and trailing newlines in lane text.
+            if jq -sjer --argjson names "$_rpc_lanes_json" '
+                if length == 1 then .[0] else error("expected one recall response") end |
+                .lanes as $lanes |
+                if all($names[]; . as $name | $lanes[$name] |
+                    (.text | type == "string") and
+                    (.ms | type == "number" and . >= 0 and . == floor) and
+                    (.timed_out | type == "boolean") and
+                    (.results | type == "array")) then
+                    $names[] as $name | $lanes[$name] |
+                    $name, "\u0000", (.ms | tostring), "\u0000",
+                    (.timed_out | tostring), "\u0000", (.text | gsub("\u0000"; "")), "\u0000"
+                else error("invalid recall lane") end
+            ' "$_ld/rpc.json" >"$_ld/rpc.records" 2>/dev/null; then
+                : >"$_ld/rpc.stats"
+                while IFS= read -r -d '' _rpc_lane &&
+                      IFS= read -r -d '' _rpc_ms &&
+                      IFS= read -r -d '' _rpc_timeout &&
+                      IFS= read -r -d '' _rpc_text; do
+                    printf '%s' "$_rpc_text" >"$_ld/$_rpc_lane"
+                    printf '%s\t%s\t%s\n' "$_rpc_lane" "$_rpc_ms" "$_rpc_timeout" >>"$_ld/rpc.stats"
+                done <"$_ld/rpc.records"
                 while IFS=$'\t' read -r _rpc_lane _rpc_ms _rpc_timeout; do
                     [[ -n "$_rpc_lane" ]] || continue
                     _LANE_MS["$_rpc_lane"]="$_rpc_ms"
@@ -1213,13 +1182,6 @@ _CLASSIFIER_SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../scripts" 2>/dev/null
 _DETECTED_INTENT=""
 _DETECTED_SCORE=""
 
-if [[ -f "$_CLASSIFIER_MODEL" && -x "$_CLASSIFIER_SCRIPT" ]]; then
-    _clf_out=$(echo "$_INTENT_QUERY" | python3 "$_CLASSIFIER_SCRIPT" "$_CLASSIFIER_MODEL" "$_CLASSIFIER_THRESHOLD" 2>/dev/null || true)
-    if [[ -n "$_clf_out" ]]; then
-        _DETECTED_INTENT="${_clf_out%% *}"
-        _DETECTED_SCORE="${_clf_out##* }"
-    fi
-fi
 
 # Skip intent detection when user is quoting/discussing hook output (feedback loop prevention)
 if echo "$_INTENT_QUERY" | grep -qE "(\[LEARN\]|\[DISCIPLINE\]|UserPromptSubmit says|learn_correction NOW|context-bloat)"; then
@@ -1247,6 +1209,17 @@ echo "$_INTENT_QUERY" | grep -qiE "(it works|finally|success|done|shipped|releas
     && _regex_milestone=1 || true
 echo "$_INTENT_QUERY" | grep -qiE "(frustrated|annoyed|confused|stuck|lost|this is (hard|difficult|confusing)|I give up|help me understand|what am I missing|tedious|repetitive|not sure|overthinking)" \
     && _regex_frustration=1 || true
+
+# Model verdicts only affect storage when one of these regexes also matches.
+# Avoid loading Python/fastText on every ordinary turn (including quoted hints).
+if (( _regex_correction || _regex_preference || _regex_belief || _regex_milestone )) &&
+   [[ -f "$_CLASSIFIER_MODEL" && -x "$_CLASSIFIER_SCRIPT" ]]; then
+    _clf_out=$(echo "$_INTENT_QUERY" | python3 "$_CLASSIFIER_SCRIPT" "$_CLASSIFIER_MODEL" "$_CLASSIFIER_THRESHOLD" 2>/dev/null || true)
+    if [[ -n "$_clf_out" ]]; then
+        _DETECTED_INTENT="${_clf_out%% *}"
+        _DETECTED_SCORE="${_clf_out##* }"
+    fi
+fi
 
 # Merge: every auto-stored category requires BOTH model + regex — model-alone
 # stored questions/probes as durable memories (echo chamber: ask about X twice
