@@ -378,7 +378,9 @@ store_current() {
     # Build observe args with optional v0.4 fields.
     # Array + direct invocation (no eval): title/content come from LLM-distilled
     # transcript text, which must never reach shell parsing.
-    local -a observe_args=(--category "$cat" --title "$title" --content "$CURRENT_CONTENT" --realm "$REALM" --json)
+    # --source labels the writer: the learning experiment classifies the
+    # automatic cohort by provenance triplet, never by kind or text.
+    local -a observe_args=(--category "$cat" --title "$title" --content "$CURRENT_CONTENT" --realm "$REALM" --source distillation --json)
     [[ -n "$_SSL_VALENCE" ]] && observe_args+=(--valence "$_SSL_VALENCE")
     [[ -n "$_SSL_AROUSAL" ]] && observe_args+=(--arousal "$_SSL_AROUSAL")
     [[ -n "$_SSL_FLAGS" ]] && observe_args+=(--flags "$_SSL_FLAGS")
