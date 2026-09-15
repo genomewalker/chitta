@@ -10,6 +10,32 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 ## [Unreleased]
 
+### Changed
+- `recall_analogy` is explicit relation transfer only (a:b :: c:?): the
+  predicate(s) linking a→b come from indexed triplet lookups and the answers are
+  c's actual neighbours over those predicates, with supporting edges and a
+  `reason` on abstention. Structural mode and VSA ranking are gone from the
+  endpoint. Frozen-replica benchmark: hit@1 14/14, hit@3 14/14, 14/14 negative
+  abstentions, 0 unsupported answers (docs/EVALS.md).
+- Prompt, SessionStart and Stop hooks no longer start Python on the hot path:
+  query cleaning, RPC-stats parsing, the heartbeat, session registration and the
+  ledger render run in bash/jq against the daemon's CLI. Prompt hook median
+  822→635 ms, SessionStart 693→599 ms on a loaded node (docs/HOOKS.md).
+- Linked git worktrees resolve to the main checkout's realm in the hooks, the
+  session registry and the CLI, so Codex and evolve streams recall project memory.
+- Recall ranks `operational` distiller fragments below curated kinds
+  (`kind_operational` 0.8) so a correction outranks verbatim transcript notes
+  of equal similarity.
+- The daemon's binary-update probe uses `posix_spawn` instead of `popen`; the
+  `fork()` ran OpenBLAS's atfork barrier and stalled the main loop under
+  embedding load.
+- Chained `git add … && git commit` commands are captured as milestones.
+
+### Fixed
+- Nightly literature cards were rejected by the proposal loader (source URL
+  instead of a kind, prose `blast_radius`, zero effort) and silently skipped by
+  the selector; the watch now writes the loader's contract.
+
 ### Removed
 
 - Retired MDL admission compression on 2026-09-15: native and Bash shadow taps,

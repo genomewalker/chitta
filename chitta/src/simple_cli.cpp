@@ -63,6 +63,7 @@
 #endif
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <spawn.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 
@@ -85,6 +86,38 @@ void daemon_signal_handler(int sig) {
 }
 
 static const auto process_started = std::chrono::steady_clock::now();
+
+extern char** environ;
+
+// Run `<binary> format-id` without fork(): posix_spawn skips pthread_atfork
+// handlers, so OpenBLAS's prefork barrier cannot stall the caller. Returns 0
+// when the probe cannot run or prints nothing parseable.
+static unsigned long long spawn_format_id_probe(const char* binary) {
+    int fds[2];
+    if (::pipe(fds) != 0) return 0;
+    posix_spawn_file_actions_t actions;
+    posix_spawn_file_actions_init(&actions);
+    posix_spawn_file_actions_addclose(&actions, fds[0]);
+    posix_spawn_file_actions_adddup2(&actions, fds[1], STDOUT_FILENO);
+    posix_spawn_file_actions_addclose(&actions, fds[1]);
+    posix_spawn_file_actions_addopen(&actions, STDERR_FILENO, "/dev/null", O_WRONLY, 0);
+    char arg0[] = "format-id";
+    char* const argv[] = {const_cast<char*>(binary), arg0, nullptr};
+    pid_t pid = 0;
+    int rc = ::posix_spawn(&pid, binary, &actions, nullptr, argv, environ);
+    posix_spawn_file_actions_destroy(&actions);
+    ::close(fds[1]);
+    unsigned long long vsid = 0;
+    if (rc == 0) {
+        char buf[64];
+        ssize_t n = ::read(fds[0], buf, sizeof(buf) - 1);
+        if (n > 0) { buf[n] = '\0'; vsid = std::strtoull(buf, nullptr, 10); }
+        int status = 0;
+        ::waitpid(pid, &status, 0);
+    }
+    ::close(fds[0]);
+    return vsid;
+}
 
 int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* embed_queue,
                int interval,
@@ -416,22 +449,18 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
                         bool compatible = true;
                         if (len > 0) {
                             self_path[len] = '\0';
-                            std::string probe = std::string(self_path) + " format-id 2>/dev/null";
-                            if (FILE* p = ::popen(probe.c_str(), "r")) {
-                                char buf[64];
-                                if (::fgets(buf, sizeof(buf), p)) {
-                                    unsigned long long new_vsid = std::strtoull(buf, nullptr, 10);
-                                    unsigned long long own_vsid =
-                                        (unsigned long long)cf_compiled_vector_space_id();
-                                    if (new_vsid != 0 && new_vsid != own_vsid) {
-                                        compatible = false;
-                                        std::cerr << "[maint] Binary updated but its store vector-space ("
-                                                  << new_vsid << ") differs from the running store ("
-                                                  << own_vsid << "); NOT auto-restarting — operator "
-                                                  << "restart required after store migration.\n";
-                                    }
-                                }
-                                ::pclose(p);
+                            // posix_spawn, not popen: fork() runs OpenBLAS's atfork
+                            // handler, which waits for every BLAS worker to go idle and
+                            // stalled this loop for seconds under embedding load.
+                            unsigned long long new_vsid = spawn_format_id_probe(self_path);
+                            unsigned long long own_vsid =
+                                (unsigned long long)cf_compiled_vector_space_id();
+                            if (new_vsid != 0 && new_vsid != own_vsid) {
+                                compatible = false;
+                                std::cerr << "[maint] Binary updated but its store vector-space ("
+                                          << new_vsid << ") differs from the running store ("
+                                          << own_vsid << "); NOT auto-restarting — operator "
+                                          << "restart required after store migration.\n";
                             }
                         }
                         if (compatible) {
