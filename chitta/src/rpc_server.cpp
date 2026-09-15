@@ -1425,7 +1425,9 @@ static std::string detect_realm() {
     // 3. Git repository name
     std::array<char, 256> buffer;
     std::string git_root;
-    FILE* pipe = popen("git rev-parse --show-toplevel 2>/dev/null", "r");
+    // --git-common-dir resolves a linked worktree to its main repository, so a
+    // Codex stream worktree shares the project realm instead of its own.
+    FILE* pipe = popen("d=$(git rev-parse --git-common-dir 2>/dev/null) && cd \"$(dirname \"$d\")\" 2>/dev/null && pwd -P", "r");
     if (pipe) {
         if (fgets(buffer.data(), buffer.size(), pipe)) {
             git_root = buffer.data();

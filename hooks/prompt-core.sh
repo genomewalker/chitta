@@ -201,7 +201,22 @@ realm_detect_once() {
         fi
         if [[ -z "$_REALM_CACHE" ]]; then
             while [[ -n "$_dir" && "$_dir" != "/" ]]; do
-                if [[ -e "$_dir/.git" ]]; then _REALM_CACHE="project:${_dir##*/}"; break; fi
+                if [[ -e "$_dir/.git" ]]; then
+                    _REALM_CACHE="project:${_dir##*/}"
+                    # A linked worktree has a .git FILE pointing into
+                    # <main>/.git/worktrees/<name>: name the realm after <main>, so
+                    # Codex streams and evolve worktrees share the project's memory
+                    # instead of an empty project:codex-wt-... realm (2026-09-15).
+                    if [[ -f "$_dir/.git" ]]; then
+                        local _gd
+                        _gd=$(sed -n 's/^gitdir: //p' "$_dir/.git" 2>/dev/null)
+                        if [[ "$_gd" == */.git/worktrees/* ]]; then
+                            _gd="${_gd%%/.git/worktrees/*}"
+                            _REALM_CACHE="project:${_gd##*/}"
+                        fi
+                    fi
+                    break
+                fi
                 _dir="${_dir%/*}"
             done
         fi

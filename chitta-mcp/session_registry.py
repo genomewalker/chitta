@@ -159,7 +159,15 @@ def _detect_realm(project_dir: str) -> str:
     except (OSError, UnicodeError):
         pass
     for directory in (project, *project.parents):
-        if (directory / ".git").exists():
+        dot_git = directory / ".git"
+        if dot_git.exists():
+            if dot_git.is_file():  # linked worktree: name the realm after the main checkout
+                try:
+                    gitdir = dot_git.read_text(encoding="utf-8").strip().removeprefix("gitdir: ")
+                except OSError:
+                    gitdir = ""
+                if "/.git/worktrees/" in gitdir:
+                    return f"project:{Path(gitdir.split('/.git/worktrees/')[0]).name}"
             return f"project:{directory.name}"
     return "brahman"
 
