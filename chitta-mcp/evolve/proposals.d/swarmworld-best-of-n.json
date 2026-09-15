@@ -1,0 +1,30 @@
+{
+  "id": "swarmworld-best-of-n",
+  "title": "Isolated best-of-2 implementation streams for evolve cycles",
+  "mechanism": "For a chosen proposal, run two independent Codex implementation streams in separate worktrees with no shared task memory (private CHITTA_DB_PATH, hooks in headless mode), gate both, and let the orchestrator merge the better candidate; compare against the current single shared-memory stream on accepted-bet rate and measured delta",
+  "expected_gain": {
+    "metric": "evolve accepted-bet rate per cycle",
+    "delta": 0.1,
+    "confidence": 0.2,
+    "rationale": "SwarmWorld: isolated best-of-N search retained the strongest single artifact (0.3488 vs 0.2380 under shared culture) while shared societies won on breadth; an evolve cycle wants the single best patch, so isolated candidates may beat one memory-fed stream"
+  },
+  "cost": {
+    "effort_h": 8,
+    "blast_radius": 2,
+    "scope": "scripts/evolve-cycle.sh, chitta-mcp/evolve/cycle.py (stream launch + candidate selection)"
+  },
+  "evidence": [
+    {
+      "source": "https://arxiv.org/abs/2608.26081",
+      "claim": "isolated control retained the strongest final single artifact, 0.3488 versus 0.2380 under full culture (3,200 ticks, N=100)"
+    },
+    {
+      "source": "https://arxiv.org/abs/2608.26081",
+      "claim": "shared worlds produced 5.75 and 7.00 validated inventions versus 2.75 in isolated search, so the advantage of sharing is breadth, not the best artifact"
+    }
+  ],
+  "source": "hypothesis",
+  "already_have": false,
+  "verifiability": "metric_only",
+  "prior_effort": "none"
+}

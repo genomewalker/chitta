@@ -10,6 +10,20 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 ## [Unreleased]
 
+### Added
+- Stigmergic artifact traces, after SwarmWorld (arXiv:2608.26081) measured
+  ~95% of first reuse through observing an artifact rather than being told:
+  `pre-tool-hook` adds `[traces]` on the first Read of a file per session
+  (memories whose text names that file; `CHITTA_FILE_TRACES=0` disables) and
+  `artifact-trace.sh` (PostToolUse Write) registers newly written scripts as
+  `[artifact] <path> sha:<8> purpose:…` signals so later sessions fork them.
+- Two hypothesis cards for the evolve loop from the same reading: isolated
+  best-of-2 implementation streams (SwarmWorld: isolated search kept the best
+  single artifact) and replication-weighted recall (Buehler's repeated runs
+  reached model-dependent conclusions). The learning-experiment protocol gains
+  two pre-registered secondary metrics: best-of-three per arm and artifact
+  reuse rate.
+
 ### Changed
 - `recall_analogy` is explicit relation transfer only (a:b :: c:?): the
   predicate(s) linking a→b come from indexed triplet lookups and the answers are

@@ -411,6 +411,35 @@ case "$MATCHER" in
             if [[ "$dir_syms" -gt 0 ]]; then
                 advisory="[code-intel] File is indexed in chitta ($dir_syms symbols in dir). For large files prefer smart_context(task) → read_symbol(file,symbol) over full Read. Whole-symbol rewrites: symbol_patch(file,symbol,body)."
             fi
+
+            # Artifact traces (stigmergy): memories other sessions anchored on this
+            # file — corrections, wisdom, [done]/[artifact] signals whose text names
+            # it. SwarmWorld (arXiv:2608.26081) found ~95% of first reuse happens by
+            # observing an artifact, not by being told; so the moment an agent touches
+            # a file is when its traces are worth one keyword RPC. Once per file per
+            # session; exact-name filter keeps BM25 noise out; CHITTA_FILE_TRACES=0 disables.
+            if [[ "${CHITTA_FILE_TRACES:-1}" != "0" && -n "$_session_id" ]]; then
+                _trace_cache="${CHITTA_DB_PATH:-${HOME}/.claude/mind}/.trace_cache_${_session_id}"
+                _trace_base=$(basename "$file_path")
+                if ! grep -qxF "$file_path" "$_trace_cache" 2>/dev/null; then
+                    printf '%s\n' "$file_path" >> "$_trace_cache" 2>/dev/null || true
+                    _trace_realm=$(timeout 1 "$CHITTA_BIN" realm_detect 2>/dev/null || echo "")
+                    if [[ -n "$_trace_realm" ]]; then
+                        # One line, no quotes/backslashes: the advisory is spliced into a
+                        # JSON string with printf below, not passed through json_escape.
+                        _traces=$(timeout 1 "$CHITTA_BIN" recall --json --strategy keyword \
+                            --query "$_trace_base" --realm "$_trace_realm" --limit 6 --no-learn 2>/dev/null </dev/null |
+                            jq -r --arg base "$_trace_base" '
+                                [.results[]? | select(.type == "correction" or .type == "wisdom" or .type == "signal" or .type == "preference")
+                                 | select(.text | contains($base))
+                                 | "#\(.id) [\(.type)] \(.text | gsub("[\n\"\\\\]"; " ") | .[0:160])"] | .[0:2] | join(" | ")' 2>/dev/null)
+                        if [[ -n "$_traces" ]]; then
+                            _trace_ctx=" [traces] anchored on $_trace_base: $_traces"
+                            advisory="${advisory}${_trace_ctx}"
+                        fi
+                    fi
+                fi
+            fi
         fi
 
         # Only compress large files (≤200 lines pass through untouched)
@@ -484,7 +513,7 @@ case "$MATCHER" in
         # Advisory: large indexed file — nudge toward read_symbol/smart_context.
         if [[ "$is_indexed" == "1" && "$offset" == "0" ]]; then
             _shadow_log "Read" "$file_path" "$line_count" "$is_indexed" "advisory" "indexed-large-offset0" 0
-            advisory="[code-intel] Large indexed file ($line_count lines). Prefer read_symbol or smart_context for targeted extraction."
+            advisory="[code-intel] Large indexed file ($line_count lines). Prefer read_symbol or smart_context for targeted extraction.${_trace_ctx:-}"
         fi
         _shadow_log "Read" "$file_path" "$line_count" "$is_indexed" "truncate" "large-file" 0
         escaped_path=$(echo -n "$file_path" | jq -Rs '.')

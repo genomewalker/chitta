@@ -22,3 +22,4 @@ log-bash-history.sh
 memory-intercept.sh
 outcome-ledger.sh
 distill.sh
+artifact-trace.sh

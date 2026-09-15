@@ -1,0 +1,30 @@
+{
+  "id": "swarmworld-replication-rank",
+  "title": "Replication-weighted recall: boost memories confirmed by independent sessions",
+  "mechanism": "Count confirmations from distinct source sessions per memory (store.get_confirmations plus provenance source triplets), expose it as a scoring factor inside the bounded envelope so a learning re-observed in 2+ independent sessions outranks a single-session conclusion of equal similarity; single-run conclusions keep the default weight",
+  "expected_gain": {
+    "metric": "golden nDCG@20",
+    "delta": 0.02,
+    "confidence": 0.25,
+    "rationale": "Buehler's three repeated Fable runs on one research brief reached model-dependent conclusions; single-session automatic learnings carry the same variance, and confirmations already exist in the store but do not reach ranking"
+  },
+  "cost": {
+    "effort_h": 6,
+    "blast_radius": 3,
+    "scope": "chitta-field/src/scoring/factors.rs, chitta-field/src/scoring/config.rs, chitta-field/src/store.rs (confirmation count on MemoryState)"
+  },
+  "evidence": [
+    {
+      "source": "https://huggingface.co/lamm-mit/MetaMaterialsDiscovery",
+      "claim": "three autonomous runs from identical prompts produced model-dependent conclusions, including different responses to weakened interfaces"
+    },
+    {
+      "source": "https://arxiv.org/abs/2608.26081",
+      "claim": "technologies accumulate through executable inheritance and persistent agent-artifact networks; reuse across agents, not single invention, marks durable technology"
+    }
+  ],
+  "source": "hypothesis",
+  "already_have": false,
+  "verifiability": "metric_only",
+  "prior_effort": "none"
+}

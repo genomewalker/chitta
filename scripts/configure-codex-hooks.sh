@@ -57,7 +57,7 @@ jq \
   ]) |
   .hooks.PostToolUse = (strip_ours(.hooks.PostToolUse) + [
     {"matcher":"Bash","hooks":[{"type":"command","command":($root+"/hooks/log-bash-history.sh"),"timeout":5},{"type":"command","command":($root+"/hooks/post-bash-hook.sh"),"timeout":5}]},
-    {"matcher":"Write","hooks":[{"type":"command","command":($root+"/hooks/memory-intercept.sh"),"timeout":10}]}
+    {"matcher":"Write","hooks":[{"type":"command","command":($root+"/hooks/memory-intercept.sh"),"timeout":10},{"type":"command","command":($root+"/hooks/artifact-trace.sh"),"timeout":5}]}
   ])
   ' "$HOOKS_FILE" > "$TMP"
 

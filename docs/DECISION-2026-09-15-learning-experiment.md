@@ -55,6 +55,24 @@
    flip (`EVALS.md` "Utility posteriors") stays a separate golden/SMRITI
    comparison, earliest 2026-09-21, and is not blocked by this experiment.
 
+## Pre-registered secondary metrics (added 2026-09-15 after reading SwarmWorld, arXiv:2608.26081)
+
+SwarmWorld found that shared societies beat isolated best-of-N search on
+portfolio breadth and resilience while isolated search kept the best single
+artifact, and that ~95% of first reuse came from observing an artifact rather
+than being told about it. Two secondary metrics are therefore recorded and
+reported, without changing the primary rule:
+
+- **Best-of-three per arm.** For each task, max success over the three trials
+  in A and in B. Hypothesis H2 (pre-registered): B's best-of-three is not worse
+  than A's even when mean Δ favours A. If H2 holds, shared memory widens what
+  gets done rather than raising the ceiling, and the orchestrator should keep
+  using isolated parallel streams for "find the best" tasks.
+- **Artifact reuse rate.** Fraction of arm-A trials in which the agent read or
+  executed an artifact (script, file, command) that a pre-task memory named,
+  measured from the trial's hook shadow log and Bash history. This tests
+  whether the cohort transfers through artifacts (stigmergy) or through prose.
+
 ## Harness (minimal)
 
 `benchmarks/learning/`: `protocol.md`, `tasks.json`, `cohort.json`,
