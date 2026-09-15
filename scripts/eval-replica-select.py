@@ -224,7 +224,7 @@ def select(root):
     files = {ref["name"]: ref["size_bytes"] for ref in recorded_refs}
     optional_suffixes = (
         "emb", "hdc", "bin", "mu", "hnsw", "delta.hnsw", "realm_hnsw",
-        "pld", "sup.json", "shdr", "rsf")
+        "pld", "sup.json", "shdr", "rsf", "lsh", "organs", "turbo", "turbo.meta")
     for suffix in optional_suffixes:
         path = root / f"chitta.{snapshot_id}.{suffix}"
         if path.is_file():

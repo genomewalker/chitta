@@ -37,6 +37,8 @@ def family(snapshot_id, seqno):
     pld.write_bytes(struct.pack("<QQ", PLD_MAGIC, 0))
     shdr = root / f"chitta.{snapshot_id}.shdr"
     shdr.write_bytes(b"optional-header")
+    for suffix in ("lsh", "organs", "turbo", "turbo.meta"):
+        (root / f"chitta.{snapshot_id}.{suffix}").write_bytes(b"optional-startup-cache")
     return {
         "snapshot": {"name": snapshot.name, "size_bytes": snapshot.stat().st_size},
         "sidecars": [
@@ -192,6 +194,9 @@ assert "both manifest slots are copied" \
     "[[ -f '$T/eval/chitta-field/MANIFEST.1' && -f '$T/eval/chitta-field/MANIFEST.2' ]]"
 assert "recorded and unrecorded optional family files are copied" \
     "[[ -f '$T/eval/chitta-field/chitta.aa000001.shdr' && -f '$T/eval/chitta-field/chitta.aa000001.rsf' ]]"
+for suffix in lsh organs turbo turbo.meta; do
+    assert "optional startup cache $suffix is copied" "[[ -f '$T/eval/chitta-field/chitta.aa000001.$suffix' ]]"
+done
 assert "cortex and seen-offset files are copied when present" \
     "[[ -f '$T/eval/chitta-field/cortex.aa000001.snapshot' && -f '$T/eval/chitta-field/seen_offsets.aa000001.json' ]]"
 assert "canonical WAL segments are copied when present" \
