@@ -70,9 +70,12 @@ bash scripts/dev-install.sh
   `TimeoutStopSec` is 300 s so a clean shutdown finishes its snapshot. If it
   still loops, `mv` the lock file aside; never delete a lock whose holder is
   another host.
-- Startup is ~27 s on the live store (phase timers in `chittad.log`:
-  `load phase=<name> ms=`). Hooks time out against a warming daemon, so do not
-  measure recall in the first minute after a restart.
+- Startup on the live store is ~12.6 s when the derived-state sidecars hit
+  (`.lsh`, `.turbo`, `.organs` next to the snapshot family; since 2026-09-16)
+  and ~20 s on the first start after a deploy or snapshot-format change, which
+  rebuilds them. Phase timers are in `chittad.log` (`load phase=<name> ms=`,
+  `cache hit=`). Hooks time out against a warming daemon, so do not measure
+  recall in the first 30 s after a restart.
 
 ## Dev install: the repo IS the live plugin
 
