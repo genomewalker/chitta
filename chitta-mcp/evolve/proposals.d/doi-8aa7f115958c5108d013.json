@@ -1,0 +1,35 @@
+{
+  "id": "doi-8aa7f115958c5108d013",
+  "title": "Consolidation Without Weights: What the Complementary Learning Systems Analogy Licenses in LLM Agent Memory, and Why the Systems That Borrow Its Name Do Not Inherit Its Guarantee",
+  "mechanism": "Add a weight-free 'replay-then-reindex' consolidation pass: periodically resample high-salience episodic traces (via existing outcome-ledger Wilson-lower-bound credit) and re-run them through the existing MDL consolidation gate in enforcing mode (not shadow), writing derived semantic triplets rather than modifying embeddings/weights — mirrors the paper's CLS claim that consolidation is a replay-driven reindexing process, not weight change, which is exactly the gap chitta has (MDL gate exists but fail-open/shadow-only).",
+  "expected_gain": {
+    "metric": "chitta-mcp/server.py recall nDCG@20 on golden set",
+    "delta": 0.02,
+    "confidence": 0.15,
+    "rationale": "chitta already has prefilter (0.435→0.487 nDCG@20 A/B) and MDL gate scaffolding but the gate never enforces (shadow-mode, fail-open per hooks/distill.sh:329-433), so no consolidation-quality signal currently reaches recall; enforcing replay-gated consolidation is a plausible small additional lift, not validated."
+  },
+  "cost": {
+    "effort_h": 6.0,
+    "blast_radius": 3,
+    "scope": "chitta-mcp/mdl_gate.py, hooks/distill.sh, field_distill.cpp write path"
+  },
+  "evidence": [
+    {
+      "source": "https://doi.org/10.5281/zenodo.22699102",
+      "claim": "Paper argues CLS-style consolidation in LLM agents is licensed only as replay/reindexing over stored traces, not as a weight-consolidation guarantee (abstract unavailable, title/claim only — not independently verified from full text)."
+    }
+  ],
+  "source": "hypothesis",
+  "already_have": false,
+  "kind": "sota-card",
+  "inventory": {
+    "path": "/projects/caeg/scratch/kbd606/tmp/chitta-truth-inventory.md",
+    "sha256": "6a2b73d936ff564571596f34659e799a58314c568673f3561f831fa6fc8150b1"
+  },
+  "created_at": "2026-09-15T08:58:53.688273+00:00",
+  "memory": {
+    "id": "13965471271186595878",
+    "realm": "project:chitta-evolve",
+    "type": "episode"
+  }
+}

@@ -84,7 +84,7 @@ class ProposalTests(unittest.TestCase):
 
     def test_existing_cards_load_with_honest_factors(self):
         paths = list((Path(__file__).resolve().parents[1] / "evolve/proposals.d").glob("*.json"))
-        self.assertEqual(len(paths), 3)
+        self.assertGreaterEqual(len(paths), 3)
         for path in paths:
             proposal = normalize(json.loads(path.read_text()))
             self.assertEqual(proposal.source, "hypothesis")

@@ -1,0 +1,43 @@
+{
+  "id": "2609.05553",
+  "title": "EdgeMem: LLM-Free Agent Memory Construction and Retrieval via Evidence-Preserving Multi-Anchor Hypergraph",
+  "mechanism": "Add an LLM-free multi-anchor hypergraph memory tier: index raw transcript turns/tool outputs by content-anchor (n-gram/entity overlap), temporal-anchor (session/turn adjacency), and episodic-anchor (thread/episode id), then at recall time do direct hypergraph traversal returning verbatim source spans instead of routing through distillation/summarization before storage",
+  "expected_gain": {
+    "metric": "LongMemEval-S strict-judge accuracy, %",
+    "delta": 3.0,
+    "confidence": 0.15,
+    "rationale": "chitta already has episode/temporal/spreading-activation lanes (recall_spreading, create_episode, RRF hybrid) but distillation is generative-summary-based (field_distill.cpp), so gain would come only from adding a verbatim-evidence-preserving anchor lane, not from novel retrieval structure"
+  },
+  "cost": {
+    "effort_h": 20.0,
+    "blast_radius": 4,
+    "scope": "chitta/src/handlers/field_memory_recall.cpp, field_distill.cpp, chitta-mcp/server.py recall gateway, storage schema for raw-turn spans"
+  },
+  "evidence": [
+    {
+      "source": "https://arxiv.org/abs/2609.05553",
+      "claim": "EdgeMem preserves original interaction turns instead of LLM-generated summaries"
+    },
+    {
+      "source": "https://arxiv.org/abs/2609.05553",
+      "claim": "multi-anchor hypergraph combines content, temporal, and episodic cues with no generative-LLM calls at construction or retrieval"
+    },
+    {
+      "source": "https://arxiv.org/abs/2609.05553",
+      "claim": "highest strict-judge score among seven reproduced systems on LoCoMo (61.01 vs 58.70)"
+    }
+  ],
+  "source": "hypothesis",
+  "already_have": false,
+  "kind": "sota-card",
+  "inventory": {
+    "path": "/projects/caeg/scratch/kbd606/tmp/chitta-truth-inventory.md",
+    "sha256": "6a2b73d936ff564571596f34659e799a58314c568673f3561f831fa6fc8150b1"
+  },
+  "created_at": "2026-09-15T00:50:20.049550+00:00",
+  "memory": {
+    "id": "13965471271186595861",
+    "realm": "project:chitta-evolve",
+    "type": "episode"
+  }
+}

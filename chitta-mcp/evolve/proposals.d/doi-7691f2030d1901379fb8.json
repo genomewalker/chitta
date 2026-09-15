@@ -1,0 +1,35 @@
+{
+  "id": "doi-7691f2030d1901379fb8",
+  "title": "Beyond static responses: multi-agent LLM systems as a new paradigm for social science research",
+  "mechanism": "Add a 'Level' classification field to chitta memories/episodes (mapping to the paper's 6-level agentic taxonomy: data processor, tool user, workflow orchestrator, adaptive agent, multi-agent collaborator, emergent-society simulator) and route recall/consolidation logic differently by level, so simple classification-style tool calls aren't distilled/consolidated with the same weight as multi-agent emergent-dynamics episodes",
+  "expected_gain": {
+    "metric": "SMRITI-Bench mui_credit (unitless, 0-1 scale)",
+    "delta": 0.02,
+    "confidence": 0.15,
+    "rationale": "chitta already has typed recall/consolidation (field_distill.cpp dedup, MDL gate shadow mode) but no agentic-tier classification; paper's taxonomy is descriptive not a technique, so expected gain is small and speculative"
+  },
+  "cost": {
+    "effort_h": 6.0,
+    "blast_radius": 3,
+    "scope": "chitta-mcp/server.py distill/consolidation handlers, memory schema (new field), recall gateway strategy routing"
+  },
+  "evidence": [
+    {
+      "source": "https://doi.org/10.1057/s41599-026-08832-2",
+      "claim": "Paper proposes a 6-level continuum from simple data processors to emergent multi-agent social simulators as a classification framework, not an implemented algorithm"
+    }
+  ],
+  "source": "hypothesis",
+  "already_have": false,
+  "kind": "sota-card",
+  "inventory": {
+    "path": "/projects/caeg/scratch/kbd606/tmp/chitta-truth-inventory.md",
+    "sha256": "6a2b73d936ff564571596f34659e799a58314c568673f3561f831fa6fc8150b1"
+  },
+  "created_at": "2026-09-15T00:51:12.862509+00:00",
+  "memory": {
+    "id": "13965471271186595863",
+    "realm": "project:chitta-evolve",
+    "type": "episode"
+  }
+}

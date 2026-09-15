@@ -1,0 +1,43 @@
+{
+  "id": "doi-ef6c3a964c1ccd831daa",
+  "title": "fidelis: zero-LLM agent memory for Claude Code and AI agents",
+  "mechanism": "Zero-LLM agent memory: deterministic rule/pattern-based extraction and storage of agent interaction history for Claude Code, avoiding LLM calls in the write path",
+  "expected_gain": {
+    "metric": "distill_cost_llm_calls_per_session",
+    "delta": 0.0,
+    "confidence": 0.15,
+    "rationale": "chitta distillation is already native C++ with no LLM in the write path (--distill-interval 60, live), so the paper's core claim overlaps existing capability rather than adding gain"
+  },
+  "cost": {
+    "effort_h": 0.5,
+    "blast_radius": 1,
+    "scope": "none — no implementation needed"
+  },
+  "evidence": [
+    {
+      "source": "https://doi.org/10.5281/zenodo.22730449",
+      "claim": "Paper provides only a title, no abstract or methodology text was retrievable"
+    },
+    {
+      "source": "https://doi.org/10.5281/zenodo.22730449",
+      "claim": "Chitta's distillation pipeline runs as native C++ (field_distill.cpp) with no LLM call, per inventory"
+    },
+    {
+      "source": "https://doi.org/10.5281/zenodo.22730449",
+      "claim": "Chitta's default recall strategy (hybrid) is RRF over semantic/typed/spreading/session lanes, also non-LLM at query time"
+    }
+  ],
+  "source": "hypothesis",
+  "already_have": true,
+  "kind": "sota-card",
+  "inventory": {
+    "path": "/projects/caeg/scratch/kbd606/tmp/chitta-truth-inventory.md",
+    "sha256": "6a2b73d936ff564571596f34659e799a58314c568673f3561f831fa6fc8150b1"
+  },
+  "created_at": "2026-09-15T08:58:25.676693+00:00",
+  "memory": {
+    "id": "13965471271186595876",
+    "realm": "project:chitta-evolve",
+    "type": "episode"
+  }
+}

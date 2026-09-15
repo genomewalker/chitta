@@ -283,9 +283,17 @@ def validate_card(extracted: dict, paper: dict) -> dict:
         "title": paper["title"],
         "mechanism": extracted["mechanism"],
         "expected_gain": gain,
-        "cost": {key: cost[key] for key in ("effort_h", "blast_radius")},
+        # proposals.normalize scores blast_radius as a component count (>= 1); the
+        # model writes it as prose, so the prose becomes `scope` and the count the number.
+        "cost": {
+            "effort_h": cost["effort_h"],
+            "blast_radius": max(1, len(re.split(r"[,;]| and ", cost["blast_radius"]))),
+            "scope": cost["blast_radius"].strip(),
+        },
         "evidence": [{"source": paper["source"], "claim": item} for item in evidence],
-        "source": paper["source"],
+        # proposals.normalize accepts only telemetry|memory|hypothesis here; the
+        # paper URL travels in `evidence[].source`.
+        "source": "hypothesis",
         "already_have": extracted["already_have"],
     }
 

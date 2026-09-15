@@ -1,0 +1,39 @@
+{
+  "id": "2609.08558",
+  "title": "Personalizing LLM Agent Memory Using Biometrics",
+  "mechanism": "Add a per-memory biometric/identity embedding field (analogous to Bio-Memory's face/palmprint vector) and use it to pre-filter the recall candidate pool by requester identity before semantic RRF ranking — i.e. an identity-gated prefilter stage inserted ahead of the existing CHITTA_RECALL_PREFILTER pass in field_memory_recall.cpp",
+  "expected_gain": {
+    "metric": "recall precision (F1) on multi-user/shared-realm queries, %",
+    "delta": 5.0,
+    "confidence": 0.15,
+    "rationale": "chitta has realm-scoped isolation (realm=<project>) but no per-user biometric identity gating within a shared realm; paper's 21-27% F1 gain assumes true multi-user contention chitta doesn't yet model, so gain here is speculative and likely smaller since realm partitioning already does coarse isolation"
+  },
+  "cost": {
+    "effort_h": 16.0,
+    "blast_radius": 4,
+    "scope": "chitta/src/handlers/field_memory_recall.cpp, chitta-field/src/store.rs (schema change for identity embedding column), chitta-mcp/server.py recall_gateway, plus a biometric capture/enrollment pipeline not present anywhere in this codebase"
+  },
+  "evidence": [
+    {
+      "source": "https://arxiv.org/abs/2609.08558",
+      "claim": "Bio-Memory augments each atomic memory note with a biometric embedding and forms the retrieval candidate pool via biometric matching before semantic ranking (abstract)"
+    },
+    {
+      "source": "https://arxiv.org/abs/2609.08558",
+      "claim": "reports up to 27.29%/21.15% F1/BLEU-1 owner-vs-non-owner separation gap on CALFW under face-based personalization (abstract)"
+    }
+  ],
+  "source": "hypothesis",
+  "already_have": false,
+  "kind": "sota-card",
+  "inventory": {
+    "path": "/projects/caeg/scratch/kbd606/tmp/chitta-truth-inventory.md",
+    "sha256": "6a2b73d936ff564571596f34659e799a58314c568673f3561f831fa6fc8150b1"
+  },
+  "created_at": "2026-09-15T00:51:58.837357+00:00",
+  "memory": {
+    "id": "13965471271186595865",
+    "realm": "project:chitta-evolve",
+    "type": "episode"
+  }
+}
