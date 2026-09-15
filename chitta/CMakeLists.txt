@@ -254,9 +254,7 @@ target_include_directories(chitta INTERFACE
 
 # Find threads
 find_package(Threads REQUIRED)
-# zlib — conditional-compression codelength for the MDL consolidation gate (mdl_gate.hpp)
-find_package(ZLIB REQUIRED)
-target_link_libraries(chitta INTERFACE Threads::Threads roaring tree-sitter-parsers ZLIB::ZLIB)
+target_link_libraries(chitta INTERFACE Threads::Threads roaring tree-sitter-parsers)
 
 # nlohmann/json for RPC server
 find_package(nlohmann_json CONFIG QUIET)
@@ -497,10 +495,6 @@ if(CHITTA_BUILD_TESTS)
     add_executable(value_fact_extract_test
         src/value_fact_extract_test.cpp src/value_fact_extractor.cpp)
     add_test(NAME value_fact_extract_test COMMAND value_fact_extract_test)
-    add_executable(mdl_gate_test src/mdl_gate_test.cpp)
-    target_link_libraries(mdl_gate_test PRIVATE ZLIB::ZLIB)
-    add_test(NAME mdl_gate_test COMMAND mdl_gate_test)
-    add_test(NAME mdl_corpus_test COMMAND mdl_gate_test --corpus)
     add_executable(prefilter_keep_test src/prefilter_keep_test.cpp)
     add_test(NAME prefilter_keep_test COMMAND prefilter_keep_test)
     add_executable(hit_line_test src/hit_line_test.cpp)
@@ -536,7 +530,7 @@ if(CHITTA_BUILD_TESTS)
     set(CHITTA_TEST_TARGETS
         task_ledger_test
         thread_pool_test llm_probe_test callsite_extract_test
-        value_fact_extract_test mdl_gate_test prefilter_keep_test
+        value_fact_extract_test prefilter_keep_test
         hit_line_test tool_spec_test rpc_work_policy_test recall_lanes_test
         maintenance_jitter_test embed_cache_test)
     foreach(t ${CHITTA_TEST_TARGETS})

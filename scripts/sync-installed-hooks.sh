@@ -87,7 +87,7 @@ for claude_root in "${claude_roots[@]}"; do
     done < "$HOOK_MANIFEST"
     sync_one "$HOOKS_SRC/hooks.json" "$claude_root/hooks/hooks.json" 0644
     for module in session_registry.py resume_selector.py task_ledger.py \
-                  thread_inference.py resume_capsule.py mdl_gate.py \
+                  thread_inference.py resume_capsule.py \
                   outcome_ledger.py daemon_client.py; do
         [[ -f "$ROOT_DIR/chitta-mcp/$module" ]] && sync_one "$ROOT_DIR/chitta-mcp/$module" "$claude_root/chitta-mcp/$module" 0755
     done

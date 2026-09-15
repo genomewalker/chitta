@@ -326,15 +326,6 @@ fi  # end SKIP_LLM gate
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib.sh" 2>/dev/null || true
 
-# MDL consolidation gate (chitta-mcp/mdl_gate.py), SHADOW MODE ONLY — resolved
-# once here. Empty MDL_GATE_PY means the gate is skipped entirely below
-# (fail-open: missing python3/mdl_gate.py leaves distillation unaffected).
-MDL_GATE_PY=""
-if command -v python3 >/dev/null 2>&1 && declare -F resolve_cc_soul_root >/dev/null 2>&1; then
-    _cc_soul_root=$(resolve_cc_soul_root 2>/dev/null || echo "")
-    [[ -n "$_cc_soul_root" && -f "$_cc_soul_root/chitta-mcp/mdl_gate.py" ]] && MDL_GATE_PY="$_cc_soul_root/chitta-mcp/mdl_gate.py"
-fi
-
 echo "[distill] Processing SSL v0.4 results..."
 
 # Get turn range for this session (for hierarchical retrieval)
@@ -406,34 +397,6 @@ store_current() {
         [[ -n "$_SSL_GRANULARITY" ]] && gran_info=" G:${_SSL_GRANULARITY}"
         echo "[distill]   +${CURRENT_TYPE,,}: ${title:0:50}...${affect_info}${flag_info}${gran_info}"
         ((STORED++)) || true
-
-        # MDL consolidation gate (SHADOW MODE ONLY): judges whether this
-        # learning compresses the transcript chunk it was distilled from.
-        # Never gates/blocks storage — just appends a verdict for later review.
-        if [[ -n "$MDL_GATE_PY" ]]; then
-            {
-                local _mdl_w _mdl_e _mdl_mind
-                _mdl_w=$(mktemp) && _mdl_e=$(mktemp)
-                printf '%s' "$CURRENT_CONTENT" > "$_mdl_w"
-                printf '%s' "$CONVERSATION" > "$_mdl_e"
-                _mdl_mind="${CHITTA_DB_PATH:-${CHITTA_MIND:-$HOME/.claude/mind}}"
-                mkdir -p "$_mdl_mind"
-                python3 -c "
-import json, sys, time
-sys.path.insert(0, sys.argv[5])
-from mdl_gate import judge
-with open(sys.argv[1], encoding='utf-8', errors='replace') as f:
-    w = f.read()
-with open(sys.argv[2], encoding='utf-8', errors='replace') as f:
-    e = f.read()
-v = judge(w, e)
-line = {'ts': int(time.time() * 1000), 'id': sys.argv[6], 'accept': v['accept'], 'saving': v['saving'], 'title_head': sys.argv[3][:80]}
-with open(sys.argv[4], 'a') as out:
-    out.write(json.dumps(line) + chr(10))
-" "$_mdl_w" "$_mdl_e" "$title" "${_mdl_mind}/mdl_gate_shadow.jsonl" "$(dirname "$MDL_GATE_PY")" "$id"
-                rm -f "$_mdl_w" "$_mdl_e"
-            } 2>/dev/null || true
-        fi
 
         # Link to episode if we have one
         if [[ -n "$EPISODE_ID" && -n "$id" ]]; then

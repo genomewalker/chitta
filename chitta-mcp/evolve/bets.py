@@ -45,23 +45,11 @@ def outcome(
         and abs(value) > number(bet["metric_bands"][key])
     }
     if unexpected:
-        from mdl_gate import judge
-
-        finding = "Unexpected metric changes: " + repr(sorted(unexpected.items()))
-        prior = judge(existing_wisdom, evidence)
-        combined = judge(existing_wisdom + "\n" + finding, evidence)
-        standalone = judge(finding, evidence)
-        novel = bool(
-            evidence
-            and standalone["accept"]
-            and combined["c_we"] + combined["margin"] <= prior["c_we"]
-        )
         return dict(
             outcome="surprise",
             measured_delta=measured,
             unexpected=unexpected,
-            novel=novel,
-            mdl=dict(prior=prior, combined=combined, finding=standalone),
+            novel=False,  # Metric surprise alone does not establish useful new knowledge.
         )
     band = bet.get("band_from_noise")
     if metric not in measured or band is None:

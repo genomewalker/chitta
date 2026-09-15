@@ -35,10 +35,10 @@ class ProposalTests(unittest.TestCase):
         self.assertEqual(persist([proposal], store)[proposal.id], "mem-2")
         self.assertEqual(store.remember.call_args.args[0], "proposal")
 
-    def test_telemetry_denominators_and_unknown_evidence_size(self):
+    def test_telemetry_denominators_and_sources(self):
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory)
-            ledger, shadow = repo / "ledger", repo / "shadow"
+            ledger = repo / "ledger"
             rows = [
                 {"event": "injected", "lane_timeout": {"sem": True}},
                 {"event": "injected", "lane_timeout": {"sem": False}},
@@ -48,20 +48,17 @@ class ProposalTests(unittest.TestCase):
                 {"event": "unrelated"},
             ]
             ledger.write_text("\n".join(json.dumps(row) for row in rows) + "\nbroken")
-            shadow.write_text(
-                json.dumps({"accept": True})
-                + "\n"
-                + json.dumps({"accept": False, "evidence_bytes": 40000})
-            )
             store = Mock(timeout=1)
             store.call.return_value = {"rpc_over_budget": 8}
-            proposals = telemetry(repo, ledger, shadow, store, [])
+            proposals = telemetry(repo, ledger, store, [])
             metrics = {p.expected_gain["metric"]: p for p in proposals}
             self.assertAlmostEqual(metrics["recall_empty_rate"].evidence[0]["rate"], 1 / 3)
             self.assertEqual(metrics["lane_timeout.sem"].evidence[0]["rate"], 0.5)
             self.assertEqual(metrics["bash_failure_rate"].evidence[0]["rate"], 0.5)
-            self.assertIn("mdl_accept_rate.unknown", metrics)
-            self.assertIn("mdl_accept_rate.large", metrics)
+            self.assertEqual(
+                set(metrics),
+                {"recall_empty_rate", "lane_timeout.sem", "bash_failure_rate", "rpc_over_budget"},
+            )
 
     def test_defaults_enums_and_derived_evidence(self):
         card = candidate("fix", "bound", "metric", 0.1, []).to_dict()
