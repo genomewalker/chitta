@@ -50,10 +50,10 @@ def main():
         summary = runner.summarize(rows)
         assert summary["hit_at_3"] == 0.25 and summary["errors"] == 3
     tasks = json.loads((ROOT / "benchmarks/analogy/tasks.json").read_text())["tasks"]
-    assert len(tasks) == len({t["id"] for t in tasks}) == 20
-    assert all(t["grounding"] and t["expected"] for t in tasks)
+    assert len(tasks) == len({t["id"] for t in tasks}) == 14
+    assert all(t["grounding"] and t["expected"] and t["style"] == "proportional" for t in tasks)
     print(
-        "PASS: analogy exact scoring, uint64 IDs, explicit socket, error/timeout misses, 20 grounded tasks"
+        "PASS: analogy exact scoring, uint64 IDs, explicit socket, error/timeout misses, 14 grounded proportional tasks"
     )
 
 

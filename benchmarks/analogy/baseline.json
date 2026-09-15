@@ -1,0 +1,1770 @@
+{
+  "snapshot_id": "bbcaed33",
+  "socket": "/maps/projects/caeg/scratch/kbd606/tmp/codex-wt-fix-analogy-rescope/r/chitta/chitta-821547086.sock",
+  "world_ms": 1789475657499,
+  "tasks_sha256": "8bbda6e0dee32b2756938a3ec8077896450bab3dc1593daa9329becf1bf70f6e",
+  "positives": [
+    {
+      "id": "retrieval-meaning-to-words",
+      "params": {
+        "mode": "proportional",
+        "a": "HNSW",
+        "b": "semantic-proximity",
+        "c": "BM25"
+      },
+      "relations": [
+        {
+          "id": 125831449,
+          "object": "semantic-proximity",
+          "predicate": "captures",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "HNSW",
+          "valid_from_ms": 1782222513828,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "edges": [
+        {
+          "id": 125831450,
+          "object": "lexical-match",
+          "predicate": "captures",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "BM25",
+          "valid_from_ms": 1782222513828,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "answers": [
+        "lexical-match"
+      ],
+      "missing_grounding": [],
+      "latency_ms": 2.164
+    },
+    {
+      "id": "retrieval-words-to-meaning",
+      "params": {
+        "mode": "proportional",
+        "a": "BM25",
+        "b": "lexical-match",
+        "c": "HNSW"
+      },
+      "relations": [
+        {
+          "id": 125831450,
+          "object": "lexical-match",
+          "predicate": "captures",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "BM25",
+          "valid_from_ms": 1782222513828,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "edges": [
+        {
+          "id": 125831449,
+          "object": "semantic-proximity",
+          "predicate": "captures",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "HNSW",
+          "valid_from_ms": 1782222513828,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "answers": [
+        "semantic-proximity"
+      ],
+      "missing_grounding": [],
+      "latency_ms": 4.728
+    },
+    {
+      "id": "bridge-to-daemon-implementation",
+      "params": {
+        "mode": "proportional",
+        "a": "chitta-bridge",
+        "b": "diff-based editing",
+        "c": "chittad"
+      },
+      "relations": [
+        {
+          "id": 671071,
+          "object": "diff-based editing",
+          "predicate": "implements",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-bridge",
+          "valid_from_ms": 1775322817143,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "edges": [
+        {
+          "id": 794640,
+          "object": "observe-handler",
+          "predicate": "implements",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chittad",
+          "valid_from_ms": 1776759166452,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 794743,
+          "object": "GroupStats via reservoir sampling",
+          "predicate": "implements",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chittad",
+          "valid_from_ms": 1776759483477,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "answers": [
+        "GroupStats via reservoir sampling",
+        "observe-handler"
+      ],
+      "missing_grounding": [],
+      "latency_ms": 1.784
+    },
+    {
+      "id": "daemon-to-bridge-implementation",
+      "params": {
+        "mode": "proportional",
+        "a": "chittad",
+        "b": "observe-handler",
+        "c": "chitta-bridge"
+      },
+      "relations": [
+        {
+          "id": 794640,
+          "object": "observe-handler",
+          "predicate": "implements",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chittad",
+          "valid_from_ms": 1776759166452,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "edges": [
+        {
+          "id": 671071,
+          "object": "diff-based editing",
+          "predicate": "implements",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-bridge",
+          "valid_from_ms": 1775322817143,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "answers": [
+        "diff-based editing"
+      ],
+      "missing_grounding": [],
+      "latency_ms": 1.558
+    },
+    {
+      "id": "mcp-to-store-dependency",
+      "params": {
+        "mode": "proportional",
+        "a": "chitta-mcp",
+        "b": "chittad-rpc-port",
+        "c": "chitta-field"
+      },
+      "relations": [
+        {
+          "id": 126367929,
+          "object": "chittad-rpc-port",
+          "predicate": "depends_on",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-mcp",
+          "valid_from_ms": 1786783084804,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "edges": [
+        {
+          "id": 1082601,
+          "object": "cc-soul",
+          "predicate": "depends_on",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-field",
+          "valid_from_ms": 1777692834044,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "answers": [
+        "cc-soul"
+      ],
+      "missing_grounding": [],
+      "latency_ms": 1.981
+    },
+    {
+      "id": "store-to-mcp-dependency",
+      "params": {
+        "mode": "proportional",
+        "a": "chitta-field",
+        "b": "cc-soul",
+        "c": "chitta-mcp"
+      },
+      "relations": [
+        {
+          "id": 1082601,
+          "object": "cc-soul",
+          "predicate": "depends_on",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-field",
+          "valid_from_ms": 1777692834044,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "edges": [
+        {
+          "id": 126367929,
+          "object": "chittad-rpc-port",
+          "predicate": "depends_on",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-mcp",
+          "valid_from_ms": 1786783084804,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "answers": [
+        "chittad-rpc-port"
+      ],
+      "missing_grounding": [],
+      "latency_ms": 2.032
+    },
+    {
+      "id": "prompt-to-store-mechanism",
+      "params": {
+        "mode": "proportional",
+        "a": "prompt-hook",
+        "b": "query-dependent-recall",
+        "c": "chitta-field"
+      },
+      "relations": [
+        {
+          "id": 791186,
+          "object": "query-dependent-recall",
+          "predicate": "uses",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "prompt-hook",
+          "valid_from_ms": 1775578514105,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "edges": [
+        {
+          "id": 788286,
+          "object": "OpLog",
+          "predicate": "uses",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-field",
+          "valid_from_ms": 1775557585041,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 125834776,
+          "object": "modern-Hopfield-energy-function",
+          "predicate": "uses",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-field",
+          "valid_from_ms": 1782280730540,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 125834805,
+          "object": "DAM+Graph-Laplacian",
+          "predicate": "uses",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-field",
+          "valid_from_ms": 1782280881985,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "answers": [
+        "DAM+Graph-Laplacian",
+        "modern-Hopfield-energy-function",
+        "OpLog"
+      ],
+      "missing_grounding": [],
+      "latency_ms": 1.399
+    },
+    {
+      "id": "store-to-prompt-mechanism",
+      "params": {
+        "mode": "proportional",
+        "a": "chitta-field",
+        "b": "OpLog",
+        "c": "prompt-hook"
+      },
+      "relations": [
+        {
+          "id": 788286,
+          "object": "OpLog",
+          "predicate": "uses",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-field",
+          "valid_from_ms": 1775557585041,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "edges": [
+        {
+          "id": 791186,
+          "object": "query-dependent-recall",
+          "predicate": "uses",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "prompt-hook",
+          "valid_from_ms": 1775578514105,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "answers": [
+        "query-dependent-recall"
+      ],
+      "missing_grounding": [],
+      "latency_ms": 1.44
+    },
+    {
+      "id": "bridge-to-prompt-mechanism",
+      "params": {
+        "mode": "proportional",
+        "a": "chitta-bridge",
+        "b": "haiku-coding-preamble",
+        "c": "prompt-hook"
+      },
+      "relations": [
+        {
+          "id": 793888,
+          "object": "haiku-coding-preamble",
+          "predicate": "uses",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-bridge",
+          "valid_from_ms": 1776745738811,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "edges": [
+        {
+          "id": 791186,
+          "object": "query-dependent-recall",
+          "predicate": "uses",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "prompt-hook",
+          "valid_from_ms": 1775578514105,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "answers": [
+        "query-dependent-recall"
+      ],
+      "missing_grounding": [],
+      "latency_ms": 1.178
+    },
+    {
+      "id": "prompt-to-bridge-mechanism",
+      "params": {
+        "mode": "proportional",
+        "a": "prompt-hook",
+        "b": "query-dependent-recall",
+        "c": "chitta-bridge"
+      },
+      "relations": [
+        {
+          "id": 791186,
+          "object": "query-dependent-recall",
+          "predicate": "uses",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "prompt-hook",
+          "valid_from_ms": 1775578514105,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "edges": [
+        {
+          "id": 793888,
+          "object": "haiku-coding-preamble",
+          "predicate": "uses",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-bridge",
+          "valid_from_ms": 1776745738811,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "answers": [
+        "haiku-coding-preamble"
+      ],
+      "missing_grounding": [],
+      "latency_ms": 1.107
+    },
+    {
+      "id": "embedding-to-daemon-mechanism",
+      "params": {
+        "mode": "proportional",
+        "a": "chitta",
+        "b": "BGE-base-en-v1.5",
+        "c": "chittad"
+      },
+      "relations": [
+        {
+          "id": 789023,
+          "object": "BGE-base-en-v1.5",
+          "predicate": "uses",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta",
+          "valid_from_ms": 1775735609787,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "edges": [
+        {
+          "id": 794656,
+          "object": "GroupStats for spectral reporting",
+          "predicate": "uses",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chittad",
+          "valid_from_ms": 1776759302230,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "answers": [
+        "GroupStats for spectral reporting"
+      ],
+      "missing_grounding": [],
+      "latency_ms": 2.203
+    },
+    {
+      "id": "daemon-to-embedding-mechanism",
+      "params": {
+        "mode": "proportional",
+        "a": "chittad",
+        "b": "GroupStats for spectral reporting",
+        "c": "chitta"
+      },
+      "relations": [
+        {
+          "id": 794656,
+          "object": "GroupStats for spectral reporting",
+          "predicate": "uses",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chittad",
+          "valid_from_ms": 1776759302230,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "edges": [
+        {
+          "id": 789023,
+          "object": "BGE-base-en-v1.5",
+          "predicate": "uses",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta",
+          "valid_from_ms": 1775735609787,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 126036457,
+          "object": "C2-metacognition",
+          "predicate": "uses",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta",
+          "valid_from_ms": 1783407619634,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "answers": [
+        "C2-metacognition",
+        "BGE-base-en-v1.5"
+      ],
+      "missing_grounding": [],
+      "latency_ms": 1.495
+    },
+    {
+      "id": "recall-to-store-mechanism",
+      "params": {
+        "mode": "proportional",
+        "a": "recall",
+        "b": "chitta",
+        "c": "chitta-field"
+      },
+      "relations": [
+        {
+          "id": 791165,
+          "object": "chitta",
+          "predicate": "uses",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "recall",
+          "valid_from_ms": 1775578300431,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "edges": [
+        {
+          "id": 788286,
+          "object": "OpLog",
+          "predicate": "uses",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-field",
+          "valid_from_ms": 1775557585041,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 125834776,
+          "object": "modern-Hopfield-energy-function",
+          "predicate": "uses",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-field",
+          "valid_from_ms": 1782280730540,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 125834805,
+          "object": "DAM+Graph-Laplacian",
+          "predicate": "uses",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-field",
+          "valid_from_ms": 1782280881985,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "answers": [
+        "DAM+Graph-Laplacian",
+        "modern-Hopfield-energy-function",
+        "OpLog"
+      ],
+      "missing_grounding": [],
+      "latency_ms": 1.474
+    },
+    {
+      "id": "store-to-recall-mechanism",
+      "params": {
+        "mode": "proportional",
+        "a": "chitta-field",
+        "b": "OpLog",
+        "c": "recall"
+      },
+      "relations": [
+        {
+          "id": 788286,
+          "object": "OpLog",
+          "predicate": "uses",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-field",
+          "valid_from_ms": 1775557585041,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "edges": [
+        {
+          "id": 791165,
+          "object": "chitta",
+          "predicate": "uses",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "recall",
+          "valid_from_ms": 1775578300431,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 791190,
+          "object": "predicate \"tagged\" for filtering",
+          "predicate": "uses",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "recall",
+          "valid_from_ms": 1775578519160,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ],
+      "answers": [
+        "predicate \"tagged\" for filtering",
+        "chitta"
+      ],
+      "missing_grounding": [],
+      "latency_ms": 1.465
+    }
+  ],
+  "negatives": [
+    {
+      "id": "retrieval-meaning-to-words-negative",
+      "style": "negative",
+      "params": {
+        "mode": "proportional",
+        "a": "HNSW",
+        "b": "semantic-proximity",
+        "c": "BGE-base-en-v1.5"
+      },
+      "expected": [],
+      "source_id": "retrieval-meaning-to-words",
+      "target_edges": [
+        {
+          "id": 789037,
+          "object": "effective_dimensionality 16.6",
+          "predicate": "has",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "BGE-base-en-v1.5",
+          "valid_from_ms": 1775735683647,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "retrieval-words-to-meaning-negative",
+      "style": "negative",
+      "params": {
+        "mode": "proportional",
+        "a": "BM25",
+        "b": "lexical-match",
+        "c": "cc-soul"
+      },
+      "expected": [],
+      "source_id": "retrieval-words-to-meaning",
+      "target_edges": [
+        {
+          "id": 732523,
+          "object": "2421_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "cc-soul",
+          "valid_from_ms": 1775337328065,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 756106,
+          "object": "248_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "cc-soul",
+          "valid_from_ms": 1775337407319,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 785127,
+          "object": "2173_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "cc-soul",
+          "valid_from_ms": 1775337663249,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 1162850,
+          "object": "4647_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "cc-soul",
+          "valid_from_ms": 1777717785654,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 4539205,
+          "object": "longmemeval_temporal-reasoning_failure_m",
+          "predicate": "has_analysis",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "cc-soul",
+          "valid_from_ms": 1779280610620,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 10798113,
+          "object": "5307_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "cc-soul",
+          "valid_from_ms": 1779423554724,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 112922395,
+          "object": "5434_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "cc-soul",
+          "valid_from_ms": 1780059005455,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 125633593,
+          "object": "2618_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "cc-soul",
+          "valid_from_ms": 1781241945030,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "bridge-to-daemon-implementation-negative",
+      "style": "negative",
+      "params": {
+        "mode": "proportional",
+        "a": "chitta-bridge",
+        "b": "diff-based editing",
+        "c": "BM25"
+      },
+      "expected": [],
+      "source_id": "bridge-to-daemon-implementation",
+      "target_edges": [
+        {
+          "id": 125831450,
+          "object": "lexical-match",
+          "predicate": "captures",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "BM25",
+          "valid_from_ms": 1782222513828,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 125831508,
+          "object": "Lexical-match",
+          "predicate": "handles",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "BM25",
+          "valid_from_ms": 1782223024777,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "daemon-to-bridge-implementation-negative",
+      "style": "negative",
+      "params": {
+        "mode": "proportional",
+        "a": "chittad",
+        "b": "observe-handler",
+        "c": "HNSW"
+      },
+      "expected": [],
+      "source_id": "daemon-to-bridge-implementation",
+      "target_edges": [
+        {
+          "id": 125831449,
+          "object": "semantic-proximity",
+          "predicate": "captures",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "HNSW",
+          "valid_from_ms": 1782222513828,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 125831507,
+          "object": "Semantic-proximity",
+          "predicate": "handles",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "HNSW",
+          "valid_from_ms": 1782223024777,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "mcp-to-store-dependency-negative",
+      "style": "negative",
+      "params": {
+        "mode": "proportional",
+        "a": "chitta-mcp",
+        "b": "chittad-rpc-port",
+        "c": "chitta"
+      },
+      "expected": [],
+      "source_id": "mcp-to-store-dependency",
+      "target_edges": [
+        {
+          "id": 789023,
+          "object": "BGE-base-en-v1.5",
+          "predicate": "uses",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta",
+          "valid_from_ms": 1775735609787,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 1258900,
+          "object": "2073_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta",
+          "valid_from_ms": 1778391217824,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 1759993,
+          "object": "2103_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta",
+          "valid_from_ms": 1779004628230,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 2129496,
+          "object": "2171_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta",
+          "valid_from_ms": 1779225092156,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 4554389,
+          "object": "2180_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta",
+          "valid_from_ms": 1779283373130,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 12113898,
+          "object": "2689_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta",
+          "valid_from_ms": 1779461684105,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 12132814,
+          "object": "2781_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta",
+          "valid_from_ms": 1779467180383,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 12180750,
+          "object": "2187_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta",
+          "valid_from_ms": 1779474378824,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 44417476,
+          "object": "2742_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta",
+          "valid_from_ms": 1779724685353,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 44718652,
+          "object": "812_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta",
+          "valid_from_ms": 1779724896193,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 112858661,
+          "object": "2234_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta",
+          "valid_from_ms": 1780058147285,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 112986602,
+          "object": "2165_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta",
+          "valid_from_ms": 1780069037668,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 113031698,
+          "object": "2169_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta",
+          "valid_from_ms": 1780077066372,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 113488151,
+          "object": "2236_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta",
+          "valid_from_ms": 1780312588034,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 124255903,
+          "object": "2240_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta",
+          "valid_from_ms": 1780402981750,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 125261113,
+          "object": "2245_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta",
+          "valid_from_ms": 1781176119802,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 125381272,
+          "object": "2179_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta",
+          "valid_from_ms": 1781202324397,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 125995735,
+          "object": "2989_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta",
+          "valid_from_ms": 1783361441342,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 126036457,
+          "object": "C2-metacognition",
+          "predicate": "uses",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta",
+          "valid_from_ms": 1783407619634,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 126036458,
+          "object": "injection-precision-measurement",
+          "predicate": "requires",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta",
+          "valid_from_ms": 1783407619634,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 126479385,
+          "object": "records milestone",
+          "predicate": "remember",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": 15005192852508508290,
+          "subject": "chitta",
+          "valid_from_ms": 1789305939078,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "store-to-mcp-dependency-negative",
+      "style": "negative",
+      "params": {
+        "mode": "proportional",
+        "a": "chitta-field",
+        "b": "cc-soul",
+        "c": "chitta-bridge"
+      },
+      "expected": [],
+      "source_id": "store-to-mcp-dependency",
+      "target_edges": [
+        {
+          "id": 671071,
+          "object": "diff-based editing",
+          "predicate": "implements",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-bridge",
+          "valid_from_ms": 1775322817143,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 671224,
+          "object": "file_patch-tool",
+          "predicate": "provides",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-bridge",
+          "valid_from_ms": 1775324631094,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 671293,
+          "object": "symbol_patch tool",
+          "predicate": "provides",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-bridge",
+          "valid_from_ms": 1775325009449,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 671311,
+          "object": "symbol_patch",
+          "predicate": "provides",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-bridge",
+          "valid_from_ms": 1775325243296,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 695764,
+          "object": "343_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-bridge",
+          "valid_from_ms": 1775336837913,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 793888,
+          "object": "haiku-coding-preamble",
+          "predicate": "uses",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-bridge",
+          "valid_from_ms": 1776745738811,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 802149,
+          "object": "identifies tier1_risks",
+          "predicate": "doctor",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-bridge",
+          "valid_from_ms": 1777361122722,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "prompt-to-store-mechanism-negative",
+      "style": "negative",
+      "params": {
+        "mode": "proportional",
+        "a": "prompt-hook",
+        "b": "query-dependent-recall",
+        "c": "chitta-mcp"
+      },
+      "expected": [],
+      "source_id": "prompt-to-store-mechanism",
+      "target_edges": [
+        {
+          "id": 1165856,
+          "object": "132_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-mcp",
+          "valid_from_ms": 1777792723346,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 10759046,
+          "object": "213_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-mcp",
+          "valid_from_ms": 1779389199322,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 10759760,
+          "object": "66_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-mcp",
+          "valid_from_ms": 1779389228203,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 36136501,
+          "object": "226_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-mcp",
+          "valid_from_ms": 1779562815221,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 124217288,
+          "object": "228_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-mcp",
+          "valid_from_ms": 1780400169970,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 125998251,
+          "object": "237_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-mcp",
+          "valid_from_ms": 1783361531790,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 126367929,
+          "object": "chittad-rpc-port",
+          "predicate": "depends_on",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-mcp",
+          "valid_from_ms": 1786783084804,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 126552391,
+          "object": "18_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-mcp",
+          "valid_from_ms": 1789327078130,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "store-to-prompt-mechanism-negative",
+      "style": "negative",
+      "params": {
+        "mode": "proportional",
+        "a": "chitta-field",
+        "b": "OpLog",
+        "c": "BGE-base-en-v1.5"
+      },
+      "expected": [],
+      "source_id": "store-to-prompt-mechanism",
+      "target_edges": [
+        {
+          "id": 789037,
+          "object": "effective_dimensionality 16.6",
+          "predicate": "has",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "BGE-base-en-v1.5",
+          "valid_from_ms": 1775735683647,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "bridge-to-prompt-mechanism-negative",
+      "style": "negative",
+      "params": {
+        "mode": "proportional",
+        "a": "chitta-bridge",
+        "b": "haiku-coding-preamble",
+        "c": "BM25"
+      },
+      "expected": [],
+      "source_id": "bridge-to-prompt-mechanism",
+      "target_edges": [
+        {
+          "id": 125831450,
+          "object": "lexical-match",
+          "predicate": "captures",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "BM25",
+          "valid_from_ms": 1782222513828,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 125831508,
+          "object": "Lexical-match",
+          "predicate": "handles",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "BM25",
+          "valid_from_ms": 1782223024777,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "prompt-to-bridge-mechanism-negative",
+      "style": "negative",
+      "params": {
+        "mode": "proportional",
+        "a": "prompt-hook",
+        "b": "query-dependent-recall",
+        "c": "HNSW"
+      },
+      "expected": [],
+      "source_id": "prompt-to-bridge-mechanism",
+      "target_edges": [
+        {
+          "id": 125831449,
+          "object": "semantic-proximity",
+          "predicate": "captures",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "HNSW",
+          "valid_from_ms": 1782222513828,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 125831507,
+          "object": "Semantic-proximity",
+          "predicate": "handles",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "HNSW",
+          "valid_from_ms": 1782223024777,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "embedding-to-daemon-mechanism-negative",
+      "style": "negative",
+      "params": {
+        "mode": "proportional",
+        "a": "chitta",
+        "b": "BGE-base-en-v1.5",
+        "c": "cc-soul"
+      },
+      "expected": [],
+      "source_id": "embedding-to-daemon-mechanism",
+      "target_edges": [
+        {
+          "id": 732523,
+          "object": "2421_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "cc-soul",
+          "valid_from_ms": 1775337328065,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 756106,
+          "object": "248_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "cc-soul",
+          "valid_from_ms": 1775337407319,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 785127,
+          "object": "2173_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "cc-soul",
+          "valid_from_ms": 1775337663249,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 1162850,
+          "object": "4647_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "cc-soul",
+          "valid_from_ms": 1777717785654,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 4539205,
+          "object": "longmemeval_temporal-reasoning_failure_m",
+          "predicate": "has_analysis",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "cc-soul",
+          "valid_from_ms": 1779280610620,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 10798113,
+          "object": "5307_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "cc-soul",
+          "valid_from_ms": 1779423554724,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 112922395,
+          "object": "5434_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "cc-soul",
+          "valid_from_ms": 1780059005455,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 125633593,
+          "object": "2618_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "cc-soul",
+          "valid_from_ms": 1781241945030,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "daemon-to-embedding-mechanism-negative",
+      "style": "negative",
+      "params": {
+        "mode": "proportional",
+        "a": "chittad",
+        "b": "GroupStats for spectral reporting",
+        "c": "chitta-mcp"
+      },
+      "expected": [],
+      "source_id": "daemon-to-embedding-mechanism",
+      "target_edges": [
+        {
+          "id": 1165856,
+          "object": "132_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-mcp",
+          "valid_from_ms": 1777792723346,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 10759046,
+          "object": "213_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-mcp",
+          "valid_from_ms": 1779389199322,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 10759760,
+          "object": "66_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-mcp",
+          "valid_from_ms": 1779389228203,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 36136501,
+          "object": "226_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-mcp",
+          "valid_from_ms": 1779562815221,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 124217288,
+          "object": "228_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-mcp",
+          "valid_from_ms": 1780400169970,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 125998251,
+          "object": "237_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-mcp",
+          "valid_from_ms": 1783361531790,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 126367929,
+          "object": "chittad-rpc-port",
+          "predicate": "depends_on",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-mcp",
+          "valid_from_ms": 1786783084804,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 126552391,
+          "object": "18_symbols",
+          "predicate": "contains",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "chitta-mcp",
+          "valid_from_ms": 1789327078130,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "recall-to-store-mechanism-negative",
+      "style": "negative",
+      "params": {
+        "mode": "proportional",
+        "a": "recall",
+        "b": "chitta",
+        "c": "BGE-base-en-v1.5"
+      },
+      "expected": [],
+      "source_id": "recall-to-store-mechanism",
+      "target_edges": [
+        {
+          "id": 789037,
+          "object": "effective_dimensionality 16.6",
+          "predicate": "has",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "BGE-base-en-v1.5",
+          "valid_from_ms": 1775735683647,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "id": "store-to-recall-mechanism-negative",
+      "style": "negative",
+      "params": {
+        "mode": "proportional",
+        "a": "chitta-field",
+        "b": "OpLog",
+        "c": "BM25"
+      },
+      "expected": [],
+      "source_id": "store-to-recall-mechanism",
+      "target_edges": [
+        {
+          "id": 125831450,
+          "object": "lexical-match",
+          "predicate": "captures",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "BM25",
+          "valid_from_ms": 1782222513828,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        },
+        {
+          "id": 125831508,
+          "object": "Lexical-match",
+          "predicate": "handles",
+          "reverse_weight": 0.3,
+          "source_file": null,
+          "source_memory_id": null,
+          "subject": "BM25",
+          "valid_from_ms": 1782223024777,
+          "valid_to_ms": 0,
+          "weight": 1.0
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "tasks": 14,
+    "hit_at_1": 14,
+    "hit_at_3": 14,
+    "negative_abstentions": 14,
+    "unsupported_answers": 0,
+    "missing_grounding": 0,
+    "median_latency_ms": 1.526
+  }
+}

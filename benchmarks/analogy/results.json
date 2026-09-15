@@ -1,219 +1,801 @@
 {
-  "timestamp": "2026-09-14T11:01:26.203138+00:00",
-  "socket": "/projects/caeg/scratch/kbd606/tmp/chitta-eval-mind/run/chitta/chitta-2511933830.sock",
+  "timestamp": "2026-09-15T12:34:17.695361+00:00",
+  "socket": "/maps/projects/caeg/scratch/kbd606/tmp/codex-wt-fix-analogy-rescope/r/chitta/chitta-821547086.sock",
   "snapshot_id": "bbcaed33",
-  "transport": "cli",
-  "cli": "/home/kbd606/.claude/bin/chitta",
-  "tasks_sha256": "1ff54c6f18bf7d487112fea6786c60d659c7a95b4d96a8ef4f78bd34bb6a494e",
+  "transport": "rpc",
+  "tasks_sha256": "8bbda6e0dee32b2756938a3ec8077896450bab3dc1593daa9329becf1bf70f6e",
+  "baseline_sha256": "c286f7543436466dcb5c5300751794459ff830d73047abf14d5b1e31a76a45a6",
   "timeout_seconds": 2,
-  "scoring": "Exact answer (case-insensitive) or exact memory ID; errors/timeouts are misses. Median includes every attempted query and CLI startup.",
+  "scoring": "Complete exact directed-join answer sets. Missing grounding and errors are misses. Every returned answer and citation is checked; negative abstention requires a reason.",
   "summary": {
-    "tasks": 20,
-    "hit_at_1": 0.0,
-    "hit_at_3": 0.0,
-    "median_latency_ms": 7.058,
-    "errors": 20,
-    "empty": 0
+    "positive_queries": 14,
+    "negative_queries": 14,
+    "hit_at_1": 14,
+    "hit_at_3": 14,
+    "negative_abstentions": 14,
+    "unsupported_answers": 0,
+    "missing_grounding": 0,
+    "errors": 0,
+    "median_latency_ms": 0.19
   },
-  "by_style": {
-    "proportional": {
-      "tasks": 14,
-      "hit_at_1": 0.0,
-      "hit_at_3": 0.0,
-      "median_latency_ms": 7.205,
-      "errors": 14,
-      "empty": 0
-    },
-    "structural": {
-      "tasks": 6,
-      "hit_at_1": 0.0,
-      "hit_at_3": 0.0,
-      "median_latency_ms": 6.481,
-      "errors": 6,
-      "empty": 0
-    }
-  },
-  "ready_for_hook": false,
+  "decision": "keep",
   "results": [
     {
       "id": "retrieval-meaning-to-words",
       "style": "proportional",
-      "hit_at_1": false,
-      "hit_at_3": false,
-      "latency_ms": 8.074,
-      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
-      "results": []
+      "hit_at_1": true,
+      "hit_at_3": true,
+      "latency_ms": 0.432,
+      "error": null,
+      "results": [
+        {
+          "answer": "lexical-match",
+          "edges": [
+            {
+              "memory_id": null,
+              "object": "lexical-match",
+              "predicate": "captures",
+              "subject": "BM25",
+              "triplet_id": 125831450,
+              "valid_from_ms": 1782222513828,
+              "weight": 1.0
+            }
+          ],
+          "id": 0,
+          "predicate": "captures",
+          "realm": "",
+          "score": 1.0,
+          "text": ""
+        }
+      ],
+      "reason": null,
+      "abstention_correct": false,
+      "unsupported_answers": 0,
+      "missing_grounding": false
     },
     {
       "id": "retrieval-words-to-meaning",
       "style": "proportional",
-      "hit_at_1": false,
-      "hit_at_3": false,
-      "latency_ms": 7.25,
-      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
-      "results": []
+      "hit_at_1": true,
+      "hit_at_3": true,
+      "latency_ms": 0.261,
+      "error": null,
+      "results": [
+        {
+          "answer": "semantic-proximity",
+          "edges": [
+            {
+              "memory_id": null,
+              "object": "semantic-proximity",
+              "predicate": "captures",
+              "subject": "HNSW",
+              "triplet_id": 125831449,
+              "valid_from_ms": 1782222513828,
+              "weight": 1.0
+            }
+          ],
+          "id": 0,
+          "predicate": "captures",
+          "realm": "",
+          "score": 1.0,
+          "text": ""
+        }
+      ],
+      "reason": null,
+      "abstention_correct": false,
+      "unsupported_answers": 0,
+      "missing_grounding": false
     },
     {
       "id": "bridge-to-daemon-implementation",
       "style": "proportional",
-      "hit_at_1": false,
-      "hit_at_3": false,
-      "latency_ms": 10.157,
-      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
-      "results": []
+      "hit_at_1": true,
+      "hit_at_3": true,
+      "latency_ms": 0.265,
+      "error": null,
+      "results": [
+        {
+          "answer": "GroupStats via reservoir sampling",
+          "edges": [
+            {
+              "memory_id": null,
+              "object": "GroupStats via reservoir sampling",
+              "predicate": "implements",
+              "subject": "chittad",
+              "triplet_id": 794743,
+              "valid_from_ms": 1776759483477,
+              "weight": 1.0
+            }
+          ],
+          "id": 0,
+          "predicate": "implements",
+          "realm": "",
+          "score": 1.0,
+          "text": ""
+        },
+        {
+          "answer": "observe-handler",
+          "edges": [
+            {
+              "memory_id": null,
+              "object": "observe-handler",
+              "predicate": "implements",
+              "subject": "chittad",
+              "triplet_id": 794640,
+              "valid_from_ms": 1776759166452,
+              "weight": 1.0
+            }
+          ],
+          "id": 0,
+          "predicate": "implements",
+          "realm": "",
+          "score": 1.0,
+          "text": ""
+        }
+      ],
+      "reason": null,
+      "abstention_correct": false,
+      "unsupported_answers": 0,
+      "missing_grounding": false
     },
     {
       "id": "daemon-to-bridge-implementation",
       "style": "proportional",
-      "hit_at_1": false,
-      "hit_at_3": false,
-      "latency_ms": 11.012,
-      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
-      "results": []
+      "hit_at_1": true,
+      "hit_at_3": true,
+      "latency_ms": 0.23,
+      "error": null,
+      "results": [
+        {
+          "answer": "diff-based editing",
+          "edges": [
+            {
+              "memory_id": null,
+              "object": "diff-based editing",
+              "predicate": "implements",
+              "subject": "chitta-bridge",
+              "triplet_id": 671071,
+              "valid_from_ms": 1775322817143,
+              "weight": 1.0
+            }
+          ],
+          "id": 0,
+          "predicate": "implements",
+          "realm": "",
+          "score": 1.0,
+          "text": ""
+        }
+      ],
+      "reason": null,
+      "abstention_correct": false,
+      "unsupported_answers": 0,
+      "missing_grounding": false
     },
     {
       "id": "mcp-to-store-dependency",
       "style": "proportional",
-      "hit_at_1": false,
-      "hit_at_3": false,
-      "latency_ms": 7.611,
-      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
-      "results": []
+      "hit_at_1": true,
+      "hit_at_3": true,
+      "latency_ms": 0.21,
+      "error": null,
+      "results": [
+        {
+          "answer": "cc-soul",
+          "edges": [
+            {
+              "memory_id": null,
+              "object": "cc-soul",
+              "predicate": "depends_on",
+              "subject": "chitta-field",
+              "triplet_id": 1082601,
+              "valid_from_ms": 1777692834044,
+              "weight": 1.0
+            }
+          ],
+          "id": 0,
+          "predicate": "depends_on",
+          "realm": "",
+          "score": 1.0,
+          "text": ""
+        }
+      ],
+      "reason": null,
+      "abstention_correct": false,
+      "unsupported_answers": 0,
+      "missing_grounding": false
     },
     {
       "id": "store-to-mcp-dependency",
       "style": "proportional",
-      "hit_at_1": false,
-      "hit_at_3": false,
-      "latency_ms": 6.955,
-      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
-      "results": []
+      "hit_at_1": true,
+      "hit_at_3": true,
+      "latency_ms": 0.213,
+      "error": null,
+      "results": [
+        {
+          "answer": "chittad-rpc-port",
+          "edges": [
+            {
+              "memory_id": null,
+              "object": "chittad-rpc-port",
+              "predicate": "depends_on",
+              "subject": "chitta-mcp",
+              "triplet_id": 126367929,
+              "valid_from_ms": 1786783084804,
+              "weight": 1.0
+            }
+          ],
+          "id": 0,
+          "predicate": "depends_on",
+          "realm": "",
+          "score": 1.0,
+          "text": ""
+        }
+      ],
+      "reason": null,
+      "abstention_correct": false,
+      "unsupported_answers": 0,
+      "missing_grounding": false
     },
     {
       "id": "prompt-to-store-mechanism",
       "style": "proportional",
-      "hit_at_1": false,
-      "hit_at_3": false,
-      "latency_ms": 7.16,
-      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
-      "results": []
+      "hit_at_1": true,
+      "hit_at_3": true,
+      "latency_ms": 0.272,
+      "error": null,
+      "results": [
+        {
+          "answer": "DAM+Graph-Laplacian",
+          "edges": [
+            {
+              "memory_id": null,
+              "object": "DAM+Graph-Laplacian",
+              "predicate": "uses",
+              "subject": "chitta-field",
+              "triplet_id": 125834805,
+              "valid_from_ms": 1782280881985,
+              "weight": 1.0
+            }
+          ],
+          "id": 0,
+          "predicate": "uses",
+          "realm": "",
+          "score": 1.0,
+          "text": ""
+        },
+        {
+          "answer": "modern-Hopfield-energy-function",
+          "edges": [
+            {
+              "memory_id": null,
+              "object": "modern-Hopfield-energy-function",
+              "predicate": "uses",
+              "subject": "chitta-field",
+              "triplet_id": 125834776,
+              "valid_from_ms": 1782280730540,
+              "weight": 1.0
+            }
+          ],
+          "id": 0,
+          "predicate": "uses",
+          "realm": "",
+          "score": 1.0,
+          "text": ""
+        },
+        {
+          "answer": "OpLog",
+          "edges": [
+            {
+              "memory_id": null,
+              "object": "OpLog",
+              "predicate": "uses",
+              "subject": "chitta-field",
+              "triplet_id": 788286,
+              "valid_from_ms": 1775557585041,
+              "weight": 1.0
+            }
+          ],
+          "id": 0,
+          "predicate": "uses",
+          "realm": "",
+          "score": 1.0,
+          "text": ""
+        }
+      ],
+      "reason": null,
+      "abstention_correct": false,
+      "unsupported_answers": 0,
+      "missing_grounding": false
     },
     {
       "id": "store-to-prompt-mechanism",
       "style": "proportional",
-      "hit_at_1": false,
-      "hit_at_3": false,
-      "latency_ms": 8.869,
-      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
-      "results": []
+      "hit_at_1": true,
+      "hit_at_3": true,
+      "latency_ms": 0.193,
+      "error": null,
+      "results": [
+        {
+          "answer": "query-dependent-recall",
+          "edges": [
+            {
+              "memory_id": null,
+              "object": "query-dependent-recall",
+              "predicate": "uses",
+              "subject": "prompt-hook",
+              "triplet_id": 791186,
+              "valid_from_ms": 1775578514105,
+              "weight": 1.0
+            }
+          ],
+          "id": 0,
+          "predicate": "uses",
+          "realm": "",
+          "score": 1.0,
+          "text": ""
+        }
+      ],
+      "reason": null,
+      "abstention_correct": false,
+      "unsupported_answers": 0,
+      "missing_grounding": false
     },
     {
       "id": "bridge-to-prompt-mechanism",
       "style": "proportional",
-      "hit_at_1": false,
-      "hit_at_3": false,
-      "latency_ms": 6.495,
-      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
-      "results": []
+      "hit_at_1": true,
+      "hit_at_3": true,
+      "latency_ms": 0.179,
+      "error": null,
+      "results": [
+        {
+          "answer": "query-dependent-recall",
+          "edges": [
+            {
+              "memory_id": null,
+              "object": "query-dependent-recall",
+              "predicate": "uses",
+              "subject": "prompt-hook",
+              "triplet_id": 791186,
+              "valid_from_ms": 1775578514105,
+              "weight": 1.0
+            }
+          ],
+          "id": 0,
+          "predicate": "uses",
+          "realm": "",
+          "score": 1.0,
+          "text": ""
+        }
+      ],
+      "reason": null,
+      "abstention_correct": false,
+      "unsupported_answers": 0,
+      "missing_grounding": false
     },
     {
       "id": "prompt-to-bridge-mechanism",
       "style": "proportional",
-      "hit_at_1": false,
-      "hit_at_3": false,
-      "latency_ms": 6.661,
-      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
-      "results": []
+      "hit_at_1": true,
+      "hit_at_3": true,
+      "latency_ms": 0.337,
+      "error": null,
+      "results": [
+        {
+          "answer": "haiku-coding-preamble",
+          "edges": [
+            {
+              "memory_id": null,
+              "object": "haiku-coding-preamble",
+              "predicate": "uses",
+              "subject": "chitta-bridge",
+              "triplet_id": 793888,
+              "valid_from_ms": 1776745738811,
+              "weight": 1.0
+            }
+          ],
+          "id": 0,
+          "predicate": "uses",
+          "realm": "",
+          "score": 1.0,
+          "text": ""
+        }
+      ],
+      "reason": null,
+      "abstention_correct": false,
+      "unsupported_answers": 0,
+      "missing_grounding": false
     },
     {
       "id": "embedding-to-daemon-mechanism",
       "style": "proportional",
-      "hit_at_1": false,
-      "hit_at_3": false,
-      "latency_ms": 12.894,
-      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
-      "results": []
+      "hit_at_1": true,
+      "hit_at_3": true,
+      "latency_ms": 0.269,
+      "error": null,
+      "results": [
+        {
+          "answer": "GroupStats for spectral reporting",
+          "edges": [
+            {
+              "memory_id": null,
+              "object": "GroupStats for spectral reporting",
+              "predicate": "uses",
+              "subject": "chittad",
+              "triplet_id": 794656,
+              "valid_from_ms": 1776759302230,
+              "weight": 1.0
+            }
+          ],
+          "id": 0,
+          "predicate": "uses",
+          "realm": "",
+          "score": 1.0,
+          "text": ""
+        }
+      ],
+      "reason": null,
+      "abstention_correct": false,
+      "unsupported_answers": 0,
+      "missing_grounding": false
     },
     {
       "id": "daemon-to-embedding-mechanism",
       "style": "proportional",
-      "hit_at_1": false,
-      "hit_at_3": false,
-      "latency_ms": 6.74,
-      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
-      "results": []
+      "hit_at_1": true,
+      "hit_at_3": true,
+      "latency_ms": 0.252,
+      "error": null,
+      "results": [
+        {
+          "answer": "C2-metacognition",
+          "edges": [
+            {
+              "memory_id": null,
+              "object": "C2-metacognition",
+              "predicate": "uses",
+              "subject": "chitta",
+              "triplet_id": 126036457,
+              "valid_from_ms": 1783407619634,
+              "weight": 1.0
+            }
+          ],
+          "id": 0,
+          "predicate": "uses",
+          "realm": "",
+          "score": 1.0,
+          "text": ""
+        },
+        {
+          "answer": "BGE-base-en-v1.5",
+          "edges": [
+            {
+              "memory_id": null,
+              "object": "BGE-base-en-v1.5",
+              "predicate": "uses",
+              "subject": "chitta",
+              "triplet_id": 789023,
+              "valid_from_ms": 1775735609787,
+              "weight": 1.0
+            }
+          ],
+          "id": 0,
+          "predicate": "uses",
+          "realm": "",
+          "score": 1.0,
+          "text": ""
+        }
+      ],
+      "reason": null,
+      "abstention_correct": false,
+      "unsupported_answers": 0,
+      "missing_grounding": false
     },
     {
       "id": "recall-to-store-mechanism",
       "style": "proportional",
-      "hit_at_1": false,
-      "hit_at_3": false,
-      "latency_ms": 6.786,
-      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
-      "results": []
+      "hit_at_1": true,
+      "hit_at_3": true,
+      "latency_ms": 0.253,
+      "error": null,
+      "results": [
+        {
+          "answer": "DAM+Graph-Laplacian",
+          "edges": [
+            {
+              "memory_id": null,
+              "object": "DAM+Graph-Laplacian",
+              "predicate": "uses",
+              "subject": "chitta-field",
+              "triplet_id": 125834805,
+              "valid_from_ms": 1782280881985,
+              "weight": 1.0
+            }
+          ],
+          "id": 0,
+          "predicate": "uses",
+          "realm": "",
+          "score": 1.0,
+          "text": ""
+        },
+        {
+          "answer": "modern-Hopfield-energy-function",
+          "edges": [
+            {
+              "memory_id": null,
+              "object": "modern-Hopfield-energy-function",
+              "predicate": "uses",
+              "subject": "chitta-field",
+              "triplet_id": 125834776,
+              "valid_from_ms": 1782280730540,
+              "weight": 1.0
+            }
+          ],
+          "id": 0,
+          "predicate": "uses",
+          "realm": "",
+          "score": 1.0,
+          "text": ""
+        },
+        {
+          "answer": "OpLog",
+          "edges": [
+            {
+              "memory_id": null,
+              "object": "OpLog",
+              "predicate": "uses",
+              "subject": "chitta-field",
+              "triplet_id": 788286,
+              "valid_from_ms": 1775557585041,
+              "weight": 1.0
+            }
+          ],
+          "id": 0,
+          "predicate": "uses",
+          "realm": "",
+          "score": 1.0,
+          "text": ""
+        }
+      ],
+      "reason": null,
+      "abstention_correct": false,
+      "unsupported_answers": 0,
+      "missing_grounding": false
     },
     {
       "id": "store-to-recall-mechanism",
       "style": "proportional",
-      "hit_at_1": false,
-      "hit_at_3": false,
-      "latency_ms": 6.818,
-      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
-      "results": []
+      "hit_at_1": true,
+      "hit_at_3": true,
+      "latency_ms": 0.233,
+      "error": null,
+      "results": [
+        {
+          "answer": "predicate \"tagged\" for filtering",
+          "edges": [
+            {
+              "memory_id": null,
+              "object": "predicate \"tagged\" for filtering",
+              "predicate": "uses",
+              "subject": "recall",
+              "triplet_id": 791190,
+              "valid_from_ms": 1775578519160,
+              "weight": 1.0
+            }
+          ],
+          "id": 0,
+          "predicate": "uses",
+          "realm": "",
+          "score": 1.0,
+          "text": ""
+        },
+        {
+          "answer": "chitta",
+          "edges": [
+            {
+              "memory_id": null,
+              "object": "chitta",
+              "predicate": "uses",
+              "subject": "recall",
+              "triplet_id": 791165,
+              "valid_from_ms": 1775578300431,
+              "weight": 1.0
+            }
+          ],
+          "id": 0,
+          "predicate": "uses",
+          "realm": "",
+          "score": 1.0,
+          "text": ""
+        }
+      ],
+      "reason": null,
+      "abstention_correct": false,
+      "unsupported_answers": 0,
+      "missing_grounding": false
     },
     {
-      "id": "closed-thread-cleanup-forward",
-      "style": "structural",
+      "id": "retrieval-meaning-to-words-negative",
+      "style": "negative",
       "hit_at_1": false,
       "hit_at_3": false,
-      "latency_ms": 9.017,
-      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
-      "results": []
+      "latency_ms": 0.183,
+      "error": null,
+      "results": [],
+      "reason": "no_target_relation",
+      "abstention_correct": true,
+      "unsupported_answers": 0,
+      "missing_grounding": false
     },
     {
-      "id": "closed-thread-cleanup-reverse",
-      "style": "structural",
+      "id": "retrieval-words-to-meaning-negative",
+      "style": "negative",
       "hit_at_1": false,
       "hit_at_3": false,
-      "latency_ms": 6.321,
-      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
-      "results": []
+      "latency_ms": 0.171,
+      "error": null,
+      "results": [],
+      "reason": "no_target_relation",
+      "abstention_correct": true,
+      "unsupported_answers": 0,
+      "missing_grounding": false
     },
     {
-      "id": "tool-overhead-reduction-forward",
-      "style": "structural",
+      "id": "bridge-to-daemon-implementation-negative",
+      "style": "negative",
       "hit_at_1": false,
       "hit_at_3": false,
-      "latency_ms": 9.532,
-      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
-      "results": []
+      "latency_ms": 0.155,
+      "error": null,
+      "results": [],
+      "reason": "no_target_relation",
+      "abstention_correct": true,
+      "unsupported_answers": 0,
+      "missing_grounding": false
     },
     {
-      "id": "tool-overhead-reduction-reverse",
-      "style": "structural",
+      "id": "daemon-to-bridge-implementation-negative",
+      "style": "negative",
       "hit_at_1": false,
       "hit_at_3": false,
-      "latency_ms": 6.641,
-      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
-      "results": []
+      "latency_ms": 0.22,
+      "error": null,
+      "results": [],
+      "reason": "no_target_relation",
+      "abstention_correct": true,
+      "unsupported_answers": 0,
+      "missing_grounding": false
     },
     {
-      "id": "preembedding-before-lock-forward",
-      "style": "structural",
+      "id": "mcp-to-store-dependency-negative",
+      "style": "negative",
       "hit_at_1": false,
       "hit_at_3": false,
-      "latency_ms": 6.313,
-      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
-      "results": []
+      "latency_ms": 0.182,
+      "error": null,
+      "results": [],
+      "reason": "no_target_relation",
+      "abstention_correct": true,
+      "unsupported_answers": 0,
+      "missing_grounding": false
     },
     {
-      "id": "preembedding-before-lock-reverse",
-      "style": "structural",
+      "id": "store-to-mcp-dependency-negative",
+      "style": "negative",
       "hit_at_1": false,
       "hit_at_3": false,
-      "latency_ms": 5.739,
-      "error": "exit 1: Unknown option: recall_analogy\nUsage:\n  chitta <tool> --param value ...   Invoke tool\n  chitta <tool> --help              Show tool parameters\n  chitta [options]                  Interactive mode (JSON-RPC)\n\nExamples:\n  chitta recall --query \"search terms\"\n  chitta soul_context\n  chitta obse",
-      "results": []
+      "latency_ms": 0.165,
+      "error": null,
+      "results": [],
+      "reason": "no_target_relation",
+      "abstention_correct": true,
+      "unsupported_answers": 0,
+      "missing_grounding": false
+    },
+    {
+      "id": "prompt-to-store-mechanism-negative",
+      "style": "negative",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 0.16,
+      "error": null,
+      "results": [],
+      "reason": "no_target_relation",
+      "abstention_correct": true,
+      "unsupported_answers": 0,
+      "missing_grounding": false
+    },
+    {
+      "id": "store-to-prompt-mechanism-negative",
+      "style": "negative",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 0.152,
+      "error": null,
+      "results": [],
+      "reason": "no_target_relation",
+      "abstention_correct": true,
+      "unsupported_answers": 0,
+      "missing_grounding": false
+    },
+    {
+      "id": "bridge-to-prompt-mechanism-negative",
+      "style": "negative",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 0.15,
+      "error": null,
+      "results": [],
+      "reason": "no_target_relation",
+      "abstention_correct": true,
+      "unsupported_answers": 0,
+      "missing_grounding": false
+    },
+    {
+      "id": "prompt-to-bridge-mechanism-negative",
+      "style": "negative",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 0.144,
+      "error": null,
+      "results": [],
+      "reason": "no_target_relation",
+      "abstention_correct": true,
+      "unsupported_answers": 0,
+      "missing_grounding": false
+    },
+    {
+      "id": "embedding-to-daemon-mechanism-negative",
+      "style": "negative",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 0.151,
+      "error": null,
+      "results": [],
+      "reason": "no_target_relation",
+      "abstention_correct": true,
+      "unsupported_answers": 0,
+      "missing_grounding": false
+    },
+    {
+      "id": "daemon-to-embedding-mechanism-negative",
+      "style": "negative",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 0.165,
+      "error": null,
+      "results": [],
+      "reason": "no_target_relation",
+      "abstention_correct": true,
+      "unsupported_answers": 0,
+      "missing_grounding": false
+    },
+    {
+      "id": "recall-to-store-mechanism-negative",
+      "style": "negative",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 0.187,
+      "error": null,
+      "results": [],
+      "reason": "no_target_relation",
+      "abstention_correct": true,
+      "unsupported_answers": 0,
+      "missing_grounding": false
+    },
+    {
+      "id": "store-to-recall-mechanism-negative",
+      "style": "negative",
+      "hit_at_1": false,
+      "hit_at_3": false,
+      "latency_ms": 0.164,
+      "error": null,
+      "results": [],
+      "reason": "no_target_relation",
+      "abstention_correct": true,
+      "unsupported_answers": 0,
+      "missing_grounding": false
     }
   ]
 }
