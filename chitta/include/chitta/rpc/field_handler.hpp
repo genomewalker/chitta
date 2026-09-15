@@ -511,6 +511,11 @@ public:
             // files to NFS — no C++ state is modified.  Holding rpc_mutex_ exclusively
             // for a 5-min NFS write blocks all reads/recall for that entire duration.
             "compact_wal",
+            // learn_codebase walks and parses a source tree, then writes code files,
+            // symbols and triplets through per-component Rust locks only. A fresh
+            // worktree held rpc_mutex_ exclusively for 271 s on 2026-09-15, timing
+            // out every recall lane of the session that triggered it.
+            "learn_codebase",
         };
         return kLockFreeWrites.count(name) > 0;
     }
