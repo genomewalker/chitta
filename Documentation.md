@@ -1,112 +1,66 @@
-# Startup phase optimization — 2026-09-15
+# Startup caches with replay delta and deterministic recall — 2026-09-15
 
-## Result and scope
+## Result
 
-Clean-family startup fell from **31.384 / 27.193 s** to **13.300 / 13.138 s** (mean **29.289 → 13.219 s**, **54.9% faster**). Normalization and event-tape cache loads meet their respective 500 ms and 800 ms targets. The 12 s overall target is approached, not fully reached.
+All requested native, latency, identity, and rollback gates pass. The final fixture contains 133,975 snapshot vectors and exactly 200 replayed vector writes, plus 20 temporary triplet additions/invalidation pairs. All work and daemon runs used this worktree and private copies of the eval replica family.
 
-Optional startup caches remove repeated LSH projection and event-tape organ reconstruction, and skip TurboVec quantization. Snapshot format/version and embedding identity remain unchanged. All work and measurements are isolated from the live mind and services.
+- Cached-with-delta `turbo_startup`: **1213 ms** (<1,500 ms).
+- Recall issued after the maintenance rebuild started returned in **395.1 ms**, before rebuilding finished. `CHITTA_TURBO_REBUILD_MIN=1000000000` verifies startup bypasses the ordinary mutation threshold.
+- **20/20 byte-identical CLI JSON responses across three cold restarts at each stage:** before the delta, after the 200-write delta, and after checkpointing that delta. HDC uses its default enabled behavior. This covers 180 complete response files, compared without normalization or field removal.
+- Release build passed; **276 Rust tests passed, 2 ignored**; CMake build and **16/16 CTests passed**; embedding identity unchanged; preserved pre-change binary opens the new sidecars and completes all 20 queries.
 
-## Changes
+## Implementation
 
-1. **Normalization/LSH** — `chitta-field/src/hnsw.rs:1944`. `normalize_all` previously included rebuilding LSH projections, because `mem_lsh` is serde-skipped. Preserve the exact f32 normalization arithmetic, use the existing bounded Rayon pool, and skip division only when the computed norm is exactly 1.0. Persist LSH signatures in `.lsh`; rebuild inverted buckets on load. The input key hashes every post-WAL normalized vector's exact bits and ID, deletion state, model identity, dimension and algorithm revision. Same-count replacements invalidate the cache. The mmap path retains existing fallback behavior.
-2. **Event-tape organs** — `chitta-field/src/startup_cache.rs:90`, `chitta-field/src/field.rs:1342`, and `chitta-field/src/organ/event_tape.rs:69`. `.organs` contains the CDAWG plus episode-HDC bit planes. Its key covers ordered events and the tool/entity name dictionaries, including same-length edits. Restore `CdawgOrgan::rebuilt`; validate HDC plane dimensions. Build from the tape rather than preserving transient runtime credit state, so cache presence retains previous startup semantics.
-3. **Turbo** — `chitta-field/src/hnsw.rs:2060`. Use turbovec 0.9 native persistence for quantized rows, plus `.turbo.meta` containing memory IDs, the vector-input fingerprint, and the index-body checksum. Validate dimensions, bit width, row count and IDs. Run `prepare()` and per-worker search warmup before publication. Rotation, centroid and blocked-layout caches are private runtime-only TurboVec fields; the existing API regenerates those, so this removes quantization rather than all Turbo startup work.
-4. **Snapshot profile** — `chitta-field/src/snapshot.rs:1209`. `CHITTA_PROFILE_SNAPSHOT=1` reports file-refill time and each V23 section's decode time. No decode algorithm/layout change. The existing snapshot phase also includes post-decode triplet-index rebuilding and state hydration; it is not solely bincode time.
+### Snapshot reuse and maintenance
 
-`chitta-field/src/startup_cache.rs:11` validates cache magic, input fingerprint, and SHA-256 body checksum before bounded deserialization. Truncated, corrupt, absent or stale caches fall back to reconstruction. Writes use temporary files and atomic rename. Turbo metadata rejects a torn index/metadata pair. These optional files are not required manifest references.
+`chitta-field/src/hnsw.rs` captures the raw snapshot `.emb` digest before replay. The LSH cache stores each snapshot row's exact f32 normalization divisor and signatures. Replay additions/replacements recompute their data; deletions disappear. Regeneration handles missing and corrupt caches before replay, including initialization of serde-skipped bucket arrays. The latter is covered by a regression that starts from a deserialized index.
 
-`chitta-field/src/store.rs:8922` creates caches for the next load from a detached snapshot clone, after writing `.emb`. It applies the next loader's exact normalization and detaches shared Turbo Arcs before mutation. Unchanged index sidecars retain the existing dirty-skip behavior. Tape identity skips unchanged organ reconstruction. This shifts cold-cache work to checkpoint time; it does not change the live search index. Optional caches total approximately 89 MiB on the eval copy.
+Turbo loads and prepares the snapshot's quantized rows at startup. Its mutation watermark excludes replay replacements/deletions from cached results, while replay rows receive exact cosine scores through the existing overlay. The first maintenance tick plans a full rebuild regardless of the usual mutation threshold. Quantization runs outside store locks and publishes an immutable replacement. No calibrated append is used.
 
-Replica selection/copying and active-save detection include `.lsh`, `.organs`, `.turbo`, and `.turbo.meta` (`scripts/eval-replica-select.py:233`, `scripts/eval-replica.sh:78`). Optional startup files follow snapshot-family pruning.
+`chitta-field/src/turbo.rs` prepares loaded codes in independent, block-aligned chunks through TurboVec's public packer, then uses its original search kernel. Indexed concatenation preserves every byte, including the padded final block. Native quantization and native persistence remain in use. Real-cache validation compared 20 top-90 searches against native TurboVec: all indices and score bits matched. The delta regression compares packed row codes, scales, and complete calibration data after maintenance against a cold full rebuild, including 200 additions, replacements, and a deletion.
 
-## Measurement protocol
+`chitta-field/src/organ/triplet.rs` limits dedup selection to dirty subjects, retains stable survivors and first-entry ties, and updates existing indexes after stable compaction. Historical duplicate IDs force the legacy scan only when an affected subject involves an ambiguous ID. Tests compare with the old full cleaner, including invalidations and historical ID collisions.
 
-- Frozen source: `/projects/caeg/scratch/kbd606/tmp/chitta-eval-mind/chitta-field`, selected with `scripts/eval-replica-select.py`: family `bbcaed33`, sequence `206208172`, manifest generation `38047`, 833,668,405-byte snapshot.
-- Copied exactly the selected family, both manifests, canonical WAL segments, migration markers and lite encoder using the replica script's rules; verified selection before opening. No process opened the frozen source or live mind.
-- Scratch daemon uses a private `--path`, worktree-root `XDG_RUNTIME_DIR`, port 17441, `CHITTA_NO_QUEUE=1`, `.quiesce`, disabled autonomous/distill/enrich/hygiene/embedding intervals, and the existing nomic GGUF model.
-- Baseline daemon built from submodule `9a1052c373b1dac7e270938995dff87d7974c7e2`, before implementation; optimized daemon links the changed library. Same compiler, model and CMake settings. No builds run during the reported pairs.
-- Each reported start is a fresh process over the same private files. No system page-cache flushing. File-cache/NFS effects are visible in the timings; fresh copies/checkpoints can be much slower than repeated process starts.
-- Scratch-only preload pins realtime to 2026-09-15 19:00 UTC for scoring; monotonic startup timers remain real. Utility seed 42. Twenty fixed queries, `recall --json --limit 10 --no-learn`. Processes terminate by their own `Popen` handle; no broad process commands or service operations.
-- Evidence and reproducible harnesses: untracked `startup-evidence/`; decisions: untracked `Plan.md`.
+### Recall determinism
 
-## Phase measurements
+The audit found three sources of instability:
 
-### Clean checkpointed family (db4b09ea)
+1. HDC and several semantic/sparse/fusion rankings omitted ID tie-breaks. Rankings now use total float ordering and IDs; bounded fallback buckets and graph reductions have deterministic traversal order.
+2. Whole-corpus Turbo builds consumed HashMap iteration order. Build rows now follow sorted memory IDs; parallel refresh collection preserves candidate order.
+3. Result hydration called content/kind/realm getters that each queued an access update despite `--no-learn`. The maintenance timer changed access counts and ACT-R scores between queries. The new `cf_peek_content` and metadata-only getters make hydration read-only; C++ recall uses that path. Existing explicit content reads still record accesses. A regression checks no-learn recall, all hydration getters, buffer-size retry, and timer drain without changing access counts or WAL position.
 
-| Phase (ms) | Before 1 | Before 2 | After 1 | After 2 |
-|---|---:|---:|---:|---:|
-| snapshot | 6235 | 4746 | 6131 | 5753 |
-| normalize | 6428 | 6611 | 162 | 167 |
-| event_tape_organs | 7078 | 5419 | 320 | 676 |
-| turbo build / startup | 6734 | 6327 | 2612 | 2688 |
-| keyword_reverse | 1272 | 1372 | 1294 | 1316 |
-| emb | 332 | 265 | 322 | 314 |
-| pld | 188 | 138 | 175 | 150 |
-| hdc | 453 | 451 | 586 | 632 |
-| span_store | 0 | 0 | 0 | 0 |
-| symbols | 202 | 198 | 158 | 166 |
-| lite_encoder | 28 | 29 | 151 | 165 |
-| wal_replay | 346 | 226 | 331 | 309 |
-| triplets | 0 | 0 | 0 | 0 |
-| **field_store total** | 31384 | 27193 | 13300 | 13138 |
+The C++ bridge-anchor selection and final reranks also break score ties by ID.
 
-### Original frozen family copy (bbcaed33), including legacy cleanup
+## Final delta phase table
 
-| Phase (ms) | Before 1 | Before 2 | After 1 | After 2 |
-|---|---:|---:|---:|---:|
-| snapshot | 6569 | 6290 | 5372 | 5235 |
-| normalize | 6485 | 7122 | 166 | 171 |
-| event_tape_organs | 6773 | 6062 | 301 | 375 |
-| turbo build / startup | 6909 | 5481 | 2851 | 2491 |
-| keyword_reverse | 1327 | 1560 | 1841 | 1624 |
-| emb | 319 | 333 | 309 | 339 |
-| pld | 129 | 186 | 130 | 182 |
-| hdc | 335 | 323 | 1785 | 467 |
-| span_store | 0 | 0 | 0 | 0 |
-| symbols | 174 | 337 | 629 | 280 |
-| lite_encoder | 58 | 57 | 1043 | 50 |
-| wal_replay | 675 | 936 | 679 | 820 |
-| triplets | 4266 | 4855 | 3390 | 4701 |
-| **field_store total** | 36167 | 35583 | 17603 | 18067 |
+Both columns use the final binary and the same snapshot/WAL content. Cold removes the optional `.lsh`, `.turbo`, `.turbo.meta`, and `.organs` caches on its private copy; cached restores snapshot-only caches before replay. Starts are process-cold, with no competing builds and no system page-cache flush. Filesystem/cache residency can affect I/O phases. Concurrent startup phases overlap, so columns must not be summed.
 
-Phases overlap: HDC and lite encoder run alongside Turbo. Do not sum individual rows. Baseline `turbo` measures build; optimized `turbo_startup` includes input validation, file loading, preparation and worker warmup, making that comparison conservative.
-
-The original eval family has 1,401,549 triplets and lacks the existing clean marker. Normal startup deduplicates 21,823 entries; its 3.4–4.9 s `triplets` cost is separate from snapshot decode. A normal private checkpoint creates family `db4b09ea`, sequence `206243514`, generation `38048`, with the existing clean marker. No new migration or snapshot version is introduced. The baseline and optimized binaries are both measured against the identical checkpointed files.
-
-## Snapshot profile
-
-On the original frozen-family clean-cache pair:
-
-| Snapshot breakdown (ms) | After 1 | After 2 |
+| Phase (ms) | Cold caches | Cached with delta |
 |---|---:|---:|
-| Snapshot phase total | 5372 | 5235 |
-| File reads | 199 | 177 |
-| Section decoding + allocation, excluding reads | 2752 | 2320 |
-| Post-decode indexes / sanitization / hydration | 2421 | 2738 |
+| snapshot | 5594 | 4724 |
+| pld | 96 | 128 |
+| emb | 1047 | 709 |
+| wal_replay | 676 | 604 |
+| normalize | 176 | 122 |
+| keyword_reverse | 1131 | 1199 |
+| symbols | 191 | 168 |
+| hdc | 1488 | 317 |
+| lite_encoder | 161 | 54 |
+| turbo_startup | 2680 | 1213 |
+| span_store | 0 | 0 |
+| event_tape_organs | 6105 | 700 |
+| triplets | 247 | 479 |
+| field_store | 19120 | 11669 |
 
-Largest decoded sections were triplet_store (684–730 ms), keyword_idx (441–451 ms), states (238–359 ms), and symbol_idx (321–336 ms), inclusive of their I/O/allocations. The file-read timer includes all snapshot refills. The post-decode residual is dominated by `TripletStore::rebuild_indexes()` and state-map hydration.
 
-Perf captured **1,469 stacks containing the snapshot loader**: **238 (16.2%)** had allocator leaf frames, **97 (6.6%)** memory copy/clear, and **1,134 (77.2%)** decode/index/other work. The latter includes collection hashing/insertion and buffered-reader/serde work. Samples from unrelated embedding/worker threads are excluded. The main-thread-only profile was discarded because FieldStore loads on a dedicated loader thread.
+The cold embedding phase includes one-time LSH cache regeneration. Snapshot decoding, keyword reverse-index construction, and stable triplet compaction still scale with store size. The full Turbo rebuild is off the ready path in the cached arm.
 
-Allocation percentages are sampled CPU attribution, not independent wall-clock timers. The post-decode residual also includes sanitization and state-map hydration. Improving these collection layouts or persisting their indexes would be a separate change; mmap/lazy payload changes are not included.
+## Protocol and evidence
 
-## Recall identity and rollback
+The snapshot source is family `db4b064f`, seqno 206244559, generation 38052. The pre-delta copy uses its recorded file list before the CLI writer segment. The exact delta retains all 200 verified 768-coordinate CLI writes and 20 matched temporary triplet additions/invalidation records. The checkpointed copy is family `db4b095a`, seqno 206245400, generation 38053. A standalone helper checkpoints only the stopped private copy because the CLI has no full-snapshot RPC.
 
-- Default fused recall: unchanged baseline A/B already matches only **15/20** raw JSON responses. Baseline A vs optimized A/B matches **17/20** and **15/20**. All **20/20 result-ID orders** match. Differences are relevance scores, not normalization bits or returned IDs.
-- Existing HDC search sorts solely by Hamming distance (`chitta-field/src/hdc.rs:323`), leaving ties in HashMap iteration order. Rank fusion assigns different scores to those tied positions. This is reproducible in unchanged baselines.
-- With the existing evaluation flag `--disable-hdc true`, the same twenty queries are **20/20 byte-identical** before/after, with no JSON fields removed or rounded. This isolates normalization/Turbo identity. It is a qualified result, not a claim that default fused JSON is deterministic.
-- Both clean-family baseline runs and both optimized runs also match **20/20 byte-for-byte** under that same control.
-- After checkpointing, all three optional caches hit. The old binary loads the new snapshot and returns **20/20 byte-identical** controlled responses versus the optimized binary. Rollback requires no sidecar removal or migration.
+Each identity restart restores the selected WAL and snapshot caches. The harness uses the same 20 `chitta recall --json --no-learn` queries, warms embeddings through an empty realm, fixes realtime for age-dependent scores, keeps monotonic timers real, and pins utility seed 42. Autonomous work and queue consumption are disabled. The overlap probe runs separately from identity comparisons. The harness waits for the actual daemon-ready log, since its socket begins listening during warmup.
 
-## Validation
+Embedding identity SHA-256: `85c1d228e600808cb82792374bf0da2bc2f99e8ec46d57c1222f30d6a0bc0e02`.
 
-- `chitta-field/build.sh build --release`: passed.
-- `chitta-field/build.sh test --release`: **269 passed, 2 ignored**, 271 library tests discovered; other binary/doc targets passed. Includes four new cache tests for corruption/truncation, same-count vector edits, tape edits, exact vector bits, Turbo row/score identity, and HDC accumulator round trips.
-- Identity marker remains `768:nomic-embed-text-v1.5`; SHA-256 `85c1d228e600808cb82792374bf0da2bc2f99e8ec46d57c1222f30d6a0bc0e02` before/after.
-- CMake uses main's CHITTA values (768, LLAMA_CPP/RPC/TESTS ON), Release, BLAS and compiler/Python paths, with CHITTA_FIELD_ROOT pointing inside this worktree. Build passed. **16/16 CTest cases passed**, including embed_pool_test with CHITTA_EMBED_MODEL supplied.
-- All **18 hook suites**, SMRITI tests, changed-shell syntax, changed-Python ruff and diff whitespace passed. Replica test covers copying all four new optional files.
-- Additional unchanged MCP suite: **126/127 passed**; SDK-session test errors because available MCP SDK lacks `_session_owners` expected by `server.py`. No MCP code changed. Earlier test-isolation path failures were fixed by short temporary paths and clearing inherited socket overrides; they are not remaining failures.
-
-A first read of newly written NFS checkpoint files took 37.7 s (20.4 s snapshot, 8.3 s embeddings; organ read 957 ms). Subsequent matched clean-family starts are the table above. These are process-cold timings, not a guarantee for uncached NFS reads.
-
-No install, service restart, push, live mind access, or deployment was performed.
+Reproduction and raw evidence remain untracked under `startup-evidence/`: `f3-measure.py`, `f3-run-gates.py`, `f3-report.py`, `f3-results.json`, `f3-lsh-init-*` build/test logs, the final pre/delta/snapshot response directories, cold/cached logs, and `f3-rollback/`. Earlier failed exploratory runs are retained separately. No services were restarted, binaries installed, live mind/configuration modified, or commits pushed.

@@ -933,15 +933,16 @@ public:
     /// Get content string for a memory. Retries with a heap buffer when the
     /// content exceeds the stack buffer (cf_get_content reports the required
     /// size via `written` on -2).
-    std::string get_content(uint64_t id) {
+    std::string get_content(uint64_t id, bool touch = true) {
+        const auto fetch = touch ? cf_get_content : cf_peek_content;
         char buf[65536];
         size_t written = 0;
-        int r = cf_get_content(handle_, id,
+        int r = fetch(handle_, id,
                                reinterpret_cast<uint8_t*>(buf), sizeof(buf), &written);
         if (r == 0) return std::string(buf, written);
         if (r == -2 && written > 0) {
             std::vector<uint8_t> big(written + 1);
-            if (cf_get_content(handle_, id, big.data(), big.size(), &written) == 0)
+            if (fetch(handle_, id, big.data(), big.size(), &written) == 0)
                 return std::string(reinterpret_cast<char*>(big.data()), written);
         }
         return "";
@@ -2658,7 +2659,7 @@ private:
             h.spacing_boost       = buf[i].spacing_boost;
 
             // Fetch content (handles oversized payloads via heap retry)
-            h.content = get_content(h.memory_id);
+            h.content = get_content(h.memory_id, false);
 
             // Fetch kind (null-terminated, no written out-param)
             strbuf[0] = '\0';
