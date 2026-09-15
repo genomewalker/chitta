@@ -45,3 +45,24 @@ No deployments or live writes. Commit when all existing gates and new tests pass
   source unchanged. Saffron A1/1 observed +1 missing / B0/2; cobalt A1/2 / B1/2.
   The voided trial also retained a hook-output/ledger mismatch; no nonvoided
   errors. Compact fixture evidence records this limitation. Overall delta null.
+
+## Follow-up 3 — 2026-09-15
+Authorized: prospective post-cut automatic cohort per task, retain all pre-cut
+baseline, hard-error unlabelled post-cut writers, remove future records in both
+arms, per-task manifests/exposure, read-only diagnostic from midnight UTC.
+Native derived operational value facts now included per the specified :326 writer.
+No hook changes, live writes, deployments, model calls or push.
+Implementation in progress; rerun harness and existing gates before commit.
+- Completed prospective schema-2 cut/task freeze, per-task runner exclusions,
+  global-fallback all-store inventory, per-task exposure and manifest validation.
+- Labelled bash source=distillation plus derived_from is consistently automatic;
+  the orchestrator's hook change needs no harness exemption.
+- Final gates: 37 harness, 18 hook scripts, 127 MCP, 46 SMRITI, Ruff, shell checks.
+  Immutable gate passes against b03a25e5 (stream base); main-only replica script
+  updates make a direct current-main comparison fail. No protected paths edited.
+- Live project:cc-soul diagnostic: 269 automatic (19 native learning, 250 native
+  value facts), zero queue-labelled, 2 unlabelled wisdom, no contradictions.
+  Enumeration drift: diagnostic only. Separate all-store live scan also drifted.
+- Scratch fixture: 8 outcomes, 7 valid, 1 rejected for existing truncated baseline
+  ID versus ledger mismatch. All exclusions pass, source unchanged, report exact.
+  No model calls or learning verdict. Ready to commit on feat/learning-experiment.

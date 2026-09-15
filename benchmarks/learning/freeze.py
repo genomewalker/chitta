@@ -11,7 +11,6 @@ import tempfile
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
-from datetime import datetime, timezone
 from pathlib import Path
 
 from audit import TOOLS
@@ -42,7 +41,7 @@ def classify(memory, triplets, parents):
     """Kind only disambiguates an output AFTER writer provenance is established."""
     mid = str(memory["id"])
     trips = [t for t in triplets if str(t.get("subject")) == mid]
-    sources = {t["object"] for t in trips if t.get("predicate") == "source"}
+    sources = {t["object"] for t in trips if t.get("predicate") == "source" and t.get("object")}
     derived = {str(t["object"]) for t in trips if t.get("predicate") == "derived_from"}
     kind = memory.get("kind", memory.get("type"))
     evidence = {
@@ -51,6 +50,9 @@ def classify(memory, triplets, parents):
         "created_at_ms": memory.get("created_at_ms"),
         "triplets": trips,
         "parents": {p: parents.get(p) for p in sorted(derived)},
+        "explicit_signal": memory.get(
+            "explicit_signal", bool(re.match(r"^\[(artifact|done)\]", memory.get("content", "")))
+        ),
     }
 
     def result(status, writer, reason):
@@ -58,7 +60,7 @@ def classify(memory, triplets, parents):
 
     if kind in {"correction", "episode"}:
         return result("excluded", "preserved", f"{kind} stays in both arms")
-    if len(sources) > 1 or (sources and derived):
+    if len(sources) > 1 or (sources and derived and sources != {"distillation"}):
         return result("unresolved", "unknown", "conflicting writer provenance")
     if sources == {"distillation"}:
         return result("included", "queue_distillation", "source=distillation")
@@ -75,10 +77,10 @@ def classify(memory, triplets, parents):
         ):
             return result("unresolved", "unknown", "derived_from contradicts episode provenance")
         if any(not parents.get(p) for p in derived):
-            return result("ambiguous", "ambiguous", "derived_from parent unavailable")
+            return result("unresolved", "unknown", "derived_from parent unavailable")
         if kind == "operational":
             return result(
-                "excluded",
+                "included",
                 "native_value_fact",
                 "episode-derived operational: deterministic value-fact writer",
             )
@@ -89,7 +91,11 @@ def classify(memory, triplets, parents):
         return result(
             "included", "native_learning_unexpected_kind", "episode-derived native output"
         )
-    return result("ambiguous", "ambiguous", "no writer provenance; excluded from both arms")
+    if evidence["explicit_signal"]:
+        return result(
+            "excluded", "explicit_signal", "[artifact]/[done] hook signal stays in both arms"
+        )
+    return result("unlabelled", "unlabelled", "no writer provenance; fix writer before freeze")
 
 
 def enumerate_memories(rpc, realm):
@@ -105,7 +111,7 @@ def enumerate_memories(rpc, realm):
             return rows
 
 
-def cohort_report(socket, realm, *, preview=False, source=None):
+def cohort_report(socket, realm, *, preview=False, source=None, cut=None):
     require(realm == REALM, f"realm must be {REALM}")
     rpc = RPC(socket)
     health = rpc.call("health_check")
@@ -125,16 +131,32 @@ def cohort_report(socket, realm, *, preview=False, source=None):
             "probe and immutable source select different families",
         )
     started = now_ms()
-    memories = enumerate_memories(rpc, realm)
-    queue_rows = rpc.call("query_graph", object="distillation")["triplets"]
+    if cut is None:
+        # The cut records state only. Historical writers are never classified.
+        return {
+            "schema": 2,
+            "preview": preview,
+            "realm": realm,
+            "cut_timestamp_ms": started,
+            "cut_store": before,
+        }
+    cut_ms = cut["cut_timestamp_ms"]
+    # Hooks can reach global fallback and graph neighbors outside the pinned realm.
+    # Official freezes must inventory the whole store; live diagnostics stay scoped.
+    inventory_realm = realm if preview else ""
+    memories = enumerate_memories(rpc, inventory_realm)
 
     def inspect(item):
         mid, memory = item
+        provenance = rpc.call("memory_provenance", id=int(mid))
+        meta = provenance.get("meta") or {}
+        require(str(meta.get("id")) == mid, f"metadata ID mismatch: {mid}")
+        ts = meta.get("created_at_ms")
+        require(isinstance(ts, int) and ts > 0, f"missing creation timestamp: {mid}")
+        memory = {**memory, "created_at_ms": ts}
+        if ts <= cut_ms:
+            return {"id": mid, "kind": memory.get("kind", memory.get("type")), "created_at_ms": ts}
         trips = rpc.call("query_graph", subject=mid)["triplets"]
-        try:
-            provenance = rpc.call("memory_provenance", id=int(mid))
-        except ValueError as exc:
-            provenance = {"unavailable": str(exc)}
         parents = {}
         for t in trips:
             if t.get("predicate") == "derived_from":
@@ -158,65 +180,61 @@ def cohort_report(socket, realm, *, preview=False, source=None):
     stable = stable and {n: v["size"] for n, v in before["files"].items()} == {
         n: v["size"] for n, v in after["files"].items()
     }
-    stable = stable and set(memories) == set(enumerate_memories(rpc, realm))
-    unresolved = [e["id"] for e in evidence if e["classification"] == "unresolved"]
+    stable = stable and set(memories) == set(enumerate_memories(rpc, inventory_realm))
+    post = [e for e in evidence if e["created_at_ms"] > cut_ms]
     return {
-        "schema": 1,
+        "schema": 2,
         "preview": preview,
         "realm": realm,
-        "cut_timestamp_ms": now_ms(),
+        "cut_timestamp_ms": cut_ms,
+        "cut_store": cut["cut_store"],
         "inspection_started_ms": started,
         "completed_timestamp_ms": now_ms(),
         "socket": str(socket),
         "store": before,
         "enumeration_stable": stable,
-        "queue_object_query": queue_rows,
-        "ids": [e["id"] for e in evidence if e["classification"] == "included"],
-        "unresolved": unresolved,
-        "ambiguous_ids": [e["id"] for e in evidence if e["classification"] == "ambiguous"],
-        "ambiguous_population": ambiguous_population(evidence),
-        "unexpected_native_kinds": dict(
-            Counter(e["kind"] for e in evidence if e["writer"] == "native_learning_unexpected_kind")
-        ),
+        "unresolved": [e["id"] for e in post if e["classification"] == "unresolved"],
+        "unlabelled": [
+            {"id": e["id"], "kind": e["kind"]} for e in post if e["classification"] == "unlabelled"
+        ],
         "evidence": evidence,
-        "counts": dict(Counter(e["writer"] for e in evidence)),
-        "classification_counts": dict(Counter(e["classification"] for e in evidence)),
+        "inventory_scope": inventory_realm or "all",
+        "counts": dict(Counter(e["writer"] for e in post)),
+        "automatic_by_writer": dict(
+            Counter(e["writer"] for e in post if e["classification"] == "included")
+        ),
+        "baseline_count": len(evidence) - len(post),
     }
 
 
-def ambiguous_population(evidence):
-    rows = [e for e in evidence if e["classification"] == "ambiguous"]
-    cutoff = int(datetime(2026, 3, 26, tzinfo=timezone.utc).timestamp() * 1000)
-    hist = {"before_2026-03-26": 0, "on_or_after_2026-03-26": 0, "unknown": 0}
-    kinds = Counter()
-    for row in rows:
-        kinds[row["kind"]] += 1
-        ts = row.get("created_at_ms")
-        hist[
-            "unknown"
-            if not ts
-            else ("before_2026-03-26" if ts < cutoff else "on_or_after_2026-03-26")
-        ] += 1
-    total = sum(e.get("access_count") or 0 for e in evidence)
-    ambiguous = sum(e.get("access_count") or 0 for e in rows)
+def task_membership(task, cohort):
+    cut, timestamp = cohort["cut_timestamp_ms"], task["prompt_timestamp_ms"]
+    require(timestamp > cut, f"task {task['id']} must be prospective: timestamp after cut")
     return {
-        "count": len(rows),
-        "kinds": dict(kinds),
-        "creation_date_histogram": hist,
-        "historical_access_count": ambiguous,
-        "historical_total_access_count": total,
-        "historical_access_share": ambiguous / total if total else None,
-        "access_count_missing": sum(e.get("access_count") is None for e in evidence),
-        "arm_a_recall_exposure": {
-            "share": None,
-            "status": "not measured: diagnostic has no arm A",
-            "required_after_exclusion": 0,
-        },
+        "eligible_cohort_ids": sorted(
+            e["id"]
+            for e in cohort["evidence"]
+            if cut < e["created_at_ms"] <= timestamp and e["classification"] == "included"
+        ),
+        "future_ids": sorted(e["id"] for e in cohort["evidence"] if e["created_at_ms"] > timestamp),
+    }
+
+
+def task_manifest(task, cohort):
+    return {
+        "prompt_timestamp_ms": task["prompt_timestamp_ms"],
+        "cut_timestamp_ms": cohort["cut_timestamp_ms"],
+        "store_sha256": cohort["store"]["sha256"],
+        **task_membership(task, cohort),
     }
 
 
 def task_payload(task):
-    return {k: v for k, v in task.items() if k not in {"validation", "eligible_cohort_ids"}}
+    return {
+        k: v
+        for k, v in task.items()
+        if k not in {"validation", "eligible_cohort_ids", "future_ids"}
+    }
 
 
 def install_grader(task, work):
@@ -318,28 +336,43 @@ def validate_task(task):
 
 
 def validate_freeze(tasks, cohort, config, *, fixture=False):
+    require(cohort.get("schema") == 2, "cohort needs prospective schema 2")
+    require(
+        fixture or cohort.get("inventory_scope") == "all",
+        "official freeze needs all-store inventory for global fallback",
+    )
     require(not cohort.get("unresolved"), "cohort has unresolved IDs")
+    require(
+        not cohort.get("unlabelled"),
+        "post-cut records lack writer provenance (id/kind): "
+        + json.dumps(cohort.get("unlabelled")),
+    )
     require(fixture or not cohort.get("fixture"), "fixture cohort cannot certify an official panel")
-    ids = cohort.get("ids", [])
-    require(len(ids) == len(set(ids)), "duplicate cohort IDs")
-    evidence = cohort.get("evidence", [])
+    require(cohort["cut_store"]["fully_hashed"], "cut manifest needs full hashes")
+    evidence = cohort["evidence"]
     require(len(evidence) == len({e["id"] for e in evidence}), "duplicate cohort evidence")
-    require(
-        set(ids) == {e["id"] for e in evidence if e["classification"] == "included"},
-        "cohort membership/evidence mismatch",
-    )
-    require(
-        set(cohort.get("ambiguous_ids", []))
-        == {e["id"] for e in evidence if e["classification"] == "ambiguous"},
-        "ambiguous membership/evidence mismatch",
-    )
     for entry in evidence:
+        require(
+            isinstance(entry.get("created_at_ms"), int) and entry["created_at_ms"] > 0,
+            f"missing creation timestamp: {entry['id']}",
+        )
+        if entry["created_at_ms"] <= cohort["cut_timestamp_ms"]:
+            require("classification" not in entry, "pre-cut records must not be classified")
+            continue
         computed = classify(entry, entry["triplets"], entry["parents"])
         require(
+            computed["classification"] != "unlabelled",
+            f"post-cut record lacks writer provenance: {entry['id']} ({entry['kind']})",
+        )
+        require(
             computed["classification"] == entry["classification"]
-            and computed["classification"] != "unresolved",
+            and computed["classification"] != "unresolved"
+            and computed["writer"] == entry["writer"],
             "cohort classification is unresolved or inconsistent",
         )
+    for task in tasks:
+        for key, expected in task_membership(task, cohort).items():
+            require(key not in task or task[key] == expected, f"task {task['id']} {key} mismatch")
     require(not cohort.get("preview"), "preview cohort cannot be frozen")
     require(cohort.get("enumeration_stable"), "unstable cohort enumeration")
     require(cohort["store"]["fully_hashed"], "source family needs full hashes")
@@ -403,8 +436,24 @@ def validate_freeze(tasks, cohort, config, *, fixture=False):
     )
 
 
-def freeze(tasks_path, cohort_path, config_path, out, *, fixture=False, isolation=None):
+def freeze(
+    tasks_path,
+    cohort_path,
+    config_path,
+    out,
+    *,
+    fixture=False,
+    isolation=None,
+    socket=None,
+    source=None,
+):
     tasks, cohort, config = map(read_json, (tasks_path, cohort_path, config_path))
+    if not fixture:
+        require(
+            socket and source, "freeze requires --socket probe and --source immutable task snapshot"
+        )
+        require(not cohort.get("preview"), "preview cut cannot be frozen")
+        cohort = cohort_report(socket, cohort["realm"], source=source, cut=cohort)
     if isolation:
         config["isolation"] = isolation
     config.setdefault("isolation", "strict")
@@ -424,13 +473,13 @@ def freeze(tasks_path, cohort_path, config_path, out, *, fixture=False, isolatio
     runtime_pins = {str(Path(r).resolve()): tree_identity(r) for r in roots}
     require(
         family(cohort["store"]["mind"]) == cohort["store"],
-        "source replica changed after cohort cut",
+        "source replica changed after task inspection",
     )
     out = Path(out)
     require(not out.exists(), "freeze output already exists; use a new path")
     tasks = deepcopy(tasks)
     for task in tasks:
-        task["eligible_cohort_ids"] = cohort["ids"]
+        task.update(task_membership(task, cohort))
     out.mkdir(parents=True)
     write_json(out / "tasks.json", tasks)
     write_json(out / "cohort.json", cohort)
@@ -452,7 +501,8 @@ def freeze(tasks_path, cohort_path, config_path, out, *, fixture=False, isolatio
         for key in ("claude_bin", "chitta_bin", "chittad_bin", "embed_model")
     }
     manifest = {
-        "schema": 1,
+        "schema": 2,
+        "task_cohorts": {t["id"]: task_manifest(t, cohort) for t in tasks},
         "isolation": config.get("isolation", "strict"),
         "runtime_sha256": runtime_pins,
         "python": {"path": sys.executable, "sha256": digest(sys.executable)},
@@ -481,6 +531,9 @@ def main():
     c.add_argument("--source", help="immutable source COPY used to start the probe replica")
     c.add_argument("--out", required=True)
     c.add_argument(
+        "--cut-timestamp-ms", type=int, help="diagnostic only: inspect writes since this cut"
+    )
+    c.add_argument(
         "--dry-run", action="store_true", help="read-only diagnostic; never eligible for freeze"
     )
     t = sub.add_parser("task").add_subparsers(dest="task_action", required=True)
@@ -494,17 +547,28 @@ def main():
     for name in ("tasks", "cohort", "config", "out"):
         f.add_argument("--" + name, required=True)
     f.add_argument("--fixture", action="store_true")
+    f.add_argument("--socket")
+    f.add_argument("--source")
     f.add_argument("--isolation", choices=("strict", "home-audit"))
     args = parser.parse_args()
     if args.action == "cohort":
-        result = cohort_report(args.socket, args.realm, preview=args.dry_run, source=args.source)
+        require(args.cut_timestamp_ms is None or args.dry_run, "backdated cuts are diagnostic only")
+        cut = (
+            None
+            if args.cut_timestamp_ms is None
+            else {"cut_timestamp_ms": args.cut_timestamp_ms, "cut_store": None}
+        )
+        result = cohort_report(
+            args.socket, args.realm, preview=args.dry_run, source=args.source, cut=cut
+        )
         write_json(args.out, result)
         print(
             json.dumps(
                 {
-                    "counts": result["counts"],
-                    "unresolved": len(result["unresolved"]),
-                    "included": len(result["ids"]),
+                    "counts": result.get("counts", {}),
+                    "unresolved": len(result.get("unresolved", [])),
+                    "unlabelled": len(result.get("unlabelled", [])),
+                    "cut_timestamp_ms": result["cut_timestamp_ms"],
                     "preview": result["preview"],
                 }
             )
@@ -527,6 +591,8 @@ def main():
             args.out,
             fixture=args.fixture,
             isolation=args.isolation,
+            socket=args.socket,
+            source=args.source,
         )
         print(
             json.dumps(

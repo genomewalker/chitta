@@ -38,7 +38,7 @@ from common import (
     validate_runtime_roots,
     write_json,
 )
-from freeze import install_grader, validate_freeze
+from freeze import install_grader, task_manifest, validate_freeze
 from isolation import probe, sandbox_command
 
 
@@ -184,6 +184,21 @@ def remove_and_verify(rpc, ids, prompt):
     return {"lookups": lookups, "lanes": lanes, "verified": True}
 
 
+def prepare_task_arm(rpc, task, arm, trial):
+    record = {"exclusion_verified": False}
+    future = task["future_ids"]
+    write_json(trial / "future-exclusion.json", remove_and_verify(rpc, future, task["prompt"]))
+    record["future_exclusion_verified"] = True
+    if arm == "B":
+        exclusion = remove_and_verify(rpc, task["eligible_cohort_ids"], task["prompt"])
+        write_json(trial / "exclusion.json", exclusion)
+        record["exclusion_verified"] = True
+    else:
+        for mid in task["eligible_cohort_ids"]:
+            require(rpc.call("get", id=mid) is not None, f"A missing cohort ID {mid}")
+    return record
+
+
 def read_jsonl(path):
     require(Path(path).is_file(), f"missing telemetry: {Path(path).name}")
     return [json.loads(line) for line in Path(path).read_text().splitlines() if line.strip()]
@@ -273,10 +288,19 @@ def aggregate(
         reasons.append("execution or telemetry failure")
     if any(e.get("success") not in (0, 1) for e in events):
         reasons.append("missing deterministic grader outcome")
-    if not any(
-        e.get("telemetry", {}).get("cohort_injections", 0) > 0 for e in events if e["arm"] == "A"
+    for task in tasks:
+        if not any(
+            e.get("telemetry", {}).get("cohort_injections", 0) > 0
+            for e in events
+            if e["arm"] == "A" and e["task"] == task["id"]
+        ):
+            reasons.append(f"task {task['id']}: A has no confirmed cohort exposure")
+    if any(
+        not e.get("future_exclusion_verified")
+        or e.get("future_telemetry", {}).get("cohort_injections", 0) != 0
+        for e in events
     ):
-        reasons.append("A has no confirmed cohort exposure")
+        reasons.append("future exclusion/exposure failed")
     if any(
         e.get("telemetry", {}).get("cohort_injections", 0) != 0 or not e.get("exclusion_verified")
         for e in events
@@ -304,6 +328,16 @@ def aggregate(
                 "a_missing": trials - len(a_valid),
                 "b_missing": trials - len(b_valid),
                 "delta": row_delta,
+                "cohort_ids": task.get("eligible_cohort_ids", []),
+                "future_ids": task.get("future_ids", []),
+                "cohort_injections": {
+                    arm: sum(
+                        e.get("telemetry", {}).get("cohort_injections", 0)
+                        for e in selected
+                        if e["arm"] == arm
+                    )
+                    for arm in ("A", "B")
+                },
             }
         )
     net = sum((e.get("success", 0) or 0) * (1 if e["arm"] == "A" else -1) for e in events)
@@ -325,14 +359,14 @@ def aggregate(
             k: sum(t.get(k, 0) for t in ts)
             for k in ("cohort_injections", "total_injections", "empty_turns", "lane_failures")
         }
-        ambiguous_injections = sum(
-            e.get("ambiguous_telemetry", {}).get("cohort_injections", 0)
+        future_injections = sum(
+            e.get("future_telemetry", {}).get("cohort_injections", 0)
             for e in events
             if e["arm"] == arm
         )
-        metrics[arm]["ambiguous_injections"] = ambiguous_injections
+        metrics[arm]["future_injections"] = future_injections
         total = metrics[arm]["total_injections"]
-        metrics[arm]["ambiguous_recall_share"] = ambiguous_injections / total if total else None
+        metrics[arm]["future_recall_share"] = future_injections / total if total else None
         for key in ("recall_ms", "hook_ms"):
             values = [v for t in ts for v in t.get(key, [])]
             metrics[arm][key] = {"median": quantile(values, 0.5), "p95": quantile(values, 0.95)}
@@ -671,18 +705,8 @@ def run_trial(task, trial_number, arm, run_dir, frozen, live, dry_run, sandbox_o
     try:
         verify_code_pins(frozen["manifest"])
         rpc = start_replica(env, source, trial / "replica-launch.log")
-        ambiguous = frozen["cohort"].get("ambiguous_ids", [])
-        write_json(
-            trial / "ambiguous-exclusion.json", remove_and_verify(rpc, ambiguous, task["prompt"])
-        )
-        record["ambiguous_exclusion_verified"] = True
-        if arm == "B":
-            exclusion = remove_and_verify(rpc, task["eligible_cohort_ids"], task["prompt"])
-            write_json(trial / "exclusion.json", exclusion)
-            record["exclusion_verified"] = True
-        else:
-            for mid in task["eligible_cohort_ids"]:
-                require(rpc.call("get", id=mid) is not None, f"A missing cohort ID {mid}")
+        future = task["future_ids"]
+        record.update(prepare_task_arm(rpc, task, arm, trial))
         visible = trial / "visible"
         proxy_path = visible / "state/recall.sock"
         broker = Broker(proxy_path, env["CHITTA_SOCKET_PATH"]).start()
@@ -709,10 +733,10 @@ def run_trial(task, trial_number, arm, run_dir, frozen, live, dry_run, sandbox_o
             hooks = read_jsonl(env["LEARNING_HOOK_LOG"])
             ledger = read_jsonl(Path(env["CHITTA_DB_PATH"]) / "outcome_ledger.jsonl")
             record["telemetry"] = telemetry(hooks, ledger, task["eligible_cohort_ids"])
-            record["ambiguous_telemetry"] = telemetry(hooks, ledger, ambiguous)
+            record["future_telemetry"] = telemetry(hooks, ledger, future)
             require(
-                record["ambiguous_telemetry"]["cohort_injections"] == 0,
-                "ambiguous memory exposed after exclusion",
+                record["future_telemetry"]["cohort_injections"] == 0,
+                "future memory exposed after exclusion",
             )
             if not dry_run:
                 output = [json.loads(line) for line in result.stdout.splitlines() if line.strip()]
@@ -799,6 +823,10 @@ def load_frozen(path):
         )
     tasks, cohort = read_json(path.parent / "tasks.json"), read_json(path.parent / "cohort.json")
     validate_freeze(tasks, cohort, manifest["config"], fixture=manifest["fixture"])
+    require(
+        manifest.get("task_cohorts") == {t["id"]: task_manifest(t, cohort) for t in tasks},
+        "per-task manifest membership mismatch",
+    )
     verify_code_pins(manifest)
     require(
         str(Path(sys.executable).resolve()) == str(Path(manifest["python"]["path"]).resolve())

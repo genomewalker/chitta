@@ -1,0 +1,45 @@
+{
+  "all_store_attempt": "Separate read-only all-store inventory failed on repeated ID / pagination drift; no all-store count claimed.",
+  "automatic_by_writer": {
+    "native_learning": 19,
+    "native_value_fact": 250
+  },
+  "automatic_count": 269,
+  "baseline_count": 15047,
+  "completed_timestamp_ms": 1789495608057,
+  "counts": {
+    "explicit_signal": 1,
+    "native_learning": 19,
+    "native_value_fact": 250,
+    "other_source": 1,
+    "preserved": 2,
+    "unlabelled": 2
+  },
+  "cut_manifest_available": false,
+  "cut_timestamp_ms": 1789430400000,
+  "diagnostic_only": true,
+  "enumeration_stable": false,
+  "inspection_started_ms": 1789495598726,
+  "inventory_scope": "project:cc-soul",
+  "post_cut_count": 275,
+  "queue_distillation": 0,
+  "raw_path": "/tmp/learning-live-postcut-2026-09-15.json",
+  "raw_sha256": "3611be7740e2541fa82052968263e4b6e928533a6a9b97d145ee3694187d3f97",
+  "realm": "project:cc-soul",
+  "schema": 2,
+  "unlabelled": [
+    {
+      "id": "15514283413526806544",
+      "kind": "wisdom"
+    },
+    {
+      "id": "15514283413526806545",
+      "kind": "wisdom"
+    }
+  ],
+  "unlabelled_kind_counts": {
+    "wisdom": 2
+  },
+  "unresolved": [],
+  "writer_attribution_note": "Two wisdom records have no writer provenance. The branch hooks/distill.sh observe path omits --source distillation; the missing labels cannot prove which writer produced a record. Orchestrator owns that fix."
+}

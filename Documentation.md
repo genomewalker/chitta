@@ -81,3 +81,74 @@ voided saffron trial also had a hook-output/ledger mismatch; it remains in raw
 evidence and does not become a failure score. No nonvoided trial had errors.
 See `benchmarks/learning/evidence/fixture-2026-09-15.md` for manifest hashes,
 external artifacts, the two-task table and the screening caveat.
+
+
+## Follow-up 3 — prospective treatment (2026-09-15)
+
+This supersedes the historical-cohort/ambiguous-exclusion implementation above.
+Cut capture now records only a timestamp and store manifest. At task freeze a
+quiescent probe of a later immutable source provides creation timestamps and
+post-cut writer evidence. Pre-cut records are baseline without classification.
+Per-task lists and manifest entries select automatic records in (cut,task] and
+exclude future records from both arms. Native derived operational value facts
+are included under the newly specified :326 writer. Explicit writes, corrections,
+episodes and [artifact]/[done] signals through the task remain in both arms.
+
+Missing post-cut provenance is an error listing IDs and kinds; missing timestamps
+or required parent provenance also blocks freeze. Per-task A exposure and zero
+B/future exposure are enforced. Schema-1 artifacts must be regenerated. The
+original cut and later source manifests are kept separately; source inspection
+requires --socket and --source on official freeze. No hook edits or deployments.
+
+### New read-only live diagnostic
+
+Realm: project:cc-soul. Cut: 2026-09-15T00:00:00Z. Inspection completed 2026-09-15T18:06:48.057000+00:00.
+
+| Post-cut writer / status | Records |
+| --- | ---: |
+| Queue/observe source=distillation | 0 |
+| Native learning | 19 |
+| Native operational value facts | 250 |
+| **Automatic total** | **269** |
+| Other explicit source | 1 |
+| Preserved corrections/episodes | 2 |
+| Explicit [artifact]/[done] signal | 1 |
+| **Unlabelled wisdom** | **2** |
+| Contradictory/unresolved | 0 |
+| **Post-cut total** | **275** |
+
+15,047 baseline records were not classified. Unlabelled IDs:
+`15514283413526806544` (wisdom), `15514283413526806545` (wisdom).
+The store changed during enumeration: diagnostic only, no official cut or
+freeze. The branch's bash distiller observe path omits --source distillation;
+missing labels do not establish authorship. Its fix belongs to main, not this
+stream. Counts and raw-artifact hash are committed in
+`benchmarks/learning/evidence/live-postcut-2026-09-15.json`.
+
+Creation-time exclusions cannot restore later edits or strengthening of older
+memories. Complete pre-task state remains a separate requirement for a valid
+model experiment. No model experiment or learning verdict is claimed here.
+
+Official task freeze inventories all store realms because hook global fallback
+and graph neighbors can expose records outside the pinned task realm. The
+read-only live diagnostic remains scoped to project:cc-soul for comparability.
+A separate all-store live inventory attempt failed on pagination drift; it is
+not reported as a complete count. All-store official enumeration and missing
+scope refusal are covered by the harness tests.
+
+### Final gates and fixture
+
+37 harness tests, 18 unchanged hook scripts, 127 MCP tests and 46 SMRITI tests
+pass. Ruff check/format, bash -n and shellcheck pass. The immutable gate passes
+against stream base b03a25e5; direct current-main comparison fails solely on
+main's newer scripts/eval-replica.sh change. This stream edits no protected paths.
+Default shell and patch tools hit the missing bubblewrap helper; shell calls
+were rerun via approval review. No install, restart, push or live write occurred.
+
+Eight synthetic fixture outcomes: seven valid and one rejected for an existing
+hook-output/ledger mismatch on a truncated baseline ID. All future/B exclusions
+passed; valid A exposure is confirmed per task; source unchanged; report exactly
+regenerates. Saffron A1/1 plus one missing versus B0/2; cobalt A1/2 versus B1/2.
+The aggregate delta is null and the fixture is NO VERDICT. Final all-store scan
+and labelled-bash provenance checks are unit-tested separately. See compact
+`evidence/fixture-postcut-2026-09-15.md` and `evidence/gates-followup3-2026-09-15.json`.
