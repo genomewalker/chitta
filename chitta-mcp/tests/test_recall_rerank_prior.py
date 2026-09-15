@@ -6,7 +6,10 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import server  # noqa: E402
+try:
+    import server
+except ImportError as exc:  # test-hooks CI job has no MCP SDK
+    raise unittest.SkipTest(f"MCP SDK unavailable: {exc}") from exc
 
 
 def _blend(logit: float, hit: dict) -> float:
