@@ -3,6 +3,14 @@
 Status as of 2026-09-13
 
 2026-09-15: Automatic-learning harness built; official cohort and prospective panel remain unfrozen — [protocol](../benchmarks/learning/protocol.md).
+2026-09-15 23:15 CEST: **official cohort cut recorded** in `benchmarks/learning/cohort.json`
+(`cut_timestamp_ms` 1789506106539, family `da86decb`, realm `project:cc-soul`).
+The immutable source copy lives at
+`/projects/caeg/scratch/kbd606/tmp/learning-cut-20260915-frozen` (read-only);
+`learning-cut-20260915` is the launcher's working copy and may be overwritten.
+The task panel is now collected prospectively: every graded prompt from a real
+session after the cut is a candidate for `freeze.py task add` / `task validate`;
+`freeze.py freeze` runs once 20 are validated.
 
 The evolution loop is propose → implement in an isolated worktree → gates →
 evaluate against a frozen-snapshot replica → verdict → human merge. Evaluation
