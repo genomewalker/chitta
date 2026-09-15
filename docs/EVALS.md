@@ -227,3 +227,62 @@ structural calls reported the lane unavailable (`results-rpc.json`). Errors coun
 as misses; the diagnostic excludes CLI startup. **hit@3=0.00 < 0.30: the analogy
 lane is not ready for a hook.** No lane tuning or immutable eval edits were made.
 These correlated forward/reverse smoke tasks do not establish broad accuracy.
+
+2026-09-15 — **KEEP `recall_analogy` as explicit directed relation transfer**, per decision memo §2: on a private, freshly copied bbcaed33 family (generation 38047), the independent exact relation-join baseline and proportional RPC both achieve hit@1=14/14, hit@3=14/14, negative abstentions=14/14, unsupported answers=0, missing grounding=0. RPC errors=0; median latency=0.333 ms over 28 calls (baseline 1.627 ms over 14 positive two-graph-RPC joins; these timings have different workloads). All 14 negative argument triples are distinct and target existing subjects with other outgoing edges. Complete answer sets, citations, inputs and hashes: `benchmarks/analogy/baseline.json`, `results.json`, `replica-selection.txt`. Structural relevance tasks and endpoint VSA ranking are retired; indexed exact-subject joins bypass the 10,000-fact bound and reject legacy ID-collision neighbours, with supporting edges and explicit `reason` abstentions. HDC and `query_graph` are unchanged; no graph cleanup or deployment. This is the memo's small screening test, not broad analogy accuracy.
+
+
+## Explicit relation transfer — 2026-09-15
+
+**Decision: keep `recall_analogy` as explicit directed relation transfer.**
+The [decision memo, section 2](DECISION-2026-09-15-mdl-analogy.md#2-analogy-choose-re-scope-to-explicit-relation-transfer)
+requires hit@3 ≥12/14, 14/14 negative abstentions, and zero unsupported
+answers. The final run meets all three thresholds; `query_graph` remains available.
+Structural mode and the endpoint's VSA cache/ranking are removed. Exact a→b
+predicates transfer as a union to actual outgoing neighbors of c; results carry
+supporting edges and rank by edge weight, then recency. Missing source/target
+relations produce explicit abstention reasons. No reverse/fuzzy relation is inferred.
+
+| Final benchmark | Exact relation-join baseline | `recall_analogy` RPC |
+| --- | ---: | ---: |
+| Positive queries | 14 | 14 |
+| Hit@1 | 14/14 | 14/14 |
+| Hit@3 | 14/14 | 14/14 |
+| Negative abstentions | 14/14 | 14/14 |
+| Unsupported returned answers | 0 | 0 |
+| Missing grounding | 0 | 0 |
+| RPC errors | 0 | 0 |
+| Median latency (ms) | 1.526 | 0.190 |
+
+Provenance: selected replica family **bbcaed33**, snapshot sequence **206208172**,
+manifest generation **38047**, copied and selector-verified before scratch daemon
+startup. The daemon opened only the private copy, with a private socket/runtime/port,
+queue disabled, autonomous work disabled, and `.quiesce` present. Startup can write
+private WAL bookkeeping; the input was a fresh family copy, not a reused warmed
+store. No graph facts were planted, repaired, or cleaned up.
+
+The independent `baseline.py` enumerated complete valid answer sets with temporal
+indexed graph reads, cross-checked against `query_graph`, and froze 14 distinct
+negative argument triples before `run.py` invoked the endpoint. Exact subject
+checks reject stale index entries caused by legacy reused triplet IDs. Original
+positive queries and grounding labels are preserved; missing grounding counts as
+failure. Every returned answer and supporting target edge/memory citation is audited.
+Baseline latency covers two graph RPCs and the Python join for positives; endpoint
+latency covers one RPC per query across all 28 cases. These single-run figures
+have different workloads and do not establish a speedup or broad generalization.
+
+Artifacts: [baseline](../benchmarks/analogy/baseline.json),
+[RPC results and keep decision](../benchmarks/analogy/results.json),
+[family selection](../benchmarks/analogy/replica-selection.txt), and
+[contract/reproduction](../benchmarks/analogy/README.md). Results bind the baseline
+and task files by SHA-256 and record the private socket and snapshot identity.
+
+Validation: Rust `./build.sh test --release` completed with **264 passed,
+2 ignored, 0 failed**, including the duplicate-triplet-ID regression; binary and
+doc-test targets also passed. `ctest` completed with **17 passed, 1 skipped
+(`embed_pool_test`), 0 failed**. Six benchmark unit tests, the updated hook
+regression, and touched-Python Ruff checks passed. Earlier isolated hook retries
+and SMRITI tests passed. The existing MCP suite remains **129/130 passing**, with
+one HTTP SDK/session-manager error (`BoundedSessionManager._session_owners`);
+no MCP implementation was changed. A redundant Rust invocation overlapped the
+surviving earlier job and failed linking; it was stopped after the original job
+completed successfully. The owned scratch daemon was stopped after evaluation.
