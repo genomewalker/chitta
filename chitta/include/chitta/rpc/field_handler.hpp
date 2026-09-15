@@ -2,6 +2,7 @@
 // FieldRpcHandler: RPC handler backed by FieldStore + VakYantra.
 
 #include "protocol.hpp"
+#include "../speech_act.hpp"
 #include "../ssl_gloss.hpp"
 #include "../field_store.hpp"
 #include "../vak.hpp"
@@ -531,6 +532,12 @@ public:
     static bool is_lockfree_read(const std::string& name) {
         static const std::unordered_set<std::string> kLockFreeReads = {
             "recall", "smart_recall", "hybrid_recall",
+            // The prompt hook's fan-in and its correction lanes compose exactly the
+            // handlers above plus keyword/correction lookups on the same Rust
+            // RwLocks. Under the shared lock they queued behind every `remember`
+            // (lockprof 2026-09-15: held 450-1100 ms) and the hook timed out
+            // while a direct `recall` stayed at 50 ms.
+            "recall_lanes", "recall_keyword", "correction_check",
         };
         return kLockFreeReads.count(name) > 0;
     }
@@ -614,6 +621,20 @@ public:
                     auto emb = embed_query(q);
                     if (emb.empty() && embed_queue_)
                         embed_queue_->enqueue_write(q); // preserve async cache warm
+                    if (!emb.empty()) args["_preembedding"] = emb;
+                }
+            }
+            // `remember` embeds its content inside the exclusive lock unless a
+            // pre-embedding is supplied; compute it here, before the lock, with the
+            // same SSL transform and speech-act reclassification the handler uses.
+            if (name == "remember" && !args.contains("_preembedding") && args.contains("content")) {
+                std::string content = args.value("content", "");
+                std::string category = args.value("category", "episode");
+                if (category == "episode") {
+                    if (auto act = classify_speech_act(content)) category = *act;
+                }
+                if (!content.empty()) {
+                    auto emb = embed_text(to_ssl_format(content, category));
                     if (!emb.empty()) args["_preembedding"] = emb;
                 }
             }
