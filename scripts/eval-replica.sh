@@ -73,7 +73,7 @@ now = time.time()
 active = []
 patterns = (
     re.compile(r"MANIFEST\.[12]\.tmp$"),
-    re.compile(r"chitta\..+\.(?:snapshot|emb|hdc|bin|mu|hnsw|delta\.hnsw|realm_hnsw|pld|rsf|sup\.json|shdr)\.tmp$"),
+    re.compile(r"chitta\..+\.(?:snapshot|emb|hdc|bin|mu|hnsw|delta\.hnsw|realm_hnsw|pld|rsf|sup\.json|shdr|lsh|organs|turbo|turbo\.meta)\.tmp$"),
     re.compile(r"cortex\..+\.tmp$"),
 )
 for path in root.iterdir():
