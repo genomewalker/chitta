@@ -161,9 +161,7 @@ def jsonl(path: Path):
                 continue
 
 
-def telemetry(
-    repo: Path, ledger: Path, shadow: Path, store: MemoryStore, warnings: list[str]
-) -> list[Proposal]:
+def telemetry(repo: Path, ledger: Path, store: MemoryStore, warnings: list[str]) -> list[Proposal]:
     counts = defaultdict(int)
     lanes = defaultdict(lambda: [0, 0])
     for row in jsonl(ledger):
@@ -218,24 +216,6 @@ def telemetry(
             timeouts,
             total,
         )
-    buckets = defaultdict(lambda: [0, 0])
-    for row in jsonl(shadow):
-        size = row.get("evidence_bytes", row.get("evidence_size", row.get("c_e")))
-        bucket = "unknown" if size is None else ("small" if number(size) < 32768 else "large")
-        buckets[bucket][0] += int(row.get("accept") is True)
-        buckets[bucket][1] += 1
-    for bucket, (accepted, total) in sorted(buckets.items()):
-        proposals.append(
-            candidate(
-                "Improve MDL evidence coverage (" + bucket + ")",
-                "Collect representative evidence across independent chunks before MDL consolidation; preserve the acceptance margin.",
-                "mdl_accept_rate." + bucket,
-                0.2 * (1 - accepted / total),
-                [dict(size_bucket=bucket, accepted=accepted, total=total, rate=accepted / total)],
-            )
-        )
-    if not shadow.exists():
-        warnings.append("MDL shadow ledger absent: " + str(shadow))
     if not ledger.exists():
         warnings.append("outcome ledger absent: " + str(ledger))
     try:
@@ -279,14 +259,13 @@ def telemetry(
 
 
 def gather(
-    repo: Path, store: MemoryStore, ledger: Path | None = None, shadow: Path | None = None
+    repo: Path, store: MemoryStore, ledger: Path | None = None
 ) -> tuple[list[Proposal], list[str]]:
     warnings: list[str] = []
     mind = Path.home() / ".claude/mind"
     proposals = telemetry(
         repo,
         ledger or mind / "outcome_ledger.jsonl",
-        shadow or mind / "mdl_gate_shadow.jsonl",
         store,
         warnings,
     )

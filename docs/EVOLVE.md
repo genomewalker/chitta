@@ -43,48 +43,42 @@ A cycle creates `evolve/auto-<UTC-date-time>-survey` from a pinned `main`
 commit under `.evolve/worktrees/`. Branches, specs, logs and verdict artifacts
 remain for review; the runner does not delete implementation worktrees.
 
-> Status as of 2026-09-14 — **MDL gate is not gating-ready.** The native shadow tap
-> has judged 237 learnings since 2026-09-02 and accepted 0 (savings −33…−68
-> bytes even for 18 KB evidence); the small-evidence pooling shipped on
-> 2026-09-13 never engaged (`pool_chunks` = 0 in all 12 post-deploy rows) because
-> the distiller sees one chunk per session. The two-part zlib cost model
-> against the *same* chunk cannot reward a learning that compresses future
-> chunks. Next proposal: score a learning by the bytes it saves across the
-> realm's recent N chunks (corpus dictionary), not the chunk that produced it.
-> Until then `CHITTA_MDL_GATE` stays shadow-only.
+The cycle resolves the Codex CLI as `CHITTA_CODEX_BIN`, else `~/.local/bin/codex`,
+else PATH: the bioinfo conda env carries an npm `@openai/codex` 0.151.0 that
+rejects `gpt-6-astra`.
+
+> Status as of 2026-09-15 — **MDL admission compression retired.** The reported
+> evaluation tally was **0 accepted / 461 judged across both models**: 237
+> historical native judgments plus 224 private-replay candidates (the replay
+> compared same-chunk and corpus-dictionary models on those same 224 candidates).
+> This is not a claim that the full live history never accepted: the
+> [decision memo, section 1](DECISION-2026-09-15-mdl-analogy.md#1-mdl-choose-c-drop-admission-compression-and-rely-on-recall-ranking)
+> also identifies a separate pooled acceptance, which does not demonstrate useful
+> selection. Compression measures string reuse, not whether chat-shaped advice
+> improves a later decision. Native and Bash shadow taps, pooling, corpus
+> dictionaries/bootstrap, Python judging, environment knobs and MDL telemetry
+> proposals are retired. Admission continues to mean an eligible retrieval
+> candidate after existing deduplication; storage and recall ranking continue.
+> No utility posterior replaces compression as a hard admission gate.
 >
-> The cycle resolves the Codex CLI as `CHITTA_CODEX_BIN`, else `~/.local/bin/codex`, else PATH: the bioinfo conda env carries an npm `@openai/codex` 0.151.0 that rejects `gpt-6-astra`.
-> Status as of 2026-09-14 — **MDL gate remains shadow-only.** The historical native
-> tap accepted 0/237 learnings; its same-session pool never engaged in the 12
-> post-deploy rows. The corpus experiment preserves `accept`, `saving`,
-> `evidence_bytes`, and `pool_chunks`, and adds `accept_corpus`, `saving_corpus`,
-> `corpus_chunks`, `corpus_bytes`, and `baseline_bytes`. Corpus saving is
-> `cost(corpus | baseline) - cost(corpus | baseline + learning) - |learning|`,
-> accepting at the existing inclusive 64-byte margin. Each conversation is
-> compressed independently, excluding the producing chunk and overlapping retries.
-> `CHITTA_MDL_CORPUS_CHUNKS` defaults to 8 and `CHITTA_MDL_CORPUS_BYTES` to 524288;
-> at most 64 realm/mind rings are retained. The baseline is recent same-realm
-> learning text filling zlib's 32 KiB dictionary window; older text outside that
-> window is not represented. New episodes retain source path/range, truncation,
-> size and CRC32 descriptors; bootstrap reconstructs matching transcript text
-> when files remain available. Legacy episodes without descriptors stay cold.
-> Within the current source scope bootstrap runs on first distiller construction;
-> a daemon-start hook is still pending. Synthetic 8-chunk / 31,695-byte corpus:
-> recurring fact +223 bytes (accept), local paraphrase +16 (reject), known fact
-> -146 (reject). One-hour wall-clock replay on a private copy of eval snapshot
-> `bbcaed33` (sequence 206208172, manifest generation 38047), with gemma4:26b:
-> old **0/224**, corpus **0/224**; 168 candidates had all eight corpus chunks,
-> and corpus savings ranged from -269 to -58 bytes. Fourteen of 54 completed
-> passes failed before successful distillation; 21 deduplicated learnings were
-> outside the shadow denominator. Nine rows after the cutoff were excluded.
-> The 224 rows cover 229 reported stored learnings: five missing verdicts are
-> unknown. Byte-truncated UTF-8 previews now serialize with replacement rather
-> than dropping the entire row; that logging fix postdates this replay.
-> Inputs were CLI copies split near 4 KiB, with two oversized turns omitted by
-> the read API; source timestamps were unavailable. This is not a verified
-> source-time hour or strictly post-snapshot cohort. The requested nonzero real
-> acceptance rate was **not demonstrated**. `CHITTA_MDL_GATE` still leaves
-> storage unchanged; this experiment is not gating-ready.
+> The open question is whether automatic learning improves subsequent work:
+> freeze 20 independently graded tasks before inspecting retrieval, then run
+> paired trials with identical model, budget and existing memories, including
+> versus excluding only the preceding automatic-learning cohort. Verify actual
+> injection and exclude source transcripts and future information. Retain
+> automatic admission for at least three net additional successes out of 20
+> (a screening threshold, not statistical proof); otherwise retire automatic
+> free-form storage while preserving explicit memories and source episodes.
+> This experiment remains pending; planted-memory SMRITI gains do not answer it.
+>
+> The outcome ledger remains active: hooks record injections, command outcomes
+> and session ends; the offline joiner assigns per-memory Wilson-bound credit.
+> Null exit codes are excluded from the known-outcome set; the current joiner
+> can still count `likely_fail` heuristics as failures. Shared-window credit
+> is associational and confounded by task difficulty and co-injected memories;
+> it is not causal evidence or an admission policy. Historical
+> `~/.claude/mind/mdl_gate_shadow.jsonl` stays untouched and inert: retirement
+> neither appends to it nor consumes it for evolve coverage proposals.
 
 ## Proposal sources and scoring
 
@@ -92,9 +86,7 @@ remain for review; the runner does not delete implementation worktrees.
   empty-plus-injected events, timeouts per attempted lane in `injected.lane_timeout`,
   and failed Bash outcomes divided by all Bash outcomes. It also asks
   `chitta health_check --json` for `rpc_over_budget` and runs the repository's
-  `saddle_detector.py report --json`. MDL shadow accept rates are grouped by
-  `evidence_bytes`/`evidence_size` (<32 KiB or larger), with `c_e` as a compressed
-  size fallback. Older shadow rows without a size have an explicit unknown bucket.
+  `saddle_detector.py report --json`.
 * Memory reads `chitta recall --json --realm project:cc-soul --tag <tag>` for
   `ceiling`, `todo`, `incident`, and `correction`, using the keyword strategy and
   `--no-learn`. Tracked repository `// ceiling:` and `# ceiling:` comments are
@@ -218,10 +210,9 @@ metric deltas. It writes a `bet-resolution` memory linked by JSON IDs.
   Unknown-band metrics cannot become surprises. Surprise takes precedence if
   both the target and another metric move.
 
-A surprise additionally invokes `mdl_gate.judge` on the cycle evidence. Novelty
-requires both the finding alone to pass MDL and the finding plus existing
-resolution wisdom to lower evidence codelength beyond existing wisdom by the
-MDL margin. The result records all three judgments and `novel: true|false`.
+A surprise records the unexpected metric movements. Those movements alone do
+not establish useful new knowledge; `novel: false` makes no novelty claim.
+Compression judgments no longer certify novelty.
 There is no fabricated bet outcome when target measurements or bands are missing.
 Verdicts link proposal memory, canonical proposal ID and bet ID, with the base
 commit, branch, spec digest, measured deltas and resolution.

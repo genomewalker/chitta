@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evolve.bets import outcome, register, resolve  # noqa: E402
@@ -39,18 +39,11 @@ class BetTests(unittest.TestCase):
 
     def test_surprise_only_on_unpredicted_banded_metric(self):
         measured = {"failure_rate": -0.2, "mean_nDCG": 0.08}
-        with patch(
-            "mdl_gate.judge",
-            side_effect=[
-                dict(accept=False, c_we=200, margin=64),
-                dict(accept=True, c_we=100, margin=64),
-                dict(accept=True, c_we=120, margin=64),
-            ],
-        ) as judge:
-            result = outcome(self.bet, measured, "cycle evidence", "existing wisdom")
+        result = outcome(self.bet, measured, "cycle evidence", "existing wisdom")
         self.assertEqual(result["outcome"], "surprise")
-        self.assertTrue(result["novel"])
-        self.assertEqual(judge.call_count, 3)
+        self.assertEqual(result["unexpected"], {"mean_nDCG": 0.08})
+        self.assertFalse(result["novel"])
+        self.assertEqual(set(result), {"outcome", "measured_delta", "unexpected", "novel"})
         self.assertFalse(outcome(self.bet, measured, "short evidence")["novel"])
         self.assertEqual(
             outcome(self.bet, {"failure_rate": -0.2, "unbanded": 999})["outcome"], "confirmed"

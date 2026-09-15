@@ -160,6 +160,19 @@ Status 2026-09-13: SessionStart concurrent lanes preserve output order and enfor
 8. Run `anticipation_predict` for context-based predictions
 9. Output combined context
 
+#### Automatic learning admission
+
+> Status as of 2026-09-15 — **MDL shadow judging retired.** Compression of
+> chat-shaped evidence did not establish useful learning selection. The Bash
+> distillation tap and native shadow machinery are removed; existing storage,
+> deduplication and recall ranking continue. Admission means eligibility for
+> retrieval after deduplication, with no utility-posterior hard gate. Historical
+> `~/.claude/mind/mdl_gate_shadow.jsonl` remains untouched and inert. See the
+> [retirement status and pending paired 20-task experiment](EVOLVE.md).
+> Outcome hooks remain active, recording associational evidence for offline
+> analysis; null exit codes are excluded from known outcomes, while `likely_fail`
+> heuristics can still count as failures in the current joiner.
+
 #### Daemon task ledger
 
 Status 2026-09-13: threads, inbox items, artifacts, session bindings and exclusive

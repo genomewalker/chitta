@@ -2,132 +2,19 @@
 #include "../include/chitta/ssl_gloss.hpp"
 #include "../include/chitta/ssl_prompt.hpp"
 #include "../include/chitta/value_fact_extractor.hpp"
-#include "../include/chitta/mdl_evidence_pool.hpp"
-#include <nlohmann/json.hpp>
 #include <sstream>
 #include <cmath>
 #include <cstdlib>
-#include <cstring>
-#include <chrono>
-#include <fstream>
 #include <iostream>
 #include <limits>
-#include <set>
 
 namespace chitta {
-
-namespace {
-// NativeDistiller is ephemeral and its public prepared-state ABI is unchanged.
-// Keep only precomputed telemetry here; never retain it as storage policy.
-struct CorpusShadow {
-    std::map<std::string, nlohmann::json> candidates;
-};
-std::mutex corpus_shadow_mutex;
-std::map<const NativeDistiller*, CorpusShadow> corpus_shadows;
-mdl::CorpusRing corpus_ring;
-std::mutex corpus_bootstrap_mutex;
-std::set<std::string> corpus_bootstrapped;
-
-std::string mdl_mind_path(const NativeDistillConfig& config) {
-    if (!config.mind_path.empty()) return config.mind_path;
-    if (const char* path = std::getenv("CHITTA_DB_PATH")) return path;
-    if (const char* home = std::getenv("HOME")) return std::string(home) + "/.claude/mind";
-    return {};
-}
-
-// Legacy transcript progress keeps only the latest watermark, not pass
-// boundaries; generic event enumeration covers msg/session, not transcripts.
-// New episode records preserve a small source descriptor so startup can
-// reconstruct the exact conversation without persisting the corpus itself.
-void bootstrap_corpus(FieldStore& field, const NativeDistillConfig& config) {
-    const auto mind = mdl_mind_path(config);
-    std::lock_guard<std::mutex> lock(corpus_bootstrap_mutex);
-    if (corpus_bootstrapped.count(mind)) return;
-    corpus_bootstrapped.insert(mind);
-    if (!mdl::corpus_chunk_limit() || !mdl::corpus_byte_limit()) return;
-    auto realms = nlohmann::json::parse(field.realm_list(), nullptr, false);
-    if (!realms.is_array()) return;
-    for (const auto& realm_value : realms) {
-        if (!realm_value.is_string()) continue;
-        const auto realm = realm_value.get<std::string>();
-        std::vector<mdl::CorpusRing::Source> sources;
-        // Bounded survey; legacy episodes without exact source ranges stay cold.
-        for (size_t offset = 0; offset < 512 && sources.size() < mdl::corpus_chunk_limit(); offset += 64) {
-            auto episodes = nlohmann::json::parse(
-                field.list_memories("episode", realm, "recency", 64, offset), nullptr, false);
-            if (!episodes.is_array() || episodes.empty()) break;
-            for (const auto& episode : episodes) {
-                if (episode.value("realm", std::string{}) != realm) continue;
-                const auto content = episode.value("content", std::string{});
-                if (content.rfind("[episode] session=", 0) != 0) continue;
-                constexpr const char* marker = "\n[mdl_source] ";
-                const auto pos = content.find(marker);
-                if (pos == std::string::npos || pos != content.find('\n')) continue;
-                const auto source = nlohmann::json::parse(content.substr(pos + std::strlen(marker)), nullptr, false);
-                if (!source.is_object()) continue;
-                const auto begin = source.value("begin", int64_t{0});
-                const auto end = source.value("end", int64_t{0});
-                const auto bytes = source.value("bytes", size_t{0});
-                if (begin < 0 || end <= begin || end - begin > 20000 || !bytes || bytes > mdl::corpus_byte_limit()) continue;
-                TranscriptParser parser;
-                TranscriptParseOptions options;
-                options.skip_lines = begin;
-                options.max_lines = end - begin;
-                int64_t actual_end = begin;
-                auto turns = parser.parse(source.value("path", std::string{}), options, &actual_end);
-                if (actual_end != end || turns.empty()) continue;
-                TruncationParams trunc;
-                const auto max_chars = source.value("max_chars", size_t{0});
-                trunc.max_chars = max_chars ? max_chars : std::numeric_limits<size_t>::max();
-                trunc.head_chars = max_chars / 4;
-                trunc.tail_chars = (max_chars * 3) / 4;
-                auto text = TranscriptParser::build_conversation(turns, trunc);
-                if (text.size() != bytes || crc32(0, reinterpret_cast<const Bytef*>(text.data()),
-                        static_cast<uInt>(text.size())) != source.value("crc32", uLong{0})) continue;
-                sources.push_back({source.value("session", std::string{}), begin, end, std::move(text)});
-                if (sources.size() >= mdl::corpus_chunk_limit()) break;
-            }
-            if (episodes.size() < 64) break;
-        }
-        for (auto it = sources.rbegin(); it != sources.rend(); ++it)
-            corpus_ring.observe({mind, realm}, *it);
-    }
-}
-
-// Recent learning text fills the actual 32 KiB zlib window, newest last.
-// Exclude episode/operational payloads and other realms. Snapshot BEFORE storing
-// any candidate so a learning cannot become its own baseline.
-std::string corpus_baseline(FieldStore& field, const std::string& realm) {
-    std::string baseline;
-    for (size_t offset = 0; baseline.size() < mdl::kChunkBytes; offset += 128) {
-        auto page = nlohmann::json::parse(
-            field.list_memories("", realm, "recency", 128, offset), nullptr, false);
-        if (!page.is_array() || page.empty()) break;
-        for (const auto& memory : page) {
-            if (memory.value("realm", std::string{}) != realm) continue;
-            const auto kind = memory.value("kind", std::string{});
-            if (kind != "wisdom" && kind != "belief" && kind != "preference" &&
-                kind != "correction" && kind != "milestone") continue;
-            auto text = memory.value("content", std::string{});
-            if (text.empty()) continue;
-            const size_t remaining = mdl::kChunkBytes - baseline.size();
-            baseline = text.substr(0, remaining) + baseline;
-            if (baseline.size() >= mdl::kChunkBytes) break;
-            baseline = "\n" + baseline;
-        }
-        if (page.size() < 128) break;
-    }
-    return baseline;
-}
-} // namespace
 
 // ── Constructor ──────────────────────────────────────────────────────────────
 
 NativeDistiller::NativeDistiller(FieldStore& field, EmbedFn embedder,
                                  const NativeDistillConfig& config)
-    : field_store_(&field), embedder_(std::move(embedder)), config_(config) {
-    try { bootstrap_corpus(field, config); } catch (...) {}
-}
+    : field_store_(&field), embedder_(std::move(embedder)), config_(config) {}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -168,63 +55,6 @@ void NativeDistiller::log(const std::string& msg) {
         log_callback_(msg);
     } else if (config_.verbose) {
         std::cerr << msg << "\n";
-    }
-}
-
-// Shadow tap for the MDL consolidation gate (see mdl_gate.hpp / chitta-mcp/mdl_gate.py).
-// Fail-open: never lets a judging or I/O error touch the caller's storage path.
-void NativeDistiller::log_mdl_shadow(const std::string& mem_id, const std::string& content,
-                                     const std::vector<std::string>& evidence) {
-    try {
-        auto v = mdl::judge_chunks(content, evidence);
-        size_t evidence_bytes = 0;
-        for (const auto& chunk : evidence) evidence_bytes += chunk.size();
-
-        std::string mind_path = config_.mind_path;
-        if (mind_path.empty()) {
-            if (const char* db_path = std::getenv("CHITTA_DB_PATH")) {
-                mind_path = db_path;
-            } else if (const char* home = std::getenv("HOME")) {
-                mind_path = std::string(home) + "/.claude/mind";
-            }
-        }
-        if (mind_path.empty()) return;
-
-        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::system_clock::now().time_since_epoch()).count();
-
-        nlohmann::json line = {
-            {"ts", ms},
-            {"id", mem_id},
-            {"accept", v.accept},
-            {"saving", v.saving},
-            {"evidence_bytes", evidence_bytes},
-            {"pool_chunks", evidence.empty() ? 0 : evidence.size() - 1},
-            {"title_head", content.substr(0, 80)},
-            {"source", "native"},
-        };
-
-        // Default is explicitly cold/unavailable, never an inferred acceptance.
-        line["accept_corpus"] = false;
-        line["saving_corpus"] = 0;
-        line["corpus_chunks"] = 0;
-        line["corpus_bytes"] = 0;
-        line["baseline_bytes"] = 0;
-        {
-            std::lock_guard<std::mutex> lock(corpus_shadow_mutex);
-            const auto context = corpus_shadows.find(this);
-            if (context != corpus_shadows.end()) {
-                const auto candidate = context->second.candidates.find(content);
-                if (candidate != context->second.candidates.end()) line.update(candidate->second);
-            }
-        }
-        std::ofstream out(mind_path + "/mdl_gate_shadow.jsonl", std::ios::app);
-        if (!out) return;
-        // title_head is a byte-limited preview and may end inside a UTF-8
-        // codepoint. Preserve the observation even when its preview needs repair.
-        out << line.dump(-1, ' ', false, nlohmann::json::error_handler_t::replace) << "\n";
-    } catch (...) {
-        // fail-open: shadow logging must never affect distillation.
     }
 }
 
@@ -294,7 +124,6 @@ void NativeDistiller::store_learnings(
     const std::string& realm,
     uint64_t episode_mem_id,
     const std::vector<LearningPrep>& learning_preps,
-    const std::vector<std::string>& evidence,
     DistillResult& result
 ) {
     for (size_t i = 0; i < ssl_result.learnings.size(); ++i) {
@@ -329,8 +158,6 @@ void NativeDistiller::store_learnings(
         }
 
         if (mem_id == 0) continue;
-
-        log_mdl_shadow(std::to_string(mem_id), full_text, evidence);
 
         result.learnings_stored++;
         log("[distill]   +" + learning.category + ": " +
@@ -514,11 +341,6 @@ PreparedDistillation NativeDistiller::prepare_distillation(
     PreparedDistillation prep;
     prep.session_id = session_id;
     prep.realm = realm;
-    {
-        std::lock_guard<std::mutex> lock(corpus_shadow_mutex);
-        corpus_shadows.erase(this); // pointer reuse must never reuse a verdict
-    }
-
     // 1. Parse transcript (BOUND: cap lines per pass; remainder resumes next distill
     // via the progress event's last_line — a 108MB transcript is chunked, never a
     // single unbounded parse+distill).
@@ -558,26 +380,6 @@ PreparedDistillation NativeDistiller::prepare_distillation(
     }
     auto conversation = TranscriptParser::build_conversation(turns, trunc);
     prep.conversation = conversation;  // reused by the deterministic value-fact pass
-    prep.mdl_evidence = {conversation};
-    // A new NativeDistiller is constructed per pass. Retain bounded history here,
-    // outside the RPC write lock; never extend the LLM/value-fact input or gate writes.
-    try {
-        static mdl::EvidencePool pool;
-        prep.mdl_evidence = pool.extend(
-            {config_.mind_path, transcript_path, session_id, realm}, conversation,
-            skip_lines, prep.last_line, mdl::pool_chunk_limit());
-    } catch (...) {
-        // Pooling is shadow-only and must not fail distillation.
-    }
-
-    std::vector<std::string> corpus;
-    std::string baseline;
-    try {
-        corpus = corpus_ring.observe({mdl_mind_path(config_), realm},
-            {session_id, skip_lines, prep.last_line, conversation});
-        baseline = corpus_baseline(*field_store_, realm);
-    } catch (...) { corpus.clear(); baseline.clear(); }
-
     // 4. Build SSL prompt
     auto prompt = ssl::build_prompt(conversation);
 
@@ -588,27 +390,9 @@ PreparedDistillation NativeDistiller::prepare_distillation(
     ep_content << "[episode] session=" << session_id
                << " turns=" << prep.start_turn << "-" << prep.end_turn
                << " realm=" << realm;
-    const std::string episode_summary = ep_content.str();
-    // Preserve only reconstruction metadata, not transcript text. The checksum
-    // prevents edited/replaced files from being counted as the original evidence.
-    try {
-        if (conversation.size() <= mdl::corpus_byte_limit() && prep.last_line > skip_lines) {
-            nlohmann::json source = {
-                {"path", transcript_path}, {"session", session_id},
-                {"begin", skip_lines}, {"end", prep.last_line},
-                {"max_chars", config_.max_context_chars}, {"bytes", conversation.size()},
-                {"crc32", crc32(0, reinterpret_cast<const Bytef*>(conversation.data()),
-                                 static_cast<uInt>(conversation.size()))},
-            };
-            const auto descriptor = source.dump();
-            ep_content << "\n[mdl_source] " << descriptor;
-        }
-    } catch (...) {
-        // Unserializable paths or telemetry errors must not stop storage.
-    }
     prep.ep_content = ep_content.str();
     if (embedder_) {
-        prep.ep_embedding = embedder_(episode_summary);
+        prep.ep_embedding = embedder_(prep.ep_content);
     }
 
     // 6. Call LLM — the slow part, zero field_store access
@@ -629,25 +413,6 @@ PreparedDistillation NativeDistiller::prepare_distillation(
     // 9. Precompute value-facts (extract + embed + dedup recall) — also lock-free.
     // Moved out of commit_distillation so the write lock never covers this heavy pass.
     precompute_value_facts(prep);
-
-    // All compression and baseline reads stay outside the exclusive commit lock.
-    try {
-        CorpusShadow shadow;
-        size_t corpus_bytes = 0;
-        for (const auto& chunk : corpus) corpus_bytes += chunk.size();
-        for (const auto& learning : prep.ssl_result.learnings) {
-            const auto content = learning.title + "\n" + learning.content;
-            const auto verdict = mdl::judge_corpus(content, corpus, baseline);
-            shadow.candidates[content] = {
-                {"accept_corpus", verdict.accept}, {"saving_corpus", verdict.saving},
-                {"corpus_chunks", corpus.size()}, {"corpus_bytes", corpus_bytes},
-                {"baseline_bytes", baseline.size()},
-            };
-        }
-        std::lock_guard<std::mutex> lock(corpus_shadow_mutex);
-        if (corpus_shadows.size() >= 64) corpus_shadows.erase(corpus_shadows.begin());
-        corpus_shadows[this] = std::move(shadow);
-    } catch (...) {}
 
     prep.valid = true;
     return prep;
@@ -677,8 +442,7 @@ DistillResult NativeDistiller::commit_distillation(const PreparedDistillation& p
 
     // Store learnings and triplets (writes only — dedup precomputed in prepare phase)
     store_learnings(prep.ssl_result, prep.realm,
-                    static_cast<uint64_t>(episode_id), prep.learning_preps,
-                    prep.mdl_evidence, result);
+                    static_cast<uint64_t>(episode_id), prep.learning_preps, result);
     result.triplets_created = static_cast<int>(prep.ssl_result.triplets.size());
 
     // Value-fact write-back: precomputed (extract+embed+dedup) in prepare_distillation,
@@ -694,10 +458,6 @@ DistillResult NativeDistiller::commit_distillation(const PreparedDistillation& p
         std::to_string(result.value_facts_stored) + " value-facts/" +
         std::to_string(result.value_facts_deduped) + " dedup)");
 
-    {
-        std::lock_guard<std::mutex> lock(corpus_shadow_mutex);
-        corpus_shadows.erase(this);
-    }
     result.last_line = prep.last_line;
     result.success = true;
     return result;

@@ -8,6 +8,17 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 > reconstructed from `git log` between tags; patch releases are grouped under
 > their minor version (`## [5.x.y]`) with per-release dates on one line.
 
+## [Unreleased]
+
+### Removed
+
+- Retired MDL admission compression on 2026-09-15: native and Bash shadow taps,
+  same-chunk pooling, corpus dictionaries/bootstrap, Python mirror, test targets,
+  environment knobs and evolve coverage telemetry. Distilled learning storage,
+  deduplication and recall ranking remain unchanged; no utility-posterior hard
+  gate replaces it. Historical shadow logs remain untouched and inert. The
+  paired 20-task automatic-learning experiment remains pending (see docs/EVOLVE.md).
+
 ## [5.72.0] - 2026-09-14
 
 ### Daemon / store
