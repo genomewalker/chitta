@@ -293,7 +293,9 @@ class WatchTests(unittest.TestCase):
         card = report["cards"][0]
         self.assertEqual(card["id"], "2609.00001")
         self.assertEqual(card["expected_gain"]["delta"], 0)
-        self.assertEqual(card["source"], "https://arxiv.org/abs/2609.00001")
+        self.assertEqual(card["source"], "hypothesis")
+        self.assertEqual(card["evidence"][0]["source"], "https://arxiv.org/abs/2609.00001")
+        self.assertGreaterEqual(card["cost"]["blast_radius"], 1)
         self.assertTrue(card["inventory"]["sha256"])
         prompts = [args["message"] for name, args in self.client.calls if name == "discuss"]
         self.assertIn(self.inventory.read_text(), prompts[0])

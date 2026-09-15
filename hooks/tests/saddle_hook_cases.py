@@ -169,8 +169,10 @@ def main():
         # The task budgets added overhead; report full-hook tails separately.
         added = [on - off for on, off in zip(timings["no_saddle"], timings["baseline"])]
         stats["incremental_p95_ms"] = round(sorted(added)[23], 2)
+        # Relative bounds only: absolute hook wall time tracks shared-node load
+        # (170 ms median at load 105 on 2026-09-15 with a 59 ms baseline).
         assert stats["incremental_p95_ms"] < 150, stats
-        assert stats["no_saddle"]["median_ms"] < 150, stats
+        assert stats["incremental_median_ms"] < 120, stats
         print("PreToolUse 25 runs/arm: " + json.dumps(stats))
         print(
             "PASS: saddle notices, dedupe, time/session/shape gates, Codex unknowns, "

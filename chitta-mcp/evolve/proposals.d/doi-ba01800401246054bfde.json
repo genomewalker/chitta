@@ -9,7 +9,7 @@
     "rationale": "Inventory shows chitta's live daemon already runs distillation with --no-enrich (native C++, no LLM) and recall via hybrid_recall/HDC-analogy/keyword lanes with no LLM in the loop; paper abstract is unavailable so no distinguishing mechanism detail beyond the title can be confirmed against this baseline."
   },
   "cost": {
-    "effort_h": 0.0,
+    "effort_h": 0.5,
     "blast_radius": 2,
     "scope": "none — no new component identified beyond what is already running (field_distill.cpp, recall_gateway strategies)"
   },

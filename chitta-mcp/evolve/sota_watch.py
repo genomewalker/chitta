@@ -252,7 +252,7 @@ def validate_card(extracted: dict, paper: dict) -> dict:
                 or not math.isfinite(value)
             ):
                 raise ValueError("Non-finite or non-numeric estimate")
-        if not 0 <= gain["confidence"] <= 1 or cost["effort_h"] < 0:
+        if not 0 <= gain["confidence"] <= 1 or cost["effort_h"] <= 0:
             raise ValueError("Estimate out of range")
         for value in (
             extracted["mechanism"],
