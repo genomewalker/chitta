@@ -73,6 +73,8 @@ def sandbox_command(visible, work, command_argv, runtime_roots=()):
 
 
 def probe():
+    if not Path("/usr/bin/bwrap").is_file():
+        return "bubblewrap is unavailable"
     p = command(["/usr/bin/bwrap", "--ro-bind", "/", "/", "--", "/bin/true"], check=False)
     if p.returncode:
         return p.stderr.strip()

@@ -1,6 +1,0 @@
-copying snapshot d909d6fd (seqno=206243523, manifest_generation=38048, files=11)
-verified snapshot=d909d6fd manifest_generation=38048 before daemon start
-started pid=4009187 socket=/tmp/clrn-e60x37aj/replica/run/chitta/chitta-1637548791.sock rpc_port=47699 manifest_generation=38048
-ready snapshot=d909d6fd seqno=206243523 manifest_generation=38048
-stopping pid=4009187
-stopped

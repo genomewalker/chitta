@@ -9,12 +9,22 @@ import json
 import sys
 from pathlib import Path
 
+from audit import TOOLS
 from common import REALM, command, digest, family, git, live_paths, now_ms, write_json
 from freeze import add_task, classify, freeze, validate_task
 from runner import private_environment, start_replica, stop_replica
 
 
-def prepare(out, source, chitta_bin, chittad_bin, claude_bin, embed_model):
+def prepare(
+    out,
+    source,
+    chitta_bin,
+    chittad_bin,
+    claude_bin,
+    embed_model,
+    isolation="strict",
+    void_trial=False,
+):
     out = Path(out).resolve()
     if out.exists():
         raise ValueError("fixture output must be new")
@@ -30,6 +40,9 @@ def prepare(out, source, chitta_bin, chittad_bin, claude_bin, embed_model):
         "budget_usd": 1.0,
         "timeout_s": 120,
         "seed": 9152026,
+        "isolation": isolation,
+        "allowed_tools": TOOLS,
+        "permission_mode": "dontAsk",
     }
     live = live_paths()
     if Path(source).resolve().is_relative_to(Path(live["mind"])):
@@ -117,6 +130,8 @@ def prepare(out, source, chitta_bin, chittad_bin, claude_bin, embed_model):
                 "B": [no, no if index == 0 else yes],
             },
         }
+        if void_trial and index == 0:
+            task["fixture"]["A"][1] = {**yes, "void_out_of_root_read": True}
         entry = out / f"{name}-entry.json"
         write_json(entry, task)
         add_task(entry, tasks_path)
@@ -137,9 +152,18 @@ def main():
     p.add_argument("--source", required=True)
     for name in ("chitta-bin", "chittad-bin", "claude-bin", "embed-model"):
         p.add_argument("--" + name, required=True)
+    p.add_argument("--isolation", choices=("strict", "home-audit"), default="strict")
+    p.add_argument("--void-trial", action="store_true")
     args = p.parse_args()
     prepare(
-        args.out, args.source, args.chitta_bin, args.chittad_bin, args.claude_bin, args.embed_model
+        args.out,
+        args.source,
+        args.chitta_bin,
+        args.chittad_bin,
+        args.claude_bin,
+        args.embed_model,
+        args.isolation,
+        args.void_trial,
     )
 
 

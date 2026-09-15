@@ -75,14 +75,24 @@ Classification precedence:
 | ingested_from | Exclude the separate ingester writer; its derived_from is not native-distiller evidence. |
 | derived_from → existing episode; no other source or ingested_from; kind wisdom, belief, preference or milestone | Include native learning. These are the kinds emitted by native_distiller.cpp:45/185. |
 | Same native episode provenance; kind operational | Exclude deterministic value facts (native_distiller.cpp:316). |
-| Missing/non-episode parent, unexpected derived kind, or no writer provenance | Unresolved; never infer authorship from kind, text, age or a tag. |
+| Same episode provenance, any other non-preserved kind | Include native output; record the unexpected kind. |
+| No writer provenance or unavailable derived parent | Ambiguous: exclude from BOTH arms. |
+| Existing non-episode derived parent | Contradictory provenance: unresolved. |
 
 Every record includes its reason, triplets, parent evidence, content hash and
 available provenance metadata. Some live `memory_provenance` replies contain
 malformed JSON; this supplemental endpoint's failure is retained verbatim in
 the diagnostic. Membership still requires the independently available exact
 triplets and memory/parent records. An unavailable required query fails the
-enumeration. **Any unresolved classification blocks freeze and verdict.**
+enumeration. **Only contradictory provenance is unresolved and blocks freeze.**
+Missing writer provenance is ambiguous, excluded from both arms. Enumeration
+instability separately invalidates a cut. Report ambiguous IDs, kinds, creation
+dates before versus on/after 2026-03-26 (UTC), unknown dates, and recall exposure.
+Metadata is queried with a lossless JSON integer and its ID checked: this avoids
+the live signed-string parser bug above 2^63. Graph evidence always uses exact
+decimal strings. Historical access-count share is labeled as a proxy, never as
+measured arm A injection share. A read-only diagnostic has no trial injections;
+its A share remains unmeasured. Trial telemetry measures that share after exclusion.
 
 Per-task eligible ID lists are frozen with the task panel. In this prospective,
 single-realm design every task uses the same complete eligible cohort. The
@@ -94,7 +104,9 @@ to ingestion, explicit memories, corrections, episodes or value facts.
 Each paired task/trial randomizes A/B order from the manifest seed, independently
 of outcomes. Each arm starts a new clone with `scripts/eval-replica.sh`:
 
-- **A:** complete source state, including cohort.
+- **Both arms:** remove and verify all frozen ambiguous IDs through exact gets
+  and all exclusion lanes before task recall. They belong to neither arm.
+- **A:** source state minus ambiguous records, including the treatment cohort.
 - **B:** soft-delete every cohort ID with `forget`. Require each exact `get`
   to return the daemon's explicit “Memory not found” response. Transport errors
   are failures, never absence. Query the task prompt through fused
@@ -114,14 +126,15 @@ Graders and known-good objects are outside the model filesystem and graders are
 materialized only after agent execution. Grader exit zero alone defines success;
 Bash command credit in the outcome ledger never grades a task.
 
-Model execution requires bubblewrap filesystem/PID isolation and Landlock network
+Default `--isolation=strict` requires bubblewrap filesystem/PID isolation and Landlock network
 ABI ≥4. Only task files, fresh HOME/state, pinned runtime dependencies, system
 runtime files and the restricted scratch RPC socket are visible. TCP connects
 are limited to HTTPS port 443, preventing access to live daemon/MCP ports.
 The original scratch socket and its raw snapshots are hidden. An RPC broker
 permits recall/session-hook operations but rejects transcript/code-file readers,
-imports, predicate execution, maintenance and process control. Strict empty MCP
-configuration and empty settings sources prevent live MCP/plugin inheritance.
+imports, predicate execution, maintenance and process control. A strict trial-only MCP configuration and empty settings sources prevent live
+MCP/plugin inheritance. The sole chitta stdio bridge health-checks the private
+broker; it exposes no model tools, keeping recall in instrumented hooks.
 Credentials, if needed, come from explicit API-key/OAuth environment variables;
 no user Claude config or project transcripts are copied.
 
@@ -138,7 +151,37 @@ The fixture explicitly supplies edits and exit codes, never grader answers read
 during execution. Dry runs attempt the OS-isolation preflight and record its
 failure if unavailable; their trusted local stub can exercise the rest of the
 pipeline on that host. **They never certify model isolation or issue a verdict.**
-Real model runs fail before starting if that preflight fails.
+Strict model runs fail before starting if that preflight fails.
+
+### Home-audit screening on kernel 4.18
+
+`freeze --isolation=home-audit` pins the accepted screening mode.
+`run --isolation=home-audit` must agree with the frozen manifest; strict remains
+the default. HOME, XDG config/data/cache/state/runtime, CLAUDE_CONFIG_DIR and
+TMPDIR are private for every trial. Generated settings live in CLAUDE_CONFIG_DIR
+and deny Read/Edit/Write/Glob/Grep/Bash targets outside trial-visible roots,
+including live mind and project transcripts. File deny patterns use Claude
+absolute `//path` syntax. PreToolUse also checks new paths and symlink escapes.
+The manifest pins `allowed_tools` to Bash, Read, Edit, Write, Glob, Grep and
+`permission_mode` to `dontAsk`; no bypass mode is used. CHITTA_SOCKET_PATH is
+replaced by the private restricted broker socket; no inherited socket discovery.
+
+Every tool attempt is captured before execution, including permission-denied
+attempts. The shadow log retains payload, audit decision and hook output.
+The hook also records Bash command history as JSONL under private HISTFILE.
+Post-hoc audit joins that history and tool events. Outside-root access, live
+socket/loopback connection attempts, missing evidence and audit-control writes
+void the trial with `voided_reason`. Shell interpreters, scripts, substitutions,
+compound commands and unknown executables are unverifiable and also void a trial.
+Only simple pwd/ls/cat/head/tail/wc/true/false commands pass this conservative
+audit. This limits tasks that require agent-side test execution; hidden graders
+still run normally after the agent exits.
+
+Home-audit is permission enforcement plus evidence checking, without kernel
+filesystem/network isolation or protection from every client/runtime side effect.
+Every verdict carries that screening caveat. A dry-run tests the trusted stub,
+not Claude permission enforcement. See the upstream
+[permission semantics](https://code.claude.com/docs/en/permissions).
 
 ## Telemetry, scoring and verdict
 
@@ -192,8 +235,8 @@ PY=/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/bin/python3
 bash scripts/eval-learning.sh freeze --tasks tasks-draft.json \
   --cohort cohort-draft.json --config config.json --out frozen
 bash scripts/eval-learning.sh run --manifest frozen/manifest.json \
-  --out benchmarks/learning/results/RUN --trials 3
-bash scripts/eval-learning.sh report benchmarks/learning/results/RUN
+  --trials 3 # output defaults outside this checkout
+bash scripts/eval-learning.sh report /projects/caeg/scratch/kbd606/tmp/learning-results/RUN
 ```
 
 A task entry uses `grader: {"command":["/bin/sh",".learning-grader/check.sh"],
@@ -213,13 +256,14 @@ when needed. Use an exact model identifier and absolute executable/dependency pa
 
 ```bash
 "$PY" benchmarks/learning/prepare_fixture.py --out /tmp/learning-fixture-NEW \
+  --isolation=home-audit --void-trial \
   --source /projects/caeg/scratch/kbd606/tmp/chitta-eval-mind \
   --chitta-bin /home/kbd606/.claude/bin/chitta \
   --chittad-bin /home/kbd606/.claude/bin/chittad \
   --claude-bin /home/kbd606/.local/bin/claude \
   --embed-model /maps/projects/caeg/people/kbd606/models/nomic-embed-text-v1.5.gguf
 bash scripts/eval-learning.sh run --manifest /tmp/learning-fixture-NEW/frozen/manifest.json \
-  --out benchmarks/learning/results/fixture-NEW --dry-run --trials 2
+  --isolation=home-audit --dry-run --trials 2
 "$PY" -m unittest discover benchmarks/learning/tests
 ```
 
@@ -227,3 +271,13 @@ The fixture builder seeds two **synthetic** source=distillation records only on 
 scratch copy. Its two-record cohort is marked fixture-only and cannot certify
 an official panel. It never freezes the official cohort.
 
+
+Voided trials are missing observations: their success is null, tables show
+successes/observed and missing counts, and paired task/overall deltas stay null
+when a pair is incomplete. They never count as grader failures or support a verdict.
+
+Runner output defaults to `$CHITTA_LEARNING_OUT/run-TIMESTAMP`, with the base
+`/projects/caeg/scratch/kbd606/tmp/learning-results` when unset. Explicit `--out`
+is supported. `benchmarks/learning/results/**` is ignored and untracked; retain
+only the compact `evidence/fixture-2026-09-15.md` in git. Fixture `--void-trial`
+injects one denied out-of-root Read attempt (saffron trial 2 A).

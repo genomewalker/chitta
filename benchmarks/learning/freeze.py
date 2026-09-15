@@ -11,8 +11,10 @@ import tempfile
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
+from datetime import datetime, timezone
 from pathlib import Path
 
+from audit import TOOLS
 from common import (
     REALM,
     ROOT,
@@ -46,6 +48,7 @@ def classify(memory, triplets, parents):
     evidence = {
         "id": mid,
         "kind": kind,
+        "created_at_ms": memory.get("created_at_ms"),
         "triplets": trips,
         "parents": {p: parents.get(p) for p in sorted(derived)},
     }
@@ -67,10 +70,12 @@ def classify(memory, triplets, parents):
         )
     if derived:
         if any(
-            not parents.get(p) or parents[p].get("type", parents[p].get("kind")) != "episode"
+            parents.get(p) and parents[p].get("type", parents[p].get("kind")) != "episode"
             for p in derived
         ):
-            return result("unresolved", "unknown", "derived_from parent missing or not an episode")
+            return result("unresolved", "unknown", "derived_from contradicts episode provenance")
+        if any(not parents.get(p) for p in derived):
+            return result("ambiguous", "ambiguous", "derived_from parent unavailable")
         if kind == "operational":
             return result(
                 "excluded",
@@ -81,10 +86,10 @@ def classify(memory, triplets, parents):
             return result(
                 "included", "native_learning", "episode-derived native learning; no ingested_from"
             )
-        return result("unresolved", "unknown", "unexpected episode-derived kind")
-    return result(
-        "unresolved", "unknown", "no writer provenance; kind or distillation tag is insufficient"
-    )
+        return result(
+            "included", "native_learning_unexpected_kind", "episode-derived native output"
+        )
+    return result("ambiguous", "ambiguous", "no writer provenance; excluded from both arms")
 
 
 def enumerate_memories(rpc, realm):
@@ -127,7 +132,7 @@ def cohort_report(socket, realm, *, preview=False, source=None):
         mid, memory = item
         trips = rpc.call("query_graph", subject=mid)["triplets"]
         try:
-            provenance = rpc.call("memory_provenance", id=mid)
+            provenance = rpc.call("memory_provenance", id=int(mid))
         except ValueError as exc:
             provenance = {"unavailable": str(exc)}
         parents = {}
@@ -137,6 +142,10 @@ def cohort_report(socket, realm, *, preview=False, source=None):
                 parents[parent] = rpc.call("get", id=parent) if parent.isdecimal() else None
         result = classify(memory, trips, parents)
         result["provenance"] = provenance
+        meta = provenance.get("meta") or {}
+        require(not meta or str(meta.get("id")) == mid, "metadata ID mismatch")
+        result["created_at_ms"] = meta.get("created_at_ms")
+        result["access_count"] = meta.get("access_count")
         result["content_sha256"] = seal(memory["content"])
         return result
 
@@ -151,8 +160,6 @@ def cohort_report(socket, realm, *, preview=False, source=None):
     }
     stable = stable and set(memories) == set(enumerate_memories(rpc, realm))
     unresolved = [e["id"] for e in evidence if e["classification"] == "unresolved"]
-    if not stable:
-        unresolved.append("store_changed_during_enumeration")
     return {
         "schema": 1,
         "preview": preview,
@@ -166,9 +173,45 @@ def cohort_report(socket, realm, *, preview=False, source=None):
         "queue_object_query": queue_rows,
         "ids": [e["id"] for e in evidence if e["classification"] == "included"],
         "unresolved": unresolved,
+        "ambiguous_ids": [e["id"] for e in evidence if e["classification"] == "ambiguous"],
+        "ambiguous_population": ambiguous_population(evidence),
+        "unexpected_native_kinds": dict(
+            Counter(e["kind"] for e in evidence if e["writer"] == "native_learning_unexpected_kind")
+        ),
         "evidence": evidence,
         "counts": dict(Counter(e["writer"] for e in evidence)),
         "classification_counts": dict(Counter(e["classification"] for e in evidence)),
+    }
+
+
+def ambiguous_population(evidence):
+    rows = [e for e in evidence if e["classification"] == "ambiguous"]
+    cutoff = int(datetime(2026, 3, 26, tzinfo=timezone.utc).timestamp() * 1000)
+    hist = {"before_2026-03-26": 0, "on_or_after_2026-03-26": 0, "unknown": 0}
+    kinds = Counter()
+    for row in rows:
+        kinds[row["kind"]] += 1
+        ts = row.get("created_at_ms")
+        hist[
+            "unknown"
+            if not ts
+            else ("before_2026-03-26" if ts < cutoff else "on_or_after_2026-03-26")
+        ] += 1
+    total = sum(e.get("access_count") or 0 for e in evidence)
+    ambiguous = sum(e.get("access_count") or 0 for e in rows)
+    return {
+        "count": len(rows),
+        "kinds": dict(kinds),
+        "creation_date_histogram": hist,
+        "historical_access_count": ambiguous,
+        "historical_total_access_count": total,
+        "historical_access_share": ambiguous / total if total else None,
+        "access_count_missing": sum(e.get("access_count") is None for e in evidence),
+        "arm_a_recall_exposure": {
+            "share": None,
+            "status": "not measured: diagnostic has no arm A",
+            "required_after_exclusion": 0,
+        },
     }
 
 
@@ -285,6 +328,11 @@ def validate_freeze(tasks, cohort, config, *, fixture=False):
         set(ids) == {e["id"] for e in evidence if e["classification"] == "included"},
         "cohort membership/evidence mismatch",
     )
+    require(
+        set(cohort.get("ambiguous_ids", []))
+        == {e["id"] for e in evidence if e["classification"] == "ambiguous"},
+        "ambiguous membership/evidence mismatch",
+    )
     for entry in evidence:
         computed = classify(entry, entry["triplets"], entry["parents"])
         require(
@@ -346,14 +394,22 @@ def validate_freeze(tasks, cohort, config, *, fixture=False):
         "seed",
     ):
         require(config.get(key) is not None, f"missing runner pin: {key}")
+    require(config.get("isolation", "strict") in {"strict", "home-audit"}, "invalid isolation")
+    require(config.get("allowed_tools") == TOOLS, "allowedTools must be pinned")
+    require(config.get("permission_mode") == "dontAsk", "permission mode must be dontAsk")
     require(
         config["max_turns"] > 0 and config["budget_usd"] > 0 and config["timeout_s"] > 0,
         "invalid execution budget",
     )
 
 
-def freeze(tasks_path, cohort_path, config_path, out, *, fixture=False):
+def freeze(tasks_path, cohort_path, config_path, out, *, fixture=False, isolation=None):
     tasks, cohort, config = map(read_json, (tasks_path, cohort_path, config_path))
+    if isolation:
+        config["isolation"] = isolation
+    config.setdefault("isolation", "strict")
+    config.setdefault("allowed_tools", TOOLS)
+    config.setdefault("permission_mode", "dontAsk")
     validate_freeze(tasks, cohort, config, fixture=fixture)
     protected = [*live_paths().values(), ROOT, cohort["store"]["mind"], *[t["repo"] for t in tasks]]
     roots = config.get("runtime_roots", [])
@@ -397,6 +453,7 @@ def freeze(tasks_path, cohort_path, config_path, out, *, fixture=False):
     }
     manifest = {
         "schema": 1,
+        "isolation": config.get("isolation", "strict"),
         "runtime_sha256": runtime_pins,
         "python": {"path": sys.executable, "sha256": digest(sys.executable)},
         "fixture": fixture,
@@ -437,6 +494,7 @@ def main():
     for name in ("tasks", "cohort", "config", "out"):
         f.add_argument("--" + name, required=True)
     f.add_argument("--fixture", action="store_true")
+    f.add_argument("--isolation", choices=("strict", "home-audit"))
     args = parser.parse_args()
     if args.action == "cohort":
         result = cohort_report(args.socket, args.realm, preview=args.dry_run, source=args.source)
@@ -462,7 +520,14 @@ def main():
                     task["validation"] = validate_task(task)
             write_json(args.tasks, tasks)
     else:
-        result = freeze(args.tasks, args.cohort, args.config, args.out, fixture=args.fixture)
+        result = freeze(
+            args.tasks,
+            args.cohort,
+            args.config,
+            args.out,
+            fixture=args.fixture,
+            isolation=args.isolation,
+        )
         print(
             json.dumps(
                 {

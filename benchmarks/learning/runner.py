@@ -19,6 +19,7 @@ import tempfile
 import time
 from pathlib import Path
 
+from audit import CAVEAT, audit_trial, deny_rules, read_history
 from broker import Broker
 from common import (
     REALM,
@@ -43,7 +44,19 @@ from isolation import probe, sandbox_command
 
 def guard_environment(env, live, private):
     private = Path(private).resolve()
-    for key in ("HOME", "CHITTA_SOCKET_PATH", "CHITTA_DB_PATH", "XDG_RUNTIME_DIR", "CHITTA_QUEUE"):
+    for key in (
+        "HOME",
+        "CHITTA_SOCKET_PATH",
+        "CHITTA_DB_PATH",
+        "XDG_RUNTIME_DIR",
+        "CHITTA_QUEUE",
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME",
+        "XDG_CACHE_HOME",
+        "XDG_STATE_HOME",
+        "CLAUDE_CONFIG_DIR",
+        "TMPDIR",
+    ):
         require(key in env, f"missing private {key}")
         path = Path(env[key]).resolve()
         require(path.is_relative_to(private), f"{key} escapes private trial")
@@ -68,6 +81,14 @@ def private_environment(trial, live, config):
         "PATH": str(Path(sys.executable).parent) + ":/usr/local/bin:/usr/bin:/bin",
         "LANG": "C.UTF-8",
         "HOME": str(home),
+        "XDG_CONFIG_HOME": str(home / ".config"),
+        "XDG_DATA_HOME": str(home / ".local/share"),
+        "XDG_CACHE_HOME": str(home / ".cache"),
+        "XDG_STATE_HOME": str(home / ".local/state"),
+        "CLAUDE_CONFIG_DIR": str(home / ".claude"),
+        "HISTFILE": str(state / "bash-history.jsonl"),
+        "LEARNING_ISOLATION": config.get("isolation", "strict"),
+        "LEARNING_AUDIT_POLICY": str(state / "audit-policy.json"),
         "CHITTA_DB_PATH": str(state),
         "MIND_PATH": str(state),
         "CHITTA_SOCKET_PATH": socket_for(replica, replica / "run"),
@@ -97,6 +118,15 @@ def private_environment(trial, live, config):
     guard_environment(env, live, trial)
     for path in (home / ".claude/mind", state, replica / "run/chitta", visible / "tmp"):
         path.mkdir(parents=True, exist_ok=True)
+    for key in (
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME",
+        "XDG_CACHE_HOME",
+        "XDG_STATE_HOME",
+        "CLAUDE_CONFIG_DIR",
+    ):
+        Path(env[key]).mkdir(parents=True, exist_ok=True)
+    Path(env["HISTFILE"]).touch()
     return env
 
 
@@ -217,8 +247,14 @@ def quantile(values, q):
     return round(values[lo] + (values[hi] - values[lo]) * (index - lo), 2)
 
 
-def aggregate(tasks, events, trials, *, dry_run=False, unresolved=(), isolation_ok=True):
+def aggregate(
+    tasks, events, trials, *, dry_run=False, unresolved=(), isolation_ok=True, isolation="strict"
+):
+    voided = [e for e in events if e.get("voided_reason")]
+    events = [e for e in events if not e.get("voided_reason")]
     reasons = []
+    if voided:
+        reasons.append("voided trials count as missing")
     if dry_run:
         reasons.append("dry-run fixture; no model experiment")
     if len(tasks) != 20 or trials != 3:
@@ -248,12 +284,28 @@ def aggregate(tasks, events, trials, *, dry_run=False, unresolved=(), isolation_
     ):
         reasons.append("B cohort exclusion/exposure failed")
     rows, delta = [], 0
+    missing = bool(voided)
     for task in tasks:
         selected = [e for e in events if e["task"] == task["id"]]
-        a = sum(e.get("success", 0) or 0 for e in selected if e["arm"] == "A")
-        b = sum(e.get("success", 0) or 0 for e in selected if e["arm"] == "B")
-        delta += (a - b) / trials
-        rows.append({"task": task["id"], "a": a, "b": b, "delta": (a - b) / trials})
+        a_valid = [e for e in selected if e["arm"] == "A" and e.get("success") in (0, 1)]
+        b_valid = [e for e in selected if e["arm"] == "B" and e.get("success") in (0, 1)]
+        a, b = sum(e["success"] for e in a_valid), sum(e["success"] for e in b_valid)
+        complete = len(a_valid) == trials and len(b_valid) == trials
+        row_delta = (a - b) / trials if complete else None
+        missing |= not complete
+        delta += row_delta or 0
+        rows.append(
+            {
+                "task": task["id"],
+                "a": a,
+                "b": b,
+                "a_observed": len(a_valid),
+                "b_observed": len(b_valid),
+                "a_missing": trials - len(a_valid),
+                "b_missing": trials - len(b_valid),
+                "delta": row_delta,
+            }
+        )
     net = sum((e.get("success", 0) or 0) * (1 if e["arm"] == "A" else -1) for e in events)
     verdict = (
         "NO VERDICT: " + "; ".join(dict.fromkeys(reasons))
@@ -264,6 +316,8 @@ def aggregate(tasks, events, trials, *, dry_run=False, unresolved=(), isolation_
             else "RETIRE tested free-form writers (queue admission and native learning)"
         )
     )
+    if isolation == "home-audit":
+        verdict += "; CAVEAT: " + CAVEAT
     metrics = {}
     for arm in ("A", "B"):
         ts = [e.get("telemetry", {}) for e in events if e["arm"] == arm]
@@ -271,12 +325,21 @@ def aggregate(tasks, events, trials, *, dry_run=False, unresolved=(), isolation_
             k: sum(t.get(k, 0) for t in ts)
             for k in ("cohort_injections", "total_injections", "empty_turns", "lane_failures")
         }
+        ambiguous_injections = sum(
+            e.get("ambiguous_telemetry", {}).get("cohort_injections", 0)
+            for e in events
+            if e["arm"] == arm
+        )
+        metrics[arm]["ambiguous_injections"] = ambiguous_injections
+        total = metrics[arm]["total_injections"]
+        metrics[arm]["ambiguous_recall_share"] = ambiguous_injections / total if total else None
         for key in ("recall_ms", "hook_ms"):
             values = [v for t in ts for v in t.get(key, [])]
             metrics[arm][key] = {"median": quantile(values, 0.5), "p95": quantile(values, 0.95)}
     return {
-        "delta": delta,
-        "net_successes": net,
+        "delta": None if missing else delta,
+        "net_successes": None if missing else net,
+        "voided_trials": len(voided),
         "rows": rows,
         "verdict": verdict,
         "metrics": metrics,
@@ -289,16 +352,19 @@ def render_table(summary, events, trials):
         "",
         f"Trials per arm: {trials}",
         "",
-        "| Task | A successes | B successes | Δ |",
-        "| --- | ---: | ---: | ---: |",
+        "| Task | A successes / observed | B successes / observed | Missing A/B | Δ |",
+        "| --- | ---: | ---: | --- | ---: |",
     ]
     for row in summary["rows"]:
+        change = "missing" if row["delta"] is None else f"{row['delta']:+.3f}"
         lines.append(
-            f"| {row['task']} | {row['a']}/{trials} | {row['b']}/{trials} | {row['delta']:+.3f} |"
+            f"| {row['task']} | {row['a']}/{row['a_observed']} | "
+            f"{row['b']}/{row['b_observed']} | {row['a_missing']}/{row['b_missing']} | {change} |"
         )
     lines += [
         "",
-        f"Δ = {summary['delta']:+.3f}; net successes = {summary['net_successes']:+d}",
+        f"Δ = {summary['delta']}; net successes = {summary['net_successes']}; "
+        f"voided trials = {summary['voided_trials']}",
         "",
         "| Task | Trial | Arm | Success | Cohort / total injections | Empty turns | Error |",
         "| --- | ---: | --- | ---: | ---: | ---: | --- |",
@@ -308,7 +374,7 @@ def render_table(summary, events, trials):
         lines.append(
             f"| {e['task']} | {e['trial']} | {e['arm']} | {e.get('success')} | "
             f"{t.get('cohort_injections', 0)} / {t.get('total_injections', 0)} | "
-            f"{t.get('empty_turns', 0)} | {str(e.get('error', '')).replace('|', '/')} |"
+            f"{t.get('empty_turns', 0)} | {str(e.get('voided_reason') or e.get('error', '')).replace('|', '/')} |"
         )
     lines += [
         "",
@@ -368,13 +434,14 @@ def start_replica(env, source, log):
     return RPC(env["CHITTA_SOCKET_PATH"], writable=True)
 
 
-def prepare_hooks(visible, env):
+def prepare_hooks(visible, env, work, live, config):
     shutil.copytree(ROOT / "hooks", visible / "hooks")
-    for name in ("hook_capture.py", "isolation.py", "common.py"):
+    for name in ("hook_capture.py", "isolation.py", "common.py", "audit.py"):
         shutil.copyfile(ROOT / "benchmarks/learning" / name, visible / name)
     hooks = {}
     for event, filename in (
         ("UserPromptSubmit", "prompt-hook.sh"),
+        ("PreToolUse", "-"),
         ("PostToolUse", "post-bash-hook.sh"),
         ("PostToolUseFailure", "post-bash-hook.sh"),
     ):
@@ -382,22 +449,72 @@ def prepare_hooks(visible, env):
             sys.executable,
             str(visible / "hook_capture.py"),
             event,
-            str(visible / "hooks" / filename),
+            str(visible / "hooks" / filename) if filename != "-" else "-",
         ]
         hooks[event] = [
             {
-                "matcher": "Bash" if event != "UserPromptSubmit" else "",
+                "matcher": "" if event == "UserPromptSubmit" else "*",
                 "hooks": [{"type": "command", "command": shlex.join(argv), "timeout": 30}],
             }
         ]
     settings = {"hooks": hooks, "disableAllHooks": False, "enableAllProjectMcpServers": False}
-    write_json(visible / "settings.json", settings)
-    (visible / "empty-mcp.json").write_text('{"mcpServers":{}}\n')
-    return visible / "settings.json"
+    policy = {
+        "work": str(work),
+        "roots": [str(work), str(visible)],
+        "home": env["HOME"],
+        "protected": [
+            str(visible / "hooks"),
+            str(visible / "state"),
+            env["HOME"],
+            str(visible / "hook_capture.py"),
+            str(visible / "audit.py"),
+            str(visible / "common.py"),
+            str(visible / "isolation.py"),
+            str(visible / "trial_mcp.py"),
+            str(visible / "mcp.json"),
+            str(visible / "claude"),
+            str(visible / "chitta"),
+        ],
+        "live_targets": [
+            live["socket"],
+            live["mind"],
+            "/home/kbd606/.claude",
+            ":9481",
+            ":7681",
+            ":8765",
+        ],
+    }
+    write_json(env["LEARNING_AUDIT_POLICY"], policy)
+    if config.get("isolation") == "home-audit":
+        settings["permissions"] = {
+            "defaultMode": config["permission_mode"],
+            "allow": config["allowed_tools"],
+            "deny": deny_rules(policy["roots"], policy["live_targets"][:3]),
+        }
+    settings_path = Path(env["CLAUDE_CONFIG_DIR"]) / "settings.json"
+    write_json(settings_path, settings)
+    # Only this trial's stdio chitta bridge; it has no path discovery or auto-start.
+    shutil.copyfile(ROOT / "benchmarks/learning/trial_mcp.py", visible / "trial_mcp.py")
+    write_json(
+        visible / "mcp.json",
+        {
+            "mcpServers": {
+                "chitta": {
+                    "command": sys.executable,
+                    "args": [str(visible / "trial_mcp.py")],
+                    "env": {"CHITTA_SOCKET_PATH": env["CHITTA_SOCKET_PATH"]},
+                }
+            }
+        },
+    )
+    return settings_path
 
 
-def execute_agent(task, trial_number, arm, work, visible, env, config, dry_run, sandbox_ok):
-    settings = prepare_hooks(visible, env)
+def execute_agent(
+    task, trial_number, arm, work, visible, env, config, dry_run, sandbox_ok, settings=None
+):
+    if settings is None:
+        settings = prepare_hooks(visible, env, work, config["live_paths"], config)
     if dry_run:
         # Exercise the actual prompt and Bash hooks. Only the model is substituted.
         session = f"fixture-{task['id']}-{trial_number}-{arm}"
@@ -435,9 +552,28 @@ def execute_agent(task, trial_number, arm, work, visible, env, config, dry_run, 
             "cwd": str(work),
             "hook_event_name": "PostToolUse",
             "tool_name": "Bash",
-            "tool_input": {"command": "learning fixture stub"},
+            "tool_input": {"command": "true"},
             "tool_response": {"exit_code": result.returncode, "stdout": "", "stderr": ""},
         }
+        command(
+            [sys.executable, visible / "hook_capture.py", "PreToolUse", "-"],
+            cwd=work,
+            env=env,
+            input=json.dumps({**payload, "hook_event_name": "PreToolUse"}),
+        )
+        if fixture.get("void_out_of_root_read"):
+            forged = {
+                **payload,
+                "hook_event_name": "PreToolUse",
+                "tool_name": "Read",
+                "tool_input": {"file_path": "/home/kbd606/.claude/projects/fabricated.jsonl"},
+            }
+            command(
+                [sys.executable, visible / "hook_capture.py", "PreToolUse", "-"],
+                cwd=work,
+                env=env,
+                input=json.dumps(forged),
+            )
         command(
             [
                 sys.executable,
@@ -451,7 +587,10 @@ def execute_agent(task, trial_number, arm, work, visible, env, config, dry_run, 
             timeout=40,
         )
         return result
-    require(sandbox_ok, "OS isolation is required before invoking Claude")
+    require(
+        config.get("isolation") == "home-audit" or sandbox_ok,
+        "OS isolation is required before invoking Claude",
+    )
     require(
         env.get("ANTHROPIC_API_KEY") or env.get("CLAUDE_CODE_OAUTH_TOKEN"),
         "provide env-only Claude credentials",
@@ -478,11 +617,13 @@ def execute_agent(task, trial_number, arm, work, visible, env, config, dry_run, 
         str(settings),
         "--strict-mcp-config",
         "--mcp-config",
-        str(visible / "empty-mcp.json"),
+        str(visible / "mcp.json"),
         "--tools",
         "Bash,Read,Edit,Write,Glob,Grep",
         "--permission-mode",
-        "bypassPermissions",
+        config["permission_mode"],
+        "--allowedTools",
+        ",".join(config["allowed_tools"]),
     ]
     # Only the pinned executable is copied; no ~/.claude config or transcripts.
     binary = visible / "claude"
@@ -493,6 +634,8 @@ def execute_agent(task, trial_number, arm, work, visible, env, config, dry_run, 
     shutil.copyfile(config["chitta_bin"], cli)
     cli.chmod(0o700)
     env["CHITTA_BIN"] = str(cli)
+    if config.get("isolation") == "home-audit":
+        return command(argv, cwd=work, env=env, timeout=config["timeout_s"], check=False)
     argv = [sys.executable, visible / "isolation.py", "--network-exec", *argv]
     invocation = sandbox_command(visible, work, argv, config.get("runtime_roots", []))
     # Bind only the scratch socket, keeping all snapshot bytes and hidden graders outside.
@@ -510,7 +653,7 @@ def run_trial(task, trial_number, arm, run_dir, frozen, live, dry_run, sandbox_o
     artifacts.mkdir(parents=True)
     # Linux Unix sockets have a 108-byte path limit. Results paths need not be short.
     trial = Path(tempfile.mkdtemp(prefix="clrn-", dir="/tmp"))
-    config = frozen["manifest"]["config"]
+    config = {**frozen["manifest"]["config"], "live_paths": live}
     env = private_environment(trial, live, config)
     record = {
         "task": task["id"],
@@ -524,9 +667,15 @@ def run_trial(task, trial_number, arm, run_dir, frozen, live, dry_run, sandbox_o
     source = frozen["cohort"]["store"]["mind"]
     stopped = False
     broker = None
+    audit_policy, audit_pins = None, {}
     try:
         verify_code_pins(frozen["manifest"])
         rpc = start_replica(env, source, trial / "replica-launch.log")
+        ambiguous = frozen["cohort"].get("ambiguous_ids", [])
+        write_json(
+            trial / "ambiguous-exclusion.json", remove_and_verify(rpc, ambiguous, task["prompt"])
+        )
+        record["ambiguous_exclusion_verified"] = True
         if arm == "B":
             exclusion = remove_and_verify(rpc, task["eligible_cohort_ids"], task["prompt"])
             write_json(trial / "exclusion.json", exclusion)
@@ -540,8 +689,18 @@ def run_trial(task, trial_number, arm, run_dir, frozen, live, dry_run, sandbox_o
         env["CHITTA_SOCKET_PATH"] = str(proxy_path)
         guard_environment(env, live, trial)
         with task_worktree(task, visible) as work:
+            settings = prepare_hooks(visible, env, work, live, config)
+            audit_policy = read_json(env["LEARNING_AUDIT_POLICY"])
+            controls = [
+                settings,
+                Path(env["LEARNING_AUDIT_POLICY"]),
+                visible / "mcp.json",
+                *visible.glob("*.py"),
+                *(visible / "hooks").rglob("*.sh"),
+            ]
+            audit_pins = {str(p): digest(p) for p in controls}
             result = execute_agent(
-                task, trial_number, arm, work, visible, env, config, dry_run, sandbox_ok
+                task, trial_number, arm, work, visible, env, config, dry_run, sandbox_ok, settings
             )
             (trial / "agent.stdout").write_text(result.stdout)
             (trial / "agent.stderr").write_text(result.stderr)
@@ -550,6 +709,11 @@ def run_trial(task, trial_number, arm, run_dir, frozen, live, dry_run, sandbox_o
             hooks = read_jsonl(env["LEARNING_HOOK_LOG"])
             ledger = read_jsonl(Path(env["CHITTA_DB_PATH"]) / "outcome_ledger.jsonl")
             record["telemetry"] = telemetry(hooks, ledger, task["eligible_cohort_ids"])
+            record["ambiguous_telemetry"] = telemetry(hooks, ledger, ambiguous)
+            require(
+                record["ambiguous_telemetry"]["cohort_injections"] == 0,
+                "ambiguous memory exposed after exclusion",
+            )
             if not dry_run:
                 output = [json.loads(line) for line in result.stdout.splitlines() if line.strip()]
                 require(
@@ -581,12 +745,32 @@ def run_trial(task, trial_number, arm, run_dir, frozen, live, dry_run, sandbox_o
             stopped = True
         except (ValueError, OSError) as exc:
             record["error"] = (record.get("error", "") + "; " + str(exc)).strip("; ")
+    if config.get("isolation") == "home-audit":
+        try:
+            record["voided_reason"] = audit_trial(
+                read_jsonl(env["LEARNING_HOOK_LOG"]),
+                read_history(env["HISTFILE"]),
+                audit_policy or {},
+            )
+        except (OSError, ValueError, KeyError) as exc:
+            record["voided_reason"] = f"audit unavailable: {exc}"
+        if any(
+            not Path(p).is_file() or digest(p) != expected for p, expected in audit_pins.items()
+        ):
+            record["voided_reason"] = "audit controls changed during trial"
+        if record["voided_reason"]:
+            record["success"] = None
     record["ended_ms"] = now_ms()
     write_json(artifacts / "outcome.json", record)
     for path in trial.iterdir():
         if path.is_file():
             shutil.copyfile(path, artifacts / path.name)
-    for name in ("hook-output.jsonl", "outcome_ledger.jsonl"):
+    for name in (
+        "hook-output.jsonl",
+        "outcome_ledger.jsonl",
+        "bash-history.jsonl",
+        "audit-policy.json",
+    ):
         path = trial / "visible/state" / name
         if path.is_file():
             shutil.copyfile(path, artifacts / name)
@@ -640,8 +824,20 @@ def load_frozen(path):
     return {"manifest": manifest, "tasks": tasks, "cohort": cohort}
 
 
-def run(manifest_path, out, *, dry_run=False, trials=3):
+def run(manifest_path, out=None, *, dry_run=False, trials=3, isolation=None):
     frozen = load_frozen(manifest_path)
+    mode = frozen["manifest"]["isolation"]
+    require(isolation is None or isolation == mode, "isolation differs from frozen manifest")
+    require(mode == frozen["manifest"]["config"]["isolation"], "isolation pin mismatch")
+    if out is None:
+        out = (
+            Path(
+                os.environ.get(
+                    "CHITTA_LEARNING_OUT", "/projects/caeg/scratch/kbd606/tmp/learning-results"
+                )
+            )
+            / f"run-{now_ms()}"
+        )
     require(trials > 0, "trials must be positive")
     require(
         dry_run or not frozen["manifest"]["fixture"], "fixture manifest forbids model execution"
@@ -658,7 +854,7 @@ def run(manifest_path, out, *, dry_run=False, trials=3):
     for forbidden in (live["home"], live["mind"], str(source)):
         f = Path(forbidden).resolve()
         require(not out.is_relative_to(f) and not f.is_relative_to(out), "unsafe run output path")
-    isolation_error = probe()
+    isolation_error = probe() if mode == "strict" else None
     require(dry_run or isolation_error is None, f"OS isolation unavailable: {isolation_error}")
     # Adopt/reap our own launcher children so stop can distinguish exited daemons from zombies.
     require(ctypes.CDLL(None).prctl(36, 1, 0, 0, 0) == 0, "cannot become scratch child subreaper")
@@ -689,7 +885,12 @@ def run(manifest_path, out, *, dry_run=False, trials=3):
         with (out / "events.jsonl").open("a") as stream:
             stream.write(json.dumps(event) + "\n")
         print(
-            json.dumps({k: event.get(k) for k in ("task", "trial", "arm", "success", "error")}),
+            json.dumps(
+                {
+                    k: event.get(k)
+                    for k in ("task", "trial", "arm", "success", "voided_reason", "error")
+                }
+            ),
             flush=True,
         )
     unchanged = family(source) == frozen["cohort"]["store"]
@@ -704,6 +905,7 @@ def run(manifest_path, out, *, dry_run=False, trials=3):
         dry_run=dry_run,
         unresolved=frozen["cohort"]["unresolved"],
         isolation_ok=isolation_error is None and unchanged,
+        isolation=mode,
     )
     write_json(out / "summary.json", summary)
     (out / "table.md").write_text(render_table(summary, events, trials))
@@ -720,7 +922,8 @@ def main():
     sub = parser.add_subparsers(dest="action", required=True)
     r = sub.add_parser("run")
     r.add_argument("--manifest", required=True)
-    r.add_argument("--out", required=True)
+    r.add_argument("--out")
+    r.add_argument("--isolation", choices=("strict", "home-audit"))
     r.add_argument("--dry-run", action="store_true")
     r.add_argument("--trials", type=int, default=3)
     p = sub.add_parser("report")
@@ -748,10 +951,17 @@ def main():
             dry_run=manifest["dry_run"],
             unresolved=cohort["unresolved"],
             isolation_ok=not manifest["isolation_error"] and manifest["source_unchanged"],
+            isolation=manifest["isolation"],
         )
         print(render_table(summary, events, manifest["run_trials"]))
     else:
-        run(args.manifest, args.out, dry_run=args.dry_run, trials=args.trials)
+        run(
+            args.manifest,
+            args.out,
+            dry_run=args.dry_run,
+            trials=args.trials,
+            isolation=args.isolation,
+        )
 
 
 if __name__ == "__main__":

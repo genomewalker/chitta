@@ -9,6 +9,7 @@ from copy import deepcopy
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from audit import TOOLS
 from common import digest, git, initial_hashes, seal, task_worktree
 from freeze import classify, enumerate_memories, task_payload, validate_freeze, validate_task
 from runner import aggregate, guard_environment, telemetry, verify_exclusion
@@ -27,7 +28,7 @@ class ClassificationTests(unittest.TestCase):
         row = self.classify(trips=[triplet(mid, "source", "distillation")])
         self.assertEqual((row["classification"], row["writer"]), ("included", "queue_distillation"))
         row = self.classify(trips=[triplet(mid, "tagged", "distillation")])
-        self.assertEqual(row["classification"], "unresolved")
+        self.assertEqual(row["classification"], "ambiguous")
 
     def test_native_all_kinds_and_value_facts(self):
         mid = "18446744073709551614"
@@ -40,7 +41,7 @@ class ClassificationTests(unittest.TestCase):
                     row["classification"], "excluded" if kind == "operational" else "included"
                 )
                 self.assertTrue(row["parents"])
-        self.assertEqual(self.classify("operational")["classification"], "unresolved")
+        self.assertEqual(self.classify("operational")["classification"], "ambiguous")
 
     def test_preserved_corrections_episodes_and_explicit(self):
         mid = "18446744073709551614"
@@ -56,7 +57,7 @@ class ClassificationTests(unittest.TestCase):
     def test_ingester_missing_parent_and_conflicts(self):
         mid = "18446744073709551614"
         derived = triplet(mid, "derived_from", 20)
-        self.assertEqual(self.classify(trips=[derived])["classification"], "unresolved")
+        self.assertEqual(self.classify(trips=[derived])["classification"], "ambiguous")
         row = self.classify(
             trips=[derived, triplet(mid, "source", "mcp_tool")], parents={"20": {"type": "episode"}}
         )
@@ -141,8 +142,25 @@ class TaskTests(unittest.TestCase):
             "chittad_bin": "/bin/true",
             "embed_model": "/bin/true",
             "seed": 1,
+            "allowed_tools": TOOLS,
+            "permission_mode": "dontAsk",
         }
         return tasks, cohort, config
+
+    def test_freeze_accepts_ambiguous_and_unexpected_but_not_contradictory(self):
+        tasks, cohort, config = self.panel()
+        ambiguous = classify({"id": "8", "kind": "wisdom"}, [], {})
+        derived = [{"subject": "9", "predicate": "derived_from", "object": "10"}]
+        included = classify({"id": "9", "kind": "alias"}, derived, {"10": {"kind": "episode"}})
+        cohort.update(ambiguous_ids=["8"], ids=["9"], evidence=[ambiguous, included])
+        validate_freeze(tasks, cohort, config)
+        cohort["ambiguous_ids"] = []
+        with self.assertRaisesRegex(ValueError, "ambiguous membership"):
+            validate_freeze(tasks, cohort, config)
+        cohort["ambiguous_ids"] = ["8"]
+        included["parents"]["10"]["kind"] = "wisdom"
+        with self.assertRaisesRegex(ValueError, "unresolved or inconsistent"):
+            validate_freeze(tasks, cohort, config)
 
     def test_real_pre_fail_post_pass(self):
         self.assertNotEqual(self.task["validation"]["initial"]["exit_code"], 0)
@@ -326,6 +344,15 @@ class LeakageTests(unittest.TestCase):
                 "CHITTA_REALM": "project:cc-soul",
                 "CHITTA_UTILITY_RECALL": "0",
             }
+            for key in (
+                "XDG_CONFIG_HOME",
+                "XDG_DATA_HOME",
+                "XDG_CACHE_HOME",
+                "XDG_STATE_HOME",
+                "CLAUDE_CONFIG_DIR",
+                "TMPDIR",
+            ):
+                env[key] = str(private / key)
             guard_environment(env, live, private)
             for key, path in (("HOME", live["home"]), ("CHITTA_SOCKET_PATH", live["socket"])):
                 bad = {**env, key: path}
