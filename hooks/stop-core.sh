@@ -40,7 +40,7 @@ fi
 # Stop fires once per completed assistant turn for both frontends. Refresh the
 # shared session and thread lease before any of the hook's early-exit paths.
 # Rate-limited: the daemon's liveness TTL is 900s, so a heartbeat every single
-# turn (2 python3 spawns + sqlite opens) is far more often than needed — skip
+# turn is far more often than needed — skip
 # while the last one is still under 120s old.
 _PLUGIN_DIR="$(resolve_cc_soul_root 2>/dev/null || dirname "$SCRIPT_DIR")"
 # Record open saddles even when the transcript or daemon is unavailable.
@@ -62,7 +62,7 @@ if [[ "$SESSION_ID" != "unknown" ]]; then
     _HB_AGE=999999
     [[ -f "$_HB_MARKER" ]] && _HB_AGE=$(( $(date +%s) - $(stat -c %Y "$_HB_MARKER" 2>/dev/null || echo 0) ))
     if [[ "$_HB_AGE" -ge 120 ]]; then
-        printf '%s' "$INPUT" | registry_call 1 heartbeat --queued && touch "$_HB_MARKER" 2>/dev/null
+        (session_heartbeat "$SESSION_ID" "$INPUT" && touch "$_HB_MARKER") </dev/null >/dev/null 2>&1 &
     fi
 fi
 

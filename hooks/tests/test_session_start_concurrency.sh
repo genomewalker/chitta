@@ -23,13 +23,25 @@ with tempfile.TemporaryDirectory(prefix="chitta-ss-test-") as temp:
     cli = base / "chitta"
     cli.write_text('''#!/bin/bash
 printf '%s %s\\n' "$BASHPID" "$*" >>"$STUB_CALLS"
-if [[ "${STUB_HANG:-}" == cli ]]; then
+if [[ "${STUB_HANG:-}" == cli || ( "${STUB_HANG:-}" == registration && "$1" == session_register ) ]]; then
     trap '' TERM
     sleep 10
 fi
 sleep "${STUB_DELAY:-0}"
 case "$1" in
 realm_detect) echo project:latency ;;
+session_register)
+    [[ "$*" == *'--session_id concurrency-test'* && "$*" == *'--realm project:latency'* ]] || exit 1
+    printf registered > "$STUB_REGISTERED" ;;
+ledger_op)
+    case "$*" in
+    *'--op session_get'*) echo '{"value":{}}' ;;
+    *'--op inbox_list'*)
+        [[ -z "${STUB_INBOX_FAIL:-}" ]] || exit 1
+        echo '{"value":{"rows":[{"digest":"inbox task"}]}}' ;;
+    *'--op thread_list'*)
+        echo '{"value":{"rows":[{"title":"active task","thread_id":"12345678-long"}]}}' ;;
+    esac ;;
 ledger_load) cat "$STUB_LEDGER" ;;
 soul_context) echo 'Memory: 10, 20 triplets' ;;
 sql_query)
@@ -56,37 +68,6 @@ query_triplets) printf 'hedging\\nhedging\\nhedging\\n' ;;
 esac
 ''')
     cli.chmod(0o700)
-    (plugin / "task_ledger.py").write_text('''import os
-import time
-
-def render_inbox(realm, limit):
-    assert realm == "project:latency" and limit == 5
-    with open(os.environ["STUB_RENDER_PIDS"], "a") as out:
-        out.write(str(os.getpid()) + "\\n")
-    time.sleep(float(os.environ.get("STUB_DELAY", "0")))
-    if os.environ.get("STUB_INBOX_FAIL"):
-        raise ValueError("inbox unavailable")
-    return "━━━ inbox (project:latency) ━━━\\n• inbox task"
-
-def render_threads(realm, limit):
-    assert realm == "project:latency" and limit == 3
-    with open(os.environ["STUB_RENDER_PIDS"], "a") as out:
-        out.write(str(os.getpid()) + "\\n")
-    time.sleep(float(os.environ.get("STUB_DELAY", "0")))
-    return "━━━ active threads ━━━\\n  ⟳  active task [12345678]"
-''')
-    (plugin / "session_registry.py").write_text('''import json
-import os
-import sys
-import time
-assert json.load(sys.stdin)["session_id"] == "concurrency-test"
-if os.environ.get("STUB_HANG") == "registry":
-    time.sleep(10)
-else:
-    time.sleep(float(os.environ.get("STUB_DELAY", "0")))
-with open(os.environ["STUB_REGISTERED"], "w") as out:
-    out.write("registered")
-''')
     sock = socket.socket(socket.AF_UNIX)
     sock.bind(str(base / "scratch.sock"))
     env = os.environ.copy()
@@ -98,7 +79,7 @@ with open(os.environ["STUB_REGISTERED"], "w") as out:
                CHITTA_BIN=str(cli), CHITTA_PLUGIN_DIR=str(plugin.parent),
                CC_SOUL_PLUGIN_DIR=str(plugin.parent), STUB_CALLS=str(base / "calls"),
                STUB_LEDGER=str(base / "ledger"), STUB_CORRECTIONS=str(base / "corrections"),
-               STUB_SCOPED=str(base / "scoped"), STUB_RENDER_PIDS=str(base / "render-pids"),
+               STUB_SCOPED=str(base / "scoped"),
                STUB_REGISTERED=str(base / "registered"))
     ledger = dict(session_id="previous", mood="idle", snapshot="Goal: preserve order")
     (base / "ledger").write_text(json.dumps(ledger))
@@ -156,10 +137,11 @@ cache warning
     output, elapsed = run(STUB_DELAY="0.3")
     assert output == expected, repr(output)
     assert elapsed < 1.5, f"300 ms calls serialized: {elapsed:.3f}s"
-    pids = (base / "render-pids").read_text().splitlines()
-    assert len(pids) == 2 and len(set(pids)) == 1, pids
+    calls = (base / "calls").read_text().splitlines()
+    assert sum("--op inbox_list" in call for call in calls) == 1, calls
+    assert sum("--op thread_list" in call for call in calls) == 1, calls
     assert (base / "registered").read_text() == "registered"
-    print(f"ok: 300 ms CLI calls, exact ordered output, one renderer process ({elapsed:.3f}s)")
+    print(f"ok: 300 ms CLI calls, exact ordered output, native task cards and registration ({elapsed:.3f}s)")
 
     (base / "scoped").write_text("Found 0 results:\n")
     output, _ = run()
@@ -215,7 +197,7 @@ Run /recap for full context. [/last-session]
 ''', repr(output)
     print("ok: compact restoration and clear resume text unchanged")
 
-    for hang in ("cli", "registry"):
+    for hang in ("cli", "registration"):
         (base / "calls").write_text("")
         output, elapsed = run(STUB_HANG=hang, CHITTA_HOOK_BUDGET_MS="350")
         assert elapsed < 0.65, f"deadline exceeded: {hang} {elapsed:.3f}s"
@@ -226,6 +208,6 @@ Run /recap for full context. [/last-session]
                 assert stat.read_text().split(") ", 1)[1][0] == "Z", line
             except FileNotFoundError:
                 pass
-    print("ok: 350 ms global deadline bounds stalled CLI/registry and kills lane children")
+    print("ok: 350 ms global deadline bounds stalled CLI/registration and kills lane children")
     sock.close()
 PY

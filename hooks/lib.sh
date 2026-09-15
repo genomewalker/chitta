@@ -86,6 +86,59 @@ registry_call() {
     timeout "$t" python3 "$registry" "$subcmd" "$@" >/dev/null 2>&1
 }
 
+# Preserve Python's left-to-right, non-greedy markup stripping. Bound each sed
+# substitution at the FIRST matching close, including nested reminders.
+clean_query() {
+    local text rest tag prefix matched closer cleaned="" old_nocasematch=0
+    local opener='<(task-notification|system-reminder|command-name|command-message|local-command-[[:alnum:]_]+)[^>]*>'
+    text=$(cat)
+    shopt -q nocasematch && old_nocasematch=1
+    shopt -s nocasematch
+    while [[ "$text" =~ $opener ]]; do
+        matched=${BASH_REMATCH[0]} tag=${BASH_REMATCH[1]}
+        prefix=${text%%"$matched"*}
+        rest=${text#*"$matched"}
+        closer="</$tag>"
+        # \w+ can backtrack when the opening local-command name is longer
+        # than its close; [^>]* then consumes the remaining name characters.
+        while [[ ! "$rest" =~ $closer && "$tag" == local-command-* && ${#tag} -gt 15 ]]; do
+            tag=${tag%?}
+            closer="</$tag>"
+        done
+        if [[ "$rest" =~ $closer ]]; then
+            closer=${BASH_REMATCH[0]}
+            cleaned+=$(printf '%s' "$prefix$matched${rest%%"$closer"*}$closer" |
+                sed -Ez 's@<(task-notification|system-reminder|command-name|command-message|local-command-[[:alnum:]_]+)[^>]*>.*</\1>@@I'; printf '.')
+            cleaned=${cleaned%.}
+            text=${rest#*"$closer"}
+        else
+            cleaned+="$prefix$matched"
+            text=$rest
+        fi
+    done
+    (( old_nocasematch )) || shopt -u nocasematch
+    # Python str.strip also includes C0 separators, NEL and nonbreaking spaces.
+    local space=$'\t\n\v\f\r\034\035\036\037 \u0085\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000'
+    space=${space//$'\n'/\\n}
+    printf '%s' "$cleaned$text" | sed -Ez "s/^[$space]+//; s/[$space]+$//"
+}
+
+# Direct liveness RPC also renews the daemon-owned thread lease. Preserve the
+# durable --queued fallback when the socket is missing or the RPC fails.
+session_heartbeat() {
+    local session_id="$1" input="$2" metadata args
+    metadata=$(jq -c '{thread_id: ((.thread_id // "") | tostring),
+                          client: ((.client // "") | tostring)}' <<< "$input") || return 1
+    if daemon_available && [[ -x "${CHITTA_BIN:-}" ]] &&
+        timeout 1 "$CHITTA_BIN" session_heartbeat --session_id "$session_id" \
+            --metadata "$metadata" </dev/null >/dev/null 2>&1; then
+        return 0
+    fi
+    args=$(jq -nc --arg sid "$session_id" --argjson metadata "$metadata" \
+        '{session_id:$sid, metadata:$metadata}') || return 1
+    queue_write session_heartbeat "$args"
+}
+
 # DJB2 hash function (matches C++ implementation in socket_server.hpp)
 djb2_hash() {
     local str="$1"
@@ -226,21 +279,18 @@ queue_write() {
     fi
 
     # Fallback: bootstrap path when the native binary isn't installed yet.
-    # Compact the entry through python3 so embedded newlines in $args can't
-    # corrupt the JSONL line. If compaction fails, drop the write loudly
-    # rather than injecting a malformed line that would poison the queue.
+    # Validate with jq, but retain raw argument number tokens: jq 1.6 would
+    # otherwise round u64 IDs. Literal CR/LF only occur outside strings in valid
+    # JSON; removing them preserves JSONL framing and escaped text newlines.
     local ack_id
     ack_id=$(generate_ack_id)
     local line
-    if line=$(ACK_ID="$ack_id" TOOL="$tool" ARGS="$args" TS="$(date +%s)" \
-        python3 -c 'import json,os,sys
-try:
-    a=json.loads(os.environ["ARGS"])
-except Exception as e:
-    sys.stderr.write(f"queue_write fallback: invalid args json: {e}\n"); sys.exit(1)
-sys.stdout.write(json.dumps({"ack_id":os.environ["ACK_ID"],"tool":os.environ["TOOL"],"args":a,"ts":int(os.environ["TS"])},separators=(",",":"))+"\n")
-' 2>/dev/null); then
-        # Command substitution strips trailing newlines from Python's output.
+    if line=$(jq -nr --arg ack_id "$ack_id" --arg tool "$tool" \
+        --arg args "$args" --argjson ts "$(date +%s)" '
+        ($args | fromjson) as $validated |
+        {ack_id:$ack_id,tool:$tool,ts:$ts} | tojson |
+        .[:-1] + ",\"args\":" + ($args | gsub("[\r\n]"; "")) + "}"' 2>/dev/null); then
+        # Command substitution strips trailing newlines from jq's output.
         # Restore the JSONL record boundary explicitly so consecutive fallback
         # writes cannot be concatenated into one invalid record.
         printf '%s\n' "$line" >> "$queue_file"

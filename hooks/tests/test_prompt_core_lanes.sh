@@ -27,6 +27,20 @@ if [[ -n "${STUB_CALL_LOG:-}" ]]; then
 fi
 get() { local flag="$1" a p; shift; for a in "$@"; do [[ "$p" == "$flag" ]] && { echo "$a"; return; }; p="$a"; done; }
 case "$sub" in
+    session_heartbeat)
+        [[ "${STUB_HEARTBEAT_FAIL:-0}" == 0 ]] || exit 1
+        if [[ -n "${STUB_OVERLAP_DIR:-}" ]]; then
+            touch "$STUB_OVERLAP_DIR/heartbeat-started"
+            for ((attempt=0; attempt<80; attempt++)); do
+                if [[ -f "$STUB_OVERLAP_DIR/rpc-started" ]]; then
+                    touch "$STUB_OVERLAP_DIR/heartbeat-overlapped"
+                    break
+                fi
+                sleep 0.01
+            done
+        fi
+        ;;
+    queue_write) exit 1 ;; # Exercise the durable file fallback.
     recall_lanes)
         if [[ -n "${STUB_OVERLAP_DIR:-}" ]]; then
             touch "$STUB_OVERLAP_DIR/rpc-started"
@@ -325,21 +339,8 @@ done
 
 # Synchronization markers prove both independent tasks overlap recall. No
 # wall-clock threshold: the old serial scheduling cannot satisfy this handshake.
-mkdir -p "$T/overlap" "$T/plugin/chitta-mcp"
-cat > "$T/plugin/chitta-mcp/session_registry.py" <<'PY'
-import os
-import time
-from pathlib import Path
-root = Path(os.environ["STUB_OVERLAP_DIR"])
-(root / "heartbeat-started").touch()
-for _ in range(80):
-    if (root / "rpc-started").exists():
-        (root / "heartbeat-overlapped").touch()
-        break
-    time.sleep(0.01)
-PY
-export STUB_OVERLAP_DIR="$T/overlap" CHITTA_PLUGIN_DIR="$T/plugin"
-unset CC_SOUL_PLUGIN_DIR
+mkdir -p "$T/overlap"
+export STUB_OVERLAP_DIR="$T/overlap"
 rm -f "$MIND/.session_active"
 CHITTA_RECALL_LANES_RPC=1 CHITTA_MAX_OUTPUT_CHARS=10000 \
     run_hook "rpc-concurrent" "what does the persimmon fixture show"
@@ -347,6 +348,38 @@ assert "RPC overlaps session recall and heartbeat" "[[ -f '$T/overlap/overlapped
 assert "heartbeat proceeds alongside RPC" "[[ -f '$T/overlap/heartbeat-overlapped' ]]"
 assert "concurrent continuity is joined before rendering" \
     "grep -q '\\[last-session\\] #99' '$T/stdout.rpc-concurrent'"
-unset STUB_OVERLAP_DIR CHITTA_PLUGIN_DIR
+unset STUB_OVERLAP_DIR
+
+# Even with a model installed, ordinary turns must not start Python. Matching
+# regex evidence still requests a model verdict before emitting a learning hint.
+mkdir -p "$T/interpreters"
+cat > "$T/interpreters/python3" <<'STUBPY'
+#!/bin/bash
+printf '%s\n' "$*" >> "$STUB_PYTHON_CALLS"
+echo 'correction 0.990'
+STUBPY
+chmod +x "$T/interpreters/python3"
+touch "$MIND/hook-classifier.bin"
+export STUB_PYTHON_CALLS="$T/python-calls"
+PATH="$T/interpreters:$PATH" run_hook "no-classifier" "what does the persimmon fixture show"
+assert "ordinary turn skips installed classifier" "[[ ! -f '$STUB_PYTHON_CALLS' ]]"
+PATH="$T/interpreters:$PATH" run_hook "with-classifier" "you are wrong about the persimmon fixture"
+assert "regex evidence invokes classifier once" "[[ $(wc -l < "$STUB_PYTHON_CALLS") == 1 ]]"
+assert "matching model and regex preserve correction hint" "grep -q 'CORRECTION detected' '$T/stdout.with-classifier'"
+rm -f "$MIND/hook-classifier.bin"
+
+# A stale socket and a missing socket both retain liveness in the durable queue.
+for offline in failed-rpc missing-socket; do
+    [[ "$offline" == missing-socket ]] && rm -f "$SOCK"
+    STUB_HEARTBEAT_FAIL=1 run_hook "$offline" "what does the persimmon fixture show"
+    # Heartbeat is asynchronous; wait for its success marker, with a bounded retry.
+    for ((attempt=0; attempt<100; attempt++)); do
+        [[ -f "$MIND/.hb_$offline" ]] && break
+        sleep 0.01
+    done
+    assert "$offline queues heartbeat" \
+        "jq -se 'any(.[]; .tool == \"session_heartbeat\" and .args.session_id == \"$offline\")' '$CHITTA_QUEUE' >/dev/null"
+    assert "$offline marks heartbeat only after queue success" "[[ -f '$MIND/.hb_$offline' ]]"
+done
 
 exit $FAIL

@@ -123,6 +123,77 @@ after a plugin update, which can replace those symlinks with a fresh clone.
 
 Status 2026-09-13: SessionStart concurrent lanes preserve output order and enforce the hook budget; 10 isolated live-read runs improved median/p95 from 3116.5/4137 ms to 739.5/1573 ms (992 bytes each, 0 failures); the 300 ms/call stub completes in 1077 ms. [Attribution and gates](../hooks/tests/session_start_latency.md).
 
+#### Native hook paths: final worktree measurements (2026-09-15)
+
+Prompt cleanup, recall-response validation, and telemetry use bash/sed/jq;
+registration, task cards, and heartbeats use the native CLI. Failed or unreachable
+heartbeat RPCs retain durable queueing. Tests now stub those CLI operations and
+verify registration, concurrent recall, offline queueing, and unchanged card text.
+RPC validation requires exactly one JSON response; empty responses trigger fallback.
+
+The unchanged `scripts/bench-recall-lanes.sh 5` ran three queries five times per
+arm, with both HEADLESS aliases unset, a warm live daemon, isolated HOME/mind/queue,
+and a CLI wrapper allowing only reads. Values are the hook's `t:total` in ms.
+
+| Prompt arm | Runs | Before median / p95 ms | Final median / p95 ms | Final empties |
+|---|---:|---:|---:|---:|
+| RPC off | 15 | 842 / 1134 | 693 / 843 | 0 |
+| RPC on | 15 | 822 / 1063 | 608 / 717 | 0 |
+
+The benchmark command and capability/status probes succeeded. Its unchanged runner
+swallows individual hook exit statuses, so a separate per-hook failure count is
+unavailable. Shared node/daemon load is uncontrolled; these are live diagnostics,
+not a controlled speedup claim. **The prompt median target of <500 ms is unmet.**
+
+Ten SessionStart runs used `source:startup`, `session_id:probe-0` through `probe-9`,
+the worktree cwd, and no transcript. All state was temporary; maintenance scripts
+were excluded via a temporary plugin root, live read APIs were allowed, and write
+APIs were no-ops. Times include the whole process tree, measured by wall clock.
+
+| SessionStart | Runs | Before median / p95 ms | Final median / p95 ms | Final failures / empties |
+|---|---:|---:|---:|---:|
+| Startup | 10 | 693 / 834 | 599 / 677 | 0 / 0 |
+
+Final samples (rounded ms): 677, 592, 650, 512, 637, 596, 617, 543, 500, 602.
+Median is computed before rounding; p95 uses nearest rank. SessionStart meets
+its <700 ms median target.
+
+**Remaining prompt costs.** A separate five-run RPC-on diagnostic inserted sparse
+phase timestamps into a temporary hook copy using the same read-only isolation.
+For `how does chitta semantic recall use the field store`, the middle run by total
+reported 747 ms (phase boundary sum 745 ms plus 2 ms to collect total telemetry):
+
+| Sequential phase | Measured ms |
+|---|---:|
+| Input, query/turn/queue preparation, and dispatch setup | 112 |
+| Recall RPC plus jq validation and lane-file writes | 255 |
+| Lane collection, C2 extraction, and recall merge | 37 |
+| Candidate filtering: confidence/token pipelines, metadata checks, deduplication, anchor logging | 174 |
+| Lane selection and admission summary | 20 |
+| Exposure and correction bookkeeping | 28 |
+| Regex-gated intent detection | 19 |
+| Narrative, predicates, habits, goals, curiosity, and inbox enrichment | 92 |
+| Output assembly up to total checkpoint | 8 |
+
+That run's overlapping daemon lanes reported sem=7, ctx=2, hyb=197, kw=42,
+corr=226, corrk=0 ms; these are concurrent and must not be added together.
+The final rendering interval was another 47 ms after the total checkpoint
+(including the 2 ms above). `t:total` excludes final JSON emission and EXIT
+telemetry. Five diagnostic checkpoint totals were 745, 806, 712, 778, 663 ms;
+instrumentation and changing load mean this table does not decompose the separate
+608 ms benchmark median.
+
+The final `grep -n 'python3' hooks/prompt-core.sh hooks/lib.sh` leaves only explicit
+RLM exploration, classifier invocation after required regex evidence, periodic
+hint extraction (every sixth turn with transcript/model), and `registry_call`
+(used by compatibility/lifecycle callers, absent from the native prompt path).
+Installing the classifier model no longer starts Python on every ordinary turn;
+model-plus-regex decisions remain unchanged. Explicit RLM mode still requires Python.
+
+[Detailed implementation and validation](../hooks/tests/hook_nopython_latency.md).
+Raw benchmark/harness evidence: `/tmp/chitta-nopython-finish/` and
+`/tmp/chitta-nopython-evidence/` on the measurement node.
+
 **What chitta Does:**
 1. Auto-install binaries if needed (`smart-install.sh`)
 2. Start subconscious daemon (`subconscious.sh start`)

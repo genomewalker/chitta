@@ -107,16 +107,15 @@ fi
 _launch_lane cleanup _reset_session_state
 
 # Check chitta CLI exists and daemon is running
-if [[ ! -x "$CHITTA_BIN" ]] || ! daemon_available; then
+if [[ ! -x "$CHITTA_BIN" ]]; then
+    # Compatibility bootstrap only; normal sessions never load the adapter.
+    [[ -z "$SESSION_ID" ]] || registry_call 8 register --client claude <<< "$INPUT"
     wait "${_lane_pids[cleanup]}" 2>/dev/null || true
     exit 0
 fi
-
-# Register every Claude session through the same adapter used by Codex.  This
-# records the exact transcript, project, frontend kind, and long-lived parent
-# PID in Chitta and in the shared task ledger before any early-exit path.
-if [[ -n "$SESSION_ID" ]]; then
-    _launch_lane registry registry_call 8 register --client claude <<< "$INPUT"
+if ! daemon_available; then
+    wait "${_lane_pids[cleanup]}" 2>/dev/null || true
+    exit 0
 fi
 
 # Detect subagent session: SubagentStart hook writes sentinel before session starts
@@ -130,14 +129,8 @@ if [[ "$HOOK_SOURCE" == "startup" && -f "$SENTINEL" ]]; then
     rm -f "$SENTINEL"
 fi
 
-if [[ "$IS_SUBAGENT" == "true" ]]; then
-    # The shared adapter above registered this session. SubagentStart already
-    # injected context, so this hook remains silent.
-    wait "${_lane_pids[@]}" 2>/dev/null || true
-    exit 0
-fi
-
 # Start realm-independent reads before path decoding and realm/ledger lookup.
+if [[ "$IS_SUBAGENT" != "true" ]]; then
 _launch_lane soul timeout "$MAX_WAIT" "$CHITTA_BIN" soul_context
 _launch_lane themes timeout "$MAX_WAIT" "$CHITTA_BIN" sql_query \
     --query "SELECT t.memory_count, substr(m.content, 1, 60) as label FROM theme t JOIN memory m ON t.representative_id = m.id WHERE t.memory_count > 0 ORDER BY t.updated_at DESC LIMIT 3" --json
@@ -149,6 +142,8 @@ _launch_lane corrections_raw timeout "$MAX_WAIT" "$CHITTA_BIN" recall --query co
 _launch_lane compliance timeout "$MAX_WAIT" "$CHITTA_BIN" recall --query "compliance:auto user correction" --limit 2 --text-only
 _launch_lane probe timeout 1 "$CHITTA_BIN" query_triplets --predicate probe_signal --limit 10
 _launch_lane cache timeout "$MAX_WAIT" "$CHITTA_BIN" recall --query "cache:break session cache_hit_ratio" --limit 1 --text-only
+
+fi
 
 # Derive project directory from transcript path
 # Transcript path: ~/.claude/projects/-maps-projects-X-Y-Z/session.jsonl
@@ -173,8 +168,8 @@ decode_project_path() {
     echo "$path_so_far"
 }
 
-PROJECT_DIR=""
-if [[ -n "$TRANSCRIPT_PATH" ]]; then
+PROJECT_DIR=$(jq -r '.cwd // .project_dir // empty' <<< "$INPUT")
+if [[ -z "$PROJECT_DIR" && -n "$TRANSCRIPT_PATH" ]]; then
     PROJECT_ENCODED=$(dirname "$TRANSCRIPT_PATH" | xargs basename)
     PROJECT_DIR=$(decode_project_path "$PROJECT_ENCODED")
 fi
@@ -184,6 +179,49 @@ if [[ -n "$PROJECT_DIR" && -d "$PROJECT_DIR" ]]; then
     REALM=$(cd "$PROJECT_DIR" && timeout "$MAX_WAIT" "$CHITTA_BIN" realm_detect 2>/dev/null || echo "brahman")
 else
     REALM=$(timeout "$MAX_WAIT" "$CHITTA_BIN" realm_detect 2>/dev/null || echo "brahman")
+fi
+
+# Native registration owns the session binding. Read an existing thread on
+# resume and claim its lease through ledger_op, preserving the adapter contract.
+_register_session() {
+    local thread_id metadata args registered=0
+    thread_id=$(jq -r '.thread_id // empty' <<< "$INPUT")
+    if [[ -z "$thread_id" ]]; then
+        args=$(jq -nc --arg sid "$SESSION_ID" '{session_id:$sid}')
+        thread_id=$(timeout "$MAX_WAIT" "$CHITTA_BIN" ledger_op --op session_get \
+            --args "$args" --json | jq -r '.value.thread_id // empty')
+    fi
+    metadata=$(jq -c --arg tid "$thread_id" --arg host "${HOSTNAME:-}" \
+        --arg model "${CHITTA_MODEL:-${CC_SOUL_MODEL:-}}" '
+        {client:"claude", model:(.model // $model), host:$host, thread_id:$tid,
+         hook_source:(.source // .hook_event_name // "")}' <<< "$INPUT")
+    if timeout "$MAX_WAIT" "$CHITTA_BIN" session_register --session_id "$SESSION_ID" \
+        --realm "$REALM" --pid "$_SESSION_START_PARENT_PID" \
+        --project_dir "${PROJECT_DIR:-$PWD}" --transcript_path "$TRANSCRIPT_PATH" \
+        --metadata "$metadata" >/dev/null; then
+        registered=1
+    fi
+    if [[ "$registered" == 1 && -n "$thread_id" ]]; then
+        args=$(jq -nc --arg sid "$SESSION_ID" --arg tid "$thread_id" \
+            '{session_id:$sid,thread_id:$tid}')
+        timeout "$MAX_WAIT" "$CHITTA_BIN" ledger_op --op lease_claim --args "$args" >/dev/null
+    fi
+    if [[ -n "$TRANSCRIPT_PATH" ]]; then
+        timeout "$MAX_WAIT" "$CHITTA_BIN" transcript_register --session_id "$SESSION_ID" \
+            --transcript_path "$TRANSCRIPT_PATH" --realm "$REALM" >/dev/null || {
+            args=$(jq -nc --arg sid "$SESSION_ID" --arg path "$TRANSCRIPT_PATH" --arg realm "$REALM" \
+                '{session_id:$sid,transcript_path:$path,realm:$realm}')
+            queue_write transcript_register "$args"
+        }
+    fi
+}
+if [[ -n "$SESSION_ID" ]]; then
+    _launch_lane registry _register_session
+fi
+if [[ "$IS_SUBAGENT" == "true" ]]; then
+    # SubagentStart already injected context; registration still runs.
+    wait "${_lane_pids[@]}" 2>/dev/null || true
+    exit 0
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -200,32 +238,34 @@ if [[ -n "${REALM:-}" && "$REALM" != brahman ]]; then
 fi
 
 _render_tasks() {
-    # Both public renderers share one interpreter, retaining independent
-    # four-second ceilings without changing the task_ledger module.
-    timeout 8 python3 - "$PLUGIN_DIR/chitta-mcp" "$REALM" <<'PY'
-import signal
-import sys
-
-sys.path.insert(0, sys.argv[1])
-from task_ledger import render_inbox, render_threads  # noqa: E402
-
-
-def expired(signum, frame):
-    raise TimeoutError()
-
-
-signal.signal(signal.SIGALRM, expired)
-for render, limit in ((render_inbox, 5), (render_threads, 3)):
-    try:
-        signal.alarm(4)
-        text = render(sys.argv[2], limit).rstrip('\n')
-        if text:
-            print('\n' + text, flush=True)
-    except Exception:  # noqa: BLE001 - preserve the independent fail-open calls
-        pass  # One failed renderer must not suppress the other card.
-    finally:
-        signal.alarm(0)
-PY
+    local inbox_args thread_args inbox_pid thread_pid
+    inbox_args=$(jq -nc --arg realm "$REALM" '{target_realm:$realm,state:"pending",limit:5}')
+    thread_args=$(jq -nc --arg realm "$REALM" '{realm:$realm,status:"active",limit:3}')
+    # ledger_op exposes separate list operations. Dispatch concurrently, then
+    # format both replies with one jq process in the original card order.
+    (timeout "$MAX_WAIT" "$CHITTA_BIN" ledger_op --op inbox_list --args "$inbox_args" --json |
+        jq -c '.value.rows // []') >"$_ld/inbox.json" &
+    inbox_pid=$!
+    (timeout "$MAX_WAIT" "$CHITTA_BIN" ledger_op --op thread_list --args "$thread_args" --json |
+        jq -c '.value.rows // []') >"$_ld/threads.json" &
+    thread_pid=$!
+    wait "$inbox_pid" 2>/dev/null || true
+    wait "$thread_pid" 2>/dev/null || true
+    jq -nr --arg realm "$REALM" --slurpfile inbox "$_ld/inbox.json" \
+        --slurpfile threads "$_ld/threads.json" '
+        ($inbox[0] // []) as $items | ($threads[0] // []) as $active |
+        (if ($items | length) > 0 then
+            ["━━━ inbox (\(if $realm == "" then "all" else $realm end)) ━━━",
+             ($items[:5][] | (if .event_type == "completed" then "✓"
+                elif (.event_type == "failed" or .event_type == "failure") then "✗"
+                else "•" end) + " " + (.digest // "")[:110])] |
+            "\n" + (join("\n") | sub("\n+$"; ""))
+         else empty end),
+        (if ($active | length) > 0 then
+            ["━━━ active threads ━━━",
+             ($active[:3][] | "  ⟳  \(.title // "?") [\((.thread_id // "")[:8])]")] |
+            "\n" + (join("\n") | sub("\n+$"; ""))
+         else empty end)'
 }
 _launch_lane tasks _render_tasks
 
@@ -260,7 +300,7 @@ if [[ -d "$STAGING_DIR" ]] && ls "$STAGING_DIR"/*.json >/dev/null 2>&1; then
 fi
 
 # Export session environment variables for other processes. Registration itself
-# is handled above by session_registry.py for both Claude and Codex.
+# is handled above by the daemon-owned session and task ledger operations.
 if [[ -n "$SESSION_ID" ]]; then
     CLAUDE_PID=$_SESSION_START_PARENT_PID
     SESSION_ENV_FILE="$HOME/.claude/mind/.session_env_$$"
@@ -350,25 +390,20 @@ _collect_corrections() {
     local -a ids=() texts=() tag_pids=()
     mkdir -p "$MIND_PATH"
     touch "$surface_file"
-    # Parse once, retaining full-width IDs and Python's Unicode character cap.
-    # NUL framing preserves embedded tabs/newlines without per-result Python.
-    python3 - "$_ld/corrections_raw" >"$_ld/correction_records" <<'PY'
-import json
-import sys
-
-with open(sys.argv[1]) as handle:
-    data = json.load(handle)
-for result in data.get('results', []):
-    text = result.get('text', '')
-    if 'verified' in text.lower():
-        continue
-    if result.get('correction_state', 'emitted') in ('verified', 'applied'):
-        continue
-    ident = str(result.get('id', '')).replace('\0', '').rstrip('\n')
-    text = text[:120].replace('\0', '').rstrip('\n')
-    if ident and text:
-        sys.stdout.write(ident + '\0' + text + '\0')
-PY
+    # Quote JSON number tokens before decoding: jq 1.6 otherwise rounds u64
+    # memory IDs. The quoted-string alternative keeps digits inside text intact.
+    # NUL framing retains embedded tabs/newlines and jq slices Unicode characters.
+    jq -Rjs '
+        gsub("(?<quoted>\"(?:[^\"\\\\]|\\\\.)*\")|(?<number>-?[0-9]+(?:[.][0-9]+)?(?:[eE][+-]?[0-9]+)?)";
+             if .quoted != null then .quoted else "\"" + .number + "\"" end) |
+        fromjson | .results[]? |
+        select(((.text // "") | ascii_downcase | contains("verified")) | not) |
+        select((.correction_state // "emitted") != "verified" and
+               (.correction_state // "emitted") != "applied") |
+        ((.id // "") | tostring | gsub("\u0000"; "") | sub("\n+$"; "")) as $id |
+        ((.text // "")[:120] | gsub("\u0000"; "") | sub("\n+$"; "")) as $text |
+        select($id != "" and $text != "") | $id, "\u0000", $text, "\u0000"
+    ' "$_ld/corrections_raw" >"$_ld/correction_records"
     while IFS= read -r -d '' corr_id && IFS= read -r -d '' corr_text; do
         ids+=("$corr_id")
         texts+=("$corr_text")
