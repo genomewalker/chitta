@@ -882,7 +882,9 @@ Restart=always
 RestartSec=10
 KillMode=mixed
 TimeoutStartSec=120
-TimeoutStopSec=30
+# Shutdown saves two ~900 MB snapshot files to NFS. A 30 s SIGKILL mid-save
+# left a server-side lock on the store dir and 49 restarts failed (2026-09-15).
+TimeoutStopSec=300
 StandardOutput=journal
 StandardError=journal
 

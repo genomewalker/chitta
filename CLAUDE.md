@@ -62,6 +62,17 @@ bash scripts/dev-install.sh
 - Embedding dimension is fixed at **compile time** (`CHITTA_EMBED_DIM`, multiple
   of 64, CMake default 1024 for bge-large-en-v1.5). Changing it needs a fresh
   build dir; the daemon rejects a model whose `n_embd` disagrees.
+- **Restart loop with `Failed to open chitta-field store`** and no other
+  `chittad` on the mind dir: a stale NFS lock on `<mind>/chitta-field/.instance.lock`,
+  left when the previous daemon was killed mid-snapshot. Since 2026-09-15 the
+  store replaces a lock whose recorded holder (pid host) is dead on this host
+  and logs `[chitta-field] open failed: …` with the reason; the unit's
+  `TimeoutStopSec` is 300 s so a clean shutdown finishes its snapshot. If it
+  still loops, `mv` the lock file aside; never delete a lock whose holder is
+  another host.
+- Startup is ~27 s on the live store (phase timers in `chittad.log`:
+  `load phase=<name> ms=`). Hooks time out against a warming daemon, so do not
+  measure recall in the first minute after a restart.
 
 ## Dev install: the repo IS the live plugin
 
