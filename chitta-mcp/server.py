@@ -2253,6 +2253,23 @@ def handle_recall_smart(arguments: dict) -> str:
     return json.dumps({"results": merged, "plan": plan})
 
 
+# Mirrors kind_multiplier in chitta-field/src/scoring/{mod,config}.rs, applied as
+# the daemon's bounded envelope 0.7 + 0.3 * kind so reranking cannot flip a
+# strongly relevant hit on kind alone.
+_KIND_MULTIPLIER = {
+    "correction": 1.3,
+    "preference": 1.3,
+    "wisdom": 1.1,
+    "insight": 1.05,
+    "episode": 0.7,
+    "operational": 0.8,
+}
+
+
+def _kind_envelope(hit: dict) -> float:
+    return 0.7 + 0.3 * _KIND_MULTIPLIER.get(str(hit.get("type", "")), 1.0)
+
+
 @profile_async("recall_gateway")
 async def handle_recall_gateway(arguments: dict) -> str:
     """Unified recall with strategy routing and optional cross-encoder reranking.
@@ -2317,7 +2334,14 @@ async def handle_recall_gateway(arguments: dict) -> str:
             len(results),
         )
         return await loop.run_in_executor(_executor, daemon_call, tool, arguments)
-    ranked = sorted(zip(scores, results), key=lambda x: -float(x[0]))
+    # The cross-encoder scores text similarity only; keep the daemon's kind
+    # prior (chitta-field scoring/config.rs) so a correction still outranks a
+    # verbatim transcript fragment of equal similarity. Logits pass through a
+    # sigmoid so the prior is a bounded envelope, as in the daemon.
+    ranked = sorted(
+        zip(scores, results),
+        key=lambda x: -(1.0 / (1.0 + math.exp(-float(x[0])))) * _kind_envelope(x[1]),
+    )
     reranked = [h for _, h in ranked[:limit]]
     return json.dumps({"results": reranked})
 

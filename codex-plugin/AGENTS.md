@@ -96,7 +96,8 @@ export LD_LIBRARY_PATH=/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinf
 (cd chitta-field && ./build.sh build --release)   # then verify target/release/.chitta-embed-identity is unchanged
 # C++ (only if chitta/ or chitta-field/ changed), built INSIDE the worktree:
 cmake -S chitta -B chitta/build -DBLAS_openblas_LIBRARY=/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/lib/libopenblas.so \
-  -DBLAS_LIBRARIES=/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/lib/libopenblas.so   # plus the CHITTA_* values from the main checkout's chitta/build/CMakeCache.txt
+  -DBLAS_LIBRARIES=/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/lib/libopenblas.so \
+  -DCHITTA_EMBED_DIM=768 -DCHITTA_WITH_LLAMA_CPP=ON -DCHITTA_BUILD_RPC=ON -DCHITTA_BUILD_TESTS=ON   # same values as the main checkout's chitta/build/CMakeCache.txt (2026-09-15)
 cmake --build chitta/build --parallel 8 && (cd chitta/build && ctest)
 ```
 
@@ -147,9 +148,13 @@ stream's, stop and say so.
 - Recall text begins with a summary/warning. Select a nonempty memory result
   (`#<id> [pct%] [type] content`) before adding a continuity heading. Test both
   header-only and populated responses with enough output budget to expose them.
-  The daemon renders the same `#<id> [pct%] [type] (on: date) text` lines for
-  `mcp__chitta__recall`; the row text is the memory's first line, so `[done]`
-  and `[correction]` prefixes are content, not extra fields.
+  That line is the hook-injected and CLI rendering. `mcp__chitta__recall`
+  returns TOON (a dictionary-compressed table, ~40% fewer tokens): one row per
+  hit with `id`, `type`, `relevance` and `text`; `[done]`/`[correction]`
+  prefixes inside `text` are content, not extra fields.
+- If the sandbox reports "bubblewrap is unavailable", the command ran in the
+  bwrap sandbox this cluster lacks; re-run it and let it escalate (streams run
+  with `--approve-for-me`, and escalated commands worked in every probe so far).
 - On this cluster the Codex sandbox can panic with "bubblewrap is unavailable"
   for a command; the command then has no exit text and the outcome ledger
   records `exit_code: null` for it (platform limit, not a hook bug). Rerun the
