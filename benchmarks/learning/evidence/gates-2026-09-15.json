@@ -1,0 +1,46 @@
+{
+  "bash_n": "PASS",
+  "eval_immutable": {
+    "command": "bash scripts/check-eval-immutable.sh main HEAD",
+    "result": "PASS",
+    "unchanged": true
+  },
+  "hook_shell_tests": {
+    "cards_rerun": "/tmp/learning-cards-test.log",
+    "logs": "/tmp/learning-hook-gates.9hlPls",
+    "note": "cards test initially collided with the shared test socket; passed unchanged with a fresh private socket",
+    "result": "PASS",
+    "tests": 18,
+    "unchanged": true
+  },
+  "learning_unittest": {
+    "result": "PASS",
+    "tests": 19
+  },
+  "mcp_unittest": {
+    "result": "PASS",
+    "tests": 127,
+    "unchanged": true
+  },
+  "model_calls": 0,
+  "official_cohort_frozen": false,
+  "os_isolation": {
+    "official_model_runs": "refused before model execution",
+    "reason": "bubblewrap namespace creation returns ENOSPC",
+    "result": "UNAVAILABLE"
+  },
+  "python": "/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/bin/python3",
+  "ruff_check": "PASS",
+  "ruff_format_check": "PASS",
+  "shellcheck": {
+    "executable": "/tmp/learning-shellcheck/shellcheck",
+    "installation": false,
+    "result": "PASS",
+    "version": "0.11.0"
+  },
+  "smriti_unittest": {
+    "result": "PASS",
+    "tests": 46,
+    "unchanged": true
+  }
+}

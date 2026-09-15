@@ -1,0 +1,31 @@
+{
+  "agent_exit_code": 0,
+  "arm": "A",
+  "ended_ms": 1789490743118,
+  "exclusion_verified": false,
+  "grader_exit_code": 0,
+  "private_trial": "/tmp/clrn-301ztnlt",
+  "started_ms": 1789490700537,
+  "success": 1,
+  "task": "saffron",
+  "telemetry": {
+    "cohort_injections": 1,
+    "complete": true,
+    "empty_turns": 0,
+    "hook_ms": [
+      913
+    ],
+    "lane_failures": 0,
+    "prompt_turns": 1,
+    "recall_ms": [
+      3,
+      63,
+      308,
+      11,
+      313,
+      0
+    ],
+    "total_injections": 1
+  },
+  "trial": 1
+}

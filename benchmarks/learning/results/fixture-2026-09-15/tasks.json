@@ -1,0 +1,166 @@
+[
+  {
+    "cwd_sha": "e1952e498539f4208235e35c14fff079172696fa",
+    "dependencies": [
+      {
+        "path": "/bin/sh",
+        "sha256": "4b31e985b1b8e631958efa80751beb7e2ff8567204d92e5e974fa35885fd56fc"
+      }
+    ],
+    "eligible_cohort_ids": [
+      "15639267563135827969",
+      "15639267563135827970"
+    ],
+    "fixture": {
+      "A": [
+        {
+          "exit_code": 0,
+          "writes": {
+            "saffron.txt": "ready\n"
+          }
+        },
+        {
+          "exit_code": 0,
+          "writes": {
+            "saffron.txt": "ready\n"
+          }
+        }
+      ],
+      "B": [
+        {
+          "exit_code": 1,
+          "writes": {}
+        },
+        {
+          "exit_code": 1,
+          "writes": {}
+        }
+      ]
+    },
+    "grader": {
+      "command": [
+        "/bin/sh",
+        ".learning-grader/check.sh"
+      ],
+      "files": {
+        "check.sh": "test \"$(cat saffron.txt)\" = ready\n"
+      },
+      "timeout_s": 10
+    },
+    "id": "saffron",
+    "initial_state_hashes": {
+      "cobalt.txt": {
+        "mode": "100644",
+        "sha256": "52d26753462488ad21852bc6718e21b84835f53765304d0a1e1b89d05a2a71b1"
+      },
+      "saffron.txt": {
+        "mode": "100644",
+        "sha256": "52d26753462488ad21852bc6718e21b84835f53765304d0a1e1b89d05a2a71b1"
+      }
+    },
+    "known_good": "c81ac96511e07420034e06ad9234c9bb0f874d00",
+    "prompt": "Apply the LearningFixture saffron readiness convention to saffron.txt.",
+    "prompt_timestamp_ms": 1789489622780,
+    "recall_inspected": false,
+    "repo": "/tmp/learning-fixture-915b/task-repo",
+    "selection_note": "Synthetic prospective pipeline fixture",
+    "selection_rule": "next_eligible_graded_prompt",
+    "transcript_sha256": "ed1a545bb85e55816bbf9566b028b2a0bc456b88f49f6f266c0401048824194b",
+    "validation": {
+      "initial": {
+        "exit_code": 1,
+        "stderr": "",
+        "stdout": ""
+      },
+      "known_good": {
+        "exit_code": 0,
+        "stderr": "",
+        "stdout": ""
+      },
+      "payload_sha256": "a6abe3086bb92c831bccf01bdc49e54fd1d4190992092cf0f41115d39a577262",
+      "timestamp_ms": 1789489623035
+    }
+  },
+  {
+    "cwd_sha": "e1952e498539f4208235e35c14fff079172696fa",
+    "dependencies": [
+      {
+        "path": "/bin/sh",
+        "sha256": "4b31e985b1b8e631958efa80751beb7e2ff8567204d92e5e974fa35885fd56fc"
+      }
+    ],
+    "eligible_cohort_ids": [
+      "15639267563135827969",
+      "15639267563135827970"
+    ],
+    "fixture": {
+      "A": [
+        {
+          "exit_code": 0,
+          "writes": {
+            "cobalt.txt": "ready\n"
+          }
+        },
+        {
+          "exit_code": 1,
+          "writes": {}
+        }
+      ],
+      "B": [
+        {
+          "exit_code": 1,
+          "writes": {}
+        },
+        {
+          "exit_code": 0,
+          "writes": {
+            "cobalt.txt": "ready\n"
+          }
+        }
+      ]
+    },
+    "grader": {
+      "command": [
+        "/bin/sh",
+        ".learning-grader/check.sh"
+      ],
+      "files": {
+        "check.sh": "test \"$(cat cobalt.txt)\" = ready\n"
+      },
+      "timeout_s": 10
+    },
+    "id": "cobalt",
+    "initial_state_hashes": {
+      "cobalt.txt": {
+        "mode": "100644",
+        "sha256": "52d26753462488ad21852bc6718e21b84835f53765304d0a1e1b89d05a2a71b1"
+      },
+      "saffron.txt": {
+        "mode": "100644",
+        "sha256": "52d26753462488ad21852bc6718e21b84835f53765304d0a1e1b89d05a2a71b1"
+      }
+    },
+    "known_good": "c81ac96511e07420034e06ad9234c9bb0f874d00",
+    "prompt": "Apply the LearningFixture cobalt readiness convention to cobalt.txt.",
+    "prompt_timestamp_ms": 1789489622781,
+    "recall_inspected": false,
+    "repo": "/tmp/learning-fixture-915b/task-repo",
+    "selection_note": "Synthetic prospective pipeline fixture",
+    "selection_rule": "next_eligible_graded_prompt",
+    "transcript_sha256": "ed1a545bb85e55816bbf9566b028b2a0bc456b88f49f6f266c0401048824194b",
+    "validation": {
+      "initial": {
+        "exit_code": 1,
+        "stderr": "",
+        "stdout": ""
+      },
+      "known_good": {
+        "exit_code": 0,
+        "stderr": "",
+        "stdout": ""
+      },
+      "payload_sha256": "31580509837268dbd475fb153074143ae0431626f826294cfb8ffbaf6be1ff54",
+      "timestamp_ms": 1789489623188
+    }
+  }
+]

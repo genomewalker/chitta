@@ -1,0 +1,133 @@
+{
+  "cut_timestamp_ms": 1789489622779,
+  "enumeration_stable": true,
+  "evidence": [
+    {
+      "classification": "included",
+      "id": "15639267563135827969",
+      "kind": "wisdom",
+      "parents": {},
+      "reason": "source=distillation",
+      "triplets": [
+        {
+          "id": 126586597,
+          "object": "distillation",
+          "predicate": "source",
+          "subject": "15639267563135827969",
+          "weight": 1.0
+        },
+        {
+          "id": 126586598,
+          "object": "wisdom",
+          "predicate": "tagged",
+          "subject": "15639267563135827969",
+          "weight": 1.0
+        }
+      ],
+      "writer": "queue_distillation"
+    },
+    {
+      "classification": "included",
+      "id": "15639267563135827970",
+      "kind": "wisdom",
+      "parents": {},
+      "reason": "source=distillation",
+      "triplets": [
+        {
+          "id": 126586599,
+          "object": "distillation",
+          "predicate": "source",
+          "subject": "15639267563135827970",
+          "weight": 1.0
+        },
+        {
+          "id": 126586600,
+          "object": "wisdom",
+          "predicate": "tagged",
+          "subject": "15639267563135827970",
+          "weight": 1.0
+        }
+      ],
+      "writer": "queue_distillation"
+    }
+  ],
+  "fixture": true,
+  "fixture_note": "Only two synthetic observe source=distillation rows; not an official cohort",
+  "ids": [
+    "15639267563135827969",
+    "15639267563135827970"
+  ],
+  "preview": false,
+  "realm": "project:cc-soul",
+  "schema": 1,
+  "store": {
+    "files": {
+      "MANIFEST.1": {
+        "sha256": "e3379df7e2cd0b8df5418770fff3d9ba37852dc5052c0fd660d5e04e3a56a27e",
+        "size": 5601334
+      },
+      "MANIFEST.2": {
+        "sha256": "6bd07a1a44447dec63bf44e78347b0c1ca3605b3c280a89a96485fdb099125c4",
+        "size": 5583714
+      },
+      "chitta.d909d6fd.bin": {
+        "sha256": "e6df4ac5bb8b8568eb245ce42a399f1e4de1f09d99faefddd3d68ae80529c036",
+        "size": 13906376
+      },
+      "chitta.d909d6fd.emb": {
+        "sha256": "cc9074c2af017321b43203d2d481b02a8b5df07b7ee0d75eed50afe1a881025b",
+        "size": 411842216
+      },
+      "chitta.d909d6fd.hdc": {
+        "sha256": "edd29f9cfd32f31cc17cf44d44c31ea79b30662e236962fdc75a682e8488de61",
+        "size": 148713704
+      },
+      "chitta.d909d6fd.pld": {
+        "sha256": "b4848f06a597d3fb4e052700c5b16d4c2e3ba107ad36185623cf4df7eea3a1c7",
+        "size": 78016436
+      },
+      "chitta.d909d6fd.shdr": {
+        "sha256": "303ef1a4dc60992c96af5edfc70ebb1e2a48086846e7b4192e675ed5407af8e8",
+        "size": 81
+      },
+      "chitta.d909d6fd.snapshot": {
+        "sha256": "d18d8380003f08dd689c15ad7a7861c1ab8a16be0f56dab0f01a54cb3e056737",
+        "size": 835945539
+      },
+      "chitta.d909d6fd.sup.json": {
+        "sha256": "aa8325fb0de7e71d0435386e11c4e89543a614258a740fa418a73275dd12a60e",
+        "size": 19913359
+      },
+      "embed_1536_v1.migrated": {
+        "sha256": "a4c3ed04a95a3da14a9d235c83d868bed7c0f45cf7f3faa751ee8f50598d2211",
+        "size": 4
+      },
+      "lite_encoder.bin": {
+        "sha256": "7aaf74db88ff398fa70c0f46f1e249f88bde58f75ebc202a84369cf85e5ba6c7",
+        "size": 11472131
+      },
+      "seen_offsets.d909d6fd.json": {
+        "sha256": "e6b39ff7920cbff66db4c497c69d9a91b1b08a93386e7802dd33f90cb382ecf6",
+        "size": 297
+      },
+      "segments/d909d6fd_000000000001.seg": {
+        "sha256": "160e59026fdf13edce650d518ca8d9ca522d3af57326f978b01a16adf60ca927",
+        "size": 9194
+      },
+      "ssl_gloss_v1.migrated": {
+        "sha256": "a4c3ed04a95a3da14a9d235c83d868bed7c0f45cf7f3faa751ee8f50598d2211",
+        "size": 4
+      }
+    },
+    "fully_hashed": true,
+    "mind": "/tmp/learning-fixture-915b/source/replica",
+    "selection": {
+      "generation": "38048",
+      "header_seqno": "206243523",
+      "id": "d909d6fd",
+      "seqno": "206243523"
+    },
+    "sha256": "3b9d24b1d0622d9b141568c15d86686bdd42ce1f047d5f1c24d0db14bde8e45b"
+  },
+  "unresolved": []
+}

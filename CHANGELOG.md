@@ -10,6 +10,11 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 ## [Unreleased]
 
+### Added
+- Automatic-learning experiment harness: provenance-based cohort classification,
+  prospective task/grader freezes, isolated paired replica trials, exposure checks,
+  deterministic grading and fixture-only dry runs (`benchmarks/learning/protocol.md`).
+
 ### Changed
 - `recall_analogy` is explicit relation transfer only (a:b :: c:?): the
   predicate(s) linking a→b come from indexed triplet lookups and the answers are

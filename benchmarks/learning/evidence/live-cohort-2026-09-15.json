@@ -1,0 +1,51 @@
+{
+  "classification_counts": {
+    "excluded": 8877,
+    "included": 1867,
+    "unresolved": 4307
+  },
+  "completed_timestamp_ms": 1789488973165,
+  "counts": {
+    "native_learning": 1867,
+    "native_value_fact": 7380,
+    "other_source": 209,
+    "preserved": 1288,
+    "queue_distillation": 0,
+    "unknown": 4307
+  },
+  "cut_timestamp_ms": 1789488957487,
+  "diagnostic_only": true,
+  "enumeration_stable": true,
+  "included": 1867,
+  "official_cohort_frozen": false,
+  "realm": "project:cc-soul",
+  "records": 15051,
+  "report_path": "/tmp/learning-live-cohort.json",
+  "report_sha256": "df64092d0594bfd7148b62cfe8792b6374a84f0e74321a946aa6000abb134ed9",
+  "store_manifest_sha256": {
+    "MANIFEST.1": "ab283becbedabb8142e487c8a0e69ed53e286c9941ebc7323b932a88484265ad",
+    "MANIFEST.2": "12670e0c78a9586f05ddfade9d8b1fba1371dcceaa97b044daba1f667a4182a6"
+  },
+  "store_selection": {
+    "generation": "39129",
+    "header_seqno": "206447268",
+    "id": "d74dce91",
+    "seqno": "206447268"
+  },
+  "supplemental_provenance_errors": 5213,
+  "unresolved": 4307,
+  "unresolved_reasons": {
+    "no writer provenance; kind or distillation tag is insufficient": 4286,
+    "unexpected episode-derived kind": 21
+  },
+  "unresolved_sample": [
+    "10021509159544946689",
+    "10041025933319602179",
+    "10041025933319602180",
+    "10041025933319602181",
+    "10041025933319602182",
+    "10041025933319602183",
+    "10041025933319602184",
+    "10041025933319602185"
+  ]
+}

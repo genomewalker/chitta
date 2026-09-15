@@ -1,0 +1,186 @@
+{
+  "binaries": {
+    "chitta_bin": {
+      "path": "/home/kbd606/.claude/bin/chitta",
+      "sha256": "367777d1c7618879a90670773166a329e751dbd4bfe0db4ba9ee9b07eafb08b5"
+    },
+    "chittad_bin": {
+      "path": "/home/kbd606/.claude/bin/chittad",
+      "sha256": "d071ea20b6c4a9ca07fc6b174d90a2be251df34039f475b091bc16746d347a2a"
+    },
+    "claude_bin": {
+      "path": "/maps/projects/caeg/people/kbd606/.local/share/claude/versions/2.1.263",
+      "sha256": "26d020351e8112f4006790f3cfce43b4c9df0c1bb1d0e542364d64151b81d5ba"
+    },
+    "embed_model": {
+      "path": "/maps/projects/caeg/people/kbd606/models/nomic-embed-text-v1.5.gguf",
+      "sha256": "3e24342164b3d94991ba9692fdc0dd08e3fd7362e0aacc396a9a5c54a544c3b7"
+    }
+  },
+  "code_sha256": {
+    "benchmarks/learning/broker.py": "ef18859a076930a5dddbd6165733479a0fb63902ef085de35a3e89bfa825ac04",
+    "benchmarks/learning/common.py": "038730bb8afda9af1bdb1588096eb669763b089d8e9250b0afb50ec7037555f1",
+    "benchmarks/learning/freeze.py": "6fd16afa00325cd71ed0151f2666d0647671f5acec6a1e7c1679132702f1f5c0",
+    "benchmarks/learning/hook_capture.py": "2a01414edad7e2739afe4fe1cdd34600199b1a9d88144be762a7e348591d9a02",
+    "benchmarks/learning/isolation.py": "35ae4762a93eaa86ad0dc57ab447e949d5b353fd5105778e9ce7ddeee9568378",
+    "benchmarks/learning/prepare_fixture.py": "a11d93be2224eff85c1156a5463abb6e003ffbc1447f1c49b120f5fc86734c00",
+    "benchmarks/learning/protocol.md": "9746556d88db0ef43c7af8a4040021e7c32f40ce2d0cd9789851cdb495cb6f3a",
+    "benchmarks/learning/runner.py": "fe1e8bf79cf9c30f5f6eda8c4d9a891a2881bcaea0d1e9446f9a038d54894be7",
+    "benchmarks/learning/tests/test_protocol.py": "ad6f75bfb41f0b946835565f4f08ee51b2ac8b40361e05f261cfc5e720864410",
+    "hooks/bridge-holes.sh": "3bf6a1b753f1cec0a3191e341c937b1b5e202b4a9f35d1f99e6403a6ed7753da",
+    "hooks/check-candidate-inclusion.py": "524acc0c91aac54c6ae0958bfa16631a07227eda3dbe7a58934fc30c8c06ad3d",
+    "hooks/check-forward-bets.py": "bfbfaefa5df85e21fe6ab2772f1ef465bfe12a698c87b7546de8ff6ca18d9f44",
+    "hooks/chitta-eval.py": "6205e7cc8e077a32ec552be8e41135e62470a80df8a6cfa61c7b4c84d70f8f1f",
+    "hooks/codebase-learn-post-read.sh": "d2184d6fac3499787c19018f66f170357cf06d8a0e3d07d17f1130455ab3afe5",
+    "hooks/codex-compact-restore-wrapper.sh": "18d6635b99bff1b8d090b18ba523c0f95f3377188988b5adbf670f8144518f26",
+    "hooks/codex-pretool-wrapper.sh": "7c4fa1dad0874e2e1f48ed350cee46ef20e99258e99fb47f2b733ba2e207f056",
+    "hooks/codex-prompt-hook.sh": "b48cedc4fc014bf6439ef66401940b405966b4e4e134aa5bfcce61014c7bf43d",
+    "hooks/codex-session-start-wrapper.sh": "799b2a77e8edf1acd30de4790fc0d77576595fe37cfc1ff4aa6189f7c6c73015",
+    "hooks/codex-stop-hook.sh": "72036c2071aeb5dac4d909a21bade7b9baa94df49801ef68d71918706def5a1a",
+    "hooks/compact-restore-hook.sh": "a2343b962ed9c3a48128a41e3e72bcb16b2d156cde2654490398d1fe810ee215",
+    "hooks/debug-recall.sh": "a5d0dd47b92b7b07447629e58dc61aebf368bea135be047253b4720ec5aba66b",
+    "hooks/distill.sh": "0d302de33a8f04ef6701c822a32f41d758b9bd2725755729f4a8d317993168a9",
+    "hooks/dream-sweep.sh": "211f82e1c95e7866fa2ad9d504d58e9b650a3d7a37ca4198080c702766152aa5",
+    "hooks/enrich-code.sh": "778ad7290db1e9d3cf5d58cf3200cd83d3f4cfad26cba74d15785375918f915e",
+    "hooks/eval-sparse.py": "79550eec32807786f8ed471caa8964c8b66236bbe556da58b0c44d1bb6bd55c7",
+    "hooks/evolve-topology.sh": "737e16443876aae35d8499937578279234eae61bdf42cdfd43fd4e9cc7dad063",
+    "hooks/extract-code-intel.sh": "0bf05920c66314d70715f1577bd16f34c376b953d7cb032a778753d8fa776b8d",
+    "hooks/file-changed-hook.sh": "4283b2a493de42cd33fef10e9a667a57e4e82bc35c293416d230c72eea9ff8a7",
+    "hooks/grade-recall.py": "18bcc8ed560eef2329f850f6e09b099e5da4776ca9f4b0c840eba42d994e235d",
+    "hooks/grade-recall.sh": "57c6e076c778df969b99f820e771fef988dc936b7fc4db388ff424e8b3804e44",
+    "hooks/harvest-labels.py": "35dde1d58cda5eba3271e984f96dee605d4936b6f58104ad9df62d9b545603c5",
+    "hooks/hook-names.sh": "fc3c5774da93564a145db8c0688813f152538f259f3847e77a2ccd949bd7e697",
+    "hooks/hopfield-probe.py": "4bc01b333067a974c6b546ff05ba72d7117a8705b3ad3a15699134f64a7c1ae3",
+    "hooks/inject-persona.sh": "491d23a5796bb219bd7717c8089b809d3fe805cd53e02cc1de7dd32b15f5d338",
+    "hooks/ledger-autosave.sh": "931dd80283dc6bebbf77c512605bd61b00cdc29e13259c2eee5e914df54d9651",
+    "hooks/lib.sh": "cb5c4d7f58357a97c89f592d4a2199ec821769b38a013b1703e526d046920065",
+    "hooks/log-bash-history.sh": "1792d90335e48090118bc735ac0ea64c1891530ed07f74f631690c1fe4064c80",
+    "hooks/memory-intercept.sh": "623499d4394fc2d00ea92a3e163c57ad4553cf0f4b4fbedb126a7312eabb7d2c",
+    "hooks/outcome-ledger.sh": "9d19a18a4463650a60c8b47dc1dc940a0fa8961ec887673d72652ef0062503c2",
+    "hooks/post-bash-hook.sh": "d67095dd2b66e8b1d3cfee81793d90e97c5ae1848f93c8b23cfe982be374f991",
+    "hooks/post-commit-hook.sh": "6616209986567d3b208484a83773a14c84c4ad7f561e2d4051a006fcc37878ae",
+    "hooks/post-edit-hook.sh": "f776cea498db46b893bfc1426a262885213290b0d4916751b4f45e679f961c18",
+    "hooks/pre-compact-hook.sh": "d6c5599c88b64d79c9aea0ad18fb87765f5e11905c703763c98d7cb18bbf56ce",
+    "hooks/pre-tool-hook.sh": "264331fbd0d944dbff2357b10a47fab0fce7d8910d422b61c954d97097a25848",
+    "hooks/prompt-core.sh": "2fd688072241ff61d4255f8a897daaf56bd029fd6aeb5fb58c0189faf087bf5a",
+    "hooks/prompt-hook.sh": "add2e90cb01eb49dd885bfb1a8762501fb9ae81e366ebf6d12a34596c7d8dbbb",
+    "hooks/reparse-transcripts.py": "c171bd2c898034e2d9238a87816e1ddb63d2794ba988e9732ae5a4852f1d96dd",
+    "hooks/reparse-transcripts.sh": "82b54008bb48d4ec933677edf9da960c90629154ed0069b08f2675646f464502",
+    "hooks/resume-inject-hook.sh": "3bf747a8366847b55e58b68274044b773627ef10f47137f2a0f3b9720451d98d",
+    "hooks/run-ledger.sh": "47c031f5ec936c76fc3c8a5d78ea9ad0a2ad4857622f187bb018f5e528dfa3c0",
+    "hooks/session-end-hook.sh": "8bd86035ca44559c733fedd6697e483be7a6a04399b3dd39eb990602c27a8483",
+    "hooks/session-start-hook.sh": "d1619fa89f5b90d712f022440a67b2649bc3b2fac3cd5d59e44866689e6c69ec",
+    "hooks/settle-predictions.sh": "61df1ef1e592a113ff03b8a028ac924d8bf69330cb9c5d8c9b93781d266a40da",
+    "hooks/shepherd-poll.sh": "c720726711200427c7c95cc3a58c266fe3c105a122291effadfbe96f6d00319e",
+    "hooks/shepherd-prompt-hook.sh": "8df9827c9f715dd9a145abd1ad32df8c27fcfd4803f03b712b7ce3eeb0b65556",
+    "hooks/shepherd-stop-hook.sh": "d07a531e84e547eee2b7956d967b008d44477cb2d2c9922ab99e389e323e0486",
+    "hooks/span-capture.sh": "67f324d3bacf7920b1b84880c34337930e31c112fd4e9cbe2aa1a0a707634fba",
+    "hooks/stop-core.sh": "b8ef09763a1e51e9f6a367afe2f9aeb870c6b4e99bbe6bf616814c3bc9ec5c91",
+    "hooks/stop-hook.sh": "16a94b307e1644df2ae6556d2bb2ae4b4cfd753ffaedf007b2915a88c5c9fab3",
+    "hooks/stop-transcript-snapshot.py": "8f409173c0690698003bb97f3570f65b285da2e24290b44b5f5799c0b5831390",
+    "hooks/subagent-stop-hook.sh": "b0dc290f2a0e61dc29a6be66d68ce7471bb644418b79213951f55ad11626ae81",
+    "hooks/subconscious.sh": "9d2bd366ab7828ec9624795cfa5b1725b8a61e6161c7ed70c06e4c9307ba8637",
+    "hooks/sweep-fetch-k.py": "3bd581a8488878107f29695dd37dbc248705990a7a3d17b636de264437e55e1e",
+    "hooks/tests/analogy_eval_cases.py": "c48cf7f90d608c96da58213e03735bea1ebe8e16e6792131f45c6bb5e053f57e",
+    "hooks/tests/saddle_hook_cases.py": "2c14eabcc536b52adcfa64dcc96639931d48fb6750d24aff5bdf41e521c6abb4",
+    "hooks/tests/test_analogy_eval.sh": "5e8b4c06ea023575bdfd46aee585353ebe83fe0e814548c7ca6ac308f302d5a0",
+    "hooks/tests/test_clean_query_parity.sh": "5475b6ac3acfb9b454ec7f359367c004a327105232b71426108eddc5bd6368ce",
+    "hooks/tests/test_eval_replica.sh": "de5d1b18b16487c2eace5298bfc7e264672a826918b6be0ea0519945a15baaa7",
+    "hooks/tests/test_hook_names.sh": "d8737d02b7f78e7d1d8f4e897b71bdebd3811237e14d52de511c9990d4a1e467",
+    "hooks/tests/test_lib_ingest_metric.sh": "3be72b0332ee22b6e8268aedec2494462cfdff33bdfc2462dcf61377b570fba2",
+    "hooks/tests/test_mcp_kill_guard.sh": "42195a780ae743c6830363011caaf43fbf1aa0d752581d3fc73dd41c5821ddc9",
+    "hooks/tests/test_native_heartbeat.sh": "39d20c81cec41282673b0078dcbdd6e01a8f9b3441b5cecdf448998d6e374018",
+    "hooks/tests/test_noise_hook_metric.sh": "5284b65b0ba5f317152c734929bec47a8b9bd01377b69c31efb6bd8de6ae8d25",
+    "hooks/tests/test_outcome_ledger.sh": "595da3d217d8af8459c11c9293fc6b39eb93b866d9d647f29c3ecb7b718abffc",
+    "hooks/tests/test_post_bash_payloads.sh": "2f99562b053a0682b8d8906c3ace4fb2c3ae8a5f2b3a139dc0acb853ad793ce0",
+    "hooks/tests/test_prompt_core_lanes.sh": "9db7ecd04cc9bfda77dce40dcac5a0d75ec113a32344d342abd1e84863904047",
+    "hooks/tests/test_prompt_core_query_gate.sh": "b4315b7e8987abed951628d7c175c54e5418510239f5dcbea66164d79e7b787d",
+    "hooks/tests/test_registry_call.sh": "2a3fb2326de912777728f0ae4a20d03b603e1b613260eca4433c44dcf02eea55",
+    "hooks/tests/test_saddle_hook.sh": "725b17979e435a2cf246f4df8da12ac63d31c86fd94c10a4dd3240ad2c033d2d",
+    "hooks/tests/test_session_start_cards.sh": "c462982b3ed46cc46994d46a8e9bf27ce722d02938de20999685e1fac816381a",
+    "hooks/tests/test_session_start_concurrency.sh": "ffd580f698da16cafc286e550ca00cd648c7a00296ed576c5bd758784209aabe",
+    "hooks/tests/test_session_start_native.sh": "a88309013ee2467f61a79adc8e6129232b309071ec18bfd296da528f55486c22",
+    "hooks/tests/test_socket_hash.sh": "c9b57c41b2524f7e29fad3167194674ae2c87d3d562d0e596420d07a40e19f00",
+    "hooks/tests/test_stop_transcript_snapshot.py": "22a2764bba8e92ce18a635a01f9844d649e6405bcdd26353cacc0e00662e0bf8",
+    "hooks/yajna-batch.sh": "b841885685fd2146f15faccbae914783563dea661cf9d96b27fa6edfa317e98f",
+    "scripts/eval-learning.sh": "5fcb7fbf90bc3844e8d6b4395ecc35446b3c9f9aae4dd9c1bb57d29d8fdf6b17",
+    "scripts/eval-replica-select.py": "3e2410ee1182ffa9b496047b221c8b2f77435f8ecbfc9d76bf854e86172373bc",
+    "scripts/eval-replica.sh": "9615f38fc5b2cec3a4bf2fdb1e79f2fc932c6b55224962c9955b56cd11803445"
+  },
+  "cohort_sha256": "75d6f3553171b9b262d1f59011ae2cea8ab02db17f6de1eda1e1e78830edcc3e",
+  "config": {
+    "budget_usd": 1.0,
+    "chitta_bin": "/home/kbd606/.claude/bin/chitta",
+    "chittad_bin": "/home/kbd606/.claude/bin/chittad",
+    "claude_bin": "/home/kbd606/.local/bin/claude",
+    "claude_version": "2.1.263 (Claude Code)",
+    "embed_model": "/maps/projects/caeg/people/kbd606/models/nomic-embed-text-v1.5.gguf",
+    "max_turns": 8,
+    "model": "claude-sonnet-4-5-20250929",
+    "seed": 9152026,
+    "timeout_s": 120
+  },
+  "dry_run": true,
+  "ended_ms": 1789490998716,
+  "events_sha256": "6ddb8e1e0ad639ae556b7e7bb954cf151227b0aad3f0719d34cedfc4977c9424",
+  "fixture": true,
+  "frozen_manifest_sha256": "651db190e8284ef7e0a5ddbd18865615ccbaed5b3c04fa70fe0ff1b9bd78f4b1",
+  "frozen_timestamp_ms": 1789490654926,
+  "isolation_error": "bwrap: Creating new namespace failed: No space left on device",
+  "python": {
+    "path": "/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/bin/python3",
+    "sha256": "ce3dc95e8324430c5b281baf448a432f3bb636ce0baa3f4e32bed962179f258d"
+  },
+  "realm": "project:cc-soul",
+  "run_trials": 2,
+  "runtime_sha256": {},
+  "schedule": [
+    [
+      "saffron",
+      1,
+      "B"
+    ],
+    [
+      "saffron",
+      1,
+      "A"
+    ],
+    [
+      "saffron",
+      2,
+      "A"
+    ],
+    [
+      "saffron",
+      2,
+      "B"
+    ],
+    [
+      "cobalt",
+      1,
+      "A"
+    ],
+    [
+      "cobalt",
+      1,
+      "B"
+    ],
+    [
+      "cobalt",
+      2,
+      "B"
+    ],
+    [
+      "cobalt",
+      2,
+      "A"
+    ]
+  ],
+  "schema": 1,
+  "selection_exclusions": [],
+  "source_unchanged": true,
+  "started_ms": 1789490658108,
+  "tasks_sha256": "3f49f045807ec817f5676298cc57411b6e6fd13c92be0a1f41c56184aa324914",
+  "trials": 3,
+  "utility_recall": false
+}
