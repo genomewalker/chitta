@@ -70,6 +70,10 @@ rejects `gpt-6-astra`.
 > (a screening threshold, not statistical proof); otherwise retire automatic
 > free-form storage while preserving explicit memories and source episodes.
 > This experiment remains pending; planted-memory SMRITI gains do not answer it.
+> Protocol agreed 2026-09-15 (Fable + Codex): see
+> `DECISION-2026-09-15-learning-experiment.md`. Tasks are collected
+> prospectively after the cohort cut, three trials per task (120 runs),
+> Δ ≥ 3 over 20 tasks to retain; harness on `feat/learning-experiment`.
 >
 > The outcome ledger remains active: hooks record injections, command outcomes
 > and session ends; the offline joiner assigns per-memory Wilson-bound credit.
