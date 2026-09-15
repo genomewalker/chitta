@@ -329,6 +329,12 @@ static const std::vector<ToolSpec> TOOL_SPECS = {
      {{"subject", "Query by subject", false, nullptr},
       {"object", "Query by object", false, nullptr}}},
 
+    {"recall_analogy", "Relation transfer a:b :: c:? over the triplet organ",
+     {{"a", "Source entity", true, nullptr},
+      {"b", "Source relation target", true, nullptr},
+      {"c", "Entity to transfer the relation to", true, nullptr},
+      {"limit", "Max answers (default 8)", false, "8"}}},
+
     // Hook tools
     {"observe", "Store observation (used by hooks for [LEARN] extraction)",
      {{"title", "Short title", true, nullptr},
