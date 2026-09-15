@@ -147,6 +147,13 @@ stream's, stop and say so.
 - Recall text begins with a summary/warning. Select a nonempty memory result
   (`#<id> [pct%] [type] content`) before adding a continuity heading. Test both
   header-only and populated responses with enough output budget to expose them.
+  The daemon renders the same `#<id> [pct%] [type] (on: date) text` lines for
+  `mcp__chitta__recall`; the row text is the memory's first line, so `[done]`
+  and `[correction]` prefixes are content, not extra fields.
+- On this cluster the Codex sandbox can panic with "bubblewrap is unavailable"
+  for a command; the command then has no exit text and the outcome ledger
+  records `exit_code: null` for it (platform limit, not a hook bug). Rerun the
+  command; do not report the null as a failure of the hooks.
 
 Deployment instructions remain in `CLAUDE.md` for the orchestrator. Source
 changes in this worktree become live only through that reviewed deployment.

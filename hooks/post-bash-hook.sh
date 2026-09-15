@@ -183,7 +183,9 @@ import sys,json; d=json.load(sys.stdin)
     _milestone_content=""
     _combined_out="${output}${stderr}"
 
-    if echo "$command" | grep -qE '^\s*git\s+commit(\s|$)'; then
+    # Commits are usually chained (`git add … && git commit …`), so match at
+    # any command boundary, not only at the start of the line.
+    if echo "$command" | grep -qE '(^|&&|;|\|\|)\s*git\s+(-C\s+\S+\s+)?commit(\s|$)'; then
         _msg=$(echo "$command" | grep -oE -- "-m\s+['\"]?[^'\"]+['\"]?" | sed "s/-m\s*['\"]//;s/['\"]$//" | head -c 120)
         [[ -z "$_msg" ]] && _msg=$(echo "$output" | grep -oE '\[.+\]' | head -1)
         _milestone_title="git commit: ${_msg:-committed}"
