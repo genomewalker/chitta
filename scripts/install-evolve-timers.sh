@@ -25,6 +25,7 @@ Type=oneshot
 WorkingDirectory=$REPO
 Environment=HOME=%h
 Environment=CHITTA_PY=$PY
+Environment=EVOLVE_PYTHON=$PY
 Environment=PATH=%h/.local/bin:%h/.claude/bin:/usr/local/bin:/usr/bin:/bin
 ExecStart=/bin/bash -lc '$3 >> $LOG_DIR/$1.log 2>&1'
 EOF

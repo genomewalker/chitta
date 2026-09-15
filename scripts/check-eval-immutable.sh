@@ -5,4 +5,4 @@ if [[ $# != 2 ]]; then
     exit 2
 fi
 root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-exec python3 "$root/benchmarks/check_eval_immutable.py" "$1" "$2"
+exec "${CHITTA_PY:-python3}" "$root/benchmarks/check_eval_immutable.py" "$1" "$2"
