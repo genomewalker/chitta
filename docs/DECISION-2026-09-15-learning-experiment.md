@@ -104,3 +104,45 @@ Plus `scripts/eval-learning.sh`: entry point reusing the replica launcher.
 **Estimate:** 16–24 engineering hours, plus 6–20 serial execution hours; historical-state recovery may extend this.
 
 **Largest invalidation risk:** future information retained in older memories or shared state despite creation-time filtering.
+
+## Amendment — 2026-09-15: prospective post-cut treatment (follow-up 3)
+
+This amendment supersedes the historical-cohort and ambiguous-exclusion rules
+above; the original decision and memo remain unchanged as history.
+
+- `cohort` capture records only the cut timestamp and hashed store manifest.
+  Every record created at or before the cut is baseline in both arms, with no
+  historical writer classification.
+- For each task T strictly after the cut, the treatment is records created in
+  (cut,T] by queue/observe `source=distillation` or native-distiller
+  `derived_from`. Combined source=distillation and derived_from lineage remains
+  automatic (the labelled bash observe path can emit both). The requested native
+  writer includes operational value facts
+  at `native_distiller.cpp:326`, superseding their earlier exemption. Explicit
+  remember/learn writes, corrections, [artifact]/[done] hook signals and episodes
+  stay in both arms through T.
+- Task freeze inspects the later immutable source through a quiescent probe;
+  it retains the original cut manifest separately. Post-cut records without
+  writer provenance are hard errors listed by ID and kind. Missing timestamps,
+  contradictory evidence or unavailable required parent evidence also block
+  freeze. No unlabelled population is dropped from both arms.
+- Official task freeze inventories all store realms to cover global fallback
+  and graph neighbors, while task recall remains pinned to project:cc-soul.
+  Both arms remove all records created after T. B additionally removes only
+  that task's automatic cohort. Exact-ID lookup, hybrid, graph and correction
+  lane checks verify both exclusion sets. The task artifact and manifest pin
+  per-task lists and timestamps, and exposure is checked per task: A must expose
+  its cohort at least once, B never, and neither arm may expose future IDs.
+- Timestamp filtering cannot undo later changes to older content, weights or
+  graph state. Recoverable pre-task state remains required for a valid model
+  verdict; creation-time exclusion does not certify that separate condition.
+- Read-only live inspection of project:cc-soul since 2026-09-15T00:00Z found
+  269 automatic records
+  (19 native learnings, 250 native value facts, zero source=distillation rows)
+  and two unlabelled wisdom records. Enumeration drift makes this diagnostic
+  only. `hooks/distill.sh` omits `--source distillation` in this branch; fixing
+  that writer belongs to the orchestrator on main. No hook edit is included.
+
+Implementation and count-only diagnostic:
+`benchmarks/learning/protocol.md` and
+`benchmarks/learning/evidence/live-postcut-2026-09-15.json`.

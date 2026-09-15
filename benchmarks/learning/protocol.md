@@ -12,9 +12,10 @@ This harness builds evidence; only the orchestrator makes the official cut and r
 2. Start a quiescent **probe clone** with the unchanged replica launcher, using
    the immutable copy as `CHITTA_LIVE_MIND` (the launcher's source variable).
    Use a private `CHITTA_EVAL_MIND`, HOME, port and runtime directory.
-3. Enumerate provenance, without task recall inspection. The cut is the timestamp
-   recorded when `cohort.json` is produced. `--source` binds the probe's selected
-   family to the immutable source; stopping a probe must never replace that source.
+3. Capture the cut timestamp and fully hashed store family manifest in
+   `cohort-draft.json` (schema 2). Do not enumerate or classify historical writers.
+   Everything created at or before the cut is baseline in both arms. `--source`
+   binds the probe's selected family to the immutable cut copy.
 4. Collect the **next 20 eligible graded prompts from real sessions after the cut**,
    in timestamp order. Record every skipped prompt and exclusion reason in
    `config.selection_exclusions`. Do not choose prompts based on recall or outcomes.
@@ -28,7 +29,13 @@ This harness builds evidence; only the orchestrator makes the official cut and r
    nonzero exit required) and known-good commit (exit zero required). A timeout,
    missing known-good ref, changed payload or missing validation blocks freezing.
    Validation is sealed to the complete task payload; edits require revalidation.
-7. Freeze `tasks.json`, `cohort.json` and their SHA256s in `manifest.json`.
+7. At task freeze, inspect a quiescent probe of a later immutable snapshot via
+   `freeze --socket ... --source ...`. Retain the original `cut_store` and cut
+   timestamp, and the inspected task source as `store`. Freeze each task's
+   `eligible_cohort_ids` and `future_ids` in `tasks.json`; duplicate those lists,
+   timestamps and source digest in `manifest.task_cohorts[TASK_ID]`. Seal tasks
+   and cohort evidence with SHA256s. Loading recomputes membership and checks
+   each manifest entry. Refuse any task timestamp at or before the cut.
    The panel has three trials from the outset: 20 × 3 × 2 = **120 model runs**.
    No outcome-dependent task replacement or extra trials.
 
@@ -50,64 +57,58 @@ Queries, in order:
 
 - `health_check {}`: bind the responding PID's `/proc/PID/cmdline --path`
   to the store. The current health response does not include `db_path`.
-- `list_memories_brief {"realm":"project:cc-soul","limit":100,"offset":N}`,
+- Official freeze: `list_memories_brief {"realm":"","limit":100,"offset":N}`
+  inventories **all realms**, because hooks can use global fallback and graph
+  neighbors. `inventory_scope=all` is required for official artifacts. Live
+  diagnostics remain scoped to `project:cc-soul` for a comparable count,
   incrementing N by the returned count **until an empty page**. The daemon caps
   page sizes. Duplicate IDs or a changed final enumeration invalidate the cut.
-- `query_graph {"object":"distillation"}`: retain only triplets whose predicate
-  is exactly `source`; `tagged=distillation` does not establish a writer.
-- For **every** enumerated ID: `query_graph {"subject":"ID"}` and
-  `memory_provenance {"id":"ID"}`. Keep IDs as decimal strings; never round u64
-  identifiers through floating-point JSON tools.
-- For every `derived_from` object: `get {"id":"PARENT"}`, requiring an existing
-  parent whose type is `episode`. Keep the parent record with the child's evidence.
+- For every enumerated ID, `memory_provenance {"id":ID}` supplies a required
+  creation timestamp. Use lossless JSON integers and validate the returned ID
+  (the live string-ID parser fails above 2^63). No timestamp means a hard error.
+- Records created at or before the cut retain only ID, kind and timestamp.
+  **Do not query or classify their writer provenance.**
+- For post-cut records, `query_graph {"subject":"ID"}` supplies exact writer
+  triplets; `tagged=distillation` is not writer evidence. For `derived_from`,
+  retrieve each exact parent with `get {"id":"PARENT"}` and validate episode
+  provenance. Retain triplets, parents, metadata and content SHA256.
 - Repeat family selection/manifests/file-size checks and enumeration. Full
-  source-file SHA256s are required for freezing. A live `--dry-run` diagnostic
-  hashes manifests, records selected file sizes, and is explicitly ineligible.
+  source hashes and stable enumeration are mandatory for task freeze. Live
+  `--dry-run --cut-timestamp-ms ...` inspection is diagnostic only; it records
+  the current manifest, never invents a historical cut manifest.
 
-Classification precedence:
+Post-cut classification precedence:
 
 | Evidence | Treatment |
 | --- | --- |
-| Kind correction or episode | Exclude: preserved in both arms, regardless of writer. |
-| Conflicting source triplets, or source plus derived_from | Unresolved. |
-| Exact source=distillation | Include queue automatic admission, across kinds other than the preserved kinds. |
-| Another explicit source (including mcp_tool) | Exclude, recording that source. |
-| ingested_from | Exclude the separate ingester writer; its derived_from is not native-distiller evidence. |
-| derived_from → existing episode; no other source or ingested_from; kind wisdom, belief, preference or milestone | Include native learning. These are the kinds emitted by native_distiller.cpp:45/185. |
-| Same native episode provenance; kind operational | Exclude deterministic value facts (native_distiller.cpp:316). |
-| Same episode provenance, any other non-preserved kind | Include native output; record the unexpected kind. |
-| No writer provenance or unavailable derived parent | Ambiguous: exclude from BOTH arms. |
-| Existing non-episode derived parent | Contradictory provenance: unresolved. |
+| Correction or episode | Explicit/preserved; stays in both arms. |
+| Conflicting source triplets, or non-distillation source plus derived_from | Hard error: unresolved. |
+| Exact source=distillation (also with derived_from lineage) | Automatic queue/observe admission; the labelled bash distiller may emit both. |
+| Another explicit source, including mcp_tool or hook_regex | Explicit write; stays in both arms. |
+| ingested_from | Separate ingester; stays in both arms. |
+| derived_from → existing episode, without another source or ingested_from | Automatic native distiller, including operational value facts at native_distiller.cpp:326 and unexpected output kinds. |
+| Explicit [artifact]/[done] hook signal without another writer | Stays in both arms. |
+| No writer provenance | Hard error, listing every ID and kind; fix the unlabelled writer. |
+| Missing or non-episode derived parent | Hard error: unresolved. |
 
-Every record includes its reason, triplets, parent evidence, content hash and
-available provenance metadata. Some live `memory_provenance` replies contain
-malformed JSON; this supplemental endpoint's failure is retained verbatim in
-the diagnostic. Membership still requires the independently available exact
-triplets and memory/parent records. An unavailable required query fails the
-enumeration. **Only contradictory provenance is unresolved and blocks freeze.**
-Missing writer provenance is ambiguous, excluded from both arms. Enumeration
-instability separately invalidates a cut. Report ambiguous IDs, kinds, creation
-dates before versus on/after 2026-03-26 (UTC), unknown dates, and recall exposure.
-Metadata is queried with a lossless JSON integer and its ID checked: this avoids
-the live signed-string parser bug above 2^63. Graph evidence always uses exact
-decimal strings. Historical access-count share is labeled as a proxy, never as
-measured arm A injection share. A read-only diagnostic has no trial injections;
-its A share remains unmeasured. Trial telemetry measures that share after exclusion.
-
-Per-task eligible ID lists are frozen with the task panel. In this prospective,
-single-realm design every task uses the same complete eligible cohort. The
-classifier does not silently omit unresolved records or expand the treatment
-to ingestion, explicit memories, corrections, episodes or value facts.
+For task timestamp T, the treatment is **automatic records created in (cut,T]**.
+Every record created after T, including explicit writes, is future information
+and excluded from both arms. Post-cut unlabelled records block freeze even if
+later than every task; they are never silently removed as a population. There
+is no global historical cohort or ambiguous-record exclusion. Old schema-1
+freezes must be regenerated.
 
 ## Trial execution and isolation
 
 Each paired task/trial randomizes A/B order from the manifest seed, independently
 of outcomes. Each arm starts a new clone with `scripts/eval-replica.sh`:
 
-- **Both arms:** remove and verify all frozen ambiguous IDs through exact gets
-  and all exclusion lanes before task recall. They belong to neither arm.
-- **A:** source state minus ambiguous records, including the treatment cohort.
-- **B:** soft-delete every cohort ID with `forget`. Require each exact `get`
+- **Both arms:** remove the task's `future_ids` with `forget`, then verify
+  exact-ID absence and every exclusion lane; save `future-exclusion.json`.
+- **A:** retain baseline, explicit writes through T, and the task's automatic
+  cohort; verify each eligible cohort ID still resolves.
+- **B:** additionally remove only the task's `eligible_cohort_ids` with `forget`.
+  Save `exclusion.json`. For both exclusion sets, require each exact `get`
   to return the daemon's explicit “Memory not found” response. Transport errors
   are failures, never absence. Query the task prompt through fused
   `recall(strategy=hybrid)`, graph `recall_spreading`, correction-tag recall,
@@ -195,7 +196,10 @@ reported outcome, not an error.
 
 Report every paired result, grader/agent failures, cohort/total injections, empty
 turns, lane failures, and median/p95 recall-lane and hook latency. At least one
-A turn must inject a cohort ID; B must have exactly zero cohort exposure.
+A turn **for each task** must inject that task's cohort ID; B must have exactly
+zero cohort exposure. Future-record injections must be zero in both arms, with
+verified exclusions. Per-task report rows retain lists and A/B exposure counts;
+one task's A exposure cannot validate another task.
 
 For binary grader success s:
 
@@ -205,7 +209,7 @@ For binary grader success s:
 
 With three trials, **retain automatic admission iff Δ ≥ 3**, equivalently nine
 net A successes across 60 attempts per arm. Otherwise a valid result retires
-**both tested free-form writers**, including queue admission. Use the integer
+**the tested automatic writers**, including queue admission. Use the integer
 net-success threshold to avoid floating-point boundary errors.
 
 Print **NO VERDICT** for fixture/dry runs, wrong panel/trial count, missing or
@@ -224,7 +228,8 @@ PY=/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/bin/python3
 
 # Diagnostic only. No official cut; read-only RPCs, scratch output.
 "$PY" benchmarks/learning/freeze.py cohort --socket "$LIVE_SOCKET" \
-  --realm project:cc-soul --dry-run --out /tmp/learning-cohort-preview.json
+  --realm project:cc-soul --dry-run --cut-timestamp-ms 1789430400000 \
+  --out /tmp/learning-cohort-preview.json
 
 # Orchestrator only, after starting a probe clone of an immutable COPY:
 "$PY" benchmarks/learning/freeze.py cohort --socket "$PROBE_SOCKET" \
@@ -233,6 +238,7 @@ PY=/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/bin/python3
 "$PY" benchmarks/learning/freeze.py task add --entry entry.json --tasks tasks-draft.json
 "$PY" benchmarks/learning/freeze.py task validate --tasks tasks-draft.json
 bash scripts/eval-learning.sh freeze --tasks tasks-draft.json \
+  --socket "$TASK_PROBE_SOCKET" --source "$TASK_FROZEN_COPY" \
   --cohort cohort-draft.json --config config.json --out frozen
 bash scripts/eval-learning.sh run --manifest frozen/manifest.json \
   --trials 3 # output defaults outside this checkout

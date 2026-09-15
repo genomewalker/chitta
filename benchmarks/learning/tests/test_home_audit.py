@@ -1,4 +1,4 @@
-"""Behavior gates for screening isolation and ambiguous cohort policy."""
+"""Behavior gates for screening isolation and prospective cohort policy."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from audit import CAVEAT, TOOLS, audit_access, audit_trial, deny_rules
-from freeze import ambiguous_population, classify
+from freeze import classify
 from isolation import probe
 from runner import aggregate, prepare_hooks, private_environment
 
@@ -196,22 +196,12 @@ class AuditTests(unittest.TestCase):
 
 
 class PopulationTests(unittest.TestCase):
-    def test_ambiguous_histogram_and_exposure(self):
-        evidence = [
-            dict(
-                id=str(i),
-                kind="signal",
-                classification="ambiguous",
-                created_at_ms=ts,
-                access_count=2,
-            )
-            for i, ts in enumerate((1, 1774483200000, None))
-        ]
-        report = ambiguous_population(evidence)
-        self.assertEqual(report["count"], 3)
-        self.assertEqual(list(report["creation_date_histogram"].values()), [1, 1, 1])
-        self.assertEqual(report["historical_access_share"], 1)
-        self.assertIsNone(report["arm_a_recall_exposure"]["share"])
+    def test_explicit_signals_are_preserved_but_unlabelled_wisdom_is_not(self):
+        for marker in ("artifact", "done"):
+            row = classify({"id": "1", "kind": "signal", "content": f"[{marker}] saved"}, [], {})
+            self.assertEqual(row["classification"], "excluded")
+        row = classify({"id": "1", "kind": "wisdom"}, [], {})
+        self.assertEqual(row["classification"], "unlabelled")
 
     def test_unexpected_native_kind_included_and_conflict_blocks(self):
         derived = {"subject": "1", "predicate": "derived_from", "object": "2"}

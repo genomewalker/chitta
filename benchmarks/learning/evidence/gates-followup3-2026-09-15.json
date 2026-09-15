@@ -1,0 +1,45 @@
+{
+  "base": "b03a25e5",
+  "bash_n": "PASS: unchanged scripts/eval-learning.sh",
+  "eval_immutable": {
+    "current_main_comparison": "FAIL: upstream-only scripts/eval-replica.sh change on main; no immutable paths edited by this stream",
+    "result": "PASS against stream base",
+    "stream_base": "b03a25e5"
+  },
+  "fixture": {
+    "outcomes": 8,
+    "path": "/tmp/lrn-postcut-915-results",
+    "rejected": 1,
+    "report_reproduced": true,
+    "source_unchanged": true,
+    "valid": 7,
+    "verdict": "NO VERDICT: synthetic panel and one existing hook-output/ledger mismatch"
+  },
+  "hook_shell_tests": {
+    "isolation": "fresh HOME/mind/queue/runtime/socket per script",
+    "logs": "/tmp/learning-followup3-hooks.R9v6sQ",
+    "result": "PASS",
+    "scripts": 18
+  },
+  "learning_unittest": {
+    "log": "/tmp/learning-followup3-harness.log",
+    "result": "PASS",
+    "tests": 37
+  },
+  "mcp_unittest": {
+    "log": "/tmp/learning-followup3-mcp.log",
+    "result": "PASS",
+    "tests": 127
+  },
+  "model_calls": 0,
+  "official_cohort_frozen": false,
+  "ruff_check": "PASS",
+  "ruff_format_check": "PASS",
+  "sandbox_tool_failures": "Default exec and apply_patch failed because bubblewrap helper is missing; exec rerun through approval review.",
+  "shellcheck": "PASS: /tmp/learning-shellcheck/shellcheck; unchanged scripts/eval-learning.sh",
+  "smriti_unittest": {
+    "log": "/tmp/learning-followup3-smriti.log",
+    "result": "PASS",
+    "tests": 46
+  }
+}

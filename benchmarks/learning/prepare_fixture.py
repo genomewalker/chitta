@@ -49,7 +49,9 @@ def prepare(
         raise ValueError("fixture source must be the eval replica, never the live mind")
     env = private_environment(out / "source", live, config)
     ctypes.CDLL(None).prctl(36, 1, 0, 0, 0)
-    ids, evidence = [], []
+    evidence = []
+    cut = now_ms()
+    cut_store = family(source)
     try:
         rpc = start_replica(env, source, out / "source-launch.log")
         for name in ("saffron", "cobalt"):
@@ -67,24 +69,25 @@ def prepare(
                 confidence=0.99,
             )
             mid = str(result["id"])
-            ids.append(mid)
             memory = rpc.call("get", id=mid)
+            memory["created_at_ms"] = rpc.call("memory_provenance", id=int(mid))["meta"][
+                "created_at_ms"
+            ]
             trips = rpc.call("query_graph", subject=mid)["triplets"]
             evidence.append(classify(memory, trips, {}))
         rpc.call("compact_wal")
     finally:
         stop_replica(env, out / "source-launch.log")
     source_family = family(env["CHITTA_EVAL_MIND"])
-    cut = now_ms()
     cohort = {
-        "schema": 1,
+        "schema": 2,
         "fixture": True,
         "preview": False,
         "realm": REALM,
         "cut_timestamp_ms": cut,
         "store": source_family,
+        "cut_store": cut_store,
         "enumeration_stable": True,
-        "ids": ids,
         "unresolved": [],
         "evidence": evidence,
         "fixture_note": "Only two synthetic observe source=distillation rows; not an official cohort",
@@ -114,7 +117,7 @@ def prepare(
             "cwd_sha": initial,
             "known_good": good,
             "prompt": f"Apply the LearningFixture {name} readiness convention to {name}.txt.",
-            "prompt_timestamp_ms": cut + index + 1,
+            "prompt_timestamp_ms": evidence[index]["created_at_ms"],
             "transcript_sha256": digest(repo / f"{name}.txt"),
             "selection_rule": "next_eligible_graded_prompt",
             "selection_note": "Synthetic prospective pipeline fixture",
@@ -143,7 +146,14 @@ def prepare(
     write_json(tasks_path, tasks)
     write_json(out / "config.json", config)
     freeze(tasks_path, out / "cohort-draft.json", out / "config.json", out / "frozen", fixture=True)
-    print(json.dumps({"fixture_manifest": str(out / "frozen/manifest.json"), "cohort_ids": ids}))
+    print(
+        json.dumps(
+            {
+                "fixture_manifest": str(out / "frozen/manifest.json"),
+                "cohort_ids": [e["id"] for e in evidence],
+            }
+        )
+    )
 
 
 def main():
