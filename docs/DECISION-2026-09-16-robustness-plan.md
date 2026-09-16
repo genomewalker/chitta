@@ -60,8 +60,15 @@
 ### Phase 1 — One locking authority (highest risk)
 - This is a concurrency redesign. Inventory (Astra): the global lock today protects the C++ task-ledger tables and revision transactions (`task_ledger.hpp`, `field_task_ledger.cpp`); the query LRU, health/soul caches, distill settings, subconscious queues, sadhana state, queue counters, the embed queue and budget counters already have local protection; registrations, pointers and callbacks need publication and lifetime discipline.
 - Sequence: (a) a ledger transaction mutex; (b) audit maintenance, queue and subconscious callers for multi-FFI atomicity and durable sync; (c) instrument Rust lock waits and holds so `[lockprof]` silence is not vacuous once the dispatcher lock goes; (d) migrate one handler class at a time behind `CHITTA_GLOBAL_LOCK=1` (a real switch covering background callers too, tested, not the current allow-lists); (e) `scripts/stress-rpc.py` with 12 writers + 12 readers, invariant and deadlock detection, run per class migrated.
-- Exit gate: stress run clean for 5 minutes with zero Rust-side holds over 50 ms; ordered recall identity checked on an unchanged corpus separately from the stress run (20 distinct queries, not one query 20 times); ctest; a live week with no hold over 150 ms.
+- Exit gate: stress run clean for 5 minutes with zero Rust-side holds over 50 ms; ordered recall identity checked on an unchanged frozen replica separately from stress using `scripts/restart-identity.py --restarts 3` (20 distinct committed golden queries, 20/20 on each restart) and `--within-process` (20/20), with a pinned evaluation clock, complete query embeddings, and no warm-up panel calls; invocation and private-copy requirements in `docs/FIELD_PERF.md`; ctest; a live week with no hold over 150 ms.
 - Rollback: the switch above, kept for two release cycles.
+
+> Gate note 2026-09-16 (afternoon): the "20/20 ordered recall identity across
+> a restart" exit gate fails on unchanged main (15, 18, 11, 19 and 16 of 20 in
+> three independent streams; a fixed-query control stays 20/20). Until
+> `feat/restart-identity` root-causes it, running phases are held to "no worse
+> than before on the same replica copy, same script"; the 20/20 gate returns
+> once the shared `scripts/restart-identity.py` passes on main.
 
 ### Phase 3 — Memory that knows what is current
 - Answer repository questions from the index first: extend code intel to Markdown headings (`code_intel.hpp` currently excludes Markdown), make the FileChanged hook handle deletions and lose its 300 s throttle for the index path, validate content hashes at query and startup because watchers miss edits. Identity is repository + path + heading (or symbol); the content hash is the version.
@@ -78,6 +85,14 @@
 ### Phase 4 — Surface reduction (with Phase 2)
 - Keep the existing tiering (`core` advertised, `advanced` and hidden callable). Add `scripts/check-mcp-surface.py` that measures the filtered `tools/list` and its payload in tokens for the model in use; target ≤ 80 advertised and payload ≤ 8k tokens. Unadvertised handlers are promoted, moved to advanced, or deleted; hidden direct calls stay compatible; contracts unchanged for kept tools.
 
+> Phase 4 status 2026-09-16 (afternoon): merged and deployed (757aa78c).
+> Advertised `tools/list` 89 → 54 tools, ~11.0k → ~6.3k estimated tokens;
+> `scripts/check-mcp-surface.py` gates core ≤ 80 and ≤ 8000 tokens in CI,
+> new tools default to advanced, hidden tools stay callable directly and via
+> `advanced(tool=...)`. Docs regenerate with
+> `python3 scripts/gen-tools-static.py --docs`. Every tier change and its
+> evidence is in CHANGELOG.md.
+
 ### Phase 5 — Policy out of bash
 - Move admission, budget accounting and lane fusion behind daemon RPCs incrementally (`recall_lanes` and the task-ledger RPC exist), keeping local safety checks and timeout fallbacks in the hooks. One implementation serves Claude Code and Codex.
 - `scripts/bench-hook-parity.py` pins clock and session inputs, records per-process exit statuses (the current runner swallows them) and compares whole hook outputs before and after each move.
@@ -85,6 +100,7 @@
 
 ## Backlog (owner-listed, not yet scheduled)
 
+- Production recall silently degrades under load: the 50 ms query-embedding deadline (`CHITTA_RECALL_EMBED_WAIT_MS`) drops the semantic lanes and falls back to keyword-only without any marker in the result. Found by the restart-identity stream on 2026-09-16 (13/20 identical restarts were exactly the ones with missing embeddings). Decide a budget that fits the prompt-hook p95 and mark degraded results (`status`) so the hook and the canary can count them.
 - **Independent qualification stage for evolve verdicts** (card
   `rekursiv-qualification-stage`, from rekursiv.ai's auto-autoresearch run):
   a second agent re-measures a candidate on a fresh replica before a verdict

@@ -7,31 +7,80 @@ server facade owns shared state and dependency overrides across all entry points
 from __future__ import annotations
 
 from mcp.types import Tool
+from tools_static import COMPOSITE_TOOLS, DAEMON_HANDLER_NAMES, TOOLS
 
-# Tools to HIDE from tools/list (still callable, just not listed)
-# Goal: Expose only ~30 essential tools to save context tokens
-#
-# INTERNAL_TOOLS: Maintenance/hooks only - completely hidden
-# ADVANCED_TOOLS: Available but not listed (use via direct call or ToolSearch)
-# SPECIALIZED_TOOLS: Domain-specific tools that most sessions don't need
+# Explicit discovery budget. Evidence and every tier change are recorded in
+# CHANGELOG.md (2026-09-16 Phase 4). New tools default to advanced; adding a
+# schema must never silently spend the core context budget.
+CORE_TOOLS = {
+    "advanced",
+    "checkpoint",
+    "code_context",
+    "codebase_overview",
+    "connect_temporal",
+    "correction_check",
+    "dream_list",
+    "dream_start",
+    "dream_status",
+    "dream_wander",
+    "explore_expand",
+    "explore_neighbors",
+    "explore_peek",
+    "explore_recall",
+    "find_symbol",
+    "forget",
+    "get",
+    "habit_list",
+    "habit_match",
+    "habit_strengthen",
+    "health_check",
+    "learn",
+    "learn_codebase",
+    "ledger_get",
+    "ledger_list",
+    "ledger_load",
+    "ledger_save",
+    "long_task_active",
+    "long_task_complete",
+    "long_task_event",
+    "long_task_snapshot",
+    "long_task_start",
+    "long_task_update",
+    "lookup",
+    "memory_edit",
+    "memory_outcome",
+    "msg_send",
+    "observe",
+    "query_graph",
+    "read_symbol",
+    "realm_detect",
+    "recall",
+    "recall_analogy",
+    "recall_keyword",
+    "recall_lanes",
+    "remember",
+    "research",
+    "run_hint_enricher",
+    "sadhana",
+    "set_memory_type",
+    "smart_context",
+    "smart_recall",
+    "soul_context",
+    "triplets",
+}
 
+# Maintenance and hook plumbing remain callable without being advertised.
 INTERNAL_TOOLS = {
     # Maintenance
     "cleanup",
-    "cleanup_code_wisdom",
     "hygiene_run",
     "hygiene_stats",
     "consolidation_scan",
     "consolidation_merge",
     "consolidation_auto",
     "batch_forget",
-    "sql_query",
-    "migrate_vss",
     "reembed_memories",
     "dedupe_symbols",
-    "background_run_cycle",
-    "background_schedule",
-    "background_status",
     # Metacognition internals
     "metacognition_corrections",
     "metacognition_outcomes",
@@ -70,7 +119,6 @@ INTERNAL_TOOLS = {
     "export_soul",
     "import_soul",
     # Research internals
-    "connect_batch",
     "research_cycle",
     "research_store",
     "research_topics",
@@ -98,328 +146,10 @@ INTERNAL_TOOLS = {
     "dream_cancel",
 }
 
-ADVANCED_TOOLS = {
-    # Memory manipulation
-    "strengthen",
-    "weaken",
-    "tag",
-    "update",
-    "get",
-    "query_graph",
-    "expand_memory",
-    # Realms
-    "realm_add",
-    "realm_detect",
-    "realm_get",
-    "realm_list",
-    "realm_remove",
-    "realm_set",
-    "realm_visibility",
-    # Goals
-    "goal_set",
-    "goal_get",
-    "goal_list",
-    "goal_complete",
-    "goal_progress",
-    # Habits
-    "habit_observe",
-    "habit_match",
-    "habit_list",
-    "habit_strengthen",
-    "habit_weaken",
-    # Anticipation
-    "anticipation_predict",
-    "anticipation_observe",
-    "anticipation_list",
-    "anticipation_success",
-    "anticipation_filter",
-    # Calibration
-    "calibration_record",
-    "calibration_score",
-    # User profile
-    "profile_get",
-    "profile_observe",
-    "profile_update",
-    # Curiosity
-    "curiosity_gaps",
-    "curiosity_note_gap",
-    "curiosity_resolve",
-    # Narrative
-    "narrative_history",
-    "narrative_log",
-    "narrative_status",
-    # Context Repository (Letta-inspired)
-    "memory_history",
-    "memory_revert",
-    "pin_memory",
-    "unpin_memory",
-    "list_pinned",
-    "memory_lock",
-    "memory_unlock",
-    "memory_lock_status",
-    "propose_change",
-    "list_merge_queue",
-    "resolve_merge",
-    # Ledger (session checkpoints)
-    "ledger_save",
-    "ledger_get",
-    "ledger_list",
-    "ledger_load",
-    "ledger_delete",
-    # Episodes
-    "create_episode",
-    "episode_cluster_status",
-    "get_turns",
-    # Themes
-    "theme_assign_orphans",
-    "theme_get",
-    "theme_list",
-    "theme_maintain",
-    "theme_recall",
-    "theme_stats",
-    # Long tasks
-    "long_task_active",
-    "long_task_complete",
-    "long_task_evaluate",
-    "long_task_event",
-    "long_task_get",
-    "long_task_snapshot",
-    "long_task_start",
-    "long_task_update",
-    # Messaging
-    "msg_history",
-    "msg_inbox",
-    "msg_send",
-    "msg_respond",
-    "msg_ack",
-    "msg_ack_all",
-    "session_list",
-    "session_sync",
-    # Explore tools (RLM-style)
-    "explore_expand",
-    "explore_neighbors",
-    "explore_peek",
-    "explore_recall",
-    # Claims/entities
-    "get_entities",
-    "get_policies",
-    "get_relationship_events",
-    "query_claims",
-    # Learning — individual learn_* tools replaced by unified `learn` gateway
-    "learn_analysis",
-    "learn_approach",
-    "learn_codebase",
-    "learn_correction",
-    "learn_insight",
-    "learn_milestone",
-    "learn_outcome",
-    "learn_preference",
-    # Research — individual research_* tools replaced by unified `research` gateway
-    "research_cycle",
-    "research_store",
-    "research_topics",
-    # Recall variants — replaced by unified `recall` with strategy param
-    "recall_by_priority",
-    "recall_temporal",
-    "recall_temporal_events",
-    "hybrid_recall",
-    "smart_recall",
-    # Sadhana — individual sadhana_* tools replaced by unified `sadhana` gateway
-    "sadhana_checkpoint",
-    "sadhana_list",
-    "sadhana_pause",
-    "sadhana_resume",
-    "sadhana_set_goal",
-    "sadhana_set_interval",
-    "sadhana_set_model",
-    "sadhana_start",
-    "sadhana_status",
-    "sadhana_stop",
-    # Triplets — individual tools replaced by unified `triplets` gateway
-    "connect_temporal",
-    "query_triplets_temporal",
-    "triplet_history",
-    # Memory edit — individual tools replaced by unified `memory_edit` gateway
-    "set_memory_type",
-    "set_priority_tier",
-    # Maintenance — move to hidden
-    "rebuild_fts_index",
-    "compact_wal",
-    "health_check",
-    "memory_type_stats",
-    "expand_query",
-    "distill_set_model",
-    "cooccurrence_graph",
-    "find_near_duplicates",
-    "labile_memories_top",
-    "consolidate_similar",
-    "queue_status",
-    "resonance_stats",
-    # Dream management (start/wander/list/status stay accessible via dream skill)
-    "dream_start",
-    "dream_wander",
-    "dream_list",
-    "dream_status",
-    "dream_force_woke",
-    # Probe / calibration
-    "probe_calibrate",
-    "probe_seed",
-    "probe_status",
-    "behavioral_probe",
-    # Sadhana (use sadhana gateway)
-    "sadhana_set_max_turns",
-    # Trajectory compaction (Latent Briefing)
-    "trajectory_compact",
-    # Misc advanced
-    "insight_global",
-    "insight_promote",
-    "list_aspects",
-    "list_by_aspect",
-    "full_resonate",
-    "grow",
-    "connect",
-    "query",
-    # File Time Machine
-    "file_timeline",
-    "file_at_time",
-    "file_restore",
-    "file_index_session",
-    # SUS metrics
-    "get_sus_metrics",
-    # Ingest, Wiki, Training export
-    "ingest_source",
-    "wiki_export",
-    "health_check_start",
-    "export_training_pairs",
-    # Skill registry
-    "skill_upload",
-    "skill_read",
-    "skill_list",
-    "skill_search",
-    "skill_deprecate",
-    # Agent registry
-    "agent_upsert",
-    "agent_get",
-    "agent_list",
-    "agent_disable",
-    # Layer 1: Executable Constraints
-    "assert_fact",
-    "retract_fact",
-    "query_unify",
-    "query_chain",
-    "explain_fact",
-    "branch_create",
-    "branch_resolve",
-    # Layer 2: Trigger Tissue
-    "trigger_add",
-    "trigger_list",
-    "trigger_fire",
-    "trigger_dismiss",
-    # Layer 3: Predictive Memory
-    "predict_needed",
-    # Layer 4: Surprise Memory
-    "record_surprise",
-    "query_surprises",
-    "get_blind_spots",
-    "surprise_stats",
-    # Layer 5: Epistemic Debt
-    "register_debt",
-    "resolve_debt",
-    "defer_debt",
-    "query_debts",
-    "get_fragile_decisions",
-    "debt_stats",
-    # Layer 6: Integration Kernel
-    "record_feedback",
-    "get_source_weights",
-    "update_source_weight",
-    "integration_stats",
-    # Autonomous Learning (Moves 1-6)
-    "surprise_learning_stats",
-    "upsert_wisdom_candidate",
-    "update_wisdom_lifecycle",
-    "query_wisdom_candidates",
-    "wisdom_promotion_stats",
-    "attach_debt_evidence",
-    "update_scorer_model",
-    "learned_scorer_stats",
-    "effective_scorer_weights",
-    # Layer 7: Intervention Ledger
-    "start_intervention",
-    "add_observation",
-    "close_intervention",
-    "record_attribution",
-    "query_interventions",
-    "get_intervention",
-    "intervention_stats",
-    "list_open_interventions",
-    # Layer 8: Agent Protocol Memory
-    "register_task",
-    "update_task",
-    "add_delegation",
-    "link_evidence",
-    "add_probe",
-    "resolve_probe",
-    "set_criterion",
-    "get_task",
-    "query_tasks",
-    "agent_protocol_stats",
-    # Layer 9: Wisdom Homeostasis
-    "enroll_wisdom_lineage",
-    "transition_wisdom_lineage",
-    "close_rederive",
-    "query_wisdom_lineages",
-    "get_wisdom_lineage",
-    "wisdom_lineage_stats",
-    "tick_lineage_staleness",
-    "lineage_expiry_check",
-    # Contradiction detection (legacy query tools)
-    "why_active",
-    "what_superseded",
-    "show_conflicts",
-    # CEC: Event tape + CDAWG + Sequitur (Phase 1-6)
-    "log_event",
-    "recall_last_action",
-    "recall_failure_pattern",
-    "recall_causal_antecedent",
-    "recall_hdcbind",
-    "consolidation_pass",
-    "recall_counterfactual",
-    "refutation_stats",
-    "recall_motif_value",
-    "executor_flush",
-    "list_policies",
-    "recall_true_counterfactual",
-    "hypothesis_probes",
-    "turiya_status",
-    "tape_stats",
-    "verbalize_rules",
-    "queue_experiments",
-    "fep_status",
-    "routed_recall",
-    "witness_memory",
-    "reconcile_pass",
-    "harvest_scope",
-    "seed_hdc_geometry",
-    # Hint enricher
-    "run_hint_enricher",
-    # Interaction ledger (v6.0)
-    "ledger_append",
-    "ledger_query",
-    "ledger_compile",
-    "ledger_contradictions",
-    "ledger_health",
-    # Falsifiable memories / predicate store (v6.1)
-    "predicate_attach",
-    "predicate_run",
-    "predicate_list",
-    # Span lane maintenance (span_query stays listed; these are backfill/diagnostics)
-    "span_backfill",
-    "span_backfill_memories",
-    "span_stats",
-}
-
-# Combined set of tools to hide from listing (but still callable)
+# Include native handlers without MCP schemas: the gateway can call them, and
+# their absence from tools/list must not make them undiscoverable via advanced.
+ALL_TOOLS = {tool.name for tool in TOOLS + COMPOSITE_TOOLS} | DAEMON_HANDLER_NAMES
+ADVANCED_TOOLS = ALL_TOOLS - CORE_TOOLS - INTERNAL_TOOLS
 HIDDEN_TOOLS = INTERNAL_TOOLS | ADVANCED_TOOLS
 
 
@@ -443,8 +173,8 @@ def handle_advanced(ctx, arguments: dict) -> str:
 
     # If tool specified, call it
     if tool:
-        if tool not in ctx.HIDDEN_TOOLS:
-            # Check if it's a valid daemon tool at all
+        if tool not in ALL_TOOLS or tool == "advanced":
+            # Promotions must preserve existing advanced(tool=...) calls too.
             return f"Unknown tool: {tool}\nUse action='list' to see available hidden tools."
 
         tool_args = dict(tool_args)
@@ -452,8 +182,9 @@ def handle_advanced(ctx, arguments: dict) -> str:
         if error:
             return error
 
-        # Call the hidden tool via daemon
-        result = ctx.daemon_call(tool, tool_args)
+        # Preserve MCP-only implementations when a composite moves to advanced.
+        handler = ctx.COMPOSITE_HANDLERS.get(tool)
+        result = handler(tool_args) if handler else ctx.daemon_call(tool, tool_args)
         return f"[{tool}]\n{result}"
 
     # List hidden tools

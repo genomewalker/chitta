@@ -204,7 +204,7 @@ jobs:
 
       - name: Composite handler-map snapshot
         working-directory: chitta-mcp
-        run: python3 -m unittest tests.test_recall_gateway -v
+        run: python3 -m unittest tests.test_recall_gateway tests.test_mcp_surface -v
 
       # The hooks and the standalone chitta-mcp modules run under
       # `#!/usr/bin/env python3`, which on the deployment hosts is 3.9. That is

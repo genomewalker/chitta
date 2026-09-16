@@ -29,6 +29,86 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 - Clear handoff capsules even on short completion turns; add transcript-pair
   construction and strict continuation scoring with source digests. Only one
   real pair is available in the authorized source (0/1); the 18/20 gate is unmet.
+### MCP surface reduction (Phase 4, 2026-09-16)
+
+- Advertised MCP discovery: **89 → 54 tools**, **11,027 → 6,326 estimated
+  tokens** (compact tools/list result, ceil(characters / 4), Anthropic
+  approximation; no local Anthropic tokenizer). The actual filtered MCP list
+  is measured, not the daemon's 319 schemas or the 359 pre-filter MCP rows.
+  All 415 distinct schema-backed tools/native handlers are tiered: 54 core,
+  302 advanced, 59 hidden. Every retained input schema and description is
+  unchanged. No daemon implementation, recall behavior or handler was deleted.
+- `scripts/check-mcp-surface.py` calls production `server.list_tools()` and
+  enforces `--max-core 80 --max-tokens 8000` by default. New tools default to
+  advanced. Hidden direct calls remain compatible; the advanced gateway now
+  dispatches MCP composites locally instead of incorrectly forwarding them.
+  Promoted tools also retain their existing advanced(tool=...) call path.
+- Evidence: canonical skills, hook call sites/advisories, README and CLI examples;
+  read-only outcome ledger scan for 2026-08-17–2026-09-16 (9,996 records).
+  The ledger contains **no explicit MCP-call records**, so absence is not
+  evidence of disuse. Truncated Bash command heads yield partial CLI evidence:
+  remember 38, recall 21, smart_recall/get 4 each, forget 3,
+  memory_outcome/recall_lanes/query_graph/recall_analogy 2 each,
+  realm_detect/triplets/recall_keyword/checkpoint/memory_edit/codebase_overview/
+  sadhana_start 1 each. Live read-only health_check and the RPC budget tracker
+  expose only aggregate counters, not a per-tool call history.
+- Core covers these observed workflows through their tools and existing
+  learn/research/sadhana/triplets/memory_edit gateways. Existing hook plumbing
+  stays hidden; specialized callers retain direct access. Code helpers without
+  evidence in those consumers remain advanced. `advanced` itself is core so
+  every unadvertised handler can be discovered and called on demand.
+- Regenerate schemas and docs with `python3 scripts/gen-tools-static.py --docs`.
+  This runs `scripts/gen-tools-docs.py` with current metadata readers: the old
+  standalone renderer still assumes pre-extraction policy and CLI tables.
+  Docs use frozen MCP schemas and list all 76 native-only handlers separately.
+- Validation: 159 MCP tests, 21 hook shell suites, 4 hook Python tests,
+  46 SMRITI tests, skills sync, CI Ruff and byte-identical contracts pass.
+  Native release build passes (289 Rust tests, 2 ignored); CTest's initial
+  17 passes plus all 8 failed-case reruns pass with `OPENBLAS_NUM_THREADS=1`,
+  `OMP_NUM_THREADS=1`, `RAYON_NUM_THREADS=1` (initial NFS fixture timeouts).
+  **Required restart-identity baseline remains unmet on unchanged native code:**
+  worktree daemon 19/20 distinct queries, cached repeat 16/20, bounded-worker
+  repeat 16/20; the fixed-query control is 20/20 throughout. These runs used
+  separate private copies of replica snapshot `bbcaed33`; no live store writes.
+
+- **Core → advanced (66):** Specialized variants, diagnostic/maintenance APIs and helpers without direct evidence in the audited consumers; callable names and schemas retained.
+  `5w_search`, `ack_memory`, `approve_memory`, `ask`, `assoc_census`, `assoc_decay`,
+  `compact_context`, `conflict_inspector`, `cross_harness_conflicts`, `densify_backfill`,
+  `detect_contradictions`, `disable_source`, `distill_now`, `embed_coverage`, `embed_probe`,
+  `flush_embeddings`, `forget_kind`, `get_embeddings`, `get_evidence_type`, `graph_pagerank`,
+  `graph_traverse`, `impl_start`, `labile_memories`, `list_by_status`, `list_memories_brief`,
+  `log_decision`, `log_event_ex`, `memory_provenance`, `memory_status`, `nack_memory`,
+  `pending_embed_ids`, `promote_memory`, `provenance_check`, `prune_episodes`,
+  `read_function`, `read_transcript`, `recall_session`, `recall_smart`, `recall_spreading`,
+  `recall_ucb1`, `reconsolidate`, `reject_memory`, `remap_realms`, `remember_batch`,
+  `remember_typed`, `resolve_contradiction`, `save_spectral_snapshot`, `scan_contradictions`,
+  `search_symbols`, `semantic_backfill`, `set_affect`, `set_evidence_type`, `soul_repl`,
+  `span_query`, `spectral_drift`, `stageb_set_surface`, `structured_recall`, `symbol_callees`,
+  `symbol_callers`, `task_state`, `think_wander`, `trim_realm_names`, `triplet_query_as_of`,
+  `triplet_supersede`, `verify_correction`, `what_do_i_know_about`.
+- **Advanced → core (31):** Explicit skill, hook or recent CLI consumers; promoted without changing schemas.
+  `connect_temporal`, `dream_list`, `dream_start`, `dream_status`, `dream_wander`,
+  `explore_expand`, `explore_neighbors`, `explore_peek`, `explore_recall`, `get`,
+  `habit_list`, `habit_match`, `habit_strengthen`, `health_check`, `learn_codebase`,
+  `ledger_get`, `ledger_list`, `ledger_load`, `ledger_save`, `long_task_active`,
+  `long_task_complete`, `long_task_event`, `long_task_snapshot`, `long_task_start`,
+  `long_task_update`, `msg_send`, `query_graph`, `realm_detect`, `run_hint_enricher`,
+  `set_memory_type`, `smart_recall`.
+- **Unadvertised native handlers → advanced (6):** Previously absent from both policy sets; registered implementations remain callable and are now discoverable through advanced.
+  `ledger_op`, `repl_execute`, `repl_session_delete`, `repl_session_get`, `repl_session_list`,
+  `repl_session_set`.
+- **Removed stale policy labels (9):** No registered handler or MCP schema exists in this checkout (full chitta source scan). The theme registration explicitly records that its backend was removed; these are stale listing entries, not deleted handlers. No working direct call is removed.
+  `background_run_cycle`, `background_schedule`, `background_status`, `cleanup_code_wisdom`,
+  `connect_batch`, `migrate_vss`, `sql_query`, `theme_assign_orphans`, `theme_maintain`.
+
+
+### Added
+- Restart identity gate on twenty frozen golden queries, with exact embedding
+  bytes, pre-fusion candidates, and score-component diagnostics. Replica restart
+  preserves the same store; evaluation pins recall time and gives embeddings a
+  bounded wait, rejecting incomplete semantic lanes instead of accepting fallback.
+- `no_learn` semantic recall preserves stored competitive weights and refresh
+  timestamps; learning and maintenance continue to refresh them normally.
 - 2026-09-16 follow-up validation: 200/200 writes, zero errors, embeddings
   drained; recall p95 113.9 ms during writes / 162.8 ms full window; cached
   restart 16.10 s. Full-window latency and restart gates remain unmet. Chaos
