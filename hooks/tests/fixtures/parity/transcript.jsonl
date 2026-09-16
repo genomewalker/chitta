@@ -1,0 +1,2 @@
+{"type":"user","message":{"role":"user","content":"Verify the apricot fixture and preserve durable corrections."}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Verified the apricot fixture. [PLAN] Run the parity fixtures again before moving admission. [DECISION] Keep the timeout fallback until the daemon response has been validated."}]}}

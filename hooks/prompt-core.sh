@@ -44,8 +44,10 @@ mkdir -p "$MIND_PATH" 2>/dev/null || true
 # ceiling: budget is wall-clock, not CPU; a stalled daemon still costs one
 # per-call timeout after the last check. upgrade: pass a deadline to chitta.
 _HOOK_T0=$(date +%s%3N)
+_HOOK_BUDGET_T0=$_HOOK_T0
+[[ "${CHITTA_HOOK_NOW:-}" =~ ^[1-9][0-9]{12}$ ]] && _HOOK_BUDGET_T0=$(command date +%s%3N)
 HOOK_BUDGET_MS="${CHITTA_HOOK_BUDGET_MS:-${CC_SOUL_HOOK_BUDGET_MS:-6000}}"
-budget_left() { (( $(date +%s%3N) - _HOOK_T0 < HOOK_BUDGET_MS )); }
+budget_left() { (( $(command date +%s%3N) - _HOOK_BUDGET_T0 < HOOK_BUDGET_MS )); }
 
 # Recall scheduling telemetry. EPOCHREALTIME is a Bash builtin, so lane
 # boundaries add no processes to the already latency-sensitive fan-out. The
@@ -61,6 +63,10 @@ _RECALL_CONTEXT_EMITTED=0
 _LEDGER_OUTPUT=""
 _NOW_MS=0
 _clock_ms() {
+    if [[ "${CHITTA_HOOK_NOW:-}" =~ ^[1-9][0-9]{12}$ ]]; then
+        _NOW_MS=$CHITTA_HOOK_NOW
+        return
+    fi
     local _stamp="${EPOCHREALTIME:-}"
     if [[ -n "$_stamp" ]]; then
         _NOW_MS="${_stamp/./}"
@@ -128,6 +134,8 @@ _render_lane_telemetry() {
     _LANE_TIMEOUT_JSON="{"
     for _lane in "${_LANE_ORDER[@]}"; do
         [[ -n "${_LANE_MS[$_lane]+set}" ]] || continue
+        # Pin presentation only; retain the daemon's real timeout/degraded flag.
+        [[ "${CHITTA_HOOK_NOW:-}" =~ ^[1-9][0-9]{12}$ ]] && _LANE_MS["$_lane"]=0
         _bad=""
         [[ "${_LANE_TIMEOUT[$_lane]}" == "true" ]] && _bad="!"
         _LANE_TIMING_FIELD+="${_sep}${_lane}=${_LANE_MS[$_lane]}${_bad}"

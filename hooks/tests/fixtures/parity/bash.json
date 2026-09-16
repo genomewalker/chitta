@@ -1,0 +1,1 @@
+{"hook_event_name":"PostToolUse","session_id":"p5-parity","tool_name":"Bash","tool_input":{"command":"printf 'parity fixture\\n'"},"tool_response":{"exit_code":0,"stdout":"parity fixture\n","stderr":""},"cwd":"@WORK@/project"}

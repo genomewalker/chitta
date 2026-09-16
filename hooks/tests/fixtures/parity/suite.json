@@ -1,0 +1,12 @@
+{
+  "now_ms": 1789516800000,
+  "cases": [
+    {"name":"prompt", "hook":"prompt-hook.sh", "input":"prompt.json", "contains":"[admit]", "state":{".session_active":"1\n", ".turn_index_p5-parity":"2\n"}},
+    {"name":"codex-prompt", "hook":"codex-prompt-hook.sh", "input":"prompt.json", "contains":"[admit]", "state":{".session_active":"1\n", ".turn_index_p5-parity":"2\n"}},
+    {"name":"session-start", "hook":"session-start-hook.sh", "input":"session-start.json"},
+    {"name":"bash", "hook":"post-bash-hook.sh", "input":"bash.json"},
+    {"name":"codex-bash", "hook":"post-bash-hook.sh", "input":"codex-bash.json"},
+    {"name":"stop", "hook":"stop-hook.sh", "input":"stop.json"},
+    {"name":"codex-stop", "hook":"codex-stop-hook.sh", "input":"stop.json"}
+  ]
+}

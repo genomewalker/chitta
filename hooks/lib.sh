@@ -4,6 +4,17 @@
 #
 # Common functions used across session-start, prompt, and stop hooks.
 
+# Evaluation wall clock in Unix milliseconds. Explicit date parsing remains real;
+# timeout(1) and prompt's budget clock remain unpinned. Invalid values are ignored.
+if [[ "${CHITTA_HOOK_NOW:-}" =~ ^[1-9][0-9]{12}$ ]]; then
+    date() {
+        case " $* " in
+            *' -d '*|*' --date'*|*' -r '*|*' --reference'*) command date "$@" ;;
+            *) command date --date="@${CHITTA_HOOK_NOW:0:10}.${CHITTA_HOOK_NOW:10:3}" "$@" ;;
+        esac
+    }
+fi
+
 # --- CC_SOUL_* / CHITTA_* env var alias shim -------------------------------
 # Every CC_SOUL_* knob keeps working under its CHITTA_* twin and vice versa.
 # If a caller sets only one name, this exports the other so any process that
