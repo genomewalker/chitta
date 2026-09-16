@@ -35,8 +35,11 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
   Capsules render before other context on the matching project and branch;
   turns without a verified action invalidate the previous session capsule.
 - Clear handoff capsules even on short completion turns; add transcript-pair
-  construction and strict continuation scoring with source digests. Only one
-  real pair is available in the authorized source (0/1); the 18/20 gate is unmet.
+  construction and strict continuation scoring with source digests. Read all
+  641 authorized transcripts, pair within project directories and select the
+  newest 20 cases. Both scorers produce 0/20 on that fixture: every preceding
+  session lacks an explicit final plan or usable ledger action. The 18/20 gate
+  remains unmet; scoring now reports branch mismatches and per-pair reasons.
 ### MCP surface reduction (Phase 4, 2026-09-16)
 
 - Advertised MCP discovery: **89 → 54 tools**, **11,027 → 6,326 estimated

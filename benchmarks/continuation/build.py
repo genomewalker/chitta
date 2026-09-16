@@ -9,7 +9,7 @@ import json
 import re
 from pathlib import Path
 
-DEFAULT_SOURCE = Path.home() / ".claude/projects/-maps-projects-fernandezguerra-apps-repos-cc-soul"
+DEFAULT_SOURCE = Path.home() / ".claude/projects"
 DEFAULT_OUTPUT = Path("/projects/caeg/scratch/kbd606/tmp/continuation-fixture")
 TRIVIAL_TOOLS = {"TodoWrite", "ToolSearch", "ExitPlanMode", "EnterPlanMode"}
 
@@ -83,12 +83,14 @@ def read_transcript(path):
                 "transcript": str(path),
                 "sha256": digest,
                 "start": event.get("timestamp", ""),
-                "realm": "project:cc-soul",
+                "project": str(path.parent.resolve()),
+                "realm": path.parent.name,
                 "first_prompt": "",
                 "first_tool": None,
                 "last_assistant": "",
                 "last_ledger": None,
                 "branch": event.get("gitBranch", ""),
+                "first_branch": "",
                 "cwd": event.get("cwd", ""),
             },
         )
@@ -99,6 +101,8 @@ def read_transcript(path):
         if isinstance(explicit_realm, str) and explicit_realm:
             session["realm"] = explicit_realm
         visible = text_content(content).strip()
+        if event.get("gitBranch"):
+            session["branch"] = event["gitBranch"]
         if event["type"] == "user":
             if (
                 not session["first_prompt"]
@@ -107,6 +111,7 @@ def read_transcript(path):
                 and not event.get("isCompactSummary")
             ):
                 session["first_prompt"] = visible
+                session["first_branch"] = event.get("gitBranch", "")
         else:
             if visible:
                 session["last_assistant"] = visible
@@ -151,33 +156,47 @@ def read_transcript(path):
 
 
 def build(source, count=20):
-    sessions = [s for p in sorted(source.glob("*.jsonl")) for s in read_transcript(p)]
-    realms = {}
+    # Accept one project for focused tests, or the projects root. Never recurse
+    # into subagent transcripts; only direct project/session JSONL files count.
+    paths = sorted({*source.glob("*.jsonl"), *source.glob("*/*.jsonl")})
+    sessions = [s for p in paths for s in read_transcript(p)]
+    projects = {}
     for session in sessions:
         if session["start"]:
-            realms.setdefault(session["realm"], []).append(session)
+            projects.setdefault(session["project"], []).append(session)
     pairs = []
-    for realm, rows in realms.items():
+    for project, rows in projects.items():
         rows.sort(key=lambda s: (s["start"], s["id"]))
         for previous, following in zip(rows, rows[1:]):
             if not following["first_prompt"]:
                 continue
             pairs.append(
                 {
-                    "realm": realm,
+                    "project": project,
+                    "realm": previous["realm"],
                     "previous": {
                         k: v for k, v in previous.items() if k not in {"first_prompt", "first_tool"}
                     },
                     "next": {
-                        k: v
-                        for k, v in following.items()
-                        if k
-                        in {"id", "transcript", "sha256", "start", "first_prompt", "first_tool"}
+                        "branch": following["first_branch"],
+                        **{
+                            k: v
+                            for k, v in following.items()
+                            if k
+                            in {"id", "transcript", "sha256", "start", "first_prompt", "first_tool"}
+                        },
                     },
                 }
             )
     pairs.sort(key=lambda p: (p["next"]["start"], p["next"]["id"]))
-    return {"version": 1, "requested": count, "available": len(pairs), "pairs": pairs[-count:]}
+    return {
+        "version": 2,
+        "requested": count,
+        "available": len(pairs),
+        "transcripts": len(paths),
+        "projects": len(projects),
+        "pairs": pairs[-count:],
+    }
 
 
 def main():

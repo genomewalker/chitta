@@ -1,5 +1,60 @@
 # chitta-field performance
 
+### Phase 3 review follow-up (2026-09-16)
+
+Merged main's recall diagnostics and deterministic measurement behavior, with
+Rust `847e7e3` and superproject `68cd0a37`. Recall now accepts `sources=false`
+for memory-only evaluation. Source rows retain their citations, but their
+uncalibrated BM25 ranks no longer force calibrated confidence to one:
+`source_hits` reports their count separately. A private-replica check with
+three sources preserves memory order and `max_relevance=0.813876867` in both
+modes; before the confidence fix, source merging forced it to `1.0`.
+
+The paired native binaries use a fresh private `da86decb` copy from
+`learning-cut-20260915-frozen`, pinned recall time and a bounded embedding wait.
+The before binary has no source switch, so its golden memory-only control used
+an empty source-root registry. The same copy was then registered to this
+worktree under `project:cc-soul` for default current-truth evaluation. Both
+the source-toggle build and final build use `sources=false` for golden recall.
+
+| Gate | Before | After |
+| --- | --- | --- |
+| Golden nDCG@20, three runs | 0.480414590, 0.480414590, 0.480414590 | 0.480414590, 0.480414590, 0.480414590 |
+| Current-truth, default sources | 36/50; visible 20/30, holdout 16/20 | 36/50; visible 20/30, holdout 16/20 |
+| Original five strict probes | 3/5 | 3/5 |
+| Ordered identity, three restarts | 20/20 each | 20/20 each |
+| Within-process identity | 20/20 | 20/20 |
+| Chaos, single-threaded BLAS/OMP/Rayon | 9/9 | 9/9 |
+| Prompt-hook median | 890 ms | 929 ms |
+| Same 20 continuation pairs | 0/20 | 0/20 |
+
+No current-truth question outcome or class moved; wrong-confident answers remain
+zero. Prompt median increased 39 ms, within the before-run 241 ms noise allowance.
+The golden band stored in `benchmarks/noise.json` is **0.490965206–0.494473852**,
+measured on family `bbcaed33`; both requested `da86decb` arms miss it. The source
+toggle removes the mechanical displacement without tuning anchor demotion.
+The current 36/50 retention gate passes; the original 40/50 and five-probe 5/5
+goals remain unmet. No frozen questions or acceptance bands were changed.
+
+Native verification passes: Rust **293 tests**, 2 ignored (the same Rust
+artifact in both binaries); **26/26 CTests**, **159 MCP tests**, **46 SMRITI
+tests**, CI Ruff and shell syntax/ShellCheck. Format identity remains
+`9230643459983636874`; the embedding identity sidecar remains absent. Contract
+checks print `contracts unchanged` after the authorized recall input update.
+The before hook run passed 27/27; the concurrent after run passed 26/27, with
+the saddle timing case at 174.21 ms incremental p95 against its 150 ms limit.
+Rerunning that case alone after the stress runs passed at **36.76 ms**; both
+observations are retained, with no timeout or threshold changes.
+
+The continuation builder read 641 transcripts across 382 project directories
+with conversation records, producing 258 eligible consecutive pairs. The newest
+20 all lack an explicit final plan line or usable ledger next action: strict
+production-selector replay scores **0/20**, before and after. Four builder/scorer
+tests pass, including project isolation and branch rejection. This is a failed
+18/20 gate, not evidence that historical sessions wrote these capsules. Pair IDs,
+transcript SHA-256 digests, ground truth and individual failure reasons stay in
+`/projects/caeg/scratch/kbd606/tmp/continuation-fixture/`, outside Git.
+
 ### Phase 3 source-index measurement (2026-09-16)
 
 Paired private copy of `learning-cut-20260915-frozen`, family `da86decb`:

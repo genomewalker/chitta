@@ -14,7 +14,8 @@ RULE = (
     "The capsule next_action must name an exact target path or the complete command of "
     "the next session's first non-trivial tool call. Tool-name matches count only with "
     "the same exact target path. Basenames, paraphrases and semantic similarity do not count. "
-    "Artifacts/branch fields alone do not count. Missing actions or tool calls are misses."
+    "Artifacts/branch fields alone do not count. Missing actions or tool calls are misses. "
+    "A known branch mismatch is a miss because SessionStart suppresses that capsule."
 )
 
 
@@ -90,12 +91,28 @@ def evaluate(fixture):
     rows = []
     for pair in fixture["pairs"]:
         candidate = capsule(pair["previous"])
+        previous_branch = pair["previous"].get("branch", "")
+        next_branch = pair["next"].get("branch", "")
+        if not candidate["next_action"]:
+            reason = "missing plan line"
+        elif previous_branch and next_branch and previous_branch != next_branch:
+            reason = "wrong branch"
+        elif not pair["next"].get("first_tool"):
+            reason = "missing non-trivial tool call"
+        elif not score(candidate, pair["next"]):
+            reason = "unrelated next action"
+        else:
+            reason = "exact action match"
         rows.append(
             {
                 "previous_id": pair["previous"]["id"],
                 "next_id": pair["next"]["id"],
                 "capsule": candidate,
-                "correct": score(candidate, pair["next"]),
+                "project": pair.get("project", ""),
+                "previous_branch": previous_branch,
+                "next_branch": next_branch,
+                "correct": reason == "exact action match",
+                "reason": reason,
             }
         )
     hits = sum(row["correct"] for row in rows)

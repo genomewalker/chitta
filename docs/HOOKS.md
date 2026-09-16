@@ -1293,9 +1293,9 @@ newest capsule suppresses older ones. An empty blocker is shown as `none recorde
 Short completion responses such as `Done.` also replace an earlier capsule
 with an unverified one before Stop's short-response exit.
 
-`benchmarks/continuation/build.py` reads the authorized Claude transcript
-directory, orders sessions by their earliest conversation timestamp, and takes
-the 20 newest consecutive same-realm pairs with a nonempty next-session first
+`benchmarks/continuation/build.py` reads `~/.claude/projects/*/*.jsonl` read-only,
+orders sessions within each project directory by their earliest conversation
+timestamp, and takes the 20 newest consecutive pairs with a nonempty next-session first
 prompt. It retains the preceding last visible assistant response and explicit
 ledger/capsule fields, and records the next session's actual first prompt and
 first nontrivial tool call as ground truth. Transcript IDs and SHA-256 digests
@@ -1307,11 +1307,15 @@ on preceding-session material only, with explicit ledger fields as fallback.
 The capsule's **next_action** must mention an exact target file path or complete
 command from the next session's first nontrivial tool call. A tool name alone,
 a shortened basename, similar wording, or a path only in the capsule's artifact
-list does not count. Missing evidence is a miss. This retrospective replay is
+list does not count. A known branch mismatch is a miss, matching SessionStart's
+branch filter. Missing evidence is a miss. This retrospective replay is
 identified as such; it is not evidence that old sessions wrote the new capsule.
-The available source on 2026-09-16 contained two conversational sessions plus
-one title-only transcript, yielding **one pair, 0/1 correct**. The required
-20-case, 18-correct gate is unmet; no cases or human labels were invented.
+The expanded authorized source on 2026-09-16 contained **641 transcripts** in
+382 projects with conversation records, yielding 258 eligible pairs. The newest
+20 score **0/20**: all lack an explicit final plan line or usable ledger action.
+The required 18/20 gate is unmet; no cases or human labels were invented. The
+scorer reports each pair's IDs, branch information and failure reason; fixture
+contents and those per-pair reports remain outside the repository.
 
 <!-- BEGIN CITATIONS -->
 ## References

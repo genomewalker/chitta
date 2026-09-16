@@ -9,6 +9,51 @@ import score
 
 
 class ContinuationTests(unittest.TestCase):
+    def test_projects_never_cross_pair_and_branch_gate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for project in ("one", "two"):
+                (root / project).mkdir()
+                for i in range(3):
+                    rows = [
+                        {
+                            "type": "user",
+                            "sessionId": f"{project}-{i}",
+                            "timestamp": f"2026-09-0{i + 1}",
+                            "gitBranch": f"branch-{i}",
+                            "realm": "shared-realm",
+                            "message": {"content": "continue"},
+                        },
+                        {
+                            "type": "assistant",
+                            "sessionId": f"{project}-{i}",
+                            "timestamp": f"2026-09-0{i + 1}",
+                            "gitBranch": f"branch-{i}",
+                            "message": {
+                                "content": [
+                                    {
+                                        "type": "tool_use",
+                                        "name": "Read",
+                                        "input": {"file_path": "docs/a.md"},
+                                    },
+                                    {"type": "text", "text": "Next: Read docs/a.md"},
+                                ]
+                            },
+                        },
+                    ]
+                    (root / project / f"{i}.jsonl").write_text("\n".join(map(json.dumps, rows)))
+            fixture = build.build(root, count=3)
+            self.assertEqual((fixture["transcripts"], fixture["available"]), (6, 4))
+            self.assertEqual(len(fixture["pairs"]), 3)
+            for pair in fixture["pairs"]:
+                self.assertEqual(
+                    Path(pair["previous"]["transcript"]).parent,
+                    Path(pair["next"]["transcript"]).parent,
+                )
+            self.assertTrue(
+                all(r["reason"] == "wrong branch" for r in score.evaluate(fixture)["rows"])
+            )
+
     def test_chronology_hash_and_visible_text(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
