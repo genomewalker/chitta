@@ -227,6 +227,445 @@ void QueueProcessor::write_failed_item(const std::string& line, const std::excep
     }
 }
 
+namespace {
+// Dispatch owns only references to the current item and its prepared inputs.
+// Lock acquisition, profiling, slow-lane flushes and checkpoints stay in run().
+struct QueueToolDispatch {
+    FieldStore& field_store_;
+    FieldRpcHandler& handler_;
+    std::atomic<size_t>& queue_count_;
+    std::atomic<size_t>& queue_fail_count_;
+    json& args;
+    const std::string& tool;
+    const std::string& line;
+    std::vector<float>& correction_emb;
+    std::vector<ExtractedSymbol>& file_syms;
+    std::vector<std::vector<float>>& file_sym_embs;
+    std::vector<std::string>& pending_slow;
+    float (*category_to_confidence)(const std::string&);
+    std::string (*category_to_kind)(const std::string&);
+
+    bool observe() {
+        std::string category = args.value("category", "wisdom");
+        std::string title = args.value("title", "");
+        std::string content = args.value("content", "");
+        if (!content.empty()) {
+            std::string source   = args.value("source", "hook_regex");
+            std::string evidence = args.value("evidence", "");
+
+            // ── Source trust policy (contract enforcement) ─────
+            auto policy = source_policy(source);
+            float confidence = args.contains("confidence")
+                ? args.value("confidence", 0.50f)
+                : category_to_confidence(category);
+            float decay = policy.allow_durable ? 0.005f : 0.02f;
+
+            // Clamp confidence to policy bounds
+            float orig_confidence = confidence;
+            confidence = std::min(confidence, policy.max_confidence);
+            confidence = std::max(confidence, policy.min_confidence);
+            if (orig_confidence != confidence) {
+                std::cerr << "[contract] confidence clamped for source=" << source
+                          << ": " << orig_confidence << "→" << confidence << "\n";
+            }
+            // Reject: distillation below floor is a bug, not a policy violation
+            if (source == "distillation" && confidence < policy.min_confidence) {
+                std::cerr << "[contract] REJECT: distillation event confidence="
+                          << confidence << " below floor=" << policy.min_confidence
+                          << " — check distillation pipeline\n";
+                queue_fail_count_++;
+                return true;  // skip this queue item
+            }
+            // Callers routinely pass a title that is already content's first line;
+            // prefixing it again stores the same text twice and doubles its weight
+            // in both the lexical lane and the embedding.
+            std::string full_text =
+                (title.empty() || content.rfind(title, 0) == 0)
+                    ? content
+                    : title + "\n" + content;
+            std::string realm = args.value("realm", "brahman");
+            // Pass empty embedding — backfill thread embeds asynchronously.
+            auto new_id = field_store_.remember(category_to_kind(category), realm,
+                                      full_text, {},
+                                      confidence, decay);
+            // Set initial epistemic status and memory status based on source
+            if (new_id > 0) {
+                uint8_t es = epistemic_status_for_source(source);
+                uint8_t ms = initial_status_for_source(source);
+                if (es != 1) field_store_.set_epistemic_status(new_id, es);
+                if (ms != 0) field_store_.set_memory_status(new_id, ms);
+            }
+            // Store provenance as triplets
+            if (new_id > 0 && !source.empty()) {
+                field_store_.add_triplet(std::to_string(new_id), "source", source);
+                if (!evidence.empty())
+                    field_store_.add_triplet(std::to_string(new_id), "evidence", evidence);
+            }
+            queue_count_++;
+            // Correction supersession: find semantically similar memories
+            // and mark them as superseded via a triplet relation
+            if (category == "correction" && new_id > 0) {
+                // Hard contradiction policy (CONTRACTS.md §3):
+                // A correction supersedes ONLY:
+                // 1. If target_id is explicit → supersede that specific memory
+                // 2. Otherwise → same realm + cosine > 0.92 (tight threshold)
+                //    AND same kind (corrections don't supersede different memory types)
+                // force_supersede_ids: explicit list bypasses cosine threshold
+                if (args.contains("force_supersede_ids")) {
+                    auto fsi = args["force_supersede_ids"];
+                    std::vector<std::string> ids;
+                    if (fsi.is_array()) {
+                        for (auto& v : fsi) ids.push_back(v.get<std::string>());
+                    } else if (fsi.is_string()) {
+                        std::istringstream ss(fsi.get<std::string>());
+                        std::string tok;
+                        while (std::getline(ss, tok, ',')) {
+                            tok.erase(0, tok.find_first_not_of(' '));
+                            tok.erase(tok.find_last_not_of(' ') + 1);
+                            if (!tok.empty()) ids.push_back(tok);
+                        }
+                    }
+                    for (const auto& sid : ids) {
+                        try {
+                            uint64_t tid = std::stoull(sid);
+                            field_store_.add_triplet(std::to_string(new_id), "supersedes", sid, 1.0f, new_id);
+                            field_store_.weaken(tid, 0.15f);
+                            field_store_.set_memory_status(tid, 1);
+                        } catch (...) {}
+                    }
+                }
+                // Embedding precomputed before the lock (see top of loop).
+                auto& emb = correction_emb;
+                std::string target_id_str = args.value("target_id", "");
+                if (!target_id_str.empty()) {
+                    // Explicit target: targeted supersession
+                    try {
+                        uint64_t tid = std::stoull(target_id_str);
+                        field_store_.add_triplet(std::to_string(new_id), "supersedes", target_id_str, 1.0f, new_id);
+                        field_store_.weaken(tid, 0.15f);
+                        field_store_.set_memory_status(tid, 1);
+                        std::cerr << "[contract] explicit supersession: " << new_id << "→" << target_id_str << "\n";
+                    } catch (...) {}
+                } else if (!emb.empty()) {
+                    // Semantic supersession: strict — same realm, same kind, very high threshold
+                    auto hits = field_store_.recall(emb, 5, realm);
+                    for (const auto& h : hits) {
+                        if (h.memory_id == new_id) continue;
+                        if (h.realm != realm) continue;           // same realm only
+                        if (h.kind == "correction") continue;     // don't supersede other corrections
+                        if (h.score < 0.92f) continue;            // tight: 0.92 not 0.85
+                        field_store_.add_triplet(std::to_string(new_id), "supersedes", std::to_string(h.memory_id), 1.0f, new_id);
+                        field_store_.weaken(h.memory_id, 0.15f);
+                        field_store_.set_memory_status(h.memory_id, 1);
+                        std::cerr << "[contract] semantic supersession: " << new_id << "→" << h.memory_id << " (score=" << h.score << ")\n";
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    bool strengthen() {
+        std::string id_str = args.value("id", "");
+        float amount = static_cast<float>(args.value("amount", 0.1));
+        if (!id_str.empty()) {
+            try {
+                uint64_t cf_id = std::stoull(id_str);
+                field_store_.strengthen(cf_id, amount);
+                queue_count_++;
+            } catch (...) {}
+        }
+        return false;
+    }
+
+    bool connect() {
+        std::string subj = args.value("subject", "");
+        std::string pred = args.value("predicate", "");
+        std::string obj = args.value("object", "");
+        if (!subj.empty() && !pred.empty() && !obj.empty()) {
+            field_store_.add_triplet(subj, pred, obj, 1.0f,
+                                     triplet_source_memory_id(field_store_, args));
+            queue_count_++;
+        }
+        return false;
+    }
+
+    bool curiosity_note_gap() {
+        std::string gap = args.value("gap", "");
+        if (!gap.empty()) {
+            std::string content = "[curiosity] " + gap;
+            // Empty embedding — backfill thread handles it.
+            field_store_.remember("episode", "brahman", content,
+                                  {}, 0.7f, 0.0f);
+            queue_count_++;
+        }
+        return false;
+    }
+
+    bool store_policy() {
+        std::string policy_type = args.value("type", "");
+        std::string content = args.value("content", "");
+        float confidence = args.value("confidence", 0.5f);
+        if (!policy_type.empty() && !content.empty()) {
+            std::string full = "[policy:" + policy_type + "] " + content;
+            // Empty embedding — backfill thread handles it.
+            field_store_.remember("wisdom", "brahman", full,
+                                  {}, confidence, 0.0f);
+            queue_count_++;
+        }
+        return false;
+    }
+
+    bool store_claim() {
+        std::string subject = args.value("subject", "");
+        std::string predicate = args.value("predicate", "");
+        std::string object_norm = args.value("object", "");
+        if (!subject.empty() && !predicate.empty() && !object_norm.empty()) {
+            field_store_.add_triplet(subject, predicate, object_norm, 1.0f,
+                                     triplet_source_memory_id(field_store_, args));
+            queue_count_++;
+        }
+        return false;
+    }
+
+    bool learn_outcome() {
+        std::string id_str = args.contains("memory-id")
+            ? args.value("memory-id", "")
+            : args.value("memory_id", "");
+        std::string outcome = args.value("outcome", "");
+        std::string context = args.value("context", "");
+        if (!id_str.empty() && !outcome.empty()) {
+            try {
+                uint64_t cf_id = std::stoull(id_str);
+                json payload = {{"outcome", outcome}, {"context", context}};
+                field_store_.emit_event("analytics", "outcome",
+                                        id_str, payload.dump());
+                if (outcome == "positive") field_store_.strengthen(cf_id, 0.1f);
+                else if (outcome == "negative") field_store_.weaken(cf_id, 0.15f);
+                queue_count_++;
+            } catch (...) {}
+        }
+        return false;
+    }
+
+    bool session_lifecycle() {
+        auto result = handler_.dispatch_session(tool, args);
+        if (result.is_error) throw std::runtime_error("queued session lifecycle failed");
+        queue_count_++;
+        return false;
+    }
+
+    bool transcript_register() {
+        std::string session_id = args.value("session_id", "");
+        std::string path = args.value("transcript_path", "");
+        if (!path.empty()) {
+            args["transcript_id"] = session_id;
+            std::cerr << "[queue] transcript_register: session=" << session_id << " path=" << path << "\n";
+            field_store_.emit_event("transcript", "register",
+                                    session_id, args.dump());
+            // Span lane: pick up this transcript's verbatim atoms
+            // immediately (incremental via per-file byte watermark).
+            field_store_.span_ingest(path);
+            queue_count_++;
+        }
+        return false;
+    }
+
+    bool ledger_save() {
+        std::string session_id = args.value("session_id", "");
+        std::string project = args.value("project", "default");
+        if (!session_id.empty()) {
+            std::string key = session_id + ":" + project;
+            field_store_.emit_event("ledger", "save", key, args.dump());
+            queue_count_++;
+        }
+        return false;
+    }
+
+    bool ledger_append() {
+        try {
+            field_store_.ledger_append(args.dump());
+            queue_count_++;
+        } catch (const std::exception& e) {
+            throw; // re-throw so the outer catch writes to dead-letter
+        }
+        return false;
+    }
+
+    bool narrative_log() {
+        std::string session_id = args.value("session_id", "");
+        std::string summary = args.value("summary", "");
+        if (!session_id.empty() && !summary.empty()) {
+            field_store_.emit_event("analytics", "narrative_log",
+                                    session_id, args.dump());
+            queue_count_++;
+        }
+        return false;
+    }
+
+    bool calibration_record() {
+        std::string domain = args.value("domain", "");
+        if (!domain.empty()) {
+            field_store_.emit_event("analytics", "calibration",
+                                    domain, args.dump());
+            queue_count_++;
+        }
+        return false;
+    }
+
+    bool habit_observe() {
+        std::string trigger = args.value("trigger", "");
+        std::string response = args.value("response", "");
+        if (!trigger.empty() && !response.empty()) {
+            // habit_observe fires on ~every tool call and its analytics
+            // event is write-only + unbounded (organ/analytics.rs Vec, no
+            // cap), so sample to bound RAM/WAL growth. The RPC-side
+            // tool_habit_observe still records every observation as a
+            // triplet; this event is redundant telemetry.
+            // ceiling: 1/HABIT_SAMPLE lossy; upgrade: cap analytics_registry
+            // or add an aggregating reader, then drop the sampling.
+            static std::atomic<uint64_t> habit_seq{0};
+            constexpr uint64_t HABIT_SAMPLE = 20;
+            if (habit_seq.fetch_add(1, std::memory_order_relaxed) % HABIT_SAMPLE == 0) {
+                field_store_.emit_event("analytics", "habit",
+                                        trigger, args.dump());
+                queue_count_++;
+            }
+        }
+        return false;
+    }
+
+    bool anticipation_success() {
+        int64_t id = args.value("id", (int64_t)0);
+        if (id > 0) {
+            field_store_.emit_event("analytics", "anticipation_success",
+                                    std::to_string(id), "{}");
+            queue_count_++;
+        }
+        return false;
+    }
+
+    bool store_turn() {
+        std::string session_id = args.value("session_id", "");
+        std::string content = args.value("content", "");
+        if (!session_id.empty() && !content.empty()) {
+            field_store_.emit_event("transcript", "turn",
+                                    session_id, args.dump());
+            queue_count_++;
+        }
+        return false;
+    }
+
+    bool store_relationship_event() {
+        std::string event_type = args.value("event_type", "");
+        std::string session_id = args.value("session_id", "");
+        if (!event_type.empty()) {
+            field_store_.emit_event("relationship", event_type,
+                                    session_id, args.dump());
+            queue_count_++;
+        }
+        return false;
+    }
+
+    bool log_session_tokens() {
+        std::string sid = args.value("session_id", "");
+        if (!sid.empty()) {
+            field_store_.emit_event("analytics", "session_tokens",
+                                    sid, args.dump());
+            queue_count_++;
+        }
+        return false;
+    }
+
+    bool log_correction_outcome() {
+        std::string sid = args.value("session_id", "");
+        if (!sid.empty()) {
+            field_store_.emit_event("analytics", "correction_outcome",
+                                    sid, args.dump());
+            queue_count_++;
+        }
+        return false;
+    }
+
+    bool log_exposure() {
+        std::string session_id = args.value("session_id", "");
+        if (!session_id.empty()) {
+            field_store_.emit_event("analytics", "exposure",
+                                    session_id, args.dump());
+            queue_count_++;
+        }
+        return false;
+    }
+
+    bool extract_symbols() {
+        // Freshness loop: post-edit hooks queue changed files here.
+        // Invalidate the file's old symbols, then insert the fresh
+        // extraction (parsed + embedded before the lock). A deleted
+        // file still gets its stale entries cleared.
+        std::string p = args.value("path", "");
+        if (!p.empty()) {
+            field_store_.remove_symbols_by_file(p);
+            for (size_t i = 0; i < file_syms.size(); ++i) {
+                const auto& sym = file_syms[i];
+                field_store_.upsert_symbol(
+                    sym.kind, sym.name,
+                    sym.signature.empty() ? sym.name : sym.signature,
+                    sym.file_path,
+                    static_cast<uint32_t>(sym.line_start),
+                    static_cast<uint32_t>(sym.line_end),
+                    0,
+                    i < file_sym_embs.size() ? file_sym_embs[i]
+                                             : std::vector<float>{});
+            }
+            queue_count_++;
+        }
+        return false;
+    }
+
+    bool distill_trigger() {
+        // Re-route to the slow lane (buffered; appended after the
+        // next sync so the transcript_register it depends on is
+        // durable first). run_slow() executes it.
+        pending_slow.push_back(line);
+        return false;
+    }
+
+    // True preserves the observe rejection's outer-loop continue. Unknown
+    // tools remain a no-op, followed by the usual batch accounting.
+    bool dispatch() {
+        using Member = bool (QueueToolDispatch::*)();
+        static const std::unordered_map<std::string, Member> handlers = {
+            {"observe", &QueueToolDispatch::observe},
+            {"strengthen", &QueueToolDispatch::strengthen},
+            {"connect", &QueueToolDispatch::connect},
+            {"curiosity_note_gap", &QueueToolDispatch::curiosity_note_gap},
+            {"store_policy", &QueueToolDispatch::store_policy},
+            {"store_claim", &QueueToolDispatch::store_claim},
+            {"learn_outcome", &QueueToolDispatch::learn_outcome},
+            {"session_register", &QueueToolDispatch::session_lifecycle},
+            {"session_heartbeat", &QueueToolDispatch::session_lifecycle},
+            {"session_deregister", &QueueToolDispatch::session_lifecycle},
+            {"transcript_register", &QueueToolDispatch::transcript_register},
+            {"ledger_save", &QueueToolDispatch::ledger_save},
+            {"ledger_append", &QueueToolDispatch::ledger_append},
+            {"narrative_log", &QueueToolDispatch::narrative_log},
+            {"calibration_record", &QueueToolDispatch::calibration_record},
+            {"habit_observe", &QueueToolDispatch::habit_observe},
+            {"anticipation_success", &QueueToolDispatch::anticipation_success},
+            {"store_turn", &QueueToolDispatch::store_turn},
+            {"store_relationship_event", &QueueToolDispatch::store_relationship_event},
+            {"log_session_tokens", &QueueToolDispatch::log_session_tokens},
+            {"log_correction_outcome", &QueueToolDispatch::log_correction_outcome},
+            {"log_exposure", &QueueToolDispatch::log_exposure},
+            {"extract_symbols", &QueueToolDispatch::extract_symbols},
+            {"distill_trigger", &QueueToolDispatch::distill_trigger},
+        };
+        const auto it = handlers.find(tool);
+        return it != handlers.end() && (this->*it->second)();
+    }
+};
+} // namespace
+
 void QueueProcessor::run() {
     // Span-lane flush cadence: live-path ingest links in RAM only; persist here,
     // off the memory-write hot path (also flushed on daemon close via cf_close).
@@ -407,326 +846,11 @@ void QueueProcessor::run() {
                     }
                 } _lp_guard{tool, _lp_h0, tool != "distill_trigger"};
 
-                if (tool == "observe") {
-                    std::string category = args.value("category", "wisdom");
-                    std::string title = args.value("title", "");
-                    std::string content = args.value("content", "");
-                    if (!content.empty()) {
-                        std::string source   = args.value("source", "hook_regex");
-                        std::string evidence = args.value("evidence", "");
-
-                        // ── Source trust policy (contract enforcement) ─────
-                        auto policy = source_policy(source);
-                        float confidence = args.contains("confidence")
-                            ? args.value("confidence", 0.50f)
-                            : category_to_confidence(category);
-                        float decay = policy.allow_durable ? 0.005f : 0.02f;
-
-                        // Clamp confidence to policy bounds
-                        float orig_confidence = confidence;
-                        confidence = std::min(confidence, policy.max_confidence);
-                        confidence = std::max(confidence, policy.min_confidence);
-                        if (orig_confidence != confidence) {
-                            std::cerr << "[contract] confidence clamped for source=" << source
-                                      << ": " << orig_confidence << "→" << confidence << "\n";
-                        }
-                        // Reject: distillation below floor is a bug, not a policy violation
-                        if (source == "distillation" && confidence < policy.min_confidence) {
-                            std::cerr << "[contract] REJECT: distillation event confidence="
-                                      << confidence << " below floor=" << policy.min_confidence
-                                      << " — check distillation pipeline\n";
-                            queue_fail_count_++;
-                            continue;  // skip this queue item
-                        }
-                        // Callers routinely pass a title that is already content's first line;
-                        // prefixing it again stores the same text twice and doubles its weight
-                        // in both the lexical lane and the embedding.
-                        std::string full_text =
-                            (title.empty() || content.rfind(title, 0) == 0)
-                                ? content
-                                : title + "\n" + content;
-                        std::string realm = args.value("realm", "brahman");
-                        // Pass empty embedding — backfill thread embeds asynchronously.
-                        auto new_id = field_store_.remember(category_to_kind(category), realm,
-                                                  full_text, {},
-                                                  confidence, decay);
-                        // Set initial epistemic status and memory status based on source
-                        if (new_id > 0) {
-                            uint8_t es = epistemic_status_for_source(source);
-                            uint8_t ms = initial_status_for_source(source);
-                            if (es != 1) field_store_.set_epistemic_status(new_id, es);
-                            if (ms != 0) field_store_.set_memory_status(new_id, ms);
-                        }
-                        // Store provenance as triplets
-                        if (new_id > 0 && !source.empty()) {
-                            field_store_.add_triplet(std::to_string(new_id), "source", source);
-                            if (!evidence.empty())
-                                field_store_.add_triplet(std::to_string(new_id), "evidence", evidence);
-                        }
-                        queue_count_++;
-                        // Correction supersession: find semantically similar memories
-                        // and mark them as superseded via a triplet relation
-                        if (category == "correction" && new_id > 0) {
-                            // Hard contradiction policy (CONTRACTS.md §3):
-                            // A correction supersedes ONLY:
-                            // 1. If target_id is explicit → supersede that specific memory
-                            // 2. Otherwise → same realm + cosine > 0.92 (tight threshold)
-                            //    AND same kind (corrections don't supersede different memory types)
-                            // force_supersede_ids: explicit list bypasses cosine threshold
-                            if (args.contains("force_supersede_ids")) {
-                                auto fsi = args["force_supersede_ids"];
-                                std::vector<std::string> ids;
-                                if (fsi.is_array()) {
-                                    for (auto& v : fsi) ids.push_back(v.get<std::string>());
-                                } else if (fsi.is_string()) {
-                                    std::istringstream ss(fsi.get<std::string>());
-                                    std::string tok;
-                                    while (std::getline(ss, tok, ',')) {
-                                        tok.erase(0, tok.find_first_not_of(' '));
-                                        tok.erase(tok.find_last_not_of(' ') + 1);
-                                        if (!tok.empty()) ids.push_back(tok);
-                                    }
-                                }
-                                for (const auto& sid : ids) {
-                                    try {
-                                        uint64_t tid = std::stoull(sid);
-                                        field_store_.add_triplet(std::to_string(new_id), "supersedes", sid, 1.0f, new_id);
-                                        field_store_.weaken(tid, 0.15f);
-                                        field_store_.set_memory_status(tid, 1);
-                                    } catch (...) {}
-                                }
-                            }
-                            // Embedding precomputed before the lock (see top of loop).
-                            auto& emb = correction_emb;
-                            std::string target_id_str = args.value("target_id", "");
-                            if (!target_id_str.empty()) {
-                                // Explicit target: targeted supersession
-                                try {
-                                    uint64_t tid = std::stoull(target_id_str);
-                                    field_store_.add_triplet(std::to_string(new_id), "supersedes", target_id_str, 1.0f, new_id);
-                                    field_store_.weaken(tid, 0.15f);
-                                    field_store_.set_memory_status(tid, 1);
-                                    std::cerr << "[contract] explicit supersession: " << new_id << "→" << target_id_str << "\n";
-                                } catch (...) {}
-                            } else if (!emb.empty()) {
-                                // Semantic supersession: strict — same realm, same kind, very high threshold
-                                auto hits = field_store_.recall(emb, 5, realm);
-                                for (const auto& h : hits) {
-                                    if (h.memory_id == new_id) continue;
-                                    if (h.realm != realm) continue;           // same realm only
-                                    if (h.kind == "correction") continue;     // don't supersede other corrections
-                                    if (h.score < 0.92f) continue;            // tight: 0.92 not 0.85
-                                    field_store_.add_triplet(std::to_string(new_id), "supersedes", std::to_string(h.memory_id), 1.0f, new_id);
-                                    field_store_.weaken(h.memory_id, 0.15f);
-                                    field_store_.set_memory_status(h.memory_id, 1);
-                                    std::cerr << "[contract] semantic supersession: " << new_id << "→" << h.memory_id << " (score=" << h.score << ")\n";
-                                }
-                            }
-                        }
-                    }
-                } else if (tool == "strengthen") {
-                    std::string id_str = args.value("id", "");
-                    float amount = static_cast<float>(args.value("amount", 0.1));
-                    if (!id_str.empty()) {
-                        try {
-                            uint64_t cf_id = std::stoull(id_str);
-                            field_store_.strengthen(cf_id, amount);
-                            queue_count_++;
-                        } catch (...) {}
-                    }
-                } else if (tool == "connect") {
-                    std::string subj = args.value("subject", "");
-                    std::string pred = args.value("predicate", "");
-                    std::string obj = args.value("object", "");
-                    if (!subj.empty() && !pred.empty() && !obj.empty()) {
-                        field_store_.add_triplet(subj, pred, obj, 1.0f,
-                                                 triplet_source_memory_id(field_store_, args));
-                        queue_count_++;
-                    }
-                } else if (tool == "curiosity_note_gap") {
-                    std::string gap = args.value("gap", "");
-                    if (!gap.empty()) {
-                        std::string content = "[curiosity] " + gap;
-                        // Empty embedding — backfill thread handles it.
-                        field_store_.remember("episode", "brahman", content,
-                                              {}, 0.7f, 0.0f);
-                        queue_count_++;
-                    }
-                } else if (tool == "store_policy") {
-                    std::string policy_type = args.value("type", "");
-                    std::string content = args.value("content", "");
-                    float confidence = args.value("confidence", 0.5f);
-                    if (!policy_type.empty() && !content.empty()) {
-                        std::string full = "[policy:" + policy_type + "] " + content;
-                        // Empty embedding — backfill thread handles it.
-                        field_store_.remember("wisdom", "brahman", full,
-                                              {}, confidence, 0.0f);
-                        queue_count_++;
-                    }
-                } else if (tool == "store_claim") {
-                    std::string subject = args.value("subject", "");
-                    std::string predicate = args.value("predicate", "");
-                    std::string object_norm = args.value("object", "");
-                    if (!subject.empty() && !predicate.empty() && !object_norm.empty()) {
-                        field_store_.add_triplet(subject, predicate, object_norm, 1.0f,
-                                                 triplet_source_memory_id(field_store_, args));
-                        queue_count_++;
-                    }
-                } else if (tool == "learn_outcome") {
-                    std::string id_str = args.contains("memory-id")
-                        ? args.value("memory-id", "")
-                        : args.value("memory_id", "");
-                    std::string outcome = args.value("outcome", "");
-                    std::string context = args.value("context", "");
-                    if (!id_str.empty() && !outcome.empty()) {
-                        try {
-                            uint64_t cf_id = std::stoull(id_str);
-                            json payload = {{"outcome", outcome}, {"context", context}};
-                            field_store_.emit_event("analytics", "outcome",
-                                                    id_str, payload.dump());
-                            if (outcome == "positive") field_store_.strengthen(cf_id, 0.1f);
-                            else if (outcome == "negative") field_store_.weaken(cf_id, 0.15f);
-                            queue_count_++;
-                        } catch (...) {}
-                    }
-                } else if (tool == "session_register" || tool == "session_heartbeat" || tool == "session_deregister") {
-                    auto result = handler_.dispatch_session(tool, args);
-                    if (result.is_error) throw std::runtime_error("queued session lifecycle failed");
-                    queue_count_++;
-                } else if (tool == "transcript_register") {
-                    std::string session_id = args.value("session_id", "");
-                    std::string path = args.value("transcript_path", "");
-                    if (!path.empty()) {
-                        args["transcript_id"] = session_id;
-                        std::cerr << "[queue] transcript_register: session=" << session_id << " path=" << path << "\n";
-                        field_store_.emit_event("transcript", "register",
-                                                session_id, args.dump());
-                        // Span lane: pick up this transcript's verbatim atoms
-                        // immediately (incremental via per-file byte watermark).
-                        field_store_.span_ingest(path);
-                        queue_count_++;
-                    }
-                } else if (tool == "ledger_save") {
-                    std::string session_id = args.value("session_id", "");
-                    std::string project = args.value("project", "default");
-                    if (!session_id.empty()) {
-                        std::string key = session_id + ":" + project;
-                        field_store_.emit_event("ledger", "save", key, args.dump());
-                        queue_count_++;
-                    }
-                } else if (tool == "ledger_append") {
-                    try {
-                        field_store_.ledger_append(args.dump());
-                        queue_count_++;
-                    } catch (const std::exception& e) {
-                        throw; // re-throw so the outer catch writes to dead-letter
-                    }
-                } else if (tool == "narrative_log") {
-                    std::string session_id = args.value("session_id", "");
-                    std::string summary = args.value("summary", "");
-                    if (!session_id.empty() && !summary.empty()) {
-                        field_store_.emit_event("analytics", "narrative_log",
-                                                session_id, args.dump());
-                        queue_count_++;
-                    }
-                } else if (tool == "calibration_record") {
-                    std::string domain = args.value("domain", "");
-                    if (!domain.empty()) {
-                        field_store_.emit_event("analytics", "calibration",
-                                                domain, args.dump());
-                        queue_count_++;
-                    }
-                } else if (tool == "habit_observe") {
-                    std::string trigger = args.value("trigger", "");
-                    std::string response = args.value("response", "");
-                    if (!trigger.empty() && !response.empty()) {
-                        // habit_observe fires on ~every tool call and its analytics
-                        // event is write-only + unbounded (organ/analytics.rs Vec, no
-                        // cap), so sample to bound RAM/WAL growth. The RPC-side
-                        // tool_habit_observe still records every observation as a
-                        // triplet; this event is redundant telemetry.
-                        // ceiling: 1/HABIT_SAMPLE lossy; upgrade: cap analytics_registry
-                        // or add an aggregating reader, then drop the sampling.
-                        static std::atomic<uint64_t> habit_seq{0};
-                        constexpr uint64_t HABIT_SAMPLE = 20;
-                        if (habit_seq.fetch_add(1, std::memory_order_relaxed) % HABIT_SAMPLE == 0) {
-                            field_store_.emit_event("analytics", "habit",
-                                                    trigger, args.dump());
-                            queue_count_++;
-                        }
-                    }
-                } else if (tool == "anticipation_success") {
-                    int64_t id = args.value("id", (int64_t)0);
-                    if (id > 0) {
-                        field_store_.emit_event("analytics", "anticipation_success",
-                                                std::to_string(id), "{}");
-                        queue_count_++;
-                    }
-                } else if (tool == "store_turn") {
-                    std::string session_id = args.value("session_id", "");
-                    std::string content = args.value("content", "");
-                    if (!session_id.empty() && !content.empty()) {
-                        field_store_.emit_event("transcript", "turn",
-                                                session_id, args.dump());
-                        queue_count_++;
-                    }
-                } else if (tool == "store_relationship_event") {
-                    std::string event_type = args.value("event_type", "");
-                    std::string session_id = args.value("session_id", "");
-                    if (!event_type.empty()) {
-                        field_store_.emit_event("relationship", event_type,
-                                                session_id, args.dump());
-                        queue_count_++;
-                    }
-                } else if (tool == "log_session_tokens") {
-                    std::string sid = args.value("session_id", "");
-                    if (!sid.empty()) {
-                        field_store_.emit_event("analytics", "session_tokens",
-                                                sid, args.dump());
-                        queue_count_++;
-                    }
-                } else if (tool == "log_correction_outcome") {
-                    std::string sid = args.value("session_id", "");
-                    if (!sid.empty()) {
-                        field_store_.emit_event("analytics", "correction_outcome",
-                                                sid, args.dump());
-                        queue_count_++;
-                    }
-                } else if (tool == "log_exposure") {
-                    std::string session_id = args.value("session_id", "");
-                    if (!session_id.empty()) {
-                        field_store_.emit_event("analytics", "exposure",
-                                                session_id, args.dump());
-                        queue_count_++;
-                    }
-                } else if (tool == "extract_symbols") {
-                    // Freshness loop: post-edit hooks queue changed files here.
-                    // Invalidate the file's old symbols, then insert the fresh
-                    // extraction (parsed + embedded before the lock). A deleted
-                    // file still gets its stale entries cleared.
-                    std::string p = args.value("path", "");
-                    if (!p.empty()) {
-                        field_store_.remove_symbols_by_file(p);
-                        for (size_t i = 0; i < file_syms.size(); ++i) {
-                            const auto& sym = file_syms[i];
-                            field_store_.upsert_symbol(
-                                sym.kind, sym.name,
-                                sym.signature.empty() ? sym.name : sym.signature,
-                                sym.file_path,
-                                static_cast<uint32_t>(sym.line_start),
-                                static_cast<uint32_t>(sym.line_end),
-                                0,
-                                i < file_sym_embs.size() ? file_sym_embs[i]
-                                                         : std::vector<float>{});
-                        }
-                        queue_count_++;
-                    }
-                } else if (tool == "distill_trigger") {
-                    // Re-route to the slow lane (buffered; appended after the
-                    // next sync so the transcript_register it depends on is
-                    // durable first). run_slow() executes it.
-                    pending_slow.push_back(line);
-                }
+                QueueToolDispatch dispatch{
+                    field_store_, handler_, queue_count_, queue_fail_count_, args,
+                    tool, line, correction_emb, file_syms, file_sym_embs, pending_slow,
+                    &QueueProcessor::category_to_confidence, &QueueProcessor::category_to_kind};
+                if (dispatch.dispatch()) continue;
             } catch (const std::exception& e) {
                 // Always log — never silently drop a learning event
                 std::cerr << "[queue] FAILED: " << e.what() << "\n";
