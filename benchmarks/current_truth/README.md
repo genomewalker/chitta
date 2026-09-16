@@ -18,7 +18,8 @@ python3 benchmarks/noise.py band current_truth.p3 --file /tmp/current-truth-nois
 
 Recall uses project:cc-soul, fused strategy, limit 3, JSON, and --no-learn. The
 runner requires CHITTA_EVAL_SOCKET inside CHITTA_EVAL_MIND, resolves symlinks,
-and rejects known live endpoints unless --live is explicit. --live produces
+and verifies the actual Linux listener PID and its --path match the eval mind.
+It rejects live endpoints unless --live is explicit. --live produces
 smoke observations only. No missing environment fallback, daemon autostart,
 answer seeding, gap writes, or LLM scoring. Errors abort rather than score zero.
 
@@ -49,3 +50,38 @@ EVAL_IMMUTABLE.txt. Existing noise.json is protected and unchanged; select the
 dated baseline with --file. Recalibrate when the binary, snapshot, panel,
 strategy, depth, reranker or scoring configuration changes. Three-run 2-SD bands
 are descriptive; zero SD does not establish equivalence or generalization.
+
+## Provenance census
+
+```
+python3 scripts/provenance-coverage.py --socket /explicit/live/socket \
+  --output /tmp/provenance-coverage.json
+```
+
+The audit invokes only list_memories_brief, memory_provenance and query_graph
+through one thin CLI process. It never opens a store or uses recall. Pagination
+continues to an empty page because the server caps pages at 100. Each observed
+ID is counted once; JSON numbers retain full 64-bit IDs. The seven-day window
+uses creation timestamps at audit start, not access or strengthening time.
+Missing timestamps and timestamps after the audit clock are reported separately.
+
+A nonempty source label identifies a writer and qualifies as source evidence;
+it never invents a session. Numeric source/derived_from references qualify only
+when the referenced memory is present in the enumerated set. Explicit sessions
+and source paths/URLs also qualify. Multiple writer labels form one sorted
+combined bucket, and unlabeled memories remain unknown. No content heuristics.
+
+The current public metadata API omits direct source_session, although it is
+stored internally. Consequently the live results are **observable-provenance
+lower bounds**; zero observable session triplets cannot mean zero stored
+sessions. Exact union coverage and comparison with the historical offline
+1,236-session audit require an API exposing that field, outside this phase's
+write scope. Live enumeration and per-memory reads are an interval census,
+not an atomic snapshot; concurrent writes can affect its population.
+
+The dated baseline is a warm calibration. To reproduce its conditioning on a
+fresh copy of the same source family, run the truth-only three-pass command
+once to `/tmp/current-truth-warmup.json`, then run it again to a separate report.
+Keep the first report too: the initial 9/40,10/40,10/40 observations show why cold
+and warm samples must not be silently mixed. The frozen final report contains
+only the second three passes; docs/EVALS.md records both sets of observations.

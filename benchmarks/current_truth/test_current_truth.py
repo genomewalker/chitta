@@ -93,8 +93,14 @@ class CurrentTruthTests(unittest.TestCase):
                     "CHITTA_EVAL_MIND": str(mind),
                     "CHITTA_EVAL_SOCKET": str(mind / "replica.sock"),
                 }
-                with patch.dict(os.environ, env, clear=True):
+                with (
+                    patch.dict(os.environ, env, clear=True),
+                    patch.object(run, "listener_mind", return_value=mind),
+                ):
                     self.assertEqual(run.endpoint(), str(mind / "replica.sock"))
+                    with patch.object(run, "listener_mind", return_value=base / "live-mind"):
+                        with self.assertRaises(ValueError):
+                            run.endpoint()
                     os.environ["CHITTA_LIVE_MIND"] = str(mind)
                     with self.assertRaises(ValueError):
                         run.endpoint()

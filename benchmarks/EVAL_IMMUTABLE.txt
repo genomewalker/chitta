@@ -7,8 +7,11 @@ benchmarks/noise.json
 benchmarks/current_truth/questions.json
 benchmarks/current_truth/run.py
 benchmarks/current_truth/test_current_truth.py
+benchmarks/current_truth/test_provenance.py
+scripts/provenance-coverage.py
 benchmarks/current_truth/README.md
 benchmarks/current_truth/baseline-2026-09-16.json
+benchmarks/current_truth/provenance-2026-09-16.json
 hooks/outcome-ledger.sh
 scripts/eval-replica.sh
 # Protect the trust policy and its enforcement, too.

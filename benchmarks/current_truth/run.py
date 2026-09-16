@@ -8,6 +8,8 @@ import hashlib
 import json
 import os
 import re
+import socket as unix_socket
+import struct
 import subprocess
 import sys
 from pathlib import Path
@@ -52,6 +54,22 @@ def load_panel(path: Path = PANEL) -> dict:
     return panel
 
 
+def listener_mind(path: Path) -> Path:
+    """Bind the pathname to the actual Linux listener, not caller-supplied labels."""
+    with unix_socket.socket(unix_socket.AF_UNIX) as connection:
+        connection.settimeout(5)
+        connection.connect(str(path))
+        peer = connection.getsockopt(unix_socket.SOL_SOCKET, unix_socket.SO_PEERCRED, 12)
+    pid, _, _ = struct.unpack("3i", peer)
+    argv = Path(f"/proc/{pid}/cmdline").read_bytes().decode().split("\0")
+    if "daemon" not in argv or "--path" not in argv:
+        raise ValueError("cannot verify listener's explicit daemon mind path")
+    index = argv.index("--path") + 1
+    if index >= len(argv) or not argv[index]:
+        raise ValueError("listener has no mind path")
+    return Path(argv[index]).resolve()
+
+
 def endpoint(live: bool = False) -> str:
     raw = os.environ.get("CHITTA_EVAL_SOCKET", "")
     if not raw:
@@ -77,6 +95,10 @@ def endpoint(live: bool = False) -> str:
         live_socket = os.environ.get("CHITTA_SOCKET_PATH")
         if live_socket and socket == Path(live_socket).resolve():
             raise ValueError("socket aliases CHITTA_SOCKET_PATH; use --live deliberately")
+        if listener_mind(socket) != mind:
+            raise ValueError(
+                "socket listener is not the declared eval daemon; use --live deliberately"
+            )
     return str(socket)
 
 
