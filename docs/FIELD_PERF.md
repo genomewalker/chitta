@@ -403,6 +403,55 @@ These are sequential implementation measurements on a shared node, not an additi
 
 2026-09-16 — Snapshot decode (V23 unchanged): four bounded Rayon workers decode immutable mmap section ranges, pre-size root maps, and overlap triplet-index reconstruction; keyword reverse reconstruction overlaps Turbo/HDC/lite startup. Two cold-process starts on the same scratch checkpoint plus one-row replay delta (Turbo cache hit both arms): snapshot **9195/7819 → 4263/3567 ms**, field_store **14999/14575 → 9516/9263 ms**. Targets <2500/<9000 ms were **not met**; triplet reconstruction remains 2944/2325 ms. The repeated-query restart gate is **20/20 byte-identical CLI JSON pairs**; the broader 20-query diagnostic is 19/20 after versus 18/20 in the warmed control (not a claim of universal determinism). Release build, 279 Rust tests (2 ignored), and all 16 CTests pass; current-main binary opens the new writer's checkpoint. Embedding constants remain 768/nomic-embed-text-v1.5/format-1; the worktree identity stamp was absent before/after and the main stamp hash is unchanged. OS caches and shared-host load were uncontrolled; overlapping phases must not be summed.
 
+## Ordered recall identity across restart
+
+Run the shared Phase 1 gate separately from write stress, after building this
+worktree's `bin/chittad` and `bin/chitta` with the pinned 768-dimensional
+`nomic-embed-text-v1.5` identity. It requires the frozen replica family, so it is
+an explicit replica gate rather than a replica-free CTest.
+
+```bash
+export OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 RAYON_NUM_THREADS=1
+identity_root=$(mktemp -d /tmp/chitta-restart-identity.XXXXXX)
+/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/bin/python3 \
+  scripts/restart-identity.py \
+  --source /projects/caeg/scratch/kbd606/tmp/learning-cut-20260915-frozen \
+  --mind "$identity_root/restarts" --restarts 3 \
+  --report "$identity_root/restarts.json" > "$identity_root/restarts.log"
+/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/bin/python3 \
+  scripts/restart-identity.py \
+  --mind "$identity_root/control" --within-process \
+  --report "$identity_root/control.json" > "$identity_root/control.log"
+```
+
+The committed `scripts/restart-identity-queries.json` is the first twenty distinct
+queries of the golden panel. Each run uses unscoped hybrid recall at depth 20,
+`no_learn`, and `explain`. There are no warm-up panel calls. Every ordered ID list
+must match: 20/20 on each of three consecutive restarts, plus 20/20 for the
+within-process control. Missing results, failed RPCs, or missing base/variant
+embeddings fail the gate. Score deltas remain visible even when IDs agree.
+
+The tool owns a fresh scratch mind, private HOME, socket and port. `--mind` must
+not exist; `--port` can select a particular private port, otherwise the tool
+selects one. It invokes `eval-replica.sh start` once to copy the selected frozen
+family, then `eval-replica.sh restart` to reopen the same store without recopying.
+It stops its daemon on completion and leaves reports and the copy outside git.
+
+`CHITTA_RECALL_NOW` pins Rust recall scoring to the run's initial Unix milliseconds
+(or `--now-ms`); writers retain their real clocks. Pinning evaluation time avoids
+changing production relevance through quantization. The report records that value
+for paired experiments. `CHITTA_RECALL_EMBED_WAIT_MS` is 10000 for the gate
+(`--embed-wait-ms`, bounded to 1–60000); production keeps its 50 ms default.
+A longer wait allows complete inference under load, and the gate still rejects a
+missing embedding instead of accepting matching keyword fallbacks. See the
+[environment table](HOOKS.md#phase-6-runtime-placement-and-embedding-workers-2026-09-16).
+
+Each JSON report retains complete RPC results, score components, exact native f32
+embedding bytes, and candidate lanes before fusion. To diagnose a failure, compare
+clock-sensitive factors, then embedding availability/bytes, then lane candidate
+sets, then state changes and exact-score ties. Optional `.lsh`, `.turbo`,
+`.turbo.meta`, and `.organs` rebuild experiments belong only on the owned copy.
+
 <!-- BEGIN CITATIONS -->
 ## References
 
