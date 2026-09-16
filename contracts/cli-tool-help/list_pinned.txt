@@ -1,0 +1,10 @@
+chitta list_pinned - List pinned memories
+
+Parameters:
+  --limit
+
+  --realm
+
+
+Example:
+  chitta list_pinned

@@ -1,0 +1,3 @@
+chitta list_open_interventions - List all currently open (in-progress) interventions
+
+  No parameters required.

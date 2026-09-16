@@ -1,8 +1,12 @@
 chitta ledger_delete - Delete checkpoint
 
 Parameters:
-  --id (required)
-      Checkpoint ID to delete
+  --key
+      Canonical checkpoint key (session:project)
+  --project
+
+  --session_id
+
 
 Example:
-  chitta ledger_delete --id "..."
+  chitta ledger_delete

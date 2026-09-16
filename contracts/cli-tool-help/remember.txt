@@ -1,20 +1,20 @@
-chitta remember - Store text in memory with optional tags
+chitta remember - Store text in memory with optional tags and realm
 
 Parameters:
+  --confidence
+      Initial confidence 0-1 (default: 0.8)
   --content (required)
       Text to remember
-  --type [default: episode]
-      Node type: wisdom|belief|episode
-  --kind
-      Alias for --type
-  --tags
-      Comma-separated tags
   --realm
       Primary realm (default: brahman)
-  --visibility [default: 0]
-      0=Private, 1=Shared, 2=Global
-  --source_session
-      Session ID for grouping (used by recall_session)
+  --shared_realms
+      Additional realms
+  --tags
+      Optional tags
+  --type
+      Node type (wisdom, insight, signal, episode)
+  --visibility
+      0=Private, 1=Shared, 2=Global (default: 0)
 
 Example:
   chitta remember --content "..."

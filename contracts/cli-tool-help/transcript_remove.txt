@@ -1,8 +1,3 @@
-chitta transcript_remove - Remove transcript from tracking
+chitta transcript_remove - Legacy daemon handler
 
-Parameters:
-  --session_id (required)
-      Session ID to remove
-
-Example:
-  chitta transcript_remove --session_id "..."
+  Legacy handler; parameters are validated by the daemon.

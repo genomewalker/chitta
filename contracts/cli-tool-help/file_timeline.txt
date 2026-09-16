@@ -1,0 +1,18 @@
+chitta file_timeline - Show files modified in time range
+
+Parameters:
+  --cross_session
+
+  --file_pattern
+
+  --limit
+
+  --path
+
+  --query
+
+  --session_id
+
+
+Example:
+  chitta file_timeline

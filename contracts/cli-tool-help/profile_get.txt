@@ -1,0 +1,8 @@
+chitta profile_get - Get user profile
+
+Parameters:
+  --user_id
+
+
+Example:
+  chitta profile_get

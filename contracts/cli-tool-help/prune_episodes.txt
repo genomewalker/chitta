@@ -1,0 +1,10 @@
+chitta prune_episodes - Prune old/excess episode memories. Deletes episodes older than max_age_days (strength<0.3) and caps total count at max_count.
+
+Parameters:
+  --max_age_days
+      Delete episodes older than this (default 90)
+  --max_count
+      Cap total episode count at this (default 10000)
+
+Example:
+  chitta prune_episodes

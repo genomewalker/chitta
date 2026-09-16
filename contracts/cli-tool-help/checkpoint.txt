@@ -1,0 +1,18 @@
+chitta checkpoint - Save session state
+
+Parameters:
+  --active_files
+
+  --discoveries
+
+  --mood
+
+  --next_steps
+
+  --realm
+
+  --summary
+
+
+Example:
+  chitta checkpoint

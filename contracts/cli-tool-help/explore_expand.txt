@@ -1,0 +1,8 @@
+chitta explore_expand - Get full content of a memory
+
+Parameters:
+  --id (required)
+      Memory ID
+
+Example:
+  chitta explore_expand --id "..."

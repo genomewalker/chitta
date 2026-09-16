@@ -1,10 +1,3 @@
-chitta describe_symbol - Set description for a code symbol (stores directly in symbol table)
+chitta describe_symbol - Legacy daemon handler
 
-Parameters:
-  --symbol-id (required)
-      Symbol ID to describe
-  --description (required)
-      Semantic description of the symbol
-
-Example:
-  chitta describe_symbol --symbol-id "..." --description "..."
+  Legacy handler; parameters are validated by the daemon.

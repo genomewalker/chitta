@@ -1,0 +1,8 @@
+chitta trigger_dismiss - Expire/dismiss a trigger without firing
+
+Parameters:
+  --trigger_id (required)
+      Trigger ID to dismiss
+
+Example:
+  chitta trigger_dismiss --trigger_id "..."

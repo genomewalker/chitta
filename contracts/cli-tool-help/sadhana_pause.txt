@@ -1,8 +1,8 @@
-chitta sadhana_pause - Pause a running sadhana (can be resumed)
+chitta sadhana_pause - Pause a sadhana
 
 Parameters:
   --id (required)
-      Sadhana ID
+
 
 Example:
   chitta sadhana_pause --id "..."

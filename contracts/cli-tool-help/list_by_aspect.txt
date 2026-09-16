@@ -2,11 +2,11 @@ chitta list_by_aspect - List memories by semantic aspect
 
 Parameters:
   --aspect (required)
-      Aspect: preferences|corrections|insights|failures|decisions|approaches|milestones|goals|habits|beliefs|wisdom|code|gaps
-  --limit [default: 50]
-      Max results
-  --min_confidence [default: 0.1]
-      Minimum confidence
+
+  --limit
+
+  --min_confidence
+
 
 Example:
   chitta list_by_aspect --aspect "..."

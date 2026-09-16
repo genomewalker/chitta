@@ -1,0 +1,8 @@
+chitta promote_memory - Promote a memory one tier: Proposed→Observed→Verified→Active
+
+Parameters:
+  --id (required)
+      Memory ID
+
+Example:
+  chitta promote_memory --id "..."

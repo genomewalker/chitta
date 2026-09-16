@@ -1,14 +1,26 @@
-chitta recall_analogy - Relation transfer a:b :: c:? over the triplet organ
+chitta recall_analogy - Analogical recall over the triplet lane (vector-symbolic, no LLM/GPU). Two modes embedding similarity cannot express, because both are about structure rather than wording. 'proportional' solves a:b :: c:? — give three entities, get ranked fillers for the fourth. 'structural' finds memories whose relation graph has the same SHAPE as a probe memory, with entity names factored out, so a pattern learned in one project matches the same pattern in another; set exclude_realm (or cross_realm) for that cross-project transfer. Use when you want 'what else looks like this?', not 'what mentions these words?'.
 
 Parameters:
-  --a (required)
-      Source entity
-  --b (required)
-      Source relation target
-  --c (required)
-      Entity to transfer the relation to
-  --limit [default: 8]
-      Max answers (default 8)
+  --a
+      proportional: source entity
+  --b
+      proportional: what a maps to
+  --c
+      proportional: target entity; the tool returns its counterpart to b
+  --cross_realm
+      structural: shorthand for excluding the probe memory's own realm (default false)
+  --exclude_realm
+      structural: drop results from this realm — the cross-project transfer case
+  --limit
+      Max results, 1-100 (default 8)
+  --memory_id
+      structural: probe memory whose relation shape is matched (excluded from results)
+  --mode
+      'proportional' (a:b :: c:?) or 'structural' (shape match). Default: structural
+  --realm
+      structural: restrict results to this realm
+  --text
+      structural: free-text probe, used when memory_id is absent; anchors on the entities it mentions
 
 Example:
-  chitta recall_analogy --a "..." --b "..." --c "..."
+  chitta recall_analogy

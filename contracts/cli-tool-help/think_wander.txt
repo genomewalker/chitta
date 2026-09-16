@@ -1,0 +1,8 @@
+chitta think_wander - Trigger internal memory synthesis
+
+Parameters:
+  --realm
+
+
+Example:
+  chitta think_wander

@@ -1,14 +1,14 @@
-chitta msg_inbox - Check unread cross-session messages
+chitta msg_inbox - Check unread messages
 
 Parameters:
+  --auto_ack
+
+  --limit
+
+  --min_priority
+
   --session_id
-      Session ID (default: current)
-  --limit [default: 20]
-      Max messages
-  --min_priority [default: 0]
-      Minimum priority level
-  --auto_ack [default: false]
-      Auto-acknowledge returned messages
+
 
 Example:
   chitta msg_inbox

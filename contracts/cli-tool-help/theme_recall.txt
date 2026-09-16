@@ -1,12 +1,12 @@
-chitta theme_recall - Two-stage retrieval: representatives then expansion
+chitta theme_recall - Two-stage theme-based retrieval
 
 Parameters:
+  --limit
+
   --query (required)
-      Search query
-  --limit [default: 10]
-      Max results
+
   --realm
-      Filter by realm
+
 
 Example:
   chitta theme_recall --query "..."

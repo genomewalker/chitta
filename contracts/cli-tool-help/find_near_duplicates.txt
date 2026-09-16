@@ -1,0 +1,12 @@
+chitta find_near_duplicates - Find memory pairs with high semantic similarity (near-duplicates)
+
+Parameters:
+  --limit
+      Max pairs to return (default 20)
+  --realm
+      Filter by realm
+  --threshold
+      Cosine similarity threshold (default 0.90)
+
+Example:
+  chitta find_near_duplicates

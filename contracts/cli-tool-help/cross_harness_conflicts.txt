@@ -1,0 +1,12 @@
+chitta cross_harness_conflicts - Find memories where claude-code and codex harnesses disagree on the same topic
+
+Parameters:
+  --limit
+      Max conflict pairs to return (default 20)
+  --min_disagreement_score
+      Minimum 1-cosine_similarity threshold (default 0.3)
+  --realm
+      Realm filter (default: all)
+
+Example:
+  chitta cross_harness_conflicts

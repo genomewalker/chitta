@@ -1,0 +1,8 @@
+chitta get_wisdom_lineage - Get full details of a wisdom lineage by ID, including challenger evidence and state history
+
+Parameters:
+  --lineage_id (required)
+      Lineage ID
+
+Example:
+  chitta get_wisdom_lineage --lineage_id "..."

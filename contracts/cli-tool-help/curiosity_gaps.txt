@@ -1,10 +1,10 @@
-chitta curiosity_gaps - List unresolved curiosity gaps
+chitta curiosity_gaps - List knowledge gaps
 
 Parameters:
+  --limit
+
   --realm
-      Filter by realm
-  --limit [default: 10]
-      Max results
+
 
 Example:
   chitta curiosity_gaps

@@ -1,0 +1,10 @@
+chitta habit_weaken - Weaken a habit
+
+Parameters:
+  --amount
+
+  --id (required)
+
+
+Example:
+  chitta habit_weaken --id "..."

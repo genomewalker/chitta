@@ -8,7 +8,7 @@
 #   scripts/contract-snapshot.sh check [DIR]   # capture to a temp dir and diff against DIR
 #
 # Sources: the running daemon's tools/list (or CHITTA_SOCKET_PATH), the MCP
-# static tool table, `chitta --help` and every KNOWN_TOOLS `--help`, hooks.json,
+# static tool table, `chitta --help` and tool help (daemon names union LEGACY_HANDLERS), hooks.json,
 # the hook install manifest, and the Codex plugin manifest.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -37,7 +37,7 @@ PY
     )
     "$CHITTA_BIN" --help > "$out/cli-help.txt" 2>&1 || true
     mkdir -p "$out/cli-tool-help"
-    grep -oE '^    \{"[a-z_0-9]+", "' "$ROOT/chitta/src/rpc_server.cpp" | grep -oE '"[a-z_0-9]+"' | tr -d '"' | LC_ALL=C sort -u > "$out/cli-tool-names.txt"
+    { cat "$out/daemon-tool-names.txt"; sed -n '/^static const .* LEGACY_HANDLERS = {/,/^};/s/^    "\([a-z_0-9]*\)",$/\1/p' "$ROOT/chitta/src/rpc_server.cpp"; } | LC_ALL=C sort -u > "$out/cli-tool-names.txt"
     while read -r t; do
         timeout 5 "$CHITTA_BIN" "$t" --help > "$out/cli-tool-help/$t.txt" 2>&1 </dev/null || true
     done < "$out/cli-tool-names.txt"

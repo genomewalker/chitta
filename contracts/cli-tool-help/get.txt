@@ -2,7 +2,7 @@ chitta get - Get a node by ID
 
 Parameters:
   --id (required)
-      Node ID
+
 
 Example:
   chitta get --id "..."

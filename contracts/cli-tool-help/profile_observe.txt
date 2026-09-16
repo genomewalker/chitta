@@ -1,0 +1,12 @@
+chitta profile_observe - Record user observation
+
+Parameters:
+  --observation_type (required)
+
+  --user_id
+
+  --value (required)
+
+
+Example:
+  chitta profile_observe --observation_type "..." --value "..."

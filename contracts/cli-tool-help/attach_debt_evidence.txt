@@ -1,0 +1,14 @@
+chitta attach_debt_evidence - Attach supporting evidence to an epistemic debt — memory IDs + confidence
+
+Parameters:
+  --confidence
+      Evidence confidence 0-1 (default 0.5)
+  --debt_id (required)
+      Epistemic debt ID
+  --memory_ids
+      Memory IDs that serve as evidence
+  --note
+      Optional note about the evidence
+
+Example:
+  chitta attach_debt_evidence --debt_id "..."

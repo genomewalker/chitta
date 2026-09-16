@@ -1,0 +1,22 @@
+chitta assert_fact - Assert a constraint fact (subject-predicate-object) with provenance and scope. Auto-detects conflicts and creates rival branches.
+
+Parameters:
+  --branch_id
+      Branch to assert into (0=trunk)
+  --confidence
+      Confidence 0-1 (default 0.8)
+  --confidence_basis
+      Basis: stated, observed, derived, corrected
+  --object (required)
+      Value (e.g. 'Rust', 'vim', 'Copenhagen')
+  --predicate (required)
+      Relation (e.g. 'prefers', 'uses', 'located-in')
+  --provenance_source
+      Source: user, tool, distillation, inference
+  --scope
+      Scope: global, realm name, or session (default: global)
+  --subject (required)
+      Entity (e.g. 'user', 'project-X')
+
+Example:
+  chitta assert_fact --subject "..." --predicate "..." --object "..."

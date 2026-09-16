@@ -1,0 +1,3 @@
+chitta intervention_stats - Show intervention ledger statistics — total, open, succeeded, failed, aborted counts
+
+  No parameters required.

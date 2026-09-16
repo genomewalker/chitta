@@ -1,0 +1,10 @@
+chitta insight_global - List global insights
+
+Parameters:
+  --limit
+
+  --tag
+
+
+Example:
+  chitta insight_global

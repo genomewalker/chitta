@@ -1,0 +1,12 @@
+chitta update_source_weight - Manually override a recall source weight
+
+Parameters:
+  --domain
+      Domain (default general)
+  --source (required)
+      Source name (required)
+  --weight
+      New weight [0-2] (default 1.0)
+
+Example:
+  chitta update_source_weight --source "..."

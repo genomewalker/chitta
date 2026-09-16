@@ -1,10 +1,10 @@
-chitta curiosity_resolve - Mark a curiosity gap as resolved
+chitta curiosity_resolve - Mark gap as resolved
 
 Parameters:
   --id (required)
-      Gap memory ID
+
   --learned
-      What was learned
+
 
 Example:
   chitta curiosity_resolve --id "..."

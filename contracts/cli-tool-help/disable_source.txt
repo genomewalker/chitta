@@ -1,0 +1,8 @@
+chitta disable_source - Add a source to the deny-list via triplet
+
+Parameters:
+  --source (required)
+      Source identifier to deny
+
+Example:
+  chitta disable_source --source "..."

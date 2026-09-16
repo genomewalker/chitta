@@ -1,12 +1,3 @@
-chitta wiki_export - Export memories as Obsidian-compatible .md wiki with backlinks
+chitta wiki_export - Legacy daemon handler
 
-Parameters:
-  --output_dir
-      Output directory
-  --realm
-      Filter to specific realm
-  --max_memories [default: 5000]
-      Max memories per realm
-
-Example:
-  chitta wiki_export
+  Legacy handler; parameters are validated by the daemon.

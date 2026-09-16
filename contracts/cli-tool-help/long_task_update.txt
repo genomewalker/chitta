@@ -1,0 +1,14 @@
+chitta long_task_update - Update long-running task progress
+
+Parameters:
+  --blockers
+
+  --completed_summary
+
+  --task_id (required)
+
+  --work_items
+
+
+Example:
+  chitta long_task_update --task_id "..."

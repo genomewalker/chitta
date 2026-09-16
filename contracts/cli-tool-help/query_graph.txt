@@ -1,10 +1,10 @@
 chitta query_graph - Query triplets by subject or object
 
 Parameters:
-  --subject
-      Query by subject
   --object
       Query by object
+  --subject
+      Query by subject
 
 Example:
   chitta query_graph

@@ -1,0 +1,20 @@
+chitta narrative_log - Append event to session log
+
+Parameters:
+  --files_mentioned
+
+  --kind (required)
+
+  --payload
+
+  --session_id
+
+  --success
+
+  --summary (required)
+
+  --tool_name
+
+
+Example:
+  chitta narrative_log --kind "..." --summary "..."

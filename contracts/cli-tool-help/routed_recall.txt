@@ -1,24 +1,3 @@
-chitta routed_recall - CEC Phase 16 CPU-native query router: dispatches to cheapest lane (exact/fuzzy/temporal/causal/hybrid) without an LLM call. Returns needs_disambiguation with named unbound slots when the typed grammar cannot fully bind the request.
+chitta routed_recall - Legacy daemon handler
 
-Parameters:
-  --subject [default: ]
-      Exact triplet subject — compiles to relational lookup
-  --predicate [default: ]
-      Exact triplet predicate
-  --freetext [default: ]
-      Free-text query — fuzzy ANN+BM25 lane
-  --realm [default: ]
-      Filter by realm
-  --causal_tool [default: ]
-      CEC causal query: tool name
-  --causal_entity [default: ]
-      CEC causal query: entity name (required with causal_tool)
-  --time_from_ms [default: ]
-      Temporal lower bound (epoch ms)
-  --time_to_ms [default: ]
-      Temporal upper bound (epoch ms)
-  --k [default: 10]
-      Max hits to return
-
-Example:
-  chitta routed_recall
+  Legacy handler; parameters are validated by the daemon.

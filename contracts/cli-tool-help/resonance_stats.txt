@@ -1,0 +1,3 @@
+chitta resonance_stats - Show ResonanceLearner Bayesian bandit stats
+
+  No parameters required.

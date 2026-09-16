@@ -1,0 +1,12 @@
+chitta set_affect - Set affect dimensions (valence, arousal) on a memory
+
+Parameters:
+  --arousal (required)
+      Emotional arousal: 0.0 to 1.0
+  --id (required)
+
+  --valence (required)
+      Emotional valence: -1.0 to +1.0
+
+Example:
+  chitta set_affect --id "..." --valence "..." --arousal "..."

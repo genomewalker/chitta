@@ -1,0 +1,8 @@
+chitta predict_needed - Get predicted next-needed memories from the Markov chain access predictor
+
+Parameters:
+  --k
+      Number of predictions (default 8)
+
+Example:
+  chitta predict_needed

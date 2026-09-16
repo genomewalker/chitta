@@ -1,0 +1,8 @@
+chitta get_source_weights - View learned recall source weights — how much each source is trusted per domain
+
+Parameters:
+  --domain
+      Filter by domain (omit for all)
+
+Example:
+  chitta get_source_weights

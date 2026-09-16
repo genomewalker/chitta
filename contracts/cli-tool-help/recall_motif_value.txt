@@ -1,12 +1,12 @@
-chitta recall_motif_value - Top-k CDAWG motif states from (tool, entity) ranked by Q-value. Answers: which action sequences have highest expected success rate from this context?
+chitta recall_motif_value - Return top-k CDAWG motif states reachable from (tool, entity) ranked by Q-value: which action sequences have the highest expected success rate from this context?
 
 Parameters:
-  --tool (required)
-      Tool name to query from
   --entity (required)
-      Entity to query from
-  --k [default: 5]
-      Max states to return
+
+  --k
+      Max states to return (default 5)
+  --tool (required)
+
 
 Example:
   chitta recall_motif_value --tool "..." --entity "..."

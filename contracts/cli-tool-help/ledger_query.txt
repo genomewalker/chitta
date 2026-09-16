@@ -1,14 +1,3 @@
-chitta ledger_query - v6.0 Interaction Ledger: query events by kind/session/time.
+chitta ledger_query - Legacy daemon handler
 
-Parameters:
-  --kind [default: ]
-      Filter by kind: Retrieve | Inject | Outcome | Override
-  --session_id [default: ]
-      Filter by session UUID
-  --since_ms [default: ]
-      Only events at or after this epoch ms
-  --limit [default: 50]
-      Max events to return
-
-Example:
-  chitta ledger_query
+  Legacy handler; parameters are validated by the daemon.

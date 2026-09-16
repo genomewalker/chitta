@@ -1,0 +1,8 @@
+chitta get_evidence_type - Retrieve the evidence type tag of a memory
+
+Parameters:
+  --id (required)
+      Memory ID
+
+Example:
+  chitta get_evidence_type --id "..."

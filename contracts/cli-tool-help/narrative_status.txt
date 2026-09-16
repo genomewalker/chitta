@@ -1,0 +1,8 @@
+chitta narrative_status - Get work mode and segment summary
+
+Parameters:
+  --session_id
+
+
+Example:
+  chitta narrative_status

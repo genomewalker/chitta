@@ -1,16 +1,3 @@
-chitta reembed_memories - Re-embed memories with missing/zero embeddings
+chitta reembed_memories - Legacy daemon handler
 
-Parameters:
-  --all [default: false]
-      Re-embed ALL memories with NULL embeddings
-  --limit [default: 100]
-      Max memories to process
-  --kind
-      Filter by kind: belief, wisdom, episode, correction, preference
-  --min_confidence [default: 0]
-      Min confidence threshold
-  --dry_run [default: false]
-      Preview without updating
-
-Example:
-  chitta reembed_memories
+  Legacy handler; parameters are validated by the daemon.

@@ -1,10 +1,12 @@
 chitta codebase_overview - Get full indexed codebase structure
 
 Parameters:
-  --project
-      Project name
   --format
-      Output format
+
+  --include_callsites
+
+  --project
+
 
 Example:
   chitta codebase_overview

@@ -1,18 +1,14 @@
 chitta grow - Add wisdom, belief, failure, aspiration, or dream
 
 Parameters:
-  --type (required)
-      Type: wisdom|belief|failure|aspiration|dream
   --content (required)
-      Content to store
-  --title
-      Short title
+
   --tags
-      Comma-separated tags
-  --realm
-      Primary realm (default: brahman)
-  --visibility [default: 0]
-      0=Private, 1=Shared, 2=Global
+
+  --title
+
+  --type (required)
+
 
 Example:
   chitta grow --type "..." --content "..."

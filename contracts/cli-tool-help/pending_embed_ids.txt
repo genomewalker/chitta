@@ -1,0 +1,3 @@
+chitta pending_embed_ids - Return IDs of memories awaiting embedding (stuck embed queue)
+
+  No parameters required.

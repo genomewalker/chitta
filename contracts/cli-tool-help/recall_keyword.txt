@@ -1,0 +1,14 @@
+chitta recall_keyword - BM25 keyword search
+
+Parameters:
+  --explain
+      Include score decomposition per hit (default: false)
+  --limit
+      Max results (default 10)
+  --query (required)
+      Search query
+  --realm
+      Filter by realm (empty = all visible)
+
+Example:
+  chitta recall_keyword --query "..."

@@ -1,0 +1,12 @@
+chitta curiosity_note_gap - Record a knowledge gap
+
+Parameters:
+  --context
+
+  --gap (required)
+
+  --realm
+
+
+Example:
+  chitta curiosity_note_gap --gap "..."

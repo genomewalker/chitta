@@ -1,0 +1,12 @@
+chitta query_wisdom_lineages - List wisdom lineages filtered by state and/or domain
+
+Parameters:
+  --domain
+      Filter by domain
+  --limit
+      Max results (default 50)
+  --state
+      Filter: trusted|watch|inflamed|demoted
+
+Example:
+  chitta query_wisdom_lineages

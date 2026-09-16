@@ -1,12 +1,12 @@
-chitta distill_now - Synchronously distill ONE session now and return the counts (learnings + value-facts)
+chitta distill_now - Synchronously distill ONE session now and return the counts (learnings + value-facts stored/deduped). Runs the lock-fixed distill path in-daemon; recall stays responsive.
 
 Parameters:
+  --realm
+      Optional realm (default brahman or the registered realm)
   --session_id (required)
       Session ID to distill
   --transcript_path
-      Optional JSONL path; registers it if given, else resolves durable register
-  --realm
-      Optional realm (default brahman or the registered realm)
+      Optional JSONL path; registers it if given, else resolves from durable transcript/register
 
 Example:
   chitta distill_now --session_id "..."

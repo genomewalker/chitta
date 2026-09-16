@@ -1,0 +1,8 @@
+chitta explore_peek - Get summary of a memory (first 200 chars)
+
+Parameters:
+  --id (required)
+      Memory ID
+
+Example:
+  chitta explore_peek --id "..."

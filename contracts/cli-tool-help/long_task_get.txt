@@ -1,0 +1,8 @@
+chitta long_task_get - Get a long-running task by ID
+
+Parameters:
+  --task_id (required)
+
+
+Example:
+  chitta long_task_get --task_id "..."

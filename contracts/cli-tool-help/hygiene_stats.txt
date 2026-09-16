@@ -1,3 +1,3 @@
-chitta hygiene_stats - Get memory health statistics
+chitta hygiene_stats - Get memory hygiene statistics
 
   No parameters required.

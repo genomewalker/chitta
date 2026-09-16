@@ -1,4 +1,4 @@
-chitta behavioral_probe - Score text against behavioral centroid clusters
+chitta behavioral_probe - Score text against behavioral centroid clusters. Returns per-class similarity scores (sycophantic/hedging/shallow/direct) and overall quality estimate. Requires prior probe_seed calls.
 
 Parameters:
   --text (required)

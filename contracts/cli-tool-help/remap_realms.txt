@@ -1,0 +1,12 @@
+chitta remap_realms - Bulk-remap realms per {old:new} mapping (mapping_file=path or mapping=object; dry_run defaults true)
+
+Parameters:
+  --dry_run
+
+  --mapping
+
+  --mapping_file
+
+
+Example:
+  chitta remap_realms

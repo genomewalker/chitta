@@ -1,0 +1,12 @@
+chitta sadhana_list - List sadhanas
+
+Parameters:
+  --limit
+
+  --realm
+
+  --state
+
+
+Example:
+  chitta sadhana_list

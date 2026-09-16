@@ -1,0 +1,14 @@
+chitta consolidate_similar - Merge near-duplicate memories — keeps stronger, soft-deletes weaker
+
+Parameters:
+  --dry_run
+      Preview without deleting (default true)
+  --limit
+      Max pairs to merge (default 10)
+  --realm
+      Filter by realm
+  --threshold
+      Similarity threshold (default 0.92)
+
+Example:
+  chitta consolidate_similar

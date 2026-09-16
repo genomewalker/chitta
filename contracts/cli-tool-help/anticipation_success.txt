@@ -1,0 +1,8 @@
+chitta anticipation_success - Mark prediction as successful
+
+Parameters:
+  --id (required)
+
+
+Example:
+  chitta anticipation_success --id "..."

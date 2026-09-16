@@ -1,3 +1,3 @@
-chitta predicate_list - v7.0 Falsifiable memories: list all predicates attached to a memory and their current status.
+chitta predicate_list - Legacy daemon handler
 
-  No parameters required.
+  Legacy handler; parameters are validated by the daemon.

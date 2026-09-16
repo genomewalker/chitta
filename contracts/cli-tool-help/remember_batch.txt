@@ -1,0 +1,10 @@
+chitta remember_batch - Store multiple memories in a single round-trip (high-throughput bulk ingest)
+
+Parameters:
+  --items (required)
+      Array of memory objects (same fields as remember)
+  --realm
+      Default realm for all items
+
+Example:
+  chitta remember_batch --items "..."

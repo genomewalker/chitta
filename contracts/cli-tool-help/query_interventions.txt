@@ -1,0 +1,14 @@
+chitta query_interventions - Query the intervention ledger with optional filters
+
+Parameters:
+  --limit
+      Max results (default 50)
+  --realm
+      Filter by realm
+  --session_id
+      Filter by session ID
+  --status
+      Filter by status (0-4)
+
+Example:
+  chitta query_interventions

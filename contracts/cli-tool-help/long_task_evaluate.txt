@@ -1,0 +1,8 @@
+chitta long_task_evaluate - Evaluate task completion
+
+Parameters:
+  --task_id (required)
+
+
+Example:
+  chitta long_task_evaluate --task_id "..."

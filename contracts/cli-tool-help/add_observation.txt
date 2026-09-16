@@ -1,0 +1,16 @@
+chitta add_observation - Record an observation during an open intervention (stdout, test result, file diff, etc.)
+
+Parameters:
+  --confidence
+      Confidence in this observation (0.0-1.0)
+  --evidence_refs
+      Memory IDs that constitute evidence
+  --intervention_id (required)
+      Intervention ID from start_intervention
+  --kind
+      0=Stdout 1=Stderr 2=FileDiff 3=TestResult 4=EnvState 5=UserFeedback
+  --summary (required)
+      Human-readable observation summary
+
+Example:
+  chitta add_observation --intervention_id "..." --summary "..."

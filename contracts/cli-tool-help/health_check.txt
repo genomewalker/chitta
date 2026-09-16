@@ -1,3 +1,3 @@
-chitta health_check - Check daemon health and readiness
+chitta health_check - Check daemon health
 
   No parameters required.

@@ -1,8 +1,8 @@
-chitta realm_get - Get realm for a memory
+chitta realm_get - Get all realms a memory belongs to
 
 Parameters:
   --id (required)
-      Memory ID
+
 
 Example:
   chitta realm_get --id "..."

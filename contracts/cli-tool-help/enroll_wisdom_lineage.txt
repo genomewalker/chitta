@@ -1,0 +1,24 @@
+chitta enroll_wisdom_lineage - Enroll a Trusted wisdom candidate into the Wisdom Homeostasis layer — creates a living WisdomLineage record that tracks belief integrity over time
+
+Parameters:
+  --ancestor_lineage_id
+      Parent lineage ID if this is a fork/split
+  --claim (required)
+      The claim this wisdom encodes
+  --derivation_relation
+      Relation to ancestor: supersedes|branches_from|narrows|splits_from
+  --envelope (required)
+      Applicability envelope: {domain, action_types, preconditions, source_families}
+  --seed_debt_ids
+      Epistemic debt IDs
+  --seed_episode_ids
+      Episode IDs that seeded this wisdom
+  --seed_intervention_ids
+      Intervention IDs
+  --seed_surprise_ids
+      Surprise event IDs
+  --wisdom_candidate_id (required)
+      ID of the WisdomCandidate to enroll
+
+Example:
+  chitta enroll_wisdom_lineage --wisdom_candidate_id "..." --claim "..." --envelope "..."

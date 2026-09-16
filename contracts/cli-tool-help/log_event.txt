@@ -1,16 +1,16 @@
-chitta log_event - Log a structured action event to the CEC tape and CDAWG
+chitta log_event - Log a structured action event to the CEC tape and CDAWG (tool, entity, outcome: 0=success 1=fail 2=error 3=partial)
 
 Parameters:
-  --tool (required)
-      Tool name (e.g. Edit, Bash)
   --entity (required)
-      Entity acted on (file, URL, command)
-  --outcome [default: 0]
-      0=success 1=fail 2=error 3=partial
-  --session_id [default: 0]
-      Session ID (optional)
-  --ts_ms [default: 0]
-      Timestamp ms (0=now)
+
+  --outcome
+
+  --session_id
+
+  --tool (required)
+
+  --ts_ms
+
 
 Example:
   chitta log_event --tool "..." --entity "..."

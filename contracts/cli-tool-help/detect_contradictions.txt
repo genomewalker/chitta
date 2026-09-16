@@ -4,7 +4,7 @@ Parameters:
   --memory_id (required)
       Memory ID to check
   --realm
-      Realm to scan
+      Realm to scan (default global)
 
 Example:
   chitta detect_contradictions --memory_id "..."

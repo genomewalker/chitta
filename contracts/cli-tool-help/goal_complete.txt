@@ -1,0 +1,10 @@
+chitta goal_complete - Mark goal completed
+
+Parameters:
+  --id (required)
+
+  --outcome (required)
+
+
+Example:
+  chitta goal_complete --id "..." --outcome "..."

@@ -1,0 +1,8 @@
+chitta get_task - Get full task view — contract, delegations, evidence links, pending probes, and completion criteria
+
+Parameters:
+  --task_id (required)
+      Task ID
+
+Example:
+  chitta get_task --task_id "..."

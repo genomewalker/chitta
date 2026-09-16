@@ -1,14 +1,20 @@
-chitta smart_recall - Intelligent recall with automatic query intent classification
+chitta smart_recall - Intelligent memory recall with hierarchical expansion
 
 Parameters:
+  --expand_top
+
+  --gwt_mode
+
+  --include_global
+
+  --limit
+
   --query (required)
-      Natural language query (e.g., 'last week', 'show preferences')
-  --limit [default: 20]
-      Max results
+
   --realm
-      Filter by realm
-  --include_global [default: true]
-      Include global memories
+
+  --separation_mode
+
 
 Example:
   chitta smart_recall --query "..."

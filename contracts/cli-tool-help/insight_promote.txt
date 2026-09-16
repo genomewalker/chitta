@@ -1,0 +1,10 @@
+chitta insight_promote - Promote memory to global
+
+Parameters:
+  --id (required)
+
+  --reason
+
+
+Example:
+  chitta insight_promote --id "..."

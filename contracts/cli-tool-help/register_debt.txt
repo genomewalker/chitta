@@ -1,0 +1,20 @@
+chitta register_debt - Register an epistemic uncertainty — competing hypotheses that need resolution
+
+Parameters:
+  --competing_hypotheses
+      Competing explanations
+  --discriminating_test
+      How to distinguish between hypotheses
+  --domain
+      Domain (default general)
+  --fragility_score
+      How fragile this belief is [0-1] (default 0.5)
+  --pattern (required)
+      The uncertain pattern/belief (required)
+  --realm
+      Realm (default global)
+  --session_id
+      Session ID (optional)
+
+Example:
+  chitta register_debt --pattern "..."

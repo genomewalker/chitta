@@ -1,0 +1,10 @@
+chitta memory_provenance - Show why a memory exists: source, evidence, superseded_by, supersedes relations
+
+Parameters:
+  --id
+      Memory ID to inspect
+  --memory_id
+      Memory ID (numeric)
+
+Example:
+  chitta memory_provenance

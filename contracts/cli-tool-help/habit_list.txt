@@ -1,12 +1,14 @@
-chitta habit_list - List learned habits
+chitta habit_list - List formed habits
 
 Parameters:
+  --limit
+
+  --min_strength
+
   --realm
-      Filter by realm
-  --min_strength [default: 0]
-      Minimum strength threshold
-  --limit [default: 20]
-      Max results
+
+  --sort_by
+
 
 Example:
   chitta habit_list

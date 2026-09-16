@@ -1,0 +1,10 @@
+chitta branch_resolve - Resolve a branch conflict: winner stays, loser abandoned
+
+Parameters:
+  --loser_id (required)
+      Branch ID to abandon
+  --winner_id (required)
+      Branch ID that wins
+
+Example:
+  chitta branch_resolve --winner_id "..." --loser_id "..."

@@ -1,0 +1,3 @@
+chitta effective_scorer_weights - Show effective scoring weights — baseline + learned deltas for all factors
+
+  No parameters required.

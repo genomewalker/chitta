@@ -1,3 +1,3 @@
-chitta tape_stats - CEC Phase 12 EventTape statistics: event count, tombstoned events (temporal compression), unique sessions, tools, entities, and failure events.
+chitta tape_stats - Legacy daemon handler
 
-  No parameters required.
+  Legacy handler; parameters are validated by the daemon.

@@ -1,0 +1,20 @@
+chitta sadhana_start - Create and start an autonomous agent
+
+Parameters:
+  --brain_model
+
+  --brain_provider
+
+  --goal (required)
+
+  --goal_dsl
+
+  --interval_seconds
+
+  --max_turns
+
+  --realm
+
+
+Example:
+  chitta sadhana_start --goal "..."

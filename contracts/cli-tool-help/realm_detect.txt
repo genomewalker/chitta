@@ -1,1 +1,3 @@
-project:cc-soul
+chitta realm_detect - Detect current realm from environment
+
+  No parameters required.

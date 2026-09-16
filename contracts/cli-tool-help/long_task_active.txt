@@ -1,0 +1,8 @@
+chitta long_task_active - Get active long-running task
+
+Parameters:
+  --realm
+
+
+Example:
+  chitta long_task_active

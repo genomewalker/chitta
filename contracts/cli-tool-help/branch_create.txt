@@ -1,0 +1,10 @@
+chitta branch_create - Fork a rival branch for conflicting interpretations
+
+Parameters:
+  --parent_id
+      Parent branch ID (0=trunk)
+  --scope
+      Branch scope (default: global)
+
+Example:
+  chitta branch_create

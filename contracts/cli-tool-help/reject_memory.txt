@@ -1,0 +1,8 @@
+chitta reject_memory - Reject a Proposed memory, archiving it
+
+Parameters:
+  --id (required)
+      Memory ID to reject
+
+Example:
+  chitta reject_memory --id "..."

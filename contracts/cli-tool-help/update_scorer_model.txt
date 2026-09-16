@@ -1,0 +1,14 @@
+chitta update_scorer_model - Apply learned weight deltas to the scoring model from outcome calibration
+
+Parameters:
+  --mean_loss
+      EWMA loss from calibration
+  --model_version
+      Monotonic version number
+  --outcome_count
+      Total outcomes used for calibration
+  --weights
+      Factor name → {delta, min_delta, max_delta} learned adjustments
+
+Example:
+  chitta update_scorer_model

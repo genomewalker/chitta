@@ -1,0 +1,3 @@
+chitta learned_scorer_stats - Current learned scoring model — version, factor count, loss, outcome count
+
+  No parameters required.

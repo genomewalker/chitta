@@ -1,3 +1,3 @@
-chitta span_backfill_memories - Backfill the memory↔span edge over all live memories (idempotent).
+chitta span_backfill_memories - Backfill the memory↔span edge: run the atom extractor over every live memory's text so distilled beliefs link to the verbatim paths/commands/ids they mention. Idempotent (per-memory content hash); superseded memories relink. Reports memories linked + new spans.
 
   No parameters required.

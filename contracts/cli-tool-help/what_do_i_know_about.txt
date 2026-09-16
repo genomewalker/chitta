@@ -1,0 +1,18 @@
+chitta what_do_i_know_about - Introspection: return claims + provenance + staleness + contradictions for a topic
+
+Parameters:
+  --confidence_min
+      Minimum confidence threshold (default 0.0)
+  --include_contradictions
+      Include contradiction info (default true)
+  --include_stale
+      Include stale memories (default true)
+  --k
+      Max claims to return (default 10)
+  --realm
+      Realm filter
+  --topic (required)
+      Topic or question to introspect
+
+Example:
+  chitta what_do_i_know_about --topic "..."

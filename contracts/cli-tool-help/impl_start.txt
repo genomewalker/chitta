@@ -1,14 +1,14 @@
-chitta impl_start - Start the self-improvement implementation sadhana (reads [impl] memories, implements changes, review gate, commits if approved)
+chitta impl_start - Start self-improvement implementation sadhana
 
 Parameters:
+  --interval_seconds
+
+  --max_turns
+
+  --realm
+
   --repo
-      Absolute path to cc-soul repo (default: auto-detected)
-  --interval_seconds [default: 86400]
-      Seconds between cycles (default: 86400)
-  --max_turns [default: 15]
-      Max turns per cycle (default: 15)
-  --realm [default: brahman]
-      Memory realm (default: brahman)
+
 
 Example:
   chitta impl_start

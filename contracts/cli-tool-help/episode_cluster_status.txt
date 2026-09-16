@@ -1,10 +1,10 @@
-chitta episode_cluster_status - Find clusters of similar episodes for distillation into wisdom
+chitta episode_cluster_status - Find similar episode clusters
 
 Parameters:
-  --similarity-threshold [default: 0.85]
-      Minimum similarity for cluster
-  --min-occurrences [default: 3]
-      Minimum episodes in cluster
+  --min_occurrences
+
+  --similarity_threshold
+
 
 Example:
   chitta episode_cluster_status

@@ -1,0 +1,8 @@
+chitta trigger_fire - Manually fire a trigger
+
+Parameters:
+  --trigger_id (required)
+      Trigger ID to fire
+
+Example:
+  chitta trigger_fire --trigger_id "..."

@@ -1,0 +1,10 @@
+chitta labile_memories_top - List the most-accessed (most labile) memories — candidates for reconsolidation
+
+Parameters:
+  --limit
+      Max results (default 20)
+  --realm
+      Filter by realm
+
+Example:
+  chitta labile_memories_top

@@ -1,0 +1,16 @@
+chitta link_evidence - Link a memory to a task as evidence — records which agent produced it and evidence kind
+
+Parameters:
+  --evidence_kind
+      0=Observation 1=Artifact 2=Result 3=Analysis 4=UserFeedback
+  --memory_id (required)
+      Memory ID to link
+  --produced_by
+      Agent that produced this evidence
+  --relevance
+      Relevance score 0-1 (default 1.0)
+  --task_id (required)
+      Task ID
+
+Example:
+  chitta link_evidence --task_id "..." --memory_id "..."

@@ -1,0 +1,10 @@
+chitta mark_memory_invalidated - Mark a memory as invalidated by a commit hash or symbol-change ID.
+
+Parameters:
+  --memory_id (required)
+      Memory ID to mark
+  --reason
+      Commit hash or change ID causing invalidation
+
+Example:
+  chitta mark_memory_invalidated --memory_id "..."

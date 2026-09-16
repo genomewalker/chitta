@@ -1,0 +1,10 @@
+chitta habit_strengthen - Strengthen a habit
+
+Parameters:
+  --amount
+
+  --id (required)
+
+
+Example:
+  chitta habit_strengthen --id "..."

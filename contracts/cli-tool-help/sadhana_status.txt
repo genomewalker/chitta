@@ -1,0 +1,10 @@
+chitta sadhana_status - Get sadhana status
+
+Parameters:
+  --history_limit
+
+  --id (required)
+
+
+Example:
+  chitta sadhana_status --id "..."

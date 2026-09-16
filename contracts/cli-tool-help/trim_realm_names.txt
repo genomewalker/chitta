@@ -1,0 +1,3 @@
+chitta trim_realm_names - Fix realm names with trailing whitespace/newlines
+
+  No parameters required.

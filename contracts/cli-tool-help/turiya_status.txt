@@ -1,3 +1,3 @@
-chitta turiya_status - CEC Phase 11 Turīya witness: read-only health vector across all CEC organs. Reports CDAWG growth, Sequitur rule churn, Q-value variance, refutation pressure, and hypothesis uncertainty. Diagnoses: healthy|stale|q_collapse|refutation_flood|high_uncertainty|fep_context_drift|fep_emission_shock.
+chitta turiya_status - Legacy daemon handler
 
-  No parameters required.
+  Legacy handler; parameters are validated by the daemon.

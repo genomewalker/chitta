@@ -1,8 +1,3 @@
-chitta resolve_callsites - Resolve callsites to symbols and populate call_edge table
+chitta resolve_callsites - Legacy daemon handler
 
-Parameters:
-  --project
-      Filter to specific project path
-
-Example:
-  chitta resolve_callsites
+  Legacy handler; parameters are validated by the daemon.

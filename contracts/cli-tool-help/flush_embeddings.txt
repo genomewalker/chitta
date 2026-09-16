@@ -1,0 +1,3 @@
+chitta flush_embeddings - Flush the pending embedding queue synchronously — call after remember_batch to ensure HNSW/semantic recall is available immediately. Returns {flushed: N}.
+
+  No parameters required.

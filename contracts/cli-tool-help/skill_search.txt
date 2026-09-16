@@ -1,0 +1,10 @@
+chitta skill_search - Search skills by query
+
+Parameters:
+  --limit
+
+  --query (required)
+
+
+Example:
+  chitta skill_search --query "..."

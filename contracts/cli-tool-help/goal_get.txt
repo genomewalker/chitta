@@ -1,0 +1,8 @@
+chitta goal_get - Get goal by ID
+
+Parameters:
+  --id (required)
+
+
+Example:
+  chitta goal_get --id "..."

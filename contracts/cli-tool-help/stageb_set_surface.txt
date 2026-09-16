@@ -1,0 +1,10 @@
+chitta stageb_set_surface - Stage B: set a memory's natural-language retrieval surface and re-embed from it (keeps telegraphic content as display). Pass surface='' to clear and re-embed from content. Returns the id and embedded flag.
+
+Parameters:
+  --id (required)
+
+  --surface (required)
+
+
+Example:
+  chitta stageb_set_surface --id "..." --surface "..."

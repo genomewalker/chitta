@@ -1,0 +1,3 @@
+chitta compact_wal - Compact WAL: save full snapshot then delete covered segments
+
+  No parameters required.

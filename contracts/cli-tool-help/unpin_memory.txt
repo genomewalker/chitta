@@ -1,0 +1,8 @@
+chitta unpin_memory - Unpin a memory
+
+Parameters:
+  --id (required)
+
+
+Example:
+  chitta unpin_memory --id "..."

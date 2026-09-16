@@ -1,8 +1,3 @@
-chitta extract_symbols - Extract symbols from source file using tree-sitter
+chitta extract_symbols - Legacy daemon handler
 
-Parameters:
-  --path (required)
-      File path to analyze
-
-Example:
-  chitta extract_symbols --path "..."
+  Legacy handler; parameters are validated by the daemon.

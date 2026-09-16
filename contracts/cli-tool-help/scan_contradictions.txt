@@ -1,10 +1,10 @@
 chitta scan_contradictions - Background scan: find contradiction candidates across all memories in a realm
 
 Parameters:
+  --limit
+      Max candidates to return (default 50)
   --realm
       Realm to scan
-  --limit [default: 50]
-      Max candidates to return
 
 Example:
   chitta scan_contradictions

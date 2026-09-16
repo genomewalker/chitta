@@ -1,0 +1,20 @@
+chitta 5w_search - Multi-dimensional semantic search across who/what/when/where/why axes
+
+Parameters:
+  --limit
+      Max results (default 10)
+  --realm
+      Filter by realm
+  --what
+      What is happening/topic
+  --when
+      Temporal description
+  --where
+      Location or context
+  --who
+      Who is involved
+  --why
+      Motivation or reason
+
+Example:
+  chitta 5w_search

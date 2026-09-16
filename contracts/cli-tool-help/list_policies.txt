@@ -1,8 +1,8 @@
-chitta list_policies - List CEC intervention policies. Shows id, source rule, kind, shadow event count, Q-lift, and fire count.
+chitta list_policies - List CEC intervention policies (shadow and active). Each entry shows rule source, kind (OpenTask/TurnInjection/GuardPolicy), shadow event count, lift, and fire count.
 
 Parameters:
-  --active_only [default: false]
-      If true, show only active (promoted) policies
+  --active_only
+      If true, only return active (promoted) policies
 
 Example:
   chitta list_policies

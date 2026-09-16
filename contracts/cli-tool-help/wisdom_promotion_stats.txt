@@ -1,0 +1,3 @@
+chitta wisdom_promotion_stats - Overview of wisdom promotion pipeline — total candidates by lifecycle stage
+
+  No parameters required.

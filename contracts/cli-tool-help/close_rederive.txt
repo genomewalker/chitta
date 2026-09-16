@@ -1,0 +1,16 @@
+chitta close_rederive - Close a re-derivation contract for an Inflamed wisdom lineage. Actions: reaffirm (0), narrow (1), split (2), demote (3).
+
+Parameters:
+  --action (required)
+      0=reaffirm 1=narrow 2=split 3=demote
+  --fork_claim
+      Claim for the forked lineage (action=split)
+  --fork_lineage_id
+      Pre-enrolled fork lineage ID (action=split)
+  --lineage_id (required)
+      Lineage ID
+  --new_envelope
+      Narrowed applicability envelope (for action=narrow/split)
+
+Example:
+  chitta close_rederive --lineage_id "..." --action "..."

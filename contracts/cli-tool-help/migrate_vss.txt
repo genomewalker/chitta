@@ -1,3 +1,0 @@
-chitta migrate_vss - Migrate embeddings from main DB VARCHAR to VSS DB FLOAT[768]
-
-  No parameters required.

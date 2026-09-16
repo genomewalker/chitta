@@ -1,0 +1,26 @@
+chitta upsert_wisdom_candidate - Create or update a wisdom candidate from clustered surprise patterns
+
+Parameters:
+  --action
+      Action or behavior pattern
+  --cluster_key (required)
+      Unique key for this pattern cluster (domain+action+sig)
+  --cross_session_count
+      Number of distinct sessions with evidence
+  --debt_ids
+      Resolved debt IDs linked to this candidate
+  --domain
+      Knowledge domain
+  --episode_ids
+      Surprise event IDs supporting this candidate
+  --mean_surprise
+      Average surprise magnitude across episodes
+  --promotion_score
+      Computed promotion readiness score 0-1
+  --summary
+      Human-readable summary of the wisdom
+  --support_count
+      Number of supporting episodes
+
+Example:
+  chitta upsert_wisdom_candidate --cluster_key "..."

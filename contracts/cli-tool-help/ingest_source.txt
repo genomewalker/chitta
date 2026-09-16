@@ -1,16 +1,3 @@
-chitta ingest_source - Ingest external content (URL, file, directory) into memory via SSL distillation
+chitta ingest_source - Legacy daemon handler
 
-Parameters:
-  --source (required)
-      URL, file path, or directory path
-  --realm [default: brahman]
-      Target realm
-  --type [default: auto]
-      Source type: auto|url|file|directory
-  --model
-      LLM model for distillation
-  --max_chunks [default: 30]
-      Max chunks to process
-
-Example:
-  chitta ingest_source --source "..."
+  Legacy handler; parameters are validated by the daemon.

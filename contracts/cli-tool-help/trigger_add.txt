@@ -1,0 +1,20 @@
+chitta trigger_add - Create a trigger automaton (prospective memory). Arms on creation, fires when conditions met or tension exceeds threshold.
+
+Parameters:
+  --action (required)
+      Action on fire (Notify, InjectMemory, EmitEvent, RememberFact)
+  --condition (required)
+      Trigger condition (TimeAfter, ConstraintMatch, EventMatch, AllOf, AnyOf)
+  --deadline_ms
+      Deadline timestamp ms (0=no deadline)
+  --gain
+      Emotional importance 0-1 (default 0.5)
+  --name (required)
+      Human-readable trigger name
+  --realm
+      Realm scope (default: global)
+  --tension_threshold
+      Tension level to auto-fire (default 0.8)
+
+Example:
+  chitta trigger_add --name "..." --condition "..." --action "..."

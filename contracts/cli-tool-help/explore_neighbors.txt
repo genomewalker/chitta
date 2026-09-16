@@ -1,0 +1,10 @@
+chitta explore_neighbors - Get nodes connected via triplets
+
+Parameters:
+  --direction
+      outgoing, incoming, or both
+  --node (required)
+      Node name
+
+Example:
+  chitta explore_neighbors --node "..."

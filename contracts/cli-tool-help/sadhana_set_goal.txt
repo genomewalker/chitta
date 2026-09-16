@@ -1,0 +1,10 @@
+chitta sadhana_set_goal - Change sadhana goal
+
+Parameters:
+  --goal (required)
+
+  --id (required)
+
+
+Example:
+  chitta sadhana_set_goal --id "..." --goal "..."

@@ -1,0 +1,3 @@
+chitta agent_list - List all agents
+
+  No parameters required.

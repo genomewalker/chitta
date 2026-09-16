@@ -1,0 +1,10 @@
+chitta narrative_history - Get work mode segment history
+
+Parameters:
+  --limit
+
+  --session_id
+
+
+Example:
+  chitta narrative_history

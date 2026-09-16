@@ -1,0 +1,3 @@
+chitta trigger_list - List all triggers with their status
+
+  No parameters required.

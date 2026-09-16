@@ -1,0 +1,16 @@
+chitta query_tasks - Query task contracts — filter by realm, session, status, or tag
+
+Parameters:
+  --limit
+      Max results (default 50)
+  --realm
+      Filter by realm
+  --session_id
+      Filter by session ID
+  --status
+      Filter by status (0-4)
+  --tag
+      Filter by tag
+
+Example:
+  chitta query_tasks

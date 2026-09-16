@@ -1,8 +1,8 @@
-chitta dream_status - Get full status of a dream including sadhana history
+chitta dream_status - Get dream details
 
 Parameters:
   --id (required)
-      Dream ID
+
 
 Example:
   chitta dream_status --id "..."

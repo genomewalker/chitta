@@ -1,12 +1,12 @@
-chitta memory_outcome - Record an outcome observation for a memory's utility posterior
+chitta memory_outcome - Record an observed outcome for a memory into its Beta utility posterior (success raises alpha, failure raises beta)
 
 Parameters:
   --id (required)
-      Node ID
+      Node ID the outcome is about
   --success (required)
-      true|false: did the action following this memory's injection succeed
-  --weight [default: 1.0]
-      Observation weight (0-5]
+      Did acting on this memory work?
+  --weight
+      Observation weight, capped at 5.0 (default 1.0)
 
 Example:
   chitta memory_outcome --id "..." --success "..."

@@ -1,0 +1,16 @@
+chitta graph_traverse - BFS graph traversal from a start node over triplet edges
+
+Parameters:
+  --direction
+      Edge direction (default outgoing)
+  --edge_types
+      Predicate filter (empty = all)
+  --max_hops
+      Max BFS depth (default 3)
+  --max_results
+      Max nodes returned (default 50)
+  --start (required)
+      Starting node
+
+Example:
+  chitta graph_traverse --start "..."

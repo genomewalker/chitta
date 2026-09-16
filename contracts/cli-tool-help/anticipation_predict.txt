@@ -1,0 +1,14 @@
+chitta anticipation_predict - Predict likely actions
+
+Parameters:
+  --context (required)
+
+  --limit
+
+  --min_confidence
+
+  --realm
+
+
+Example:
+  chitta anticipation_predict --context "..."

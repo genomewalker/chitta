@@ -1,16 +1,3 @@
-chitta export_training_pairs - Export query-passage pairs as JSONL for embedding fine-tuning
+chitta export_training_pairs - Legacy daemon handler
 
-Parameters:
-  --output_path
-      Output JSONL path
-  --realm
-      Filter to specific realm
-  --max_pairs [default: 10000]
-      Max pairs to export
-  --min_confidence [default: 0.5]
-      Min confidence threshold
-  --include_negatives [default: true]
-      Generate hard negatives
-
-Example:
-  chitta export_training_pairs
+  Legacy handler; parameters are validated by the daemon.

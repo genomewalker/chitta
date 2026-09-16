@@ -1,0 +1,14 @@
+chitta transition_wisdom_lineage - Manually transition a wisdom lineage state (Trusted/Watch/Inflamed/Demoted). Normally automatic — use for overrides.
+
+Parameters:
+  --lineage_id (required)
+      Lineage ID
+  --new_state (required)
+      0=Trusted 1=Watch 2=Inflamed 3=Demoted
+  --reason
+      Why this transition is happening
+  --rederive_task_id
+      Task contract ID if opening re-derivation
+
+Example:
+  chitta transition_wisdom_lineage --lineage_id "..." --new_state "..."

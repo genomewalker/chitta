@@ -1,0 +1,12 @@
+chitta anticipation_observe - Record context->action pattern
+
+Parameters:
+  --action (required)
+
+  --context (required)
+
+  --realm
+
+
+Example:
+  chitta anticipation_observe --context "..." --action "..."

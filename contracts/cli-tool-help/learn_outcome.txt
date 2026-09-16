@@ -1,12 +1,12 @@
-chitta learn_outcome - Record whether a surfaced memory helped (positive/negative/neutral)
+chitta learn_outcome - Record memory usage outcome
 
 Parameters:
-  --memory-id (required)
-      Memory ID that was surfaced
-  --outcome (required)
-      Did it help? positive|negative|neutral
   --context
-      What task triggered recall
+
+  --memory_id (required)
+
+  --outcome (required)
+
 
 Example:
-  chitta learn_outcome --memory-id "..." --outcome "..."
+  chitta learn_outcome --memory_id "..." --outcome "..."

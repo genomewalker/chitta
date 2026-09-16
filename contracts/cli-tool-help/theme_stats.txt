@@ -2,7 +2,7 @@ chitta theme_stats - Get theme organization statistics
 
 Parameters:
   --realm
-      Filter by realm
+
 
 Example:
   chitta theme_stats

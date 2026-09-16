@@ -1,0 +1,16 @@
+chitta query_triplets_temporal - Query triplets at a point in time
+
+Parameters:
+  --at_date
+      YYYY-MM-DD
+  --limit
+
+  --object
+
+  --predicate
+
+  --subject
+
+
+Example:
+  chitta query_triplets_temporal

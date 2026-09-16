@@ -1,0 +1,16 @@
+chitta query_debts - Query epistemic debts with filters
+
+Parameters:
+  --domain
+      Filter by domain
+  --limit
+      Max results (default 50)
+  --min_fragility
+      Minimum fragility score
+  --realm
+      Filter by realm
+  --status
+      Filter: open, resolved, deferred
+
+Example:
+  chitta query_debts

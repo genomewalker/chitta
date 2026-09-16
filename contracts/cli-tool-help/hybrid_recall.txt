@@ -1,0 +1,24 @@
+chitta hybrid_recall - Combined vector + BM25 + graph recall
+
+Parameters:
+  --bm25_weight
+
+  --explain
+      Include score decomposition per hit (default: false)
+  --graph_weight
+
+  --limit
+
+  --query (required)
+
+  --realm
+
+  --recency_weight
+
+  --tag
+
+  --vector_weight
+
+
+Example:
+  chitta hybrid_recall --query "..."

@@ -1,8 +1,12 @@
-chitta sadhana_stop - Stop a running sadhana permanently
+chitta sadhana_stop - Stop a sadhana
 
 Parameters:
   --id (required)
-      Sadhana ID
+
+  --reason
+
+  --success
+
 
 Example:
   chitta sadhana_stop --id "..."

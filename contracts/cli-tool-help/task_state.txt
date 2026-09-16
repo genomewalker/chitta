@@ -1,4 +1,4 @@
-chitta task_state - Deterministic task-state check (capability #3): what is the current state of task X? Exact keyed lookup of the LATEST stored [task] record by its slug — bypasses fuzzy recall.
+chitta task_state - Deterministic task-state check (capability #3): what is the current state of task X? Exact keyed lookup of the LATEST stored [task] record by its slug — bypasses fuzzy recall so an agent resuming a discontinuous session gets the durable status/next-step. Returns found + the record.
 
 Parameters:
   --id (required)

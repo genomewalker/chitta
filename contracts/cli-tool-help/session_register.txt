@@ -1,18 +1,3 @@
-chitta session_register - Register session for cross-session messaging
+chitta session_register - Legacy daemon handler
 
-Parameters:
-  --session_id (required)
-      Session ID
-  --realm [default: brahman]
-      Realm
-  --pid
-      Process ID
-  --transcript_path
-      Path to transcript .jsonl file (stable ID)
-  --project_dir
-      Working directory
-  --metadata [default: {}]
-      JSON metadata
-
-Example:
-  chitta session_register --session_id "..."
+  Legacy handler; parameters are validated by the daemon.

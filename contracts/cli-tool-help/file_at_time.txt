@@ -1,0 +1,14 @@
+chitta file_at_time - Get file content at time (stub)
+
+Parameters:
+  --file_path (required)
+
+  --session_id
+
+  --show_diff
+
+  --time
+
+
+Example:
+  chitta file_at_time --file_path "..."

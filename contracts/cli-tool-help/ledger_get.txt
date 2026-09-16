@@ -1,8 +1,14 @@
-chitta ledger_get - Get specific checkpoint by ID
+chitta ledger_get - Get checkpoint by key or session/project
 
 Parameters:
-  --id (required)
-      Checkpoint ID
+  --include_snapshot
+      Include snapshot preview (truncated) in response
+  --key
+      Canonical checkpoint key (session:project)
+  --project
+
+  --session_id
+
 
 Example:
-  chitta ledger_get --id "..."
+  chitta ledger_get

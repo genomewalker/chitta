@@ -1,0 +1,8 @@
+chitta agent_get - Get agent record
+
+Parameters:
+  --agent_id (required)
+
+
+Example:
+  chitta agent_get --agent_id "..."

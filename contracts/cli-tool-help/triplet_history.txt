@@ -1,0 +1,12 @@
+chitta triplet_history - Get history of a subject-predicate relationship
+
+Parameters:
+  --limit
+
+  --predicate (required)
+
+  --subject (required)
+
+
+Example:
+  chitta triplet_history --subject "..." --predicate "..."

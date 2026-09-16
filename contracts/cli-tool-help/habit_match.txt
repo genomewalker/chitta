@@ -1,0 +1,12 @@
+chitta habit_match - Find matching habits
+
+Parameters:
+  --context (required)
+
+  --min_strength
+
+  --realm
+
+
+Example:
+  chitta habit_match --context "..."

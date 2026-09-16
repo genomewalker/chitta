@@ -1,0 +1,8 @@
+chitta embed_probe - For a memory id: cosine of its STORED vector against a fresh single-prefix embed vs a double-prefix embed of the same content. ~1.0 identifies which vector space the memory actually lives in.
+
+Parameters:
+  --id (required)
+
+
+Example:
+  chitta embed_probe --id "..."

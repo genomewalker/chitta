@@ -1,10 +1,10 @@
 chitta strengthen - Increase confidence of a memory
 
 Parameters:
+  --amount
+      Amount (default 0.1)
   --id (required)
       Node ID
-  --amount [default: 0.1]
-      Amount to strengthen (0-1)
 
 Example:
   chitta strengthen --id "..."

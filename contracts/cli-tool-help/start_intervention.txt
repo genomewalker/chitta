@@ -1,0 +1,28 @@
+chitta start_intervention - Begin tracking an agent intervention — records intent, action, preconditions and expected observables before execution
+
+Parameters:
+  --action_ref (required)
+      Reference to the action (tool name, file path, command)
+  --action_type
+      0=ToolCall 1=MultiStepPlan 2=Delegation 3=Edit 4=Command
+  --agent_id
+      Agent performing the action
+  --domain
+      Domain area (e.g. git, filesystem, testing, compiler)
+  --expected_observables
+      What success looks like
+  --intent (required)
+      What the agent intends to achieve
+  --preconditions
+      Known preconditions
+  --realm
+      Realm: coding, research, planning (default: coding)
+  --reversal_cost
+      0=None 1=Low 2=Medium 3=High
+  --session_id
+      Current session ID
+  --task_id
+      Optional task ID
+
+Example:
+  chitta start_intervention --intent "..." --action_ref "..."

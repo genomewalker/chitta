@@ -1,0 +1,12 @@
+chitta msg_respond - Reply to a message using the original sender/target from the event
+
+Parameters:
+  --content (required)
+      Reply content
+  --message_id (required)
+      Event ID of the message to reply to
+  --session_id
+      Override sender session_id (defaults to original target)
+
+Example:
+  chitta msg_respond --message_id "..." --content "..."

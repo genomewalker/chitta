@@ -1,0 +1,10 @@
+chitta resolve_debt - Mark an epistemic debt as resolved with a resolution
+
+Parameters:
+  --debt_id (required)
+      Debt ID to resolve
+  --resolution (required)
+      How the uncertainty was resolved
+
+Example:
+  chitta resolve_debt --debt_id "..." --resolution "..."

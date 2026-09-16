@@ -1,0 +1,8 @@
+chitta agent_disable - Disable an agent
+
+Parameters:
+  --agent_id (required)
+
+
+Example:
+  chitta agent_disable --agent_id "..."
