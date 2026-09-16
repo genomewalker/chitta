@@ -823,61 +823,77 @@ sets, then state changes and exact-score ties. Optional `.lsh`, `.turbo`,
 <!-- ORGAN-ABLATION-TABLE -->
 ## Organ ablation 2026-09-16
 
-**Unqualified, pre-fix.** The lead stopped this matrix on 2026-09-16 at
-19:30 CEST after 105 completed trials. Its binary predates the restart-identity
-fix: a 50 ms embedding deadline can silently omit semantic lanes under load,
-and the recall clock was not pinned. Control golden spread was 0.067317,
-against the frozen 0.001790 margin. These historical rows cannot qualify
-retirement and must not be pooled with the forthcoming pinned measurements.
-
 Three repetitions per arm; missing calibration or invariants block retirement.
-No organ or tool is deleted by the measurement runner.
+When controls exceed a declared band, differences are descriptive and cannot
+be attributed to the ablation. No organ or tool is deleted by this runner.
+Equivalence requires complete panel, identity and consumer-test evidence.
+A valid calibrated-panel or invariant failure is sufficient for not equivalent.
+
+Golden controls: 0.500078362622, 0.500078362622, 0.500078362622; spread 0; frozen margin 0.00179012512677.
+
+Unqualified raw observations remain in the report and are not equivalence estimates.
 
 | Organ | Dependency class | Panels moved (Δ; margin) | Verdict |
 |---|---|---|---|
-| `session_registry` | event/API | golden.ndcg: +0.0267231; margin=0.0017901251267712533; hook_total_ms: -10.6667; margin=1833.3949929025114; current_truth.p3: +0; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `transcript_registry` | event/API | golden.ndcg: +0.0160853; margin=0.0017901251267712533; hook_total_ms: +11.6667; margin=1833.3949929025114; current_truth.p3: +0.0166667; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `task_registry` | event/API | golden.ndcg: +0.00260341; margin=0.0017901251267712533; hook_total_ms: +24; margin=1833.3949929025114; current_truth.p3: +0.00833333; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `user_model_registry` | event/API | golden.ndcg: +0.0224851; margin=0.0017901251267712533; hook_total_ms: -68.3333; margin=1833.3949929025114; current_truth.p3: +0.0166667; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `theme_organ` | event/API | golden.ndcg: +0.0194296; margin=0.0017901251267712533; hook_total_ms: +50.3333; margin=1833.3949929025114; current_truth.p3: +0.0166667; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `analytics_registry` | event/API | golden.ndcg: +0.0231328; margin=0.0017901251267712533; hook_total_ms: +17.3333; margin=1833.3949929025114; current_truth.p3: +0.0166667; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `msg_registry` | event/API; snapshot section retained | golden.ndcg: +0.0197931; margin=0.0017901251267712533; hook_total_ms: +65.6667; margin=1833.3949929025114; current_truth.p3: +0; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `skill_registry` | event/API | golden.ndcg: +0.0160004; margin=0.0017901251267712533; hook_total_ms: +110.333; margin=1833.3949929025114; current_truth.p3: +0.0166667; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `agent_registry` | event/API | golden.ndcg: +0.0365527; margin=0.0017901251267712533; hook_total_ms: +126; margin=1833.3949929025114; current_truth.p3: +0.0166667; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `constraint_store` | event/API | golden.ndcg: -0.00188171; margin=0.0017901251267712533; hook_total_ms: +101.667; margin=1833.3949929025114; current_truth.p3: +0.025; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `trigger_store` | event/API | golden.ndcg: +0.0146081; margin=0.0017901251267712533; hook_total_ms: +560.333; margin=1833.3949929025114; current_truth.p3: +0.00833333; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `intervention_store` | event/API | golden.ndcg: +0.022439; margin=0.0017901251267712533; hook_total_ms: -40.3333; margin=1833.3949929025114; current_truth.p3: +0.00833333; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `agent_protocol_store` | event/API | golden.ndcg: +0.0173138; margin=0.0017901251267712533; hook_total_ms: -18.6667; margin=1833.3949929025114; current_truth.p3: +0; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `wisdom_lineage_store` | event/API | golden.ndcg: +0.022439; margin=0.0017901251267712533; hook_total_ms: -70.6667; margin=1833.3949929025114; current_truth.p3: +0.00833333; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `symbol_event_log` | event/API | golden.ndcg: +0.015061; margin=0.0017901251267712533; hook_total_ms: -38; margin=1833.3949929025114; current_truth.p3: +0.00833333; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `repl_sessions` | event/API | golden.ndcg: +0.022439; margin=0.0017901251267712533; hook_total_ms: -76.6667; margin=1833.3949929025114; current_truth.p3: +0.00833333; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `event_tape` | event/API; write path (retain); snapshot section retained | golden.ndcg: +0.022439; margin=0.0017901251267712533; hook_total_ms: -10.6667; margin=1833.3949929025114; current_truth.p3: +0.00833333; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `cdawg` | event/API; write path (retain) | golden.ndcg: +0.022439; margin=0.0017901251267712533; hook_total_ms: -46.6667; margin=1833.3949929025114; current_truth.p3: +0.00833333; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `episode_hdc` | event/API | golden.ndcg: +0.022439; margin=0.0017901251267712533; hook_total_ms: -79.6667; margin=1833.3949929025114; current_truth.p3: +0.00833333; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `refutation_ledger` | event/API | golden.ndcg: +0.022439; margin=0.0017901251267712533; hook_total_ms: -56; margin=1833.3949929025114; current_truth.p3: +0.00833333; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `cec_policy_store` | event/API | golden.ndcg: +0.022439; margin=0.0017901251267712533; hook_total_ms: -67.6667; margin=1833.3949929025114; current_truth.p3: +0.00833333; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `decision_tape` | event/API; snapshot section retained | golden.ndcg: +0.0223086; margin=0.0017901251267712533; hook_total_ms: -54.6667; margin=1833.3949929025114; current_truth.p3: +0.00833333; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `hypothesis_market` | event/API | golden.ndcg: +0.022439; margin=0.0017901251267712533; hook_total_ms: -12; margin=1833.3949929025114; current_truth.p3: +0; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `turiya_monitor` | event/API; snapshot section retained | golden.ndcg: +0.022439; margin=0.0017901251267712533; hook_total_ms: -50.6667; margin=1833.3949929025114; current_truth.p3: +0.00833333; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `fep_prior` | event/API; write path (retain) | golden.ndcg: +0.0164701; margin=0.0017901251267712533; hook_total_ms: +0; margin=1833.3949929025114; current_truth.p3: +0.00833333; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `observer` | event/API; write path (retain) | golden.ndcg: -0.0290264; margin=0.0017901251267712533; hook_total_ms: -37.3333; margin=1833.3949929025114; current_truth.p3: +0.00833333; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `observer_state` | event/API; write path (retain); snapshot section retained | golden.ndcg: +0.0140715; margin=0.0017901251267712533; hook_total_ms: -35; margin=1833.3949929025114; current_truth.p3: +0.00833333; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `interaction_ledger` | event/API; snapshot section retained | golden.ndcg: +0.022439; margin=0.0017901251267712533; hook_total_ms: -65; margin=1833.3949929025114; current_truth.p3: +0.00833333; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `predicate_store` | event/API; snapshot section retained | golden.ndcg: +0.0127812; margin=0.0017901251267712533; hook_total_ms: +65; margin=1833.3949929025114; current_truth.p3: +0; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `archive` | event/API; write path (retain) | golden.ndcg: +0.022439; margin=0.0017901251267712533; hook_total_ms: +182.667; margin=1833.3949929025114; current_truth.p3: +0.00833333; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `cortical_idx` | recall-adjacent; write path (retain) | golden.ndcg: +0.022439; margin=0.0017901251267712533; hook_total_ms: +37.6667; margin=1833.3949929025114; current_truth.p3: +0.00833333; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `hdc_idx` | recall-adjacent; write path (retain) | golden.ndcg: +0.0274445; margin=0.0017901251267712533; hook_total_ms: -20.6667; margin=1833.3949929025114; current_truth.p3: -0.0166667; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `lite_encoder` | recall-adjacent | golden.ndcg: +0.022439; margin=0.0017901251267712533; hook_total_ms: +6; margin=1833.3949929025114; current_truth.p3: +0; margin=None; current_truth.abstain: +0; margin=None | unqualified: missing current_truth.abstain, current_truth.p3 |
-| `sparse_encoder` | recall-adjacent; write path (retain) | not measured | unqualified |
-| `learners` | recall-adjacent; write path (retain) | not measured | unqualified |
-| `span_store` | recall-adjacent; write path (retain) | not measured | unqualified |
-| `predictor` | recall-adjacent | not measured | unqualified |
-| `surprise_store` | recall-adjacent | not measured | unqualified |
-| `epistemic_debt_store` | recall-adjacent | not measured | unqualified |
-| `integration_kernel` | recall-adjacent | not measured | unqualified |
-| `surprise_learning` | recall-adjacent | not measured | unqualified |
-| `wisdom_promotion` | recall-adjacent | not measured | unqualified |
-| `learned_scorer` | recall-adjacent | not measured | unqualified |
+| `session_registry` | event/API | not measured | unqualified: not run |
+| `transcript_registry` | event/API | not measured | unqualified: not run |
+| `task_registry` | event/API; write path (retain) | not measured | unqualified: not run |
+| `user_model_registry` | event/API | not measured | unqualified: not run |
+| `theme_organ` | event/API | not measured | unqualified: not run |
+| `analytics_registry` | event/API; write path (retain) | not measured | unqualified: not run |
+| `msg_registry` | event/API; snapshot section retained | not measured | unqualified: not run |
+| `skill_registry` | event/API | not measured | unqualified: not run |
+| `agent_registry` | event/API | not measured | unqualified: not run |
+| `constraint_store` | event/API | not measured | unqualified: not run |
+| `trigger_store` | event/API | not measured | unqualified: not run |
+| `intervention_store` | event/API | not measured | unqualified: not run |
+| `agent_protocol_store` | event/API | not measured | unqualified: not run |
+| `wisdom_lineage_store` | event/API | not measured | unqualified: not run |
+| `symbol_event_log` | event/API | not measured | unqualified: not run |
+| `repl_sessions` | event/API | not measured | unqualified: not run |
+| `event_tape` | event/API; write path (retain); snapshot section retained | not measured | unqualified: not run |
+| `cdawg` | event/API; write path (retain) | not measured | unqualified: not run |
+| `episode_hdc` | event/API | not measured | unqualified: not run |
+| `refutation_ledger` | event/API | not measured | unqualified: not run |
+| `cec_policy_store` | event/API | not measured | unqualified: not run |
+| `decision_tape` | event/API; snapshot section retained | not measured | unqualified: not run |
+| `hypothesis_market` | event/API | not measured | unqualified: not run |
+| `turiya_monitor` | event/API; snapshot section retained | not measured | unqualified: not run |
+| `fep_prior` | event/API; write path (retain) | not measured | unqualified: not run |
+| `observer` | event/API; write path (retain) | not measured | unqualified: not run |
+| `observer_state` | event/API; write path (retain); snapshot section retained | not measured | unqualified: not run |
+| `interaction_ledger` | event/API; snapshot section retained | not measured | unqualified: not run |
+| `predicate_store` | event/API; snapshot section retained | not measured | unqualified: not run |
+| `archive` | event/API; write path (retain) | not measured | unqualified: not run |
+| `cortical_idx` | recall-adjacent; write path (retain); index sidecar retained | not measured | unqualified: not run |
+| `hdc_idx` | recall-adjacent; write path (retain); index sidecar retained | not measured | unqualified: not run |
+| `lite_encoder` | recall-adjacent | not measured | unqualified: not run |
+| `sparse_encoder` | recall-adjacent; write path (retain) | not measured | unqualified: not run |
+| `learners` | recall-adjacent; write path (retain) | not measured | unqualified: not run |
+| `span_store` | recall-adjacent; write path (retain) | not measured | unqualified: not run |
+| `predictor` | recall-adjacent | not measured | unqualified: not run |
+| `surprise_store` | recall-adjacent | not measured | unqualified: not run |
+| `epistemic_debt_store` | recall-adjacent | not measured | unqualified: not run |
+| `integration_kernel` | recall-adjacent | not measured | unqualified: not run |
+| `surprise_learning` | recall-adjacent | not measured | unqualified: not run |
+| `wisdom_promotion` | recall-adjacent | not measured | unqualified: not run |
+| `learned_scorer` | recall-adjacent | not measured | unqualified: not run |
+| `event_api` | group (30 organs) | not qualified; raw observations retained | unqualified; consumer API test evidence missing: session_registry, transcript_registry, task_registry, user_model_registry, theme_organ, analytics_registry, msg_registry, skill_registry, agent_registry, constraint_store, trigger_store, intervention_store, agent_protocol_store, wisdom_lineage_store, symbol_event_log, repl_sessions, event_tape, cdawg, episode_hdc, refutation_ledger, cec_policy_store, decision_tape, hypothesis_market, turiya_monitor, fep_prior, observer, observer_state, interaction_ledger, predicate_store, archive: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `recall_adjacent` | group (13 organs) | golden.ndcg: +0.00463211; margin=0.0017901251267712533; hook_total_ms: +45.6667; margin=1833.3949929025114 | not equivalent; consumer API test evidence missing: cortical_idx, hdc_idx, lite_encoder, sparse_encoder, learners, span_store, predictor, surprise_store, epistemic_debt_store, integration_kernel, surprise_learning, wisdom_promotion, learned_scorer: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens; observed beyond band: golden.ndcg |
+| `event_prediction` | group (4 organs) | not qualified; raw observations retained | unqualified; consumer API test evidence missing: event_tape, cdawg, episode_hdc, fep_prior: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `all` | group (43 organs) | golden.ndcg: +0.00463211; margin=0.0017901251267712533; hook_total_ms: +12; margin=1833.3949929025114 | not equivalent; consumer API test evidence missing: session_registry, transcript_registry, task_registry, user_model_registry, theme_organ, analytics_registry, msg_registry, skill_registry, agent_registry, constraint_store, trigger_store, intervention_store, agent_protocol_store, wisdom_lineage_store, symbol_event_log, repl_sessions, event_tape, cdawg, episode_hdc, refutation_ledger, cec_policy_store, decision_tape, hypothesis_market, turiya_monitor, fep_prior, observer, observer_state, interaction_ledger, predicate_store, archive, cortical_idx, hdc_idx, lite_encoder, sparse_encoder, learners, span_store, predictor, surprise_store, epistemic_debt_store, integration_kernel, surprise_learning, wisdom_promotion, learned_scorer: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens; observed beyond band: golden.ndcg |
+
+### Paired prompt-hook latency
+
+Each trial runs `bench-recall-lanes.sh 5`: 15 samples per arm. Cells list
+each repetition's median/p95 in milliseconds; these are descriptive and
+separate from the calibrated `hook_total_ms` statistic above.
+
+| Ablation | Off median/p95 | On median/p95 | Empty outputs | Write/restart invariants |
+|---|---|---|---|---|
+| `control` | 903/1103, 938/5094, 863/1167 | 908/4922, 920/995, 878/1065 | 0 | 3/3 passed; recall identity 20/20, 20/20, 20/20 |
+| `recall_adjacent` | 842/1347, 930/1345, 932/1892 | 883/3310, 912/1053, 901/1809 | 0 | 3/3 passed; recall identity 20/20, 20/20, 20/20 |
+| `all` | 914/1143, 891/1077, 827/4680 | 937/4971, 858/1200, 818/995 | 0 | 3/3 passed; recall identity 20/20, 20/20, 20/20 |
 <!-- ORGAN-ABLATION-TABLE -->
 
 ### Organ retention and rollback justification
@@ -895,9 +911,21 @@ The preserved state remains allocated: this experiment measures runtime effects,
 not memory savings or the eventual startup cost of removing an organ.
 
 `ablate-organs.py --preflight` prints the frozen margins and missing inputs.
-The default run measures each organ and four groups, three fresh copies each.
-Use `--organ NAME` to select an individual or group, `--output /tmp/RESULTS`
-for raw results, and `--write-table` to update the table above. The optional
+The runner pins one `CHITTA_RECALL_NOW`, a 10000 ms embedding wait and
+BLAS/OMP/Rayon thread limits of one, recording these in the report. Golden
+requests save their actual `--explain` lane traces; missing embeddings fail
+the trial. The identity gate is `scripts/restart-identity.py` on a fresh copy.
+Run `--controls-only` first, then `--resume` with `--block groups`,
+`--block largest` and `--block remaining`, using the same `--output /tmp/RESULTS`. Each arm has
+three fresh copies. Controls must fit the frozen spread bands before any
+treatment starts. The remaining block defers when one-minute node load exceeds
+`--max-load` (default: CPU affinity count; 96 on this run).
+Use `--organ NAME` for a specific arm and `--write-table` for qualified numeric
+comparisons; unqualified rows explain the missing evidence. A complete
+calibrated panel outside its margin can disprove equivalence even when other
+panels are unavailable. `--consumer-tests FILE` supplies an organ-to-argv JSON
+map; those API tests must actually pass on each ablated replica for a positive
+equivalence claim. Their commands and log hashes are retained. The optional
 `--smriti-agent claude-code` runs the real visible panel without `--dry-run`;
 without an isolated replica agent, the report explicitly omits SMRITI.
 
@@ -905,7 +933,7 @@ Retention reasons below distinguish consumers from exposed APIs. API ownership
 was traced from `ChittaField` through store/FFI entry points and searched in
 handlers, hooks, MCP and scripts. An API declaration alone is not a consumer;
 where none was found, missing equivalence evidence still prevents deletion.
-Existing handlers, hooks, MCP and scripts remain untouched.
+No consumer API was removed by this stream.
 
 | Remaining organ | Consumer / reason retained |
 |---|---|
@@ -953,6 +981,7 @@ Existing handlers, hooks, MCP and scripts remain untouched.
 | `wisdom_promotion` | `upsert_wisdom_candidate / query_wisdom_candidates` |
 | `learned_scorer` | `update_scorer_model / effective_scorer_weight` |
 | `payloads / states / log / id_alloc` | core remember/get/WAL durability; not retirement candidates |
+| `anchors` | memory insert/delete and `source_anchors`; core source-lifecycle write/read dependency added on main |
 | `retrieval_surfaces` | Stage B retrieval surface / reembedding; snapshot sidecar |
 | `assoc_edges / coactivation_stats` | recall_spreading / drain_pending_recall_effects; recall and snapshot |
 | `semantic_idx` | recall_semantic_ctx / put_memory; recall/write |
@@ -975,31 +1004,63 @@ Existing handlers, hooks, MCP and scripts remain untouched.
 
 ### Ablation implementation validation
 
-Rust submodule `99351f7`: release build passed with the existing 768-dimensional
+Post-merge Rust `85a9205` includes main `36039ba` and preserves named lock
+profiling inside the ablation wrappers; superproject `5393cf8c` includes
+main `3a2a2612`. Release builds pass with 768-dimensional
 `nomic-embed-text-v1.5`, text-format-1 identity; `format-id` remains
-`9230643459983636874`. This build wrapper has no `.chitta-embed-identity` file.
-Rust: **295 passed, 2 ignored** (289 baseline tests plus six ablation tests;
-none removed). All **25 CTests** passed across the initial run and targeted
-rechecks. Three initial chaos fixture timeouts are retained in the untracked
-logs; the model-dependent embed test passed after setting its model path.
-The actual NFS replica chaos panel passed **9/9**, including stale/foreign
-locks, SIGKILL, ENOSPC, WAL deletion, queue replay and hook/MCP restarts.
-MCP **149**, SMRITI unit tests **46**, all hook scripts (two isolated rechecks),
-CI Ruff and contract comparison passed; the latter printed `contracts unchanged`.
-No shell source changed. No tests, organs or tools were removed.
+`9230643459983636874`. The build wrapper has no `.chitta-embed-identity` file.
+Rust: **301 passed, 2 ignored** (main's 295 plus six ablation tests).
+All **31 CTests**, MCP **159**, SMRITI unit tests **46**, and all **27 hook
+scripts** pass. The primary-node hook was rechecked after rebuilding its daemon;
+the saddle timing recheck measured incremental p95 **41.83 ms**, after an
+initial loaded run measured 210.1 ms against its 150 ms gate. Both logs remain.
+The full owned NFS-copy chaos gate passes **9/9**. An earlier XFS-copy run
+passed eight and skipped the NFS-only case; it is not the 9/9 evidence.
+CI Ruff, shell syntax and ShellCheck pass. Contract checks printed
+`contracts unchanged` at the commits. No tests were removed.
 
-The first corrected control repetition admitted **200/200** distinct remembers,
-retrieved every acknowledged ID with its expected text after SIGKILL/WAL replay, preserved
-**3/3** keyed lanes, and matched **20/20 distinct-query ordered recall results**
-across a further restart (also **20/20** fixed-query full responses). Its golden
-nDCG was **0.500078363**, current-truth **4/40** answerable hits with **10/10**
-abstentions, and hook medians off/on **863/869 ms** (p95 **3548/1242 ms**,
-15 samples each, zero empty outputs). This is one control repetition, not an
-equivalence verdict. The lead stopped the pre-fix matrix after 105 completed
-trials; its unqualified raw reports remain under `/tmp/p2-ablation-matrix`.
-Completed individual trials include
-restart-identity failures (16–19/20), despite successful recovery of 200 writes
-and all three keyed lanes. The universal restart gate is therefore not met;
-these failures are retained in the report, not discarded. The earlier diagnostic pilot
-(`/tmp/p2-ablation-pilot`) had a multiline-JSON assertion bug, was stopped,
-and is excluded from comparisons. The assertion now has a regression check.
+### Pinned controls and group checkpoint
+
+Runner `f3ea9cd9` fixes the clock at **1789581502687 ms**, embedding wait at
+**10000 ms**, and the three thread limits at **1**. All three control golden
+scores are **0.5000783626223507**: spread **0**, inside the frozen
+**0.0017901251267712533** margin. All 60 scored requests per control have
+complete 768-dimensional embeddings. Calibrated hook samples are
+**951/795/906 ms**, spread **156 ms**, inside the **1833.3949929025114 ms** band.
+
+The four-group block has **12/12 completed trials**, three per group.
+Together with controls, all **15 trials** recovered **200/200** acknowledged
+writes with exact content-value matches after SIGKILL/WAL replay, answered
+**3/3** keyed lanes and passed the canonical identity gate **20/20**. There
+were no trial errors or empty prompt-hook outputs.
+
+`recall_adjacent` and `all` each score **0.5047104720407914** in every run:
+golden delta **+0.004632109418440722**, outside the frozen margin, hence
+**not equivalent**. `event_api` and `event_prediction` match the control's
+golden score in all three runs but remain **unqualified** for equivalence.
+Current-truth observations are 4/40 answerable hits for controls/event groups
+and 3/40 for recall-adjacent/all; all have 10/10 correct abstentions. These
+truth counts are descriptive: their margins are absent from the frozen noise
+file. No isolated SMRITI agent is configured, and no consumer-test commands
+were supplied. SMRITI unit-test success is not a real visible-panel result.
+The eight largest individual organs are the next block; the remainder is
+conditional on node load. Raw post-fix reports are in
+`/tmp/p2-ablation-postfix`.
+
+**Retired organs: none. Removed tools: none. Retirement lines removed: 0.
+Removed tests: none.** Consumers and protected dependencies above remain the
+reasons to keep each organ; no positive equivalence claim is made from
+incomplete evidence.
+
+### Quarantined earlier measurements
+
+The lead stopped the original matrix after **105 completed trials** and an
+interrupted sparse-encoder trial. Its controls were
+0.5000783626223507 / 0.5000783626223507 / 0.4327613581907712: spread
+0.0673170044315795 against the 0.0017901251267712533 margin. The pre-fix binary's
+50 ms embedding deadline could silently omit semantic lanes under load, and
+the clock was not pinned. These data, including restart failures, are
+**unqualified, pre-fix**, retained under `/tmp/p2-ablation-matrix` and never
+pooled with the pinned runs. The earlier diagnostic pilot
+(`/tmp/p2-ablation-pilot`) had a multiline-JSON assertion bug and is also
+excluded; the corrected content matcher has a regression test.

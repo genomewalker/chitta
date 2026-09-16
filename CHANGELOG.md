@@ -28,10 +28,16 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
   empty runtime views, suppressed new organ WAL events, and preserved snapshot
   state for rollback. Six new Rust tests cover parsing, runtime isolation,
   rollback sections, disabled WAL writes, and core writes/keyed lanes.
-  `scripts/ablate-organs.py` declares noise margins before three-run scratch-copy
-  panels and refuses qualification when metrics or invariants are missing.
-  No tools or organs retired: the checked-in noise file lacks current-truth
-  margins. Per-organ consumers and measurements are in `docs/FIELD_PERF.md`.
+  `scripts/ablate-organs.py` pins recall time, a 10-second embedding wait and
+  BLAS/OMP/Rayon thread limits, records lane traces and uses the canonical
+  restart-identity gate. Three controls have golden spread 0 against margin
+  0.0017901251267712533. Four groups have three runs each: recall-adjacent and
+  all-organ ablation change golden nDCG by +0.004632109418440722 and are not
+  equivalent; all 15 control/group trials pass 200-write recovery, three keyed
+  lanes and identity 20/20. The 105 pre-fix trials remain quarantined.
+  No tools or organs retired (retirement LOC 0); positive equivalence still
+  lacks current-truth margins, a real isolated SMRITI panel and consumer API
+  tests. Per-organ consumers and measurements are in `docs/FIELD_PERF.md`.
 - Markdown heading extraction through code intel, including hierarchical heading
   names, duplicate-heading disambiguation, fenced examples and Setext headings.
   Repository recall integration now validates sources on startup and query.

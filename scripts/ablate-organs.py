@@ -128,9 +128,9 @@ def module(name, path):
     return result
 
 
-def run(argv, env, log, timeout=1200):
+def run(argv, env, log, timeout=1200, accepted_codes=(0,)):
     with log.open("w") as output:
-        subprocess.run(
+        result = subprocess.run(
             [str(a) for a in argv],
             env=env,
             cwd=ROOT,
@@ -138,8 +138,10 @@ def run(argv, env, log, timeout=1200):
             stdout=output,
             stderr=subprocess.STDOUT,
             timeout=timeout,
-            check=True,
+            check=False,
         )
+        if result.returncode not in accepted_codes:
+            raise subprocess.CalledProcessError(result.returncode, argv)
 
 
 def metadata(mind):
@@ -247,9 +249,24 @@ def compare(control, treatment, declared, missing):
         failures.append("control repetitions exceed declared margins: " + ", ".join(unstable))
     if len(control) != 3 or len(treatment) != 3:
         failures.append("requires three complete repetitions in each arm")
-    if any(not r.get("invariants", {}).get("passed") for r in control + treatment):
-        failures.append("write/keyed/restart invariants incomplete or failed")
-    verdict = "unqualified" if missing or failures else "moved" if moved else "within margins"
+    if any(r.get("invariants", {}).get("passed") is not True for r in control):
+        failures.append("control invariants incomplete or failed")
+    if any(not isinstance(r.get("invariants", {}).get("passed"), bool) for r in treatment):
+        failures.append("treatment invariants incomplete")
+    invariant_failed = any(r.get("invariants", {}).get("passed") is False for r in treatment)
+    # One valid counterexample disproves equivalence; unavailable other panels
+    # cannot erase it. They still prevent a positive equivalence claim.
+    verdict = (
+        "unqualified"
+        if failures
+        else "not equivalent"
+        if moved or invariant_failed
+        else "unqualified"
+        if missing
+        else "equivalent"
+    )
+    if invariant_failed:
+        failures.append("treatment write/keyed/restart invariant failed")
     return {
         "verdict": verdict,
         "deltas": deltas,
@@ -567,9 +584,17 @@ def trial(args, organs, index, output):
                 ],
                 env,
                 output / "identity.log",
+                accepted_codes=(0, 1),  # A completed ID mismatch is measured, not missing data.
             )
             identity = json.loads((output / "identity.json").read_text())
             comparisons = identity.get("comparisons", [])
+            if (
+                identity.get("error")
+                or identity.get("stop_error")
+                or len(comparisons) != 1
+                or len(comparisons[0]) != 20
+            ):
+                raise ValueError("canonical identity gate incomplete; see identity.json")
             count = sum(row["identical"] for row in comparisons[0]) if comparisons else 0
             result["invariants"]["restart"] = {
                 "ordered_recall_identity": f"{count}/20",
@@ -610,7 +635,8 @@ def write_table(report, destination):
         "Three repetitions per arm; missing calibration or invariants block retirement.",
         "When controls exceed a declared band, differences are descriptive and cannot",
         "be attributed to the ablation. No organ or tool is deleted by this runner.",
-        "Numeric treatment rows require complete panel, identity and consumer-test evidence.",
+        "Equivalence requires complete panel, identity and consumer-test evidence.",
+        "A valid calibrated-panel or invariant failure is sufficient for not equivalent.",
         "Unqualified raw observations remain in the report and are not equivalence estimates.",
         "",
         "| Organ | Dependency class | Panels moved (Δ; margin) | Verdict |",
@@ -631,6 +657,7 @@ def write_table(report, destination):
             "; ".join(
                 f"{k}: {v['delta']:+.6g}; margin={v['margin']}"
                 for k, v in row.get("deltas", {}).items()
+                if v["margin"] is not None
             )
             or "not measured"
         )
@@ -651,6 +678,7 @@ def write_table(report, destination):
         if verdict == "unqualified":
             numbers = "not qualified; raw observations retained"
         if not row:
+            numbers = "not measured"
             verdict += ": not run"
             gate = report.get("control_gate", {})
             if not gate.get("passed", False):
@@ -678,9 +706,9 @@ def write_table(report, destination):
         "|---|---|---|---|---|",
     ]
     for name in ("control", *ORGANS, *GROUPS):
-        if (
-            name != "control"
-            and report.get("comparisons", {}).get(name, {}).get("verdict") == "unqualified"
+        if name != "control" and report.get("comparisons", {}).get(name, {}).get("verdict") not in (
+            "equivalent",
+            "not equivalent",
         ):
             continue
         runs = report.get("runs", {}).get(name, [])
@@ -726,9 +754,17 @@ def self_test():
     assert missing == ["current_truth.p3", "current_truth.abstain", "hook_total_ms"]
     row = {"metrics": {"golden.ndcg": 0.5}, "invariants": {"passed": True}}
     assert compare([row] * 3, [row] * 3, declared, missing)["verdict"] == "unqualified"
-    assert compare([row] * 3, [row] * 3, declared, [])["verdict"] == "within margins"
+    assert compare([row] * 3, [row] * 3, declared, [])["verdict"] == "equivalent"
     changed = {"metrics": {"golden.ndcg": 0.7}, "invariants": {"passed": True}}
-    assert compare([row] * 3, [changed] * 3, declared, [])["verdict"] == "moved"
+    assert compare([row] * 3, [changed] * 3, declared, [])["verdict"] == "not equivalent"
+    assert (
+        compare([row] * 3, [changed] * 3, declared, ["current_truth.p3"])["verdict"]
+        == "not equivalent"
+    )
+    failed_identity = {**row, "invariants": {"passed": False}}
+    assert compare([row] * 3, [failed_identity] * 3, declared, [])["verdict"] == "not equivalent"
+    errored = {**changed, "error": "missing embedding"}
+    assert compare([row] * 3, [errored] * 3, declared, [])["verdict"] == "unqualified"
     assert compare([row] * 3, [row] * 2, declared, [])["verdict"] == "unqualified"
     unstable = compare([row, row, changed], [row] * 3, declared, [])
     assert unstable["verdict"] == "unqualified"
@@ -745,6 +781,14 @@ def self_test():
 
     with tempfile.TemporaryDirectory(prefix="p2-control-test-") as directory:
         base = Path(directory)
+        status_command = [sys.executable, "-c", "raise SystemExit(1)"]
+        run(status_command, os.environ, base / "status.log", accepted_codes=(0, 1))
+        try:
+            run(status_command, os.environ, base / "status-default.log")
+        except subprocess.CalledProcessError as exc:
+            assert exc.returncode == 1
+        else:
+            raise AssertionError("unaccepted child failures must propagate")
         source = base / "source"
         source.mkdir()
         (source / "replica.env").touch()
@@ -973,9 +1017,8 @@ def main():
             ]
             if absent:
                 row["failures"].append("consumer API test evidence missing: " + ", ".join(absent))
-                row["verdict"] = "unqualified"
-            elif row["verdict"] != "unqualified":
-                row["verdict"] = "not equivalent" if row["moved"] else "equivalent"
+                if row["verdict"] == "equivalent":
+                    row["verdict"] = "unqualified"
         (args.output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
         if args.write_table:
             write_table(report, ROOT / "docs/FIELD_PERF.md")
