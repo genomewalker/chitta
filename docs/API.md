@@ -1,6 +1,7 @@
 # chitta MCP API reference
 
 Status as of 2026-09-16.
+API reference generated from a live daemon on 2026-09-02; MCP static table synchronized on 2026-09-16 (320 daemon tools) with `python3 scripts/gen-tools-static.py` (`--check` verifies freshness). Regenerate this reference with `python3 scripts/gen-tools-docs.py`.
 
 Generated from a live daemon on 2026-09-16, 344 tools — regenerate with `python3 scripts/gen-tools-docs.py`.
 

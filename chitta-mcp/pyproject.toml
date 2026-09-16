@@ -33,4 +33,6 @@ py-modules = [
     # server.py imports this at module scope — omitting it makes an installed
     # package fail on import.
     "recall_gateway",
+    "code_tools", "daemon_bridge", "evolve_helpers", "mcp_health",
+    "mcp_transport", "memory_tools", "recall_handlers", "session_ops", "tool_policy",
 ]
