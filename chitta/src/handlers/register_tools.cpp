@@ -5,6 +5,18 @@
 
 namespace chitta {
 
+void FieldRpcHandler::register_tool_table(std::initializer_list<ToolRegistration> registrations) {
+    for (const auto& tool : registrations) {
+        if (tool.description) {
+            tools_.push_back({{"name", tool.name}, {"description", tool.description},
+                              {"inputSchema", tool.params_schema}});
+        }
+        tool.binding = [this, handler = tool.handler](const json& params) {
+            return (this->*handler)(params);
+        };
+    }
+}
+
 void FieldRpcHandler::register_tools() {
     // ceiling: CHITTA_SANDBOX (CONTRACTS.md §8) guards only `remember`, so a
     // sandboxed caller can still mutate the store through the other write-class
