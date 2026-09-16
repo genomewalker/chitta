@@ -6,6 +6,11 @@ T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
 TS_SOURCE=$(sed -n 's/^FETCHCONTENT_SOURCE_DIR_TREE-SITTER:PATH=//p' "$ROOT/chitta/build/CMakeCache.txt" 2>/dev/null || true)
 TS_SOURCE="${TS_SOURCE:-$ROOT/chitta/build/_deps/tree-sitter-src}"
+if [[ ! -f "$TS_SOURCE/lib/include/tree_sitter/api.h" ]] &&
+   ! echo '#include <tree_sitter/api.h>' | "${CXX:-c++}" -x c++ -E - >/dev/null 2>&1; then
+    echo "skip: tree-sitter headers not available (build the daemon once, or install tree-sitter)"
+    exit 0
+fi
 cat > "$T/test.cpp" <<'CPP'
 #include "chitta/code_intel.hpp"
 #include <cassert>

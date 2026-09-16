@@ -1,12 +1,11 @@
-import hashlib
+import hashlib  # noqa: I001 - build and score are sibling modules on the runner's path
 import json
 import tempfile
 import unittest
 from pathlib import Path
 
-import score
-
 import build
+import score
 
 
 class ContinuationTests(unittest.TestCase):
