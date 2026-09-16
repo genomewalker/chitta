@@ -10,6 +10,11 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 ## [Unreleased]
 
+- Record Phase 5 verification and unmet exit gates in
+  `docs/PHASE5-POLICY-REPORT.md`: 30 measured paired fixtures match, but shell
+  lines grow 8,743 → 8,988; prompt medians 415/457 ms and Bash added overhead
+  about 92 ms miss their targets. SessionStart median 304 ms meets its target.
+
 - Move SessionStart ledger/task/handoff cards and Stop capsule assembly behind
   `ledger_op`; route admitted Stop turns through its `hook_turn` operation while
   preserving transcript event payloads and durable cursor acknowledgement.

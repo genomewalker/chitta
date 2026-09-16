@@ -48,6 +48,9 @@ before changing the default. A hook environment alone cannot change an already
 running daemon's policy. See [FIELD_PERF.md](FIELD_PERF.md) for inventory and
 measurements. Stream tests use private copies from `scripts/eval-replica.sh`.
 
+Phase 5's measured implementation and unmet line/latency exit gates are recorded
+in [the policy migration report](PHASE5-POLICY-REPORT.md).
+
 ### Phase 5 prompt admission and fusion (2026-09-16)
 
 `prompt_context(state=...)` applies the shared admission policy and returns the
