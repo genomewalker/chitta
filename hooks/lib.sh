@@ -413,7 +413,10 @@ get_next_turn() {
     local session_id="${1:-$(get_session_id)}"
     [[ -z "$session_id" ]] && echo 0 && return
 
-    local turn_file="$HOME/.claude/mind/.turn_index_$session_id"
+    local state_dir
+    state_dir=$(runtime_state_dir "${CHITTA_DB_PATH:-$HOME/.claude/mind}") || return 1
+    mkdir -p "$state_dir" || return 1
+    local turn_file="$state_dir/.turn_index_$session_id"
     local turn
     {
         flock -x 200

@@ -187,10 +187,10 @@ jobs:
       # ships with the plugin; scripts/ and benchmarks/ fixtures are excluded
       # there. No `|| true` — this gate is green and must stay green.
       - name: Lint
-        run: ruff check chitta-mcp hooks benchmarks/smriti benchmarks/noise.py benchmarks/check_eval_immutable.py benchmarks/current_truth scripts/provenance-coverage.py
+        run: ruff check chitta-mcp hooks benchmarks/smriti benchmarks/noise.py benchmarks/check_eval_immutable.py benchmarks/current_truth benchmarks/continuation scripts/provenance-coverage.py
 
       - name: Check formatting
-        run: ruff format --check chitta-mcp hooks benchmarks/smriti benchmarks/noise.py benchmarks/check_eval_immutable.py benchmarks/current_truth scripts/provenance-coverage.py
+        run: ruff format --check chitta-mcp hooks benchmarks/smriti benchmarks/noise.py benchmarks/check_eval_immutable.py benchmarks/current_truth benchmarks/continuation scripts/provenance-coverage.py
 
       # Catches syntax errors in modules no test imports.
       - name: Byte-compile
@@ -204,7 +204,7 @@ jobs:
 
       - name: Composite handler-map snapshot
         working-directory: chitta-mcp
-        run: python3 -m unittest tests.test_recall_gateway -v
+        run: python3 -m unittest tests.test_recall_gateway tests.test_mcp_surface -v
 
       # The hooks and the standalone chitta-mcp modules run under
       # `#!/usr/bin/env python3`, which on the deployment hosts is 3.9. That is

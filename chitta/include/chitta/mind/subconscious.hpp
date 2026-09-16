@@ -222,16 +222,26 @@ public:
     }
 
     // Dream callback: called when the soul has been idle long enough to dream
-    void set_dream_callback(std::function<void()> fn) { dream_callback_ = std::move(fn); }
+    void set_dream_callback(std::function<void()> fn) {
+        std::lock_guard<std::mutex> lock(callback_mutex_);
+        dream_callback_ = std::move(fn);
+    }
 
     // Belief maintenance callback: periodic stale demotion + contradiction resolution
-    void set_maintenance_callback(std::function<void()> fn) { maintenance_cb_ = std::move(fn); }
+    void set_maintenance_callback(std::function<void()> fn) {
+        std::lock_guard<std::mutex> lock(callback_mutex_);
+        maintenance_cb_ = std::move(fn);
+    }
     void set_maintenance_load_probe(std::function<bool(const std::string&)> fn) {
+        std::lock_guard<std::mutex> lock(callback_mutex_);
         maintenance_load_probe_ = std::move(fn);
     }
 
     // Think callback: called hourly during idle for internal memory synthesis
-    void set_think_callback(std::function<void()> fn) { think_callback_ = std::move(fn); }
+    void set_think_callback(std::function<void()> fn) {
+        std::lock_guard<std::mutex> lock(callback_mutex_);
+        think_callback_ = std::move(fn);
+    }
 
     // Wire in FieldStore (may be initialized async after construction).
     // Pointer is not owned; must outlive this Subconscious instance.
@@ -239,6 +249,8 @@ public:
 
     // Wire in embedder (may be initialized after construction).
     void set_embedder(VakYantra* e) { embedder_ = e; }
+    // Startup-only publication. Null selects the same global-lock bypass as
+    // the dispatcher factories; component-owned state still synchronizes itself.
     void set_rpc_mutex(std::shared_mutex* m) { rpc_mutex_ = m; }
 
 private:
@@ -249,6 +261,14 @@ private:
     SubconsciousStats stats_;
     MaintenanceJitter maintenance_jitter_;
     std::function<bool(const std::string&)> maintenance_load_probe_;
+    mutable std::mutex callback_mutex_;
+    struct Callbacks {
+        std::function<void()> maintenance, dream, think;
+    };
+    Callbacks callbacks() const {
+        std::lock_guard<std::mutex> lock(callback_mutex_);
+        return {maintenance_cb_, dream_callback_, think_callback_};
+    }
 
     // Threading
     std::thread process_thread_;
@@ -331,7 +351,12 @@ private:
     // Periodic tasks
     void run_theme_maintenance();
     bool maintenance_loaded(const std::string& task) const {
-        return maintenance_load_probe_ && maintenance_load_probe_(task);
+        std::function<bool(const std::string&)> probe;
+        {
+            std::lock_guard<std::mutex> lock(callback_mutex_);
+            probe = maintenance_load_probe_;
+        }
+        return probe && probe(task);
     }
     bool time_for_theme_maintenance() const;
     void run_sleep_consolidation();

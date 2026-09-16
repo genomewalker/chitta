@@ -18,7 +18,7 @@ START_TIMEOUT="${CHITTA_EVAL_START_TIMEOUT:-600}"
 ACTIVE_TMP_MAX_AGE="${CHITTA_EVAL_TMP_MAX_AGE:-600}"
 
 die() { printf 'eval-replica: ERROR: %s\n' "$*" >&2; exit 1; }
-usage() { printf 'usage: %s start|stop|status|snapshot-id\n' "${0##*/}" >&2; exit 2; }
+usage() { printf 'usage: %s start|restart|stop|status|snapshot-id\n' "${0##*/}" >&2; exit 2; }
 require_file() { [[ -f "$1" ]] || die "required file not found: $1"; }
 
 validate_paths() {
@@ -287,6 +287,13 @@ start_replica() {
     [[ ! -d "$old_field" ]] || rm -rf "$old_field"
     trap - EXIT
 
+    launch_replica "$snapshot_id" "$snapshot_seqno" "$generation"
+}
+
+# Launch the already selected store; restart deliberately does not recopy it.
+launch_replica() {
+    local snapshot_id="$1" snapshot_seqno="$2" generation="$3"
+    local runtime_dir socket pid
     runtime_dir="$EVAL_MIND/run"
     mkdir -p "$runtime_dir/chitta"
     socket="$(replica_socket)"
@@ -380,6 +387,18 @@ case "${1:-}" in
             sleep 5
         done
         exit 1 ;;
+    restart)
+        load_replica_env
+        stop_replica
+        selection="$(select_family "$EVAL_FIELD")" || die "existing replica family is invalid"
+        while IFS=$'\t' read -r kind value _; do
+            case "$kind" in
+                ID) CHITTA_EVAL_SNAPSHOT_ID="$value" ;;
+                SEQNO) CHITTA_EVAL_SNAPSHOT_SEQNO="$value" ;;
+                GENERATION) CHITTA_EVAL_MANIFEST_GENERATION="$value" ;;
+            esac
+        done <<< "$selection"
+        launch_replica "$CHITTA_EVAL_SNAPSHOT_ID" "$CHITTA_EVAL_SNAPSHOT_SEQNO" "$CHITTA_EVAL_MANIFEST_GENERATION" ;;
     stop) stop_replica ;;
     status) status_replica ;;
     snapshot-id) snapshot_id_command ;;

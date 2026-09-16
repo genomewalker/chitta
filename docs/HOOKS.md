@@ -1,16 +1,64 @@
 # chitta Hooks System
 
+Repository knowledge is indexed by `learn_codebase`. Markdown chunks follow
+headings; code chunks follow symbols, with a file-scope fallback for shell and
+configuration. Recall recognizes repository questions (paths, environment
+variables, hook names and location questions) and includes at most three cited
+`[doc]`/`[code]` rows in its normal result limit. Each source row names the
+checkout, path, heading/symbol and SHA-256. Registered roots are realm scoped;
+the active checkout for a realm replaces its previous registration.
+
+FileChanged queues an incremental source refresh for every change and deletion.
+The 300-second directory throttle applies only to full symbol extraction.
+Queries hash sources again, and startup rebuilds chunks from registered roots,
+so missed watcher events cannot leave an old source chunk marked current.
+The root registry is a derived sidecar in the daemon mind; snapshot formats are
+unchanged. Queries with tag or historical time filters retain their memory lane.
+
+Hook artifact facts carry a full SHA-256 anchor in their payload: repository,
+relative path and heading/symbol scope (whole-file facts use `<file>`).
+The queue observe path also anchors hook `[done] input:/absolute/path` facts;
+an existing full hash is retained for delayed events, and legacy short hashes
+are left unanchored. Different done facts receive different scope identities.
+Rust rebuilds the anchor index on load and updates it for ingestion, content
+replacement, forgetting and foreign replay. FileChanged refresh checks anchors
+for the affected path; recall checks them again and shows `current`, `stale`,
+`missing` or `unavailable`. File IO occurs after releasing Rust index locks.
+
+A current hook observation supersedes earlier versions of the same realm,
+repository, path and scope through the existing `supersedes` relation. Delayed
+old observations cannot supersede the current source version. Recall excludes
+superseded anchored versions and moves stale/missing facts behind other facts
+only when scores are equal. Current and unanchored facts keep their original
+relative order; there is no general preference for unanchored memories.
+
 Status as of 2026-09-16.
+
+### Phase 1 global-lock rollback switch (2026-09-16)
+
+`CHITTA_GLOBAL_LOCK` is read once at daemon startup. The default is `1`, which
+retains the existing C++ dispatcher serialization; exactly `0` bypasses it for
+every tool, the queue and background callers. Other values retain the mutex.
+The ledger, C++ caches, callback publication and Rust components keep their own
+locks. Existing write acknowledgement/sync classifications are unchanged.
+
+Global-lock removal is experimental: multi-FFI maintenance transactions remain
+unqualified, and the measured Rust hold and restart-identity gates must pass
+before changing the default. A hook environment alone cannot change an already
+running daemon's policy. See [FIELD_PERF.md](FIELD_PERF.md) for inventory and
+measurements. Stream tests use private copies from `scripts/eval-replica.sh`.
 
 ### Phase 6 runtime placement and embedding workers (2026-09-16)
 
 | Environment | Default | Meaning |
 | --- | --- | --- |
-| `CHITTA_RUNTIME_LOCAL` | `0` | `1` selects node-local queue, saddle marker and outcome-ledger tail; experimental until the replay/marker gates below pass. |
+| `CHITTA_RUNTIME_LOCAL` | `0` | `1` selects node-local queue, transient hook markers and outcome-ledger tail; experimental until atomic replay is available. |
 | `CHITTA_LEDGER_FLUSH_SECONDS` | `5` | Healthy-daemon ledger checkpoint interval, 1–300 seconds; flush also becomes eligible at 64 KiB pending. |
 | `CHITTA_EMBED_WRITE_WORKERS` | `0` | `0` preserves the existing embedding lane. Positive values enable dedicated document workers and a separate two-worker Unix write-RPC pool. Clamped to leave one of `CHITTA_EMBED_CONTEXTS` free when possible. |
 | `CHITTA_EMBED_WRITE_DEPTH` | `64` | Maximum queued document jobs, excluding active workers; 1–65536. |
 | `CHITTA_EMBED_WRITE_WAIT_MS` | `1000` | Actual document-inference callers wait for admission at most this long; 1–60000 ms. Cache-warming calls remain nonblocking because legacy callers can hold the global write lock. |
+| `CHITTA_RECALL_NOW` | unset | Evaluation only: positive Unix milliseconds, fixed once per daemon for Rust recall scoring. Write/WAL clocks remain real. Unset or invalid uses the wall clock. The restart gate records and reuses one value across processes. |
+| `CHITTA_RECALL_EMBED_WAIT_MS` | `50` | Query and variant embedding wait, 1–60000 ms; invalid values retain 50 ms. Replica identity evaluation uses 10000 ms and rejects missing embeddings, preventing load-dependent semantic-lane loss. Production fallback remains 50 ms unless explicitly overridden. |
 | `CHITTA_MAX_QUEUE_DEPTH` | `256` | Existing RPC cap also bounds the opt-in Unix write pool and its additional admission waiting room; a full pool is retried for one second without blocking socket polling. |
 
 The shared resolver is `runtime_state_dir` in `queue_path.hpp` and `hooks/lib.sh`.
@@ -49,9 +97,25 @@ capacity; document workers yield to the existing recall-pressure signal for up
 to 100 ms before each job. The asynchronous remember/observe acknowledgement
 semantics remain unchanged. The Unix RPC write pool isolates remember/observe/
 distill dispatch from readers; HTTP request-thread saturation is not changed.
-The other four hard-coded marker callers still require path-only edits outside
-this stream's write scope. Keep local placement off until that migration and
-ack_id recovery are complete.
+Prompt, SessionStart, Stop and PreTool use the resolver for four transient
+marker groups: heartbeat (`.hb_*`); turn discipline (`.turn_index_*`,
+`.last_store_turn_*`, `.last_distill_turn_*`, `.last_stop_time*`); prompt/Stop
+recall state (`.ctx_window_*`, `.injected_hashes_*`, `.exposed_*`,
+`.last_user_message`, `.last_correction_context`, `.last_predictions.json`,
+`.last_auto_store_ts`, `.size_warned_*`, `.session_summary_written_*`); and
+PreTool caches/sentinels (`.soul_injected_*`, `.trace_cache_*`, `.read_cache_*`,
+`.allow_read_*`, `.wakeup_count_*`, `.loop_count_*`). `get_next_turn` uses the
+same resolver, including custom `CHITTA_DB_PATH`. Both placements run through
+real hook lifecycle fixtures in `hooks/tests/test_runtime_markers.sh`.
+
+Persistent policy (`.strict_claude_style`, `.disable_consolidation`), metrics,
+transcript/staging data, and files shared with other lifecycle hooks (including
+`.session_active`, `.gaps_surfaced`, `.stop_dedup_*`, `.subagent_count_*`,
+`.compact_advised_*`, current-thread and notification files) retain their NFS
+paths. The out-of-scope FileChanged `.reindex_*` marker also stays on NFS. A placement change resets transient local state; drain queues first.
+Keep local placement off until atomic ack_id recovery is complete. Phase 7's
+existing `.applied-acks` ledger suppresses already-recorded receipts, but a crash
+between durable mutation and receipt publication can still replay a mutation.
 
 
 chitta integrates with Claude Code and Codex through the hooks system, enabling
@@ -1219,6 +1283,53 @@ none of the relocated tools was listed. Hook registrations are unchanged.
 - `scripts/debug-recall.sh`: Compare over-fetched candidates with final recall results for a query; supports `--limit` and `--fetch`.
 - `scripts/evolve-topology.sh`: Evolve conductor visibility matrices using archive fitness, ledger and stability gates; supports `--dry-run` and `--realm`.
 - `scripts/settle-predictions.sh`: Confirm expired open predictions without correction references; supports `--dry-run` and `--realm`.
+
+## Handoff capsule (Phase 3, partial qualification)
+
+Stop stores a versioned `handoff` object in the task ledger's session metadata
+through the existing `ledger_op/session_bind` metadata merge. It records the last
+explicit `Next:`, `Next action:`, `Next step:` or `TODO:` line in the latest visible
+assistant response, excluding fenced examples and quoted lines. If absent, an
+explicit `next_action` or first `next_steps` entry in the bound thread's metadata
+is eligible. Thread titles are not inferred actions. `verified` means the action
+has this recorded source; it does not certify that an action has already passed
+its tests or remains feasible.
+
+The capsule includes the checked-out branch (or detached commit), up to 20 sorted
+paths from git's staged, unstaged and untracked changes, the last explicit blocker line, and
+source session/thread identifiers. No eligible action writes an unverified
+capsule, replacing that session's earlier action. SessionStart selects the newest
+capsule for the exact project directory and branch, optionally restricted by an
+explicit thread ID, and renders it before other session context. An unverified
+newest capsule suppresses older ones. An empty blocker is shown as `none recorded`.
+
+`hooks/tests/test_handoff_capsule.sh` tests the mechanics with synthetic inputs.
+Short completion responses such as `Done.` also replace an earlier capsule
+with an unverified one before Stop's short-response exit.
+
+`benchmarks/continuation/build.py` reads `~/.claude/projects/*/*.jsonl` read-only,
+orders sessions within each project directory by their earliest conversation
+timestamp, and takes the 20 newest consecutive pairs with a nonempty next-session first
+prompt. It retains the preceding last visible assistant response and explicit
+ledger/capsule fields, and records the next session's actual first prompt and
+first nontrivial tool call as ground truth. Transcript IDs and SHA-256 digests
+are retained. Fixture data goes outside the repository, by default to
+`/projects/caeg/scratch/kbd606/tmp/continuation-fixture/`.
+
+`benchmarks/continuation/score.py` replays the production visible-plan selector
+on preceding-session material only, with explicit ledger fields as fallback.
+The capsule's **next_action** must mention an exact target file path or complete
+command from the next session's first nontrivial tool call. A tool name alone,
+a shortened basename, similar wording, or a path only in the capsule's artifact
+list does not count. A known branch mismatch is a miss, matching SessionStart's
+branch filter. Missing evidence is a miss. This retrospective replay is
+identified as such; it is not evidence that old sessions wrote the new capsule.
+The expanded authorized source on 2026-09-16 contained **641 transcripts** in
+382 projects with conversation records, yielding 258 eligible pairs. The newest
+20 score **0/20**: all lack an explicit final plan line or usable ledger action.
+The required 18/20 gate is unmet; no cases or human labels were invented. The
+scorer reports each pair's IDs, branch information and failure reason; fixture
+contents and those per-pair reports remain outside the repository.
 
 <!-- BEGIN CITATIONS -->
 ## References

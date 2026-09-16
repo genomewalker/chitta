@@ -1,0 +1,12 @@
+{
+  "source": "/projects/caeg/scratch/kbd606/tmp/codex-specs/eval-agentic.last.md",
+  "date": "2026-09-16",
+  "rule": "A useful hit must match every expression for that probe in one returned row. Report useful top-three counts; a probe passes if at least one row is useful. This deterministic rubric is distinct from the memo author's qualitative verdict.",
+  "probes": [
+    {"id": "deploy", "question": "Deploy rebuilt chittad without ETXTBSY", "all": ["(?i)install", "ETXTBSY"], "citation": "codex-plugin/AGENTS.md: hard constraints"},
+    {"id": "posttooluse", "question": "Correction to Codex PostToolUse exits", "all": ["PostToolUse", "(?i)(null|unknown|missing|no exit)", "(?i)(heuristic|likely_fail)"], "citation": "codex-plugin/AGENTS.md: Reaching chitta"},
+    {"id": "mdl", "question": "September 15 decision retiring MDL", "all": ["MDL", "(?i)(retir|remov|delet)", "2026-09-15"], "citation": "docs/DECISION-2026-09-15-mdl-analogy.md"},
+    {"id": "field_performance", "question": "Resume field-performance work; remaining work/artifacts", "all": ["(?i)(remaining|next|pending|open)", "(?i)(field.perf|FIELD_PERF)", "(?i)(artifact|benchmark|chitta-field/)"], "citation": "docs/FIELD_PERF.md"},
+    {"id": "nfs", "question": "Recover NFS lock without killing HTTP MCP", "all": ["(?i)(NFS|STORE_LOCK)", "(?i)(HTTP MCP|--http|9481)", "(?i)(never|do not|don't|without)"], "citation": "codex-plugin/AGENTS.md: hard constraints; docs/HOOKS.md"}
+  ]
+}

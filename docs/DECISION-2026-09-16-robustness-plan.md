@@ -44,17 +44,61 @@
 - Acknowledged-write durability defined and tested: which RPCs return after fsync, which after WAL append.
 - Exit gate: restart ≤ 5 s cached (`benchmarks/field-perf/run.sh` extended); a fortnight without a runtime lock incident, measured by `scripts/report-runtime-incidents.py` over `chittad.log`; the stress target above.
 
+> Phase 6 status 2026-09-16 (evening): merged and deployed — bounded embedding
+> workers (recall p95 during 200 concurrent writes 625 → 114–163 ms; the 150 ms
+> gate is borderline and re-measured by the canary), runtime-dir placement of
+> hook markers and the queue behind `CHITTA_RUNTIME_LOCAL=1` (default off),
+> acknowledged-write durability test, timestamped daemon log, incident report
+> flags other-host lock holders, store-lock wait for a live holder
+> (`CHITTA_STORE_LOCK_WAIT_S`), and the primary-node gate now enforced by the
+> daemon itself (exit 75) with the installer writing the marker and drop-in.
+> Not met: cached restart 16 s on the replica against the 5 s gate (snapshot
+> decode is the floor); deferred: cross-node RPC fallback for hooks and MCP on
+> non-primary nodes (zero transport changes landed), atomic ack replay as one
+> store transaction. The fortnight soak starts today.
+
 ### Phase 1 — One locking authority (highest risk)
 - This is a concurrency redesign. Inventory (Astra): the global lock today protects the C++ task-ledger tables and revision transactions (`task_ledger.hpp`, `field_task_ledger.cpp`); the query LRU, health/soul caches, distill settings, subconscious queues, sadhana state, queue counters, the embed queue and budget counters already have local protection; registrations, pointers and callbacks need publication and lifetime discipline.
 - Sequence: (a) a ledger transaction mutex; (b) audit maintenance, queue and subconscious callers for multi-FFI atomicity and durable sync; (c) instrument Rust lock waits and holds so `[lockprof]` silence is not vacuous once the dispatcher lock goes; (d) migrate one handler class at a time behind `CHITTA_GLOBAL_LOCK=1` (a real switch covering background callers too, tested, not the current allow-lists); (e) `scripts/stress-rpc.py` with 12 writers + 12 readers, invariant and deadlock detection, run per class migrated.
-- Exit gate: stress run clean for 5 minutes with zero Rust-side holds over 50 ms; ordered recall identity checked on an unchanged corpus separately from the stress run (20 distinct queries, not one query 20 times); ctest; a live week with no hold over 150 ms.
+- Exit gate: stress run clean for 5 minutes with zero Rust-side holds over 50 ms; ordered recall identity checked on an unchanged frozen replica separately from stress using `scripts/restart-identity.py --restarts 3` (20 distinct committed golden queries, 20/20 on each restart) and `--within-process` (20/20), with a pinned evaluation clock, complete query embeddings, and no warm-up panel calls; invocation and private-copy requirements in `docs/FIELD_PERF.md`; ctest; a live week with no hold over 150 ms.
 - Rollback: the switch above, kept for two release cycles.
+
+> Gate note 2026-09-16 (afternoon): the "20/20 ordered recall identity across
+> a restart" exit gate fails on unchanged main (15, 18, 11, 19 and 16 of 20 in
+> three independent streams; a fixed-query control stays 20/20). Until
+> `feat/restart-identity` root-causes it, running phases are held to "no worse
+> than before on the same replica copy, same script"; the 20/20 gate returns
+> once the shared `scripts/restart-identity.py` passes on main.
+
+> Phase 1 status 2026-09-16 (evening): merged and deployed (ac09d5b7, store
+> 6792a05). Task-ledger transactions own their mutex; handler queue metadata,
+> write-notify and subconscious callbacks are published under narrow locks;
+> the sadhana manager is published before serving and the compact_wal thread
+> is joined at shutdown; every Rust store component RwLock is named and
+> profiled (`[lockprof] RUST component=…`). `CHITTA_GLOBAL_LOCK` exists and
+> stays **on** by default: `scripts/stress-rpc.py` (12 writers + 12 readers,
+> 300 s) preserved 40,279 writes through WAL replay, but Rust holds over 50 ms
+> occurred in every tested class, so the switch does not flip. Restart
+> identity on the same replica copy 18/20 → 20/20 after the store fixes.
 
 ### Phase 3 — Memory that knows what is current
 - Answer repository questions from the index first: extend code intel to Markdown headings (`code_intel.hpp` currently excludes Markdown), make the FileChanged hook handle deletions and lose its 300 s throttle for the index path, validate content hashes at query and startup because watchers miss edits. Identity is repository + path + heading (or symbol); the content hash is the version.
 - Source-anchored memories only for hook-generated file facts at first (`artifact-trace.sh`, `[done]` provenance); explicit supersession through the queue's `observe` path and filtering in recall, not a blanket "unanchored is fresher" rule. Facts sharing a file must not supersede each other.
 - Handoff capsule (F9): Stop writes, and SessionStart renders, a verified next action, branch, artifact paths and blocker from the ledger; measured by a cold-session continuation fixture (≥ 90% correct continuation on a 20-case set).
 - Exit gate: current-truth ≥ 40/50 including holdout; the five 2026-09-16 probes kept as regression fixtures and answered 5/5; golden nDCG within its band; the continuation fixture met.
+
+> Phase 3 status 2026-09-16 (evening): merged and deployed (45de7d13, store
+> 36039ba). Markdown headings and code chunks are indexed as first-class
+> sources with anchors; obsolete file facts are demoted only within exact
+> score ties and superseded ones dropped; recall merges up to three source
+> chunks unless `sources=false`; Stop writes a handoff capsule to the task
+> ledger and SessionStart renders it. On the frozen replica: current-truth
+> 20 → 36/50 with no losses, golden with `sources=false` unchanged (0.4804),
+> restart identity 20/20 on three restarts, chaos 9/9, prompt median within
+> the noise band. Not met: the 40/50 target, probes 3/5, and the continuation
+> gate (0/20: none of the 20 past sessions wrote an explicit plan line, which
+> the capsule now adds going forward; `benchmarks/continuation` re-scores as
+> sessions accumulate).
 
 ### Phase 2 — Retirement by measurement (with Phase 4)
 - Inventory every organ by dependency class (Astra's table: recall/write, keyed, index maintenance, code intel, event/API, and snapshot-resident state marked). Snapshot-resident codecs and WAL replay stay until compatibility tests pass; V23 defaults do not preserve discarded data on rollback.
@@ -65,13 +109,27 @@
 ### Phase 4 — Surface reduction (with Phase 2)
 - Keep the existing tiering (`core` advertised, `advanced` and hidden callable). Add `scripts/check-mcp-surface.py` that measures the filtered `tools/list` and its payload in tokens for the model in use; target ≤ 80 advertised and payload ≤ 8k tokens. Unadvertised handlers are promoted, moved to advanced, or deleted; hidden direct calls stay compatible; contracts unchanged for kept tools.
 
+> Phase 4 status 2026-09-16 (afternoon): merged and deployed (757aa78c).
+> Advertised `tools/list` 89 → 54 tools, ~11.0k → ~6.3k estimated tokens;
+> `scripts/check-mcp-surface.py` gates core ≤ 80 and ≤ 8000 tokens in CI,
+> new tools default to advanced, hidden tools stay callable directly and via
+> `advanced(tool=...)`. Docs regenerate with
+> `python3 scripts/gen-tools-static.py --docs`. Every tier change and its
+> evidence is in CHANGELOG.md.
+
 ### Phase 5 — Policy out of bash
 - Move admission, budget accounting and lane fusion behind daemon RPCs incrementally (`recall_lanes` and the task-ledger RPC exist), keeping local safety checks and timeout fallbacks in the hooks. One implementation serves Claude Code and Codex.
 - `scripts/bench-hook-parity.py` pins clock and session inputs, records per-process exit statuses (the current runner swallows them) and compares whole hook outputs before and after each move.
 - Exit gate: byte-identical outputs on the parity fixtures; `hooks/*.sh` under 3k lines; targets with measured attribution from today's baselines (prompt 608 ms, SessionStart 599 ms, Bash added 24 ms): prompt ≤ 400 ms, SessionStart ≤ 400 ms, Bash added ≤ 15 ms.
 
+### Phase 8 — Memory and latency budget (after Phase 2)
+- Agreed with Astra on 2026-09-16 in two rounds; the laptop constraint (round 2) governs: steps, verdicts, the `CHITTA_PROFILE=laptop` envelope and the three deciding prototypes are in `DECISION-2026-09-16-memory-scale.md`. Order: census and identity freeze → power-aware bounded execution (foreground competitive-weight refresh off, per-lane status) → mapped candidate/payload/BM25 path → 256-d candidates → compact canonical tables and incremental checkpoints → organ lazy modes, archive tier, disk qualification.
+- Exit gate (laptop profile): resident ≤ 1.5 GB at 135k and ≤ 3 GB at 1M, cold start ≤ 2 s, prompt-hook p95 ≤ 300 ms on 8 shared cores with zero silent lane loss, background ≤ 1 core and paused on battery, disk ≤ 3 × resident. Node profile keeps its formats and defaults.
+
 ## Backlog (owner-listed, not yet scheduled)
 
+- Shutdown must finish an in-flight snapshot before exiting (the unit already allows 300 s): a SIGTERM mid-save abandons the family and the next start replays hours of WAL (105 s to ready on 2026-09-16 versus 10–18 s). Until then the operator checks the log before restarting (CLAUDE.md).
+- Production recall silently degrades under load: the 50 ms query-embedding deadline (`CHITTA_RECALL_EMBED_WAIT_MS`) drops the semantic lanes and falls back to keyword-only without any marker in the result. Found by the restart-identity stream on 2026-09-16 (13/20 identical restarts were exactly the ones with missing embeddings). Decide a budget that fits the prompt-hook p95 and mark degraded results (`status`) so the hook and the canary can count them.
 - **Independent qualification stage for evolve verdicts** (card
   `rekursiv-qualification-stage`, from rekursiv.ai's auto-autoresearch run):
   a second agent re-measures a candidate on a fresh replica before a verdict

@@ -2,7 +2,8 @@
 // CodeIntel: Tree-sitter based symbol extraction
 //
 // Extracts functions, classes, methods from source files.
-// Supports: C/C++, Python, JavaScript/TypeScript, Go, Rust, Java, Ruby, C#, Swift
+// Supports: C/C++, Python, JavaScript/TypeScript, Go, Rust, Java, Ruby, C#, Swift,
+// and heading-scoped Markdown documents.
 
 #include <tree_sitter/api.h>
 #include <cstring>
@@ -16,6 +17,8 @@
 #include <fstream>
 #include <sstream>
 #include <chrono>
+#include <mutex>
+#include <nlohmann/json.hpp>
 
 // External tree-sitter language functions (from tree-sitter-parsers library)
 extern "C" {
@@ -33,6 +36,37 @@ extern "C" {
 }
 
 namespace chitta {
+
+// Derived source knowledge. The sidecar contains registered roots only; chunks
+// are rebuilt from the filesystem and hashes are checked on every source query.
+// It deliberately shares recall's result rows rather than adding an RPC/lane.
+class RepositoryIndex {
+public:
+    static bool repository_question(const std::string& query);
+    static std::string content_hash(const std::string& bytes);
+    static std::string file_hash(const std::string& path);
+    static std::string repository_root(const std::string& path);
+    static nlohmann::json source_anchor(const std::string& content, const nlohmann::json& supplied);
+    void open(const std::string& sidecar, const std::string& known_files);
+    void index(const std::string& path, const std::string& realm);
+    nlohmann::json search(const std::string& query, const std::string& realm, size_t limit);
+private:
+    struct Chunk {
+        std::string identity, name, text, kind;
+        size_t line = 1;
+        std::unordered_map<std::string, size_t> terms;
+        size_t token_count = 0;
+    };
+    struct File {
+        std::string root, realm, path, hash;
+        std::vector<Chunk> chunks;
+    };
+    std::mutex mutex_;
+    std::string sidecar_;
+    std::unordered_map<std::string, std::string> roots_; // realm -> active checkout
+    std::unordered_map<std::string, File> files_;
+    void refresh(const std::string& realm);
+};
 
 // Extracted symbol with location info
 struct ExtractedSymbol {
@@ -208,8 +242,87 @@ public:
         if (ext == ".cs") return "csharp";
         if (ext == ".swift") return "swift";
         if (ext == ".lua") return "lua";
+        if (ext == ".md" || ext == ".markdown" || ext == ".mdown") return "markdown";
 
         return "";
+    }
+
+    // Each chunk ends before the next heading. Hierarchical names distinguish
+    // repeated child headings; occurrence suffixes distinguish repeated siblings.
+    // Fenced examples are content, never document structure. Keeping extraction
+    // here shares exactly the same index path as source symbols (no new codec).
+    static std::vector<ExtractedSymbol> extract_markdown(const std::string& path) {
+        std::ifstream file(path);
+        if (!file) return {};
+        std::vector<std::string> lines;
+        for (std::string line; std::getline(file, line);) {
+            if (!line.empty() && line.back() == '\r') line.pop_back();
+            lines.push_back(std::move(line));
+        }
+        struct Heading { size_t start; size_t body; size_t level; std::string text; };
+        std::vector<Heading> headings;
+        char fence = 0;
+        size_t fence_width = 0;
+        auto trim = [](const std::string& s) {
+            auto first = s.find_first_not_of(" \t");
+            if (first == std::string::npos) return std::string{};
+            return s.substr(first, s.find_last_not_of(" \t") - first + 1);
+        };
+        for (size_t i = 0; i < lines.size(); ++i) {
+            const auto& line = lines[i];
+            size_t start = line.find_first_not_of(' ');
+            if (start == std::string::npos || start > 3) continue;
+            char c = line[start];
+            size_t run = 0;
+            while (start + run < line.size() && line[start + run] == c) ++run;
+            if (fence) {
+                if (c == fence && run >= fence_width && trim(line.substr(start + run)).empty()) fence = 0;
+                continue;
+            }
+            if ((c == '`' || c == '~') && run >= 3) {
+                fence = c;
+                fence_width = run;
+                continue;
+            }
+            if (c == '#' && run <= 6 &&
+                (start + run == line.size() || line[start + run] == ' ' || line[start + run] == '\t')) {
+                auto title = trim(line.substr(start + run));
+                auto hashes = title.find_last_not_of('#');
+                if (hashes != std::string::npos && hashes + 1 < title.size() &&
+                    (title[hashes] == ' ' || title[hashes] == '\t')) title = trim(title.substr(0, hashes + 1));
+                headings.push_back({i, i + 1, run, title});
+            } else if ((c == '=' || c == '-') && trim(line.substr(start + run)).empty() && i > 0 &&
+                       !trim(lines[i - 1]).empty() &&
+                       (headings.empty() || headings.back().body < i)) {
+                headings.push_back({i - 1, i + 1, c == '=' ? 1u : 2u, trim(lines[i - 1])});
+            }
+        }
+        if (lines.empty()) return {};
+        if (headings.empty() || headings.front().start > 0)
+            headings.insert(headings.begin(), {0, 0, 0, "(preamble)"});
+        std::vector<ExtractedSymbol> out;
+        std::vector<std::pair<size_t, std::string>> parents;
+        std::unordered_map<std::string, size_t> occurrences;
+        for (size_t i = 0; i < headings.size(); ++i) {
+            const auto& h = headings[i];
+            while (!parents.empty() && parents.back().first >= h.level) parents.pop_back();
+            std::string name;
+            for (const auto& parent : parents) name += parent.second + " / ";
+            name += h.text;
+            auto occurrence = ++occurrences[name];
+            std::string component = h.text;
+            if (occurrence > 1) {
+                component += " [" + std::to_string(occurrence) + "]";
+                name += " [" + std::to_string(occurrence) + "]";
+            }
+            if (h.level > 0) parents.emplace_back(h.level, component);
+            size_t end = i + 1 < headings.size() ? headings[i + 1].start : lines.size();
+            std::string text;
+            for (size_t j = h.start; j < end; ++j) text += lines[j] + "\n";
+            out.push_back({"heading", name, text, path,
+                           static_cast<int32_t>(h.start + 1), static_cast<int32_t>(end), ""});
+        }
+        return out;
     }
 
     // Extract symbols from a single file
@@ -218,6 +331,7 @@ public:
 
         std::string lang = detect_language(path);
         if (lang.empty()) return symbols;
+        if (lang == "markdown") return extract_markdown(path);
 
         auto it = parsers_.find(lang);
         if (it == parsers_.end()) return symbols;
@@ -272,6 +386,10 @@ public:
 
         std::string lang = detect_language(path);
         if (lang.empty()) return result;
+        if (lang == "markdown") {
+            result.symbols = extract_markdown(path);
+            return result;
+        }
 
         auto it = parsers_.find(lang);
         if (it == parsers_.end()) return result;

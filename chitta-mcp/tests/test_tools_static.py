@@ -48,6 +48,41 @@ class StaticToolsTests(unittest.TestCase):
         )
         self.assertEqual(actual, (ROOT / "contracts/mcp-tools.json").read_text())
 
+    def test_docs_use_current_policy_and_frozen_schemas_without_rpc(self):
+        try:
+            import tool_policy
+        except ImportError as exc:
+            self.skipTest(f"MCP SDK unavailable: {exc}")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "scripts").mkdir()
+            (root / "docs").mkdir()
+            (root / "scripts/gen-tools-docs.py").write_text(
+                (ROOT / "scripts/gen-tools-docs.py").read_text()
+            )
+            (root / "scripts/site_common.py").write_text(
+                (ROOT / "scripts/site_common.py").read_text()
+            )
+            (root / "CHANGELOG.md").write_text("## [0.0.0]\n")
+            with (
+                mock.patch.object(generator, "ROOT", root),
+                mock.patch.object(subprocess, "run", side_effect=AssertionError("unexpected RPC")),
+            ):
+                generator.generate_docs()
+            markdown = (root / "docs/API.md").read_text()
+            html = (root / "docs/tools.html").read_text()
+            self.assertIn(f"{len(tool_policy.CORE_TOOLS)} tools are listed", markdown)
+            self.assertIn("scripts/gen-tools-static.py --docs", markdown)
+            self.assertIn("Generated from frozen contracts", markdown)
+            self.assertNotIn("TOOL_SPECS", markdown + html)
+            self.assertIn("| `ledger_op` | advanced |", markdown)
+            self.assertIn("<code>repl_execute</code> (advanced)", html)
+            self.assertTrue(
+                "### `remember_typed` *(gateway, via advanced)*" in markdown,
+                "hidden composite badge missing",
+            )
+
     def test_stale_check_does_not_write(self):
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "tools.py"

@@ -10,6 +10,19 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 ## [Unreleased]
 
+- Preserve calibrated recall confidence when repository sources are merged.
+  Source BM25 ranks have no similarity calibration, so `max_relevance` and
+  abstention retain their memory values; `source_hits` reports source coverage.
+
+- Add recall `sources` (boolean, default true). `sources=false` preserves the
+  memory-only ranking for ID-based evaluations; regenerate the recall input
+  contract, MCP static schema and generated tool documentation.
+
+- Index repository Markdown headings and code with source identities, SHA-256
+  validation on startup/query, deletion-aware FileChanged refresh and cited
+  `[doc]`/`[code]` recall rows. Frozen-family current-truth improves 20/50 to
+  36/50; the current-truth and golden recall exit gates remain unmet.
+
 ### Added
 - Per-open `CHITTA_ABLATE_ORGANS` experiments for 43 field organs, with
   empty runtime views, suppressed new organ WAL events, and preserved snapshot
@@ -19,6 +32,132 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
   panels and refuses qualification when metrics or invariants are missing.
   No tools or organs retired: the checked-in noise file lacks current-truth
   margins. Per-organ consumers and measurements are in `docs/FIELD_PERF.md`.
+- Markdown heading extraction through code intel, including hierarchical heading
+  names, duplicate-heading disambiguation, fenced examples and Setext headings.
+  Repository recall integration now validates sources on startup and query.
+- Derived source anchors for hook file facts, with replay-safe lifecycle indexing,
+  same-anchor supersession, visible freshness state and equal-score stale demotion.
+  No snapshot format or queue dispatcher/ack-ledger changes.
+- Stop-to-SessionStart handoff capsules in task-ledger session metadata, carrying
+  an explicit next action, branch, artifact paths, blocker and source provenance.
+  Capsules render before other context on the matching project and branch;
+  turns without a verified action invalidate the previous session capsule.
+- Clear handoff capsules even on short completion turns; add transcript-pair
+  construction and strict continuation scoring with source digests. Read all
+  641 authorized transcripts, pair within project directories and select the
+  newest 20 cases. Both scorers produce 0/20 on that fixture: every preceding
+  session lacks an explicit final plan or usable ledger action. The 18/20 gate
+  remains unmet; scoring now reports branch mismatches and per-pair reasons.
+### MCP surface reduction (Phase 4, 2026-09-16)
+
+- Advertised MCP discovery: **89 → 54 tools**, **11,027 → 6,326 estimated
+  tokens** (compact tools/list result, ceil(characters / 4), Anthropic
+  approximation; no local Anthropic tokenizer). The actual filtered MCP list
+  is measured, not the daemon's 319 schemas or the 359 pre-filter MCP rows.
+  All 415 distinct schema-backed tools/native handlers are tiered: 54 core,
+  302 advanced, 59 hidden. Every retained input schema and description is
+  unchanged. No daemon implementation, recall behavior or handler was deleted.
+- `scripts/check-mcp-surface.py` calls production `server.list_tools()` and
+  enforces `--max-core 80 --max-tokens 8000` by default. New tools default to
+  advanced. Hidden direct calls remain compatible; the advanced gateway now
+  dispatches MCP composites locally instead of incorrectly forwarding them.
+  Promoted tools also retain their existing advanced(tool=...) call path.
+- Evidence: canonical skills, hook call sites/advisories, README and CLI examples;
+  read-only outcome ledger scan for 2026-08-17–2026-09-16 (9,996 records).
+  The ledger contains **no explicit MCP-call records**, so absence is not
+  evidence of disuse. Truncated Bash command heads yield partial CLI evidence:
+  remember 38, recall 21, smart_recall/get 4 each, forget 3,
+  memory_outcome/recall_lanes/query_graph/recall_analogy 2 each,
+  realm_detect/triplets/recall_keyword/checkpoint/memory_edit/codebase_overview/
+  sadhana_start 1 each. Live read-only health_check and the RPC budget tracker
+  expose only aggregate counters, not a per-tool call history.
+- Core covers these observed workflows through their tools and existing
+  learn/research/sadhana/triplets/memory_edit gateways. Existing hook plumbing
+  stays hidden; specialized callers retain direct access. Code helpers without
+  evidence in those consumers remain advanced. `advanced` itself is core so
+  every unadvertised handler can be discovered and called on demand.
+- Regenerate schemas and docs with `python3 scripts/gen-tools-static.py --docs`.
+  This runs `scripts/gen-tools-docs.py` with current metadata readers: the old
+  standalone renderer still assumes pre-extraction policy and CLI tables.
+  Docs use frozen MCP schemas and list all 76 native-only handlers separately.
+- Validation: 159 MCP tests, 21 hook shell suites, 4 hook Python tests,
+  46 SMRITI tests, skills sync, CI Ruff and byte-identical contracts pass.
+  Native release build passes (289 Rust tests, 2 ignored); CTest's initial
+  17 passes plus all 8 failed-case reruns pass with `OPENBLAS_NUM_THREADS=1`,
+  `OMP_NUM_THREADS=1`, `RAYON_NUM_THREADS=1` (initial NFS fixture timeouts).
+  **Required restart-identity baseline remains unmet on unchanged native code:**
+  worktree daemon 19/20 distinct queries, cached repeat 16/20, bounded-worker
+  repeat 16/20; the fixed-query control is 20/20 throughout. These runs used
+  separate private copies of replica snapshot `bbcaed33`; no live store writes.
+
+- **Core → advanced (66):** Specialized variants, diagnostic/maintenance APIs and helpers without direct evidence in the audited consumers; callable names and schemas retained.
+  `5w_search`, `ack_memory`, `approve_memory`, `ask`, `assoc_census`, `assoc_decay`,
+  `compact_context`, `conflict_inspector`, `cross_harness_conflicts`, `densify_backfill`,
+  `detect_contradictions`, `disable_source`, `distill_now`, `embed_coverage`, `embed_probe`,
+  `flush_embeddings`, `forget_kind`, `get_embeddings`, `get_evidence_type`, `graph_pagerank`,
+  `graph_traverse`, `impl_start`, `labile_memories`, `list_by_status`, `list_memories_brief`,
+  `log_decision`, `log_event_ex`, `memory_provenance`, `memory_status`, `nack_memory`,
+  `pending_embed_ids`, `promote_memory`, `provenance_check`, `prune_episodes`,
+  `read_function`, `read_transcript`, `recall_session`, `recall_smart`, `recall_spreading`,
+  `recall_ucb1`, `reconsolidate`, `reject_memory`, `remap_realms`, `remember_batch`,
+  `remember_typed`, `resolve_contradiction`, `save_spectral_snapshot`, `scan_contradictions`,
+  `search_symbols`, `semantic_backfill`, `set_affect`, `set_evidence_type`, `soul_repl`,
+  `span_query`, `spectral_drift`, `stageb_set_surface`, `structured_recall`, `symbol_callees`,
+  `symbol_callers`, `task_state`, `think_wander`, `trim_realm_names`, `triplet_query_as_of`,
+  `triplet_supersede`, `verify_correction`, `what_do_i_know_about`.
+- **Advanced → core (31):** Explicit skill, hook or recent CLI consumers; promoted without changing schemas.
+  `connect_temporal`, `dream_list`, `dream_start`, `dream_status`, `dream_wander`,
+  `explore_expand`, `explore_neighbors`, `explore_peek`, `explore_recall`, `get`,
+  `habit_list`, `habit_match`, `habit_strengthen`, `health_check`, `learn_codebase`,
+  `ledger_get`, `ledger_list`, `ledger_load`, `ledger_save`, `long_task_active`,
+  `long_task_complete`, `long_task_event`, `long_task_snapshot`, `long_task_start`,
+  `long_task_update`, `msg_send`, `query_graph`, `realm_detect`, `run_hint_enricher`,
+  `set_memory_type`, `smart_recall`.
+- **Unadvertised native handlers → advanced (6):** Previously absent from both policy sets; registered implementations remain callable and are now discoverable through advanced.
+  `ledger_op`, `repl_execute`, `repl_session_delete`, `repl_session_get`, `repl_session_list`,
+  `repl_session_set`.
+- **Removed stale policy labels (9):** No registered handler or MCP schema exists in this checkout (full chitta source scan). The theme registration explicitly records that its backend was removed; these are stale listing entries, not deleted handlers. No working direct call is removed.
+  `background_run_cycle`, `background_schedule`, `background_status`, `cleanup_code_wisdom`,
+  `connect_batch`, `migrate_vss`, `sql_query`, `theme_assign_orphans`, `theme_maintain`.
+
+
+### Added
+- Restart identity gate on twenty frozen golden queries, with exact embedding
+  bytes, pre-fusion candidates, and score-component diagnostics. Replica restart
+  preserves the same store; evaluation pins recall time and gives embeddings a
+  bounded wait, rejecting incomplete semantic lanes instead of accepting fallback.
+- `no_learn` semantic recall preserves stored competitive weights and refresh
+  timestamps; learning and maintenance continue to refresh them normally.
+
+- 2026-09-16: private-replica RPC stress tool with 12 writers/12 readers for
+  300 seconds, total 30-second call deadlines, named Rust lock maxima, count
+  and payload/state checks, and SIGKILL/WAL replay verification. Corrected
+  read-induced access-state comparison verifies 18,901 observe and 21,378
+  remember acknowledgements; Rust hold limits remain unmet. Diagnostic and
+  incomplete-gate runs exit nonzero; reproduction and limits are documented.
+- 2026-09-16: `CHITTA_GLOBAL_LOCK=0` bypasses the dispatcher, queue and background
+  global mutex without changing WAL-sync classification. Default 1 retains the
+  existing policy: all three 300-second mixed-client workloads exceeded the
+  50 ms Rust hold gate. Named timing records now survive native stderr writes.
+  CTest 30/30, Rust 291 passed, chaos 9/9; same-copy restart identity 20/20
+  versus 18/20 before, fixed controls 20/20. Inventory and limitations are in
+  `docs/FIELD_PERF.md`.
+- 2026-09-16 follow-up validation: 200/200 writes, zero errors, embeddings
+  drained; recall p95 113.9 ms during writes / 162.8 ms full window; cached
+  restart 16.10 s. Full-window latency and restart gates remain unmet. Chaos
+  9/9, CTest 25/25, Rust 289 passed/2 ignored, hooks 23/23; contracts unchanged.
+- 2026-09-16: UTC timestamps on daemon stderr, including Rust and native C
+  diagnostics; incident reporting identifies foreign-host lock holders and
+  accepts an explicit originating host. Scratch verification found all 5,528
+  daemon log lines dated; this does not establish the fortnight soak gate.
+- 2026-09-16: installer writes the primary-host `.daemon-node` marker and
+  `primary-node.conf` guard (exit 75 elsewhere), including custom mind paths.
+  Automatic secondary-host RPC fallback is documented as the next step;
+  partial transport changes were not added.
+- 2026-09-16: runtime placement for heartbeat, turn discipline, prompt/Stop
+  recall state and PreTool caches, with real hook tests for default and local
+  paths. Shared lifecycle markers stay on NFS; atomic queue mutation/ack replay
+  remains blocked on a store transaction API, so local placement stays off.
 - Opt-in nightly replica canary with dated reports, calibrated golden-score
   regression exits, explicit current-truth availability/calibration checks,
   and a disabled-by-default user timer (`--enable-canary`). On 2026-09-16,
@@ -88,6 +227,16 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 - Chained `git add … && git commit` commands are captured as milestones.
 
 ### Fixed
+- 2026-09-16 (Phase 1c): measure real Rust component RwLock waits and holds,
+  including timed reads and unwinding. Named diagnostics log first use, maxima,
+  and every wait or hold over 50 ms; archive poisoning remains intact.
+- 2026-09-16 (Phase 1b): publish queue metadata and callbacks under narrow
+  mutexes, initialize sadhana before background readers, and join foreground
+  RPC and compaction workers before destroying their captured state.
+- 2026-09-16 (Phase 1a): task-ledger reads, revision allocation, WAL append,
+  and table publication now share a dedicated transaction mutex instead of
+  depending on the RPC dispatcher lock. A 24-client regression verifies one
+  lease winner, sequential revisions, and replay equality.
 - Nightly literature cards were rejected by the proposal loader (source URL
   instead of a kind, prose `blast_radius`, zero effort) and silently skipped by
   the selector; the watch now writes the loader's contract.

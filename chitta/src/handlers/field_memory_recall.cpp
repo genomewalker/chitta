@@ -194,11 +194,69 @@ std::vector<char> prefilter_keep(const std::vector<PrefilterCand>& c,
 
 namespace chitta {
 
+namespace {
+// Move stale evidence only within an exactly equal-score group. Current and
+// unanchored memories retain their original relative order; no age heuristic.
+// ANCHOR_TIES_BEGIN
+template<class Row, class Score, class Stale>
+void demote_stale_ties(std::vector<Row>& rows, Score score, Stale stale) {
+    std::map<float, std::vector<size_t>> groups;
+    for (size_t i = 0; i < rows.size(); ++i)
+        if (std::isfinite(score(rows[i]))) groups[score(rows[i])].push_back(i);
+    for (const auto& [value, positions] : groups) {
+        std::vector<Row> tied;
+        for (auto i : positions) tied.push_back(std::move(rows[i]));
+        std::stable_partition(tied.begin(), tied.end(), [&](const auto& row) { return !stale(row); });
+        for (size_t i = 0; i < positions.size(); ++i) rows[positions[i]] = std::move(tied[i]);
+    }
+}
+// ANCHOR_TIES_END
+
+void anchor_filter(FieldStore& store, std::vector<FieldRecallHit>& hits) {
+    json ids = json::array();
+    for (const auto& hit : hits) ids.push_back(std::to_string(hit.memory_id));
+    if (ids.empty()) return;
+    std::unordered_set<uint64_t> stale, superseded;
+    for (const auto& row : store.source_anchors({{"ids", ids}})) {
+        const auto id = std::stoull(row.value("id", "0"));
+        const auto state = row.value("state", "");
+        if (state == "stale" || state == "missing") stale.insert(id);
+        if (row.value("status", 0) == 1) superseded.insert(id);
+    }
+    hits.erase(std::remove_if(hits.begin(), hits.end(), [&](const auto& h) { return superseded.count(h.memory_id); }), hits.end());
+    demote_stale_ties(hits, [](const auto& h) { return h.score; },
+        [&](const auto& h) { return stale.count(h.memory_id); });
+}
+}
+
 // Single emission point for the `#<id> [pct%] …` hit line. See the contract on
 // FieldRpcHandler::HitLineOpts in rpc/handlers/field_memory_recall.hpp — hooks
 // parse this format, so it is frozen; only the per-lane flags vary.
 void FieldRpcHandler::format_hits(std::ostringstream& ss, json& results,
                                   const std::string& query, const HitLineOpts& opts) {
+    json ids = json::array();
+    for (const auto& row : results)
+        if (!row.contains("source_identity")) ids.push_back(row.value("id", "0"));
+    std::unordered_map<std::string, json> anchors;
+    if (!ids.empty()) for (const auto& row : field_store_->source_anchors({{"ids", ids}}))
+        anchors[row.value("id", "0")] = row;
+    std::vector<json> visible;
+    for (auto& row : results) {
+        auto found = anchors.find(row.value("id", "0"));
+        if (found != anchors.end()) {
+            if (found->second.value("status", 0) == 1) continue;
+            row["anchor"] = found->second["anchor"];
+            row["anchor_state"] = found->second["state"];
+            auto text = row.value("text", "");
+            auto marker = text.rfind("\n[anchor] ");
+            if (marker != std::string::npos) text.resize(marker);
+            row["text"] = text + " [anchor:" + row["anchor_state"].get<std::string>() + "]";
+        }
+        visible.push_back(std::move(row));
+    }
+    demote_stale_ties(visible, [](const auto& r) { return r.value("relevance", 0.0f); },
+        [](const auto& r) { const auto s = r.value("anchor_state", ""); return s == "stale" || s == "missing"; });
+    results = visible;
     set_lexical(results, query);
 
     float lex_max = 0.0f;
@@ -215,7 +273,7 @@ void FieldRpcHandler::format_hits(std::ostringstream& ss, json& results,
         ss << hit_line(id, pct, r.value("type", "?"), r.value("ts_ms", int64_t(0)),
                        r.value("text", ""), opts.show_type, opts.show_date);
 
-        if (!opts.link_atoms) continue;
+        if (!opts.link_atoms || r.contains("source_identity")) continue;
         // Memory→span forward edge: hyperlink this belief to the exact atoms its
         // text references (paths/commands/ids), un-paraphrased. Directly fixes the
         // ellesmere class — the distilled belief now carries the verbatim path.
@@ -241,8 +299,9 @@ ToolResult FieldRpcHandler::tool_remember(const json& params) {
     if (content.empty()) return ToolResult::error("content is required");
 
     if (sandbox::is_sandboxed()) {
+        const auto queue = queue_snapshot();
         std::string dead_id = sandbox::dead_letter_write(
-            failed_queue_path_, queue_fail_count_, "remember", params);
+            queue.failed_path, queue.fail_count, "remember", params);
         return ToolResult::ok(
             "Sandboxed write diverted to dead-letter queue",
             {{"sandboxed", true}, {"dead_lettered_id", dead_id}, {"tool", "remember"}});
@@ -431,6 +490,25 @@ struct FieldRpcHandler::RecallPipeline {
     int64_t win_from = 0, win_to = 0;
     std::vector<FieldRecallHit> hits;
     std::unordered_map<uint64_t, float> bridge_boost;
+    json diagnostics = {{"embeddings", json::array()}, {"lanes", json::array()}};
+
+    void trace_embedding(const std::string& text, const std::vector<float>& emb) {
+        if (!params.value("explain", false)) return;
+        // Hex encodes the actual in-process f32 bytes, not rounded JSON floats.
+        std::ostringstream bytes;
+        bytes << std::hex << std::setfill('0');
+        const auto* data = reinterpret_cast<const unsigned char*>(emb.data());
+        for (size_t i = 0; i < emb.size() * sizeof(float); ++i)
+            bytes << std::setw(2) << static_cast<unsigned>(data[i]);
+        diagnostics["embeddings"].push_back({{"query", text}, {"dimension", emb.size()},
+                                             {"f32_native_hex", bytes.str()}});
+    }
+
+    void trace_lane(const std::string& name, const std::vector<FieldRecallHit>& lane) {
+        if (!params.value("explain", false)) return;
+        diagnostics["lanes"].push_back({{"name", name},
+                                       {"hits", handler.hits_to_results_json(lane, true)}});
+    }
 
     RecallPipeline(FieldRpcHandler& handler, const json& params)
         : handler(handler), params(params),
@@ -564,7 +642,8 @@ std::optional<ToolResult> FieldRpcHandler::RecallPipeline::dispatch_lanes() {
         std::unordered_map<uint64_t, FieldRecallHit> best_hit;
         const float kRRF = 60.0f;
 
-        auto rrf_lane = [&](const std::vector<FieldRecallHit>& lane) {
+        auto rrf_lane = [&](const std::string& name, const std::vector<FieldRecallHit>& lane) {
+            trace_lane(name, lane);
             int rank = 1;
             for (const auto& h : lane) {
                 rrf_scores[h.memory_id] += 1.0f / (kRRF + rank);
@@ -577,23 +656,25 @@ std::optional<ToolResult> FieldRpcHandler::RecallPipeline::dispatch_lanes() {
         std::vector<float> base_emb;
         if (params.contains("_preembedding"))
             base_emb = params["_preembedding"].get<std::vector<float>>();
+        trace_embedding(query, base_emb);
         // Only attempt semantic lanes if we have a working embedding (base_emb non-empty).
         // When yantra is unavailable, skip SSL-variant embed calls (each costs a full timeout).
         profile.next("semantic_lanes");
         if (!base_emb.empty()) {
             for (const auto& f : forms) {
                 auto emb = (f == query) ? base_emb : handler.embed_query(f);
+                if (f != query) trace_embedding(f, emb);
                 if (emb.empty()) continue;
-                rrf_lane(window_gate(handler.field_store_->recall(emb, lane_depth, realm, no_learn)));
+                rrf_lane("semantic:" + f, window_gate(handler.field_store_->recall(emb, lane_depth, realm, no_learn)));
             }
         }
         profile.next("keyword");
         // BM25 lane
-        rrf_lane(window_gate(handler.field_store_->recall_keyword(query, lane_depth, realm, no_learn)));
+        rrf_lane("keyword", window_gate(handler.field_store_->recall_keyword(query, lane_depth, realm, no_learn)));
         profile.next("hdc");
         // HDC lane (skipped when disable_hdc=true for ablation/benchmarking)
         if (!params.value("disable_hdc", false)) {
-            rrf_lane(window_gate(handler.field_store_->recall_hdc(query, lane_depth, realm)));
+            rrf_lane("hdc", window_gate(handler.field_store_->recall_hdc(query, lane_depth, realm)));
         }
 
         fuse_lanes(rrf_scores, best_hit, kRRF);
@@ -602,14 +683,18 @@ std::optional<ToolResult> FieldRpcHandler::RecallPipeline::dispatch_lanes() {
         // Never call handler.embed_query() here — that's inside rpc_mutex_ and blocks readers.
         if (params.contains("_preembedding")) {
             auto emb = params["_preembedding"].get<std::vector<float>>();
+            trace_embedding(query, emb);
             hits = window_gate(handler.field_store_->recall(emb, pool_limit, realm, no_learn));
+            trace_lane("semantic", hits);
         } else {
             // Realm scoping: this is the pre-embed-miss fallback (embed_queue
             // timed out at 50ms, so no _preembedding), which fires for ordinary
             // recalls, not just diagnostics. It passed "" for realm, so every
             // cold-cache recall silently returned cross-realm memories while the
             // semantic leg two branches up was correctly scoped. Same `realm`.
+            trace_embedding(query, {});
             hits = window_gate(handler.field_store_->recall_keyword(query, pool_limit, realm, no_learn));
+            trace_lane("keyword-fallback", hits);
         }
     }
 
@@ -1108,6 +1193,8 @@ void FieldRpcHandler::RecallPipeline::rerank() {
         hits = std::move(kept);
     }
 
+    anchor_filter(*handler.field_store_, hits);
+
     // Optional MMR diversification (separation_mode). The corpus stores the same event
     // several times, so near-identical siblings fill the page and one cluster crowds out
     // the rest — the "good cosine, no margin" failure. Greedy re-selection penalizes a
@@ -1177,27 +1264,22 @@ void FieldRpcHandler::RecallPipeline::rerank() {
     // passes so a deep-pool candidate the rescorers rank highly makes the cut.
     if (hits.size() > limit) hits.resize(limit);
 
-    // Hebbian co-occurrence: strengthen associations between co-retrieved
-    // memories. After truncation on purpose — only memories actually returned
-    // to the caller should co-strengthen, not the whole rescore pool.
-    // Honor no_learn: recall must not mutate the assoc graph when the caller
-    // asked for a read-only query (the lanes above already thread no_learn;
-    // this Hebbian co-strengthen leaked past it). CHITTA_NO_ASSOC_LEARN freezes
-    // it process-wide for reproducible paired evals on a fixed graph.
-    static const bool assoc_frozen = std::getenv("CHITTA_NO_ASSOC_LEARN") != nullptr;
-    if (!no_learn && !assoc_frozen && hits.size() >= 2) {
-        std::vector<uint64_t> ids;
-        ids.reserve(hits.size());
-        for (const auto& h : hits) ids.push_back(h.memory_id);
-        handler.field_store_->record_co_retrieval(ids);
-    }
-
 }
 
 ToolResult FieldRpcHandler::RecallPipeline::format() {
     bool explain = params.value("explain", false);
     profile.next("result_metadata");
     json results_json = handler.hits_to_results_json(hits, explain);
+    auto sources = params.value("sources", true) && tag.empty() && !windowed
+        ? handler.repository_index_.search(query, realm, std::min<size_t>(3, limit)) : json::array();
+    const size_t source_hits = sources.size();
+    if (!sources.empty() && tag.empty()) {
+        for (const auto& memory : results_json) {
+            if (sources.size() >= limit) break;
+            sources.push_back(memory);
+        }
+        results_json = std::move(sources);
+    }
 
     // Abstain signal: if no candidate clears the calibrated relevance bar, say so honestly
     // instead of presenting a weak best-of-a-bad-batch as if confident. relevance(cos) =
@@ -1216,16 +1298,18 @@ ToolResult FieldRpcHandler::RecallPipeline::format() {
         max_rel = std::max(max_rel, std::max(dense, h.lexical_score));
     }
     bool weak = !hits.empty() && max_rel < 0.45f;
+    // Repository BM25 scores are not calibrated similarities. Preserve the
+    // memory confidence used by prompt-hook bins; report source coverage separately.
 
     std::ostringstream ss;
     if (weak)
         ss << "[weak: no strongly-relevant memory (max relevance "
            << static_cast<int>(max_rel * 100) << "%); results may be tangential]\n";
-    ss << "Found " << hits.size() << " results";
+    ss << "Found " << results_json.size() << " results";
     if (!realm.empty()) ss << " in realm '" << realm << "'";
     // Surface the calibrated confidence always, not only when weak: downstream
     // C2 self-monitoring (prompt-core.sh) bins this into KNOWN/THIN/UNKNOWN.
-    if (!hits.empty()) ss << " (maxrel " << static_cast<int>(max_rel * 100) << "%)";
+    if (!results_json.empty()) ss << " (maxrel " << static_cast<int>(max_rel * 100) << "%)";
     ss << ":\n";
     profile.next("format");
     handler.format_hits(ss, results_json, query, {.show_date = true, .link_atoms = true});
@@ -1256,7 +1340,9 @@ ToolResult FieldRpcHandler::RecallPipeline::format() {
     json meta = {{"results", results_json}, {"realm", realm},
                  {"status", recall_status},
                  {"atoms", atoms_json},
+                 {"source_hits", source_hits},
                  {"abstain", weak}, {"max_relevance", max_rel}};
+    if (explain) meta["diagnostics"] = std::move(diagnostics);
     if (windowed) {
         // Surface the applied gate so a mis-parsed phrase is visible and correctable.
         auto iso = [](int64_t ms) {
@@ -1270,7 +1356,18 @@ ToolResult FieldRpcHandler::RecallPipeline::format() {
         ss << "\n[window: " << iso(win_from) << " → " << iso(win_to) << " UTC]\n";
     }
     auto result = ToolResult::ok(ss.str(), meta);
-    handler.fire_recall_callback(results_json, 1);
+    json memory_results = json::array();
+    for (const auto& row : results_json)
+        if (!row.contains("source_identity")) memory_results.push_back(row);
+    // Preserve the existing learning rule after the source merge: only returned
+    // memory IDs co-strengthen. Source IDs and displaced memories never do.
+    static const bool assoc_frozen = std::getenv("CHITTA_NO_ASSOC_LEARN") != nullptr;
+    if (!no_learn && !assoc_frozen && memory_results.size() >= 2) {
+        std::vector<uint64_t> ids;
+        for (const auto& row : memory_results) ids.push_back(std::stoull(row.value("id", "0")));
+        handler.field_store_->record_co_retrieval(ids);
+    }
+    handler.fire_recall_callback(memory_results, 1);
     return result;
 }
 

@@ -21,12 +21,21 @@ esac
 
 CHITTA_BIN="${CHITTA_BIN:-$HOME/.claude/bin/chitta}"
 [[ -x "$CHITTA_BIN" ]] || exit 0
-SHA=$(sha256sum "$FILE_PATH" 2>/dev/null | cut -c1-8)
+SHA=$(sha256sum "$FILE_PATH" 2>/dev/null | cut -d ' ' -f 1)
 # Purpose: first comment or docstring line after the shebang, if any.
 PURPOSE=$(sed -n '2,6p' "$FILE_PATH" | grep -m1 -E '^\s*(#|//|"""|'"'''"')' | sed -E 's/^\s*(#+|\/\/|"""|'"'''"')\s*//' | cut -c1-120)
 REALM=$(cd "$(dirname "$FILE_PATH")" && timeout 1 "$CHITTA_BIN" realm_detect 2>/dev/null || echo "")
 [[ -z "$REALM" ]] && exit 0
-timeout 3 "$CHITTA_BIN" remember \
-    --content "[artifact] $FILE_PATH sha:$SHA purpose:${PURPOSE:-unknown} — reuse or fork this script before writing a new one" \
-    --type signal --realm "$REALM" --tags '["artifact","provenance"]' --visibility 1 >/dev/null 2>&1 || true
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib.sh"
+REPO=$(git -C "$(dirname "$FILE_PATH")" rev-parse --show-toplevel 2>/dev/null) || exit 0
+FILE_PATH=$(realpath "$FILE_PATH") || exit 0
+REPO=$(realpath "$REPO") || exit 0
+[[ "$FILE_PATH" == "$REPO/"* ]] || exit 0
+ARGS=$(jq -nc --arg file "$FILE_PATH" --arg repo "$REPO" --arg path "${FILE_PATH#"$REPO/"}" \
+    --arg sha "$SHA" --arg purpose "${PURPOSE:-unknown}" --arg realm "$REALM" \
+    '{category:"signal",source:"hook_regex",realm:$realm,
+      content:("[artifact] input:" + ($file|tojson) + " sha:" + $sha + " purpose:" + $purpose + " — reuse or fork this script before writing a new one"),
+      anchor:{repo:$repo,path:$path,scope:"<file>",content_hash:$sha}}') || exit 0
+queue_write observe "$ARGS" || true
 exit 0

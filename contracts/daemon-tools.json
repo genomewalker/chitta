@@ -4367,6 +4367,11 @@
           "description": "Diverse results via MMR (default: false)",
           "type": "boolean"
         },
+        "sources": {
+          "default": true,
+          "description": "Include indexed repository sources; false returns memory ranking only (default: true)",
+          "type": "boolean"
+        },
         "strategy": {
           "description": "Retrieval lane: fused (default), keyword (BM25 only, realm-scoped), field (Hopfield/DAM)",
           "type": "string"

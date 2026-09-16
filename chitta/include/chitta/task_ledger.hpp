@@ -4,6 +4,7 @@
 #include <chrono>
 #include <functional>
 #include <map>
+#include <mutex>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -11,7 +12,9 @@
 #include <fnmatch.h>
 
 namespace chitta {
-// Called only while the daemon RPC mutex is held (startup replay is single-threaded).
+// Owns synchronization independently of RPC dispatch and queue/background callers.
+// Lock order: transaction mutex, then store locks inside the persistence callback.
+// Persist must not reenter this ledger. Reads return copies under the same mutex.
 // Persist a whole mutation before publishing any rows: lease claims never expose
 // a binding without its lease, or a close without its lease deletions.
 class TaskLedger {
@@ -71,6 +74,8 @@ public:
             return out;
         }
     };
+private:
+    std::mutex transaction_mutex_;
     std::map<std::string, Table> tables{
         {"threads", {"thread_id", {"realm", "status"}}},
         {"thread_sessions", {"session_id", {"thread_id", "project_dir", "status"}}},
@@ -129,23 +134,31 @@ public:
                 row.at("delivery_state")))
             throw std::invalid_argument("invalid inbox state");
     }
+public:
     static bool is_read(const std::string& op) {
         static const std::set<std::string> reads = {
             "thread_get", "thread_list",   "session_get",      "session_list", "lease_list",
             "inbox_list", "artifact_list", "artifact_lineage", "counts"};
         return reads.count(op) != 0;
     }
+private:
     uint64_t revision = 0;
-    void replay(const json& batch) {
+    void replay_locked(const json& batch) {
         for (const auto& c : batch.at("changes"))
             tables.at(c.at("table").get<std::string>()).put(c.at("id"), c.at("row"));
         revision = std::max(revision, batch.at("revision").get<uint64_t>());
+    }
+public:
+    void replay(const json& batch) {
+        std::lock_guard<std::mutex> lock(transaction_mutex_);
+        replay_locked(batch);
     }
     static double now() {
         return std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch())
             .count();
     }
     json run(const std::string& op, const json& a, const Persist& persist) {
+        std::lock_guard<std::mutex> lock(transaction_mutex_);
         const double ts = now();
         json changes    = json::array();
         auto change     = [&](const std::string& table, const std::string& id, const json& row) {
@@ -157,7 +170,7 @@ public:
                 for (const auto& c : changes)
                     validate_row(c["table"], c["id"], c["row"]);
                 persist(batch);
-                replay(batch);
+                replay_locked(batch);
             }
             return result;
         };

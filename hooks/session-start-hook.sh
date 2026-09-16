@@ -61,6 +61,10 @@ MAX_WAIT="${CHITTA_MAX_WAIT:-${CC_SOUL_MAX_WAIT:-2}}"
 # Source shared library (provides queue_write with ack_id, get_queue_file, etc.)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib.sh"
+
+# Ephemeral hook state; persistent policy and cross-hook shared files stay in mind.
+HOOK_STATE_DIR=$(runtime_state_dir "${CHITTA_DB_PATH:-${HOME}/.claude/mind}")
+mkdir -p "$HOOK_STATE_DIR" 2>/dev/null || true
 PLUGIN_DIR="$(resolve_cc_soul_root 2>/dev/null || dirname "$SCRIPT_DIR")"
 
 SOCKET_PATH=$(get_socket_path)
@@ -81,7 +85,7 @@ _reset_session_state() {
 if [[ "$HOOK_SOURCE" != "compact" ]]; then
     rm -f "$MIND_PATH/.session_active" "$MIND_PATH/.gaps_surfaced"
     rm -f "$MIND_PATH/.stop_dedup_"* 2>/dev/null || true
-    rm -f "$MIND_PATH/.size_warned_"* 2>/dev/null || true
+    rm -f "${HOOK_STATE_DIR}/.size_warned_"* 2>/dev/null || true
     # Reset subagent counter for new session
     [[ -n "$SESSION_ID" ]] && rm -f "$MIND_PATH/.subagent_count_${SESSION_ID}" 2>/dev/null || true
 fi
@@ -98,9 +102,9 @@ fi
 # Initialize turn-discipline counter to current turn so the discipline nudge
 # measures idle turns within THIS session, not across session boundaries.
 if [[ -n "$SESSION_ID" ]]; then
-    TURN_FILE="${MIND_PATH}/.turn_index_${SESSION_ID}"
+    TURN_FILE="${HOOK_STATE_DIR}/.turn_index_${SESSION_ID}"
     CURRENT_TURN=$(cat "$TURN_FILE" 2>/dev/null || echo 0)
-    echo "$CURRENT_TURN" > "${MIND_PATH}/.last_store_turn_${SESSION_ID}"
+    echo "$CURRENT_TURN" > "${HOOK_STATE_DIR}/.last_store_turn_${SESSION_ID}"
 fi
 
 }
@@ -156,6 +160,35 @@ fi
 
 # Detect realm from project directory
 REALM=$(detect_project_realm "$PROJECT_DIR")
+
+# BEGIN handoff capsule
+_load_handoff_capsule() {
+    local project branch args tid
+    [[ -d "$PROJECT_DIR" ]] || return 0
+    project=$(cd "$PROJECT_DIR" && pwd -P) || return 0
+    branch=$(git -C "$project" symbolic-ref --quiet --short HEAD 2>/dev/null ||
+        git -C "$project" rev-parse --short HEAD 2>/dev/null || true)
+    tid=$(jq -r '.thread_id // empty' <<< "$INPUT")
+    args=$(jq -nc --arg project "$project" --arg tid "$tid" \
+        '{project_dir:$project,limit:100} + (if $tid == "" then {} else {thread_id:$tid} end)')
+    timeout "$MAX_WAIT" "$CHITTA_BIN" ledger_op --op session_list --args "$args" --json |
+        jq -r --arg branch "$branch" --arg project "$project" '
+        [.value.rows[]? | (.metadata_json | fromjson? // {}) | .handoff // empty |
+         select(.version == 1 and .project_dir == $project and .branch == $branch)] |
+        sort_by(.saved_at) | last |
+        select(.verified == true and (.next_action | type == "string" and length > 0)) |
+        "[handoff]",
+        "Next action: \(.next_action)",
+        "Branch: \(.branch)",
+        "Artifacts: \((.artifact_paths // []) | join(", "))",
+        "Blocker: \(if .blocker == "" then "none recorded" else .blocker end)",
+        "Source: \(.source.kind) (session \(.source.session_id))",
+        "[/handoff]"'
+}
+if [[ "$IS_SUBAGENT" != true ]]; then
+    _launch_lane handoff _load_handoff_capsule
+fi
+# END handoff capsule
 
 # Native registration owns the session binding. Read an existing thread on
 # resume and claim its lease through ledger_op, preserving the adapter contract.
@@ -317,6 +350,10 @@ fi
 # ═══════════════════════════════════════════════════════════════════════════
 # Load and inject session state
 # ═══════════════════════════════════════════════════════════════════════════
+
+# Render the verified capsule before all other session context.
+_read_lane handoff HANDOFF_CAPSULE
+[[ -n "$HANDOFF_CAPSULE" ]] && printf '%s\n' "$HANDOFF_CAPSULE"
 
 # Get full ledger entry (not just summary)
 # ledger_load returns the most recent entry for the project

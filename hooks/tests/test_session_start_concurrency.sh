@@ -206,8 +206,8 @@ Run /recap for full context. [/last-session]
             stat = Path("/proc", line.split()[0], "stat")
             try:
                 assert stat.read_text().split(") ", 1)[1][0] == "Z", line
-            except FileNotFoundError:
-                pass
+            except (FileNotFoundError, ProcessLookupError):
+                pass  # gone or reaped between the listing and the read
     print("ok: 350 ms global deadline bounds stalled CLI/registration and kills lane children")
     sock.close()
 PY

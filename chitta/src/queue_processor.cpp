@@ -376,6 +376,14 @@ struct QueueToolDispatch {
                     ? content
                     : title + "\n" + content;
             std::string realm = args.value("realm", "brahman");
+            json anchor = nullptr, previous = json::array();
+            if (source.rfind("hook", 0) == 0) {
+                anchor = RepositoryIndex::source_anchor(full_text, args.value("anchor", json()));
+                if (!anchor.is_null()) {
+                    full_text += "\n[anchor] " + anchor.dump();
+                    previous = field_store_.source_anchors({{"anchor", anchor}, {"realm", realm}});
+                }
+            }
             // Pass empty embedding — backfill thread embeds asynchronously.
             auto new_id = field_store_.remember(category_to_kind(category), realm,
                                       full_text, {},
@@ -392,6 +400,24 @@ struct QueueToolDispatch {
                 field_store_.add_triplet(std::to_string(new_id), "source", source);
                 if (!evidence.empty())
                     field_store_.add_triplet(std::to_string(new_id), "evidence", evidence);
+            }
+            // Only versions of this exact source fact supersede each other.
+            // Same path with a different heading/symbol/fact remains independent.
+            const auto observed = new_id > 0 && !anchor.is_null()
+                ? field_store_.source_anchors({{"ids", json::array({std::to_string(new_id)})}, {"realm", realm}})
+                : json::array();
+            const bool current_anchor = !observed.empty() && observed[0].value("state", "") == "current";
+            if (new_id > 0 && current_anchor) field_store_.set_memory_status(new_id, initial_status_for_source(source));
+            if (new_id > 0 && current_anchor) for (const auto& old : previous) {
+                const auto old_id = old.value("id", "0");
+                // Reverting a file can deduplicate to a previously superseded
+                // record. Retire its incoming version edge before reversing it.
+                if (old_id != std::to_string(new_id))
+                    field_store_.forget_triplet(old_id, "supersedes", std::to_string(new_id));
+                if (old_id == std::to_string(new_id) || old.value("status", 0) == 1 ||
+                    old["anchor"]["content_hash"] == anchor["content_hash"]) continue;
+                field_store_.add_triplet(std::to_string(new_id), "supersedes", old_id, 1.0f, new_id);
+                field_store_.set_memory_status(std::stoull(old_id), 1);
             }
             queue_count_++;
             // Correction supersession: find semantically similar memories
@@ -935,7 +961,7 @@ void QueueProcessor::run() try {
                 // (health_check, msg_inbox, …) stalls. run_distillation takes
                 // &handler_ and acquires the lock itself for the brief writes.
                 std::unique_lock<std::shared_mutex> _lk;
-                if (tool != "distill_trigger") {
+                if (tool != "distill_trigger" && FieldRpcHandler::global_lock_enabled()) {
                     _lk = handler_.acquire_lock();
                 }
                 // Lock-hold profiler: log if this queued write holds the exclusive
@@ -955,7 +981,7 @@ void QueueProcessor::run() try {
                             std::cerr << "[lockprof] EXCLUSIVE queue:" << tool << " held=" << ms
                                       << "ms (blocks all readers/recall while held)\n";
                     }
-                } _lp_guard{tool, _lp_h0, tool != "distill_trigger"};
+                } _lp_guard{tool, _lp_h0, _lk.owns_lock()};
 
                 QueueToolDispatch dispatch{
                     field_store_, handler_, queue_count_, queue_fail_count_, args,

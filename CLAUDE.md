@@ -78,6 +78,13 @@ bash scripts/dev-install.sh
   drop-in makes other nodes' units exit 75 without restarting; a node honours
   it only after `systemctl --user daemon-reload` there. Stop the foreign unit
   (`ssh <node> systemctl --user stop chittad`) rather than touching the lock.
+- **Do not restart while a snapshot is in flight.** SIGTERM during a save
+  abandons that family (`manifest family … failed validation` on the next
+  start), so the daemon falls back to the previous family and replays the
+  WAL since then (2026-09-16: 2 h of WAL → 32 s replay + 41 s normalize,
+  105 s to ready). Before `systemctl --user restart chittad`, check that
+  `chittad.log` shows no `Turbo rebuild start` / `LSH cache` / `event tape
+  organs` lines in the last minute, or wait for the family to commit.
 - Startup on the live store is ~9.5 s when the derived-state sidecars hit
   (`.lsh`, `.turbo`, `.organs` next to the snapshot family; since 2026-09-16,
   parallel snapshot decode included) and ~20 s on the first start after a

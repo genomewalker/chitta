@@ -35,6 +35,8 @@ struct CfSessionHit {
 // These ensure the symbols are visible even if chitta_field.h was included earlier
 // from a different path that predates these additions.
 extern "C" {
+int cf_source_anchors(struct CfHandle* h, const char* request,
+    uint8_t* buf, size_t cap, size_t* written);
 int cf_sync(struct CfHandle* h);  // fdatasync WAL; call OFF the rpc_mutex (see field_handler)
 int64_t cf_cw_refresh_sweep(struct CfHandle* h, size_t budget);
 int cf_backfill_embedding(struct CfHandle* h, uint64_t memory_id,
@@ -1064,6 +1066,18 @@ public:
     /// path — bypasses the fuzzy retriever entirely. Returns {found, memory_id,
     /// content}. `sha` is tried first, then `input`; either may be empty.
     struct ProvenanceHit { bool found = false; uint64_t memory_id = 0; std::string content; };
+    nlohmann::json source_anchors(const nlohmann::json& request) {
+        const auto text = request.dump();
+        std::vector<uint8_t> buf(8192);
+        size_t written = 0;
+        int r = cf_source_anchors(handle_, text.c_str(), buf.data(), buf.size(), &written);
+        if (r == -2) {
+            buf.resize(written + 1);
+            r = cf_source_anchors(handle_, text.c_str(), buf.data(), buf.size(), &written);
+        }
+        cf_checked(r, __func__);
+        return nlohmann::json::parse(buf.begin(), buf.begin() + written);
+    }
     ProvenanceHit provenance_lookup(const std::string& sha, const std::string& input) {
         size_t cap = 8192;
         std::vector<uint8_t> buf(cap);

@@ -7,10 +7,12 @@ import argparse
 import collections
 import datetime as dt
 import re
+import socket
 from pathlib import Path
 
 
-def incidents(lines):
+def incidents(lines, host=None):
+    host = (host or socket.gethostname()).split(".")[0].lower()
     counts = collections.defaultdict(collections.Counter)
     starts = collections.defaultdict(lambda: collections.defaultdict(list))
     for line in lines:
@@ -27,6 +29,9 @@ def incidents(lines):
             re.I,
         ):
             counts[day]["stale-lock replacements"] += 1
+        holder = re.search(r"(?:held by|recorded holder:)\s+(\d+)\s+([A-Za-z0-9_.-]+)", line)
+        if holder and holder[2].split(".")[0].lower() != host:
+            counts[day]["cross-host lock holders"] += 1
         held = re.search(r"\[lockprof\].*\bheld=(\d+(?:\.\d+)?)ms", line)
         if held and float(held[1]) > 150:
             counts[day]["holds >150ms"] += 1
@@ -59,6 +64,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("logs", type=Path, nargs="*")
     parser.add_argument("--self-test", action="store_true")
+    parser.add_argument("--host", help="host that produced the logs (default: this host)")
     args = parser.parse_args()
     if args.self_test:
         rows = incidents(
@@ -86,7 +92,20 @@ def main():
         )
         assert attempts["2026-09-16"]["starts/restarts"] == 3
         assert attempts["2026-09-16"]["restart loops"] == 1
-        print("incident date, thresholds, restart loops and undated coverage: passed")
+        locks = incidents(
+            [
+                "2026-09-16T12:00:00Z [chitta-field] instance lock /tmp/x held by 42 other; waiting up to 30 s",
+                "2026-09-16T12:00:01Z open failed (recorded holder: 42 other.example) — refusing",
+                "2026-09-16T12:00:02Z instance lock /tmp/x held by 43 primary.example; waiting",
+                "2026-09-16T12:00:03Z instance lock /tmp/x held by unknown; waiting",
+            ],
+            host="primary",
+        )
+        assert locks["2026-09-16"]["cross-host lock holders"] == 2
+        assert locks["2026-09-16"]["open failures"] == 1
+        print(
+            "incident ISO UTC dates, cross-host locks, thresholds, restart loops and undated coverage: passed"
+        )
         return
     if not args.logs:
         parser.error("provide logs or --self-test")
@@ -96,10 +115,11 @@ def main():
             with path.open(errors="replace") as stream:
                 yield from stream
 
-    counts = incidents(log_lines())
+    counts = incidents(log_lines(), args.host)
     columns = [
         "open failures",
         "stale-lock replacements",
+        "cross-host lock holders",
         "starts/restarts",
         "restart loops",
         "holds >150ms",

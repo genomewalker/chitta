@@ -21,6 +21,8 @@ Parameters:
       Filter by realm
   --separation_mode
       Diverse results via MMR (default: false)
+  --sources [default: true]
+      Include indexed repository sources; false returns memory ranking only (default: true)
   --strategy
       Retrieval lane: fused (default), keyword (BM25 only, realm-scoped), field (Hopfield/DAM)
   --tag
