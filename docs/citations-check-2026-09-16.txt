@@ -82,6 +82,7 @@
 200 https://iva.acm.org/2026/accepted-papers/
 200 https://labs.ramp.com/research/latent-briefing-kv-cache/
 200 https://learn.chatgpt.com/docs/agent-configuration/agents-md
+200 https://nousresearch.com/refactoring-hermes-with-1393-agents
 403 https://openai.com/index/gpt-6-astra/
 200 https://openreview.net/forum?id=B1ckMDqlg
 200 https://openreview.net/forum?id=tL89RnzIiCd

@@ -116,8 +116,8 @@
 <header class="page-header">
   <div class="container">
     <div class="page-header-badge reveal">Hook System</div>
-    <h1 class="reveal reveal-delay-1">Lifecycle-aware memory.</h1>
-    <p class="page-header-sub reveal reveal-delay-2">Hooks inject memories at the right moment. Individual scripts in <code style="color: var(--aura-300);">hooks/</code> handle each lifecycle event, configured via <code style="color: var(--aura-300);">hooks.json</code> (plugin) or <code style="color: var(--aura-300);">~/.claude/settings.json</code> (standalone).</p>
+    <h1 class="reveal reveal-delay-1">Lifecycle hooks</h1>
+    <p class="page-header-sub reveal reveal-delay-2">Hooks inject retrieved memories at session and prompt events. Individual scripts in <code style="color: var(--aura-300);">hooks/</code> handle each lifecycle event, configured via <code style="color: var(--aura-300);">hooks.json</code> (plugin) or <code style="color: var(--aura-300);">~/.claude/settings.json</code> (standalone).</p>
     <p class="reveal reveal-delay-2" style="font-family: var(--font-mono); font-size: var(--text-xs); color: #565f89; margin-top: var(--space-3);">Status as of 2026-09-16. <a href="HOOKS.md">Canonical hook contract and measurements</a>.</p>
   </div>
 </header>
@@ -375,7 +375,7 @@
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
       <div class="tools-content">
-        <p class="content-text">The hook system learns context&rarr;action patterns over time, anticipating what you need before you ask.</p>
+        <p class="content-text">The hook system records context&rarr;action patterns and surfaces matching predictions on subsequent prompts.</p>
         <div class="mapping-grid">
           <div class="mapping-row reveal">
             <div class="mapping-event">
@@ -536,7 +536,7 @@
 <footer class="footer">
   <div class="container">
     <p class="footer-text">
-      Built with conviction. Grounded in philosophy.
+      Persistent memory for Claude Code and Codex.
       <span class="footer-sep"></span>
       <a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a>
     </p>

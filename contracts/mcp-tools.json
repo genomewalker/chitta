@@ -7387,14 +7387,6 @@
   "name": "retract_fact"
  },
  {
-  "description": "Show route learner status and arm configuration for smart_recall",
-  "inputSchema": {
-   "properties": {},
-   "type": "object"
-  },
-  "name": "route_stats"
- },
- {
   "description": "Generate retrieval hints for unprocessed memories using chitta-hint-tuned. Reads memories without a retrieval_hint tag, calls the local hint model, stores each hint as a derived memory (kind=hint, tags=retrieval_hint), and marks the source memory with hint:done. Run after a session to enrich new memories for better recall.",
   "inputSchema": {
    "properties": {

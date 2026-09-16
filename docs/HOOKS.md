@@ -780,7 +780,7 @@ The PreToolUse section handles matchers `Read`, `Edit`, `Write`, `Bash`, `Agent`
 
 ## Transparent Memory
 
-The key innovation is **transparent memory** — memories that surface automatically without explicit tool calls.
+**Transparent memory** is the prompt-hook path that injects retrieved memories without an explicit agent tool call.
 
 ### How It Works
 

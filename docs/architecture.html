@@ -116,7 +116,7 @@
 <header class="page-header">
   <div class="container">
     <div class="page-header-badge reveal">Technical Architecture</div>
-    <h1 class="reveal reveal-delay-1">How chitta thinks.</h1>
+    <h1 class="reveal reveal-delay-1">System architecture</h1>
     <p class="page-header-sub reveal reveal-delay-2">chitta-field Rust memory substrate, 8-phase resonance, Bayesian self-tuning, and tree-sitter code intelligence&thinsp;&mdash;&thinsp;in a single C++ daemon.</p>
     <p class="reveal reveal-delay-2" style="font-family: var(--font-mono); font-size: var(--text-xs); color: #565f89; margin-top: var(--space-3);">Status as of 2026-09-16. <a href="ARCHITECTURE.md">Canonical architecture</a>.</p>
   </div>
@@ -147,7 +147,7 @@
       <div class="section-divider"></div>
       <h2 class="heading-section">System Overview</h2>
     </div>
-    <p class="section-intro reveal reveal-delay-1">Three layers, one process. Claude Code hooks and the MCP server communicate with the <code>chittad</code> daemon over a Unix domain socket. Inside, <code>chitta-field</code> (a statically-linked Rust library) is the sole storage substrate — orchestrating memory, embedding, resonance, and decay.</p>
+    <p class="section-intro reveal reveal-delay-1">Three layers: hooks, MCP server, and daemon. Claude Code hooks and the MCP server communicate with the <code>chittad</code> daemon over a Unix domain socket. Inside, <code>chitta-field</code> (a statically-linked Rust library) is the sole storage substrate — orchestrating memory, embedding, resonance, and decay.</p>
 
     <div class="sys-diagram reveal reveal-delay-2">
 
@@ -204,7 +204,7 @@
     <!-- Key Design Decisions -->
     <div class="config-block reveal reveal-delay-3">
       <div class="config-block-title">Key Design Decisions</div>
-      <pre><span class="cm">// chitta-field: organic Rust memory substrate</span>
+      <pre><span class="cm">// chitta-field: Rust memory store</span>
 <span class="kw">FieldStore</span>     <span class="cm">WAL-backed in-memory field, sparse codes, cortical index</span>
 <span class="kw">Sparse</span>         <span class="cm">64 of 16,384 features active per memory — 0.4% sparsity</span>
 <span class="kw">Ownership</span>      <span class="cm">One daemon holds the instance lock; sessions share it over RPC</span>
@@ -792,7 +792,7 @@
       <div class="section-divider"></div>
       <h2 class="heading-section">Self-Tuning (Bayesian Bandits)</h2>
     </div>
-    <p class="section-intro reveal reveal-delay-1">The <code>ResonanceLearner</code> uses Thompson sampling<sup><a href="#ref-69">69</a></sup> to automatically optimize resonance parameters. No manual tuning&thinsp;&mdash;&thinsp;the system learns what works for each user's memory patterns.</p>
+    <p class="section-intro reveal reveal-delay-1">The <code>ResonanceLearner</code> uses Thompson sampling<sup><a href="#ref-69">69</a></sup> to automatically optimize resonance parameters. Feedback updates the parameter posteriors used by later retrieval calls.</p>
 
     <div class="tuning-grid reveal reveal-delay-2">
       <div class="tuning-card">
@@ -851,7 +851,7 @@
 <footer class="footer">
   <div class="container">
     <p class="footer-text">
-      Built with conviction. Grounded in philosophy.
+      Persistent memory for Claude Code and Codex.
       <span class="footer-sep"></span>
       <a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a>
     </p>

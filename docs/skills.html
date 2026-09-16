@@ -515,7 +515,7 @@ body::before {
 <header class="page-header">
   <div class="container">
     <div class="page-header-badge reveal">Skills Reference</div>
-    <h1 class="reveal reveal-delay-1">31 skills. Invoke with /.</h1>
+    <h1 class="reveal reveal-delay-1">31 slash-command skills</h1>
     <p class="page-header-sub reveal reveal-delay-2">Skills are slash commands that expand into specialized prompts. They are namespaced by plugin, so each is invoked as <code style="color: var(--aura-300);">/chitta:&lt;name&gt;</code>. They guide Claude through structured workflows&thinsp;&mdash;&thinsp;from soul initialization to autonomous development rituals.</p>
     <p class="reveal reveal-delay-2" style="font-family: var(--font-mono); font-size: var(--text-xs); color: #565f89; margin-top: var(--space-3);">Status as of 2026-09-16. Names follow the repository's skill directories; maintenance suffixes were retained during the rename.</p>
   </div>
@@ -550,13 +550,13 @@ body::before {
       </div>
       <div class="tools-list">
         <div class="tool-row"><span class="tool-name">/chitta:init</span><span class="tool-desc">Initialize the soul with foundational beliefs and wisdom</span></div>
-        <div class="tool-row"><span class="tool-name">/chitta:checkpoint</span><span class="tool-desc">Capture a moment of clarity before moving forward</span></div>
-        <div class="tool-row"><span class="tool-name">/chitta:reawaken</span><span class="tool-desc">Restore context and momentum via Pratyabhij&ntilde;&#x0101; (recognition)</span></div>
+        <div class="tool-row"><span class="tool-name">/chitta:checkpoint</span><span class="tool-desc">Save task status, decisions, active files, and next steps as a checkpoint</span></div>
+        <div class="tool-row"><span class="tool-name">/chitta:reawaken</span><span class="tool-desc">Restore task context from a checkpoint using Pratyabhij&ntilde;&#x0101; (recognition)</span></div>
         <div class="tool-row"><span class="tool-name">/chitta:explore</span><span class="tool-desc">RLM<sup><a href="#ref-71">71</a></sup>-style recursive memory exploration &mdash; navigate the memory graph instead of taking a top-k dump</span></div>
         <div class="tool-row"><span class="tool-name">/chitta:health</span><span class="tool-desc">Soul system health check with remediation</span></div>
         <div class="tool-row"><span class="tool-name">/chitta:introspect</span><span class="tool-desc">Soul self-examination (Sv&#x0101;dhy&#x0101;ya)</span></div>
         <div class="tool-row"><span class="tool-name">/chitta:migrate</span><span class="tool-desc">Import soul data from SQLite or shared chitta files</span></div>
-        <div class="tool-row"><span class="tool-name">/chitta:remember</span><span class="tool-desc">Quickly save a memory to the soul</span></div>
+        <div class="tool-row"><span class="tool-name">/chitta:remember</span><span class="tool-desc">Save a memory to chitta</span></div>
       </div>
     </div>
 
@@ -570,7 +570,7 @@ body::before {
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
       <div class="tools-list">
-        <div class="tool-row"><span class="tool-name">/chitta:recap</span><span class="tool-desc">Token-savvy session continuation. Rebuilds working context from the transcript and soul memories in roughly 1500 tokens instead of replaying full history</span></div>
+        <div class="tool-row"><span class="tool-name">/chitta:recap</span><span class="tool-desc">Rebuild working context from transcripts and chitta memories in approximately 1500 tokens</span></div>
         <div class="tool-row"><span class="tool-name">/chitta:resume</span><span class="tool-desc">Resume a thread by loading its ~800-token context capsule</span></div>
         <div class="tool-row"><span class="tool-name">/chitta:tasks</span><span class="tool-desc">Browse and resume tasks, threads, and background jobs across sessions</span></div>
       </div>
@@ -587,7 +587,7 @@ body::before {
       </div>
       <div class="tools-list">
         <div class="tool-row"><span class="tool-name">/chitta:antahkarana</span><span class="tool-desc">Multi-perspective reasoning through cognitive voices</span></div>
-        <div class="tool-row"><span class="tool-name">/chitta:ultrathink</span><span class="tool-desc">First-principles deep thinking for significant problems</span></div>
+        <div class="tool-row"><span class="tool-name">/chitta:ultrathink</span><span class="tool-desc">Analyze assumptions, constraints, and alternative explanations</span></div>
       </div>
     </div>
 
@@ -636,7 +636,7 @@ body::before {
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
       <div class="tools-list">
-        <div class="tool-row"><span class="tool-name">/chitta:epsilon-yajna</span><span class="tool-desc">Convert verbose memories to SSL v0.4 format &mdash; the skill is both encoder and decoder</span></div>
+        <div class="tool-row"><span class="tool-name">/chitta:epsilon-yajna</span><span class="tool-desc">Convert stored memories to SSL v0.4 format and check that the result can be decoded</span></div>
         <div class="tool-row"><span class="tool-name">/chitta:mermaid</span><span class="tool-desc">Render Mermaid diagrams as ASCII/Unicode art or SVG</span></div>
         <div class="tool-row"><span class="tool-name">/chitta:distill-pending</span><span class="tool-desc">Process pending transcript distillation</span></div>
       </div>
@@ -700,7 +700,7 @@ body::before {
 <footer class="footer">
   <div class="container">
     <p class="footer-text">
-      Built with conviction. Grounded in philosophy.
+      Persistent memory for Claude Code and Codex.
       <span class="footer-sep"></span>
       <a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a>
     </p>

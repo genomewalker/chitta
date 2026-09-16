@@ -79,7 +79,7 @@
 <header class="page-header">
   <div class="container">
     <div class="page-header-badge reveal">Retrieval</div>
-    <h1 class="reveal reveal-delay-1">How recall works.</h1>
+    <h1 class="reveal reveal-delay-1">Recall pipeline</h1>
     <p class="page-header-sub reveal reveal-delay-2">Retrieval runs in two places. The daemon answers a <code style="color: var(--aura-300);">recall</code> call by widening a candidate pool, over-selecting it with cheap scalar rules, and optionally reranking. The hook that runs on every prompt fans out across several lanes, fuses them, and then decides what is actually allowed into the context window.</p>
     <p class="status-line">Status as of 2026-09-16. Sources: <a href="HOOKS.md">hook contract</a> and <a href="https://github.com/genomewalker/chitta-field/blob/f3176e587dced64dd3a6a663a40a58e3802b0a10/src/scoring/config.rs">pinned scoring defaults</a><sup><a href="#ref-66">66</a></sup>.</p>
   </div>
@@ -272,7 +272,7 @@
           </tbody>
         </table>
         <p class="section-intro">Two bands, not three, on purpose. Version 5.70.0 shipped a three-band tag; store drift then inverted the boundary between the top two bands, with the supposedly stronger band scoring gold-hit@3 0.62 against the weaker band&rsquo;s 0.64, and no threshold restored a monotonic separation. A confident-sounding tag that can be wrong at rank one is worse than a coarser honest one, so the two top bands were merged into a single confident-but-verify band. The KNOWN-versus-UNKNOWN split is monotonic.</p>
-        <p class="section-intro">The <em>displayed</em> percentage is recalibrated separately. Raw Platt maxrel read a mean of 0.844 on a frozen golden snapshot where the true hit@3 was 0.533, an expected calibration error of 0.31. A logistic refit over the logit of maxrel cuts leave-one-out calibration error to 0.159 and removes the over-confidence. Only the number shown is recalibrated; the band itself stays on raw maxrel, so behaviour is unchanged and the figure the model reads stops lying.</p>
+        <p class="section-intro">The <em>displayed</em> percentage is recalibrated separately. Raw Platt maxrel read a mean of 0.844 on a frozen golden snapshot where the true hit@3 was 0.533, an expected calibration error of 0.31. A logistic refit over the logit of maxrel cuts leave-one-out calibration error to 0.159 and removes the over-confidence. Only the number shown is recalibrated; the band itself stays on raw maxrel, so behaviour is unchanged and the displayed percentage uses the fitted calibration.</p>
         <p class="section-intro"><strong>UNKNOWN silence.</strong> The per-item percentage from multi-lane fusion is max-normalized, so rank one always reads 100% for any query at all, off-topic included &mdash; which defeats a per-item floor. When the absolute signal says UNKNOWN, the semantic, context and fuzzy-correction lanes are treated as noise and dropped. Keyword, hybrid and cross-realm hits survive only if they share a distinctive token with the current turn, which preserves the exact-lookup case without letting stop-word matches leak arbitrary memories. Set <code>CHITTA_UNKNOWN_SILENCE=0</code> to disable.</p>
         <p class="section-intro"><strong>Small-realm relaxation.</strong> A cross-project calibration under-scores a genuinely small realm: a handful of on-topic memories can pin the band below the threshold even when the top hit is strong. When the hybrid header shows a short result page in a non-default realm with a confident top hit, the token-share rule is extended to the semantic and context lanes instead of dropping them outright. The fuzzy correction lane stays silenced regardless, because a wrong correction costs more than a missed one.</p>
       </div>
@@ -290,7 +290,7 @@
       </div>
       <div class="tools-content">
         <p class="section-intro">When a cross-encoder is available, the MCP recall gateway fetches four times the requested limit and scores query/document pairs with <code>cross-encoder/ms-marco-MiniLM-L-6-v2</code>. Ranking uses sigmoid(logit) multiplied by the kind envelope <code>0.7 + 0.3 × kind_prior</code>, preserving the distinction between curated corrections and operational fragments. Missing, insufficient or malformed candidate/score output falls back to the daemon's ordering. This gateway stage is separate from native candidate pooling.</p>
-        <p class="section-intro">An ONNX int8 export is preferred when <code>CHITTA_RERANK_ONNX_DIR</code> points at one. Thread count and maximum sequence length are set by <code>CHITTA_RERANK_THREADS</code> (8) and <code>CHITTA_RERANK_MAX_LEN</code> (128). If no reranker can be loaded the pipeline runs without it &mdash; the stage is an improvement, not a dependency.</p>
+        <p class="section-intro">An ONNX int8 export is preferred when <code>CHITTA_RERANK_ONNX_DIR</code> points at one. Thread count and maximum sequence length are set by <code>CHITTA_RERANK_THREADS</code> (8) and <code>CHITTA_RERANK_MAX_LEN</code> (128). If no reranker can be loaded the pipeline runs without it &mdash; this stage is optional.</p>
       </div>
     </div>
 
@@ -380,7 +380,7 @@
 <footer class="footer">
   <div class="container">
     <p class="footer-text">
-      Built with conviction. Grounded in philosophy.
+      Persistent memory for Claude Code and Codex.
       <span class="footer-sep"></span>
       <a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a>
     </p>

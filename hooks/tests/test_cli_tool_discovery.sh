@@ -3,7 +3,9 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CHITTA_TEST_BIN="${CHITTA_TEST_BIN:-$ROOT/bin/chitta}"
-[[ -x "$CHITTA_TEST_BIN" ]] || { echo 'FAIL: build bin/chitta first' >&2; exit 1; }
+# The hooks CI job has no C++ build; the discovery test runs wherever bin/chitta
+# exists (dev checkouts, the build-and-test job) and skips elsewhere.
+[[ -x "$CHITTA_TEST_BIN" ]] || { echo 'skip: bin/chitta not built (set CHITTA_TEST_BIN)'; exit 0; }
 export CHITTA_TEST_BIN
 python3 - <<'PY'
 import json

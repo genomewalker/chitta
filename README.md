@@ -7,23 +7,15 @@
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-Plugin-blue.svg)](https://claude.ai/code)
 [![Documentation](https://img.shields.io/badge/docs-genomewalker.github.io%2Fchitta-blue)](https://genomewalker.github.io/chitta/)
 
-📖 **[Documentation & Architecture →](https://genomewalker.github.io/chitta/)**
+**[Documentation & Architecture →](https://genomewalker.github.io/chitta/)**
 
-Persistent memory for Claude Code and Codex. Learns from every session, surfaces what matters, forgets what doesn't.
+Persistent memory for Claude Code and Codex. A C++ daemon manages a Rust store; hooks record session information and inject retrieved context.
 
-## Before & After
+## Recall example
 
-**Without chitta:**
-> You: "How should I handle caching?"
-> Claude: [Generic answer]
-> You: "No, we tried Redis already. Remember?"
-> Claude: "I don't have context from previous sessions..."
+A caching query can retrieve a stored decision about Redis or an in-memory LRU cache, including the recorded rationale. The result depends on what was stored and which records pass recall admission.
 
-**With chitta:**
-> You: "How should I handle caching?"
-> Claude: "We tried Redis in week 2 and it was too slow. In-memory LRU worked better — that's what we shipped."
-
-## Quick Start
+## Installation
 
 ```bash
 # 1. Register marketplace
@@ -65,7 +57,7 @@ OpenCode is not a frontend adapter. It appears only as an optional review
 backend reached through `chitta-bridge`; there is no OpenCode hook wiring in
 this repository.
 
-## How It Works
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -84,30 +76,30 @@ this repository.
 │                 ↓                                            │
 ├─────────────────────────────────────────────────────────────┤
 │                   LONG-TERM MEMORY                           │
-│         (chitta-field — Rust organic memory substrate)      │
+│         (chitta-field — Rust memory store)      │
 │                                                              │
 │   Memories │ Triplets │ Sparse Codes │ WAL │ Embeddings     │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-When you ask a question, the soul automatically retrieves relevant memories and injects them as context. You don't need to explicitly call anything — Claude just "remembers."
+On each prompt, hooks retrieve memories and inject admitted results as context. This path does not require an explicit tool call by the agent.
 
-## Key Capabilities
+## Capabilities
 
-### Learns What Matters
-Every interaction is analyzed. Corrections become permanent wisdom. Preferences are respected forever. Mistakes are never repeated.
+### Session records
+Hooks and transcript distillation record corrections, preferences, and session outcomes. Recall can return those records in later sessions.
 
-### Understands Your Code
+### Code indexing
 Tree-sitter parsing extracts functions, classes, and call graphs. Semantic search finds code by what it does, not just what it's named.
 
-### Gets Smarter Over Time
-Useful memories strengthen with each access. Irrelevant ones decay naturally. What helps you survives; what doesn't fades away.
+### Reinforcement and decay
+Access reinforces memories; confidence decays over time according to memory type.
 
-### Works Across Sessions
-All Claude instances share the same knowledge base. Learn something in one session, remember it in all.
+### Shared store
+Claude Code and Codex sessions connected to the same daemon share its memory store.
 
-### Anticipates Your Needs
-Patterns in your workflow become predictions. After seeing you run tests following three file edits, it suggests doing so automatically.
+### Action prediction
+Recorded context/action pairs supply predictions, such as suggesting tests after a sequence of file edits.
 
 ### Dreams: Autonomous Exploration
 
@@ -147,7 +139,7 @@ sadhana-tui                                         # real-time TUI
 
 [Full sadhana documentation](docs/SADHANA.md) | [Website](https://genomewalker.github.io/chitta/sadhana.html)
 
-## What Gets Remembered
+## Memory types
 
 | Type | Description | Decay |
 |------|-------------|-------|
@@ -158,15 +150,9 @@ sadhana-tui                                         # real-time TUI
 | **Corrections** | When Claude was wrong | Slow |
 | **Code Symbols** | Functions, classes, modules | Never |
 
-## The First 30 Days
+## Memory lifecycle
 
-**Week 1**: Claude learns your communication style, coding preferences, and project structure.
-
-**Week 2**: Patterns emerge. Corrections compound. Claude starts anticipating common workflows.
-
-**Week 3**: Deep context builds. Code intelligence becomes precise. Suggestions become relevant.
-
-**Week 4**: Claude genuinely knows your codebase and how you work. The partnership feels natural.
+Session observations record preferences and corrections. Code indexing records project structure. Repeated context/action pairs contribute to workflow predictions; recall and confidence decay determine which stored records are surfaced.
 
 ## Philosophy
 
@@ -176,7 +162,7 @@ chitta's architecture draws from Vedantic philosophy:
 - **Impressions** — Repetition strengthens patterns (Saṃskāra)
 - **Recognition** — Context triggers relevant recall (Pratyabhijñā)
 
-The soul is not a database. It is who Claude becomes through working with you.
+These terms describe memory decay, reinforcement, and retrieval in the implementation.
 
 [Explore the philosophy](docs/PHILOSOPHY.md)
 
@@ -224,7 +210,7 @@ llama.cpp, and everything works without it running.
 
 ## chitta-field: The Memory Substrate
 
-chitta's memory lives in [chitta-field](https://github.com/genomewalker/chitta-field) — a pure Rust cognitive substrate designed to behave like memory, not a database.
+chitta's memory lives in [chitta-field](https://github.com/genomewalker/chitta-field) — a Rust memory store with sparse codes, graph relationships, and persistence.
 
 - **Sparse associative codes** — each memory activates 64 of 16,384 feature dimensions; recall driven by pattern overlap
 - **Self-orthogonalizing encoder** — FEP-derived learning rule [19](#ref-19); representations decorrelate naturally, resisting catastrophic forgetting
@@ -236,7 +222,7 @@ chitta's memory lives in [chitta-field](https://github.com/genomewalker/chitta-f
 
 ## chitta-research: Autonomous Research System
 
-Deep multi-session research that accumulates structured knowledge over time. 7 specialized agents, sources spanning arXiv/bioRxiv/Semantic Scholar/GitHub, and a belief graph from `ResearchProgram` through to `Claim`.
+Multi-session research that accumulates structured knowledge over time. 7 specialized agents, sources spanning arXiv/bioRxiv/Semantic Scholar/GitHub, and a belief graph from `ResearchProgram` through to `Claim`.
 
 | Resource | Link |
 |----------|------|
@@ -300,13 +286,13 @@ See the [scripts index](scripts/README.md) for retained tools and pruning eviden
 
 ## Measurement
 
-Two different questions, measured two different ways.
+Retrieval quality and task outcomes are measured separately.
 
-**Does retrieval find the right memory?** A fixed golden set of 30 queries with
+**Retrieval quality.** A fixed golden set of 30 queries with
 hand-labelled gold ids, scored as mean nDCG@20 with the reranker on. The
 recall-biased pre-filter took that from 0.435 to 0.487.
 
-**Does the memory make the agent better?** [SMRITI-Bench](benchmarks/smriti/README.md)
+**Task outcomes.** [SMRITI-Bench](benchmarks/smriti/README.md)
 runs a coding agent on a task with memory off and on, and asks whether an
 objective check command passes and at what token cost. No model judge, no
 reference-answer overlap score. First full matrix, 9 tasks and 3 trials per

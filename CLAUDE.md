@@ -6,8 +6,8 @@ an MCP server, and shell hooks that inject context into Claude Code and Codex.
 > Status as of 2026-09-13: **this file is canonical for Claude Code.**
 > `codex-plugin/AGENTS.md` is canonical for Codex; `CLAUDE.lean.md` and
 > `.claude-plugin/CLAUDE-full.md` are the lean and shipped-plugin variants and
-> defer here. Rewritten as constraints rather than procedure, and trimmed to
-> non-obvious gotchas, per the sources at the bottom.
+> defer here. This file contains constraints, model routing, build commands,
+> deployment details, and source references.
 >
 > Renamed cc-soul → chitta on 2026-09-02. `CC_SOUL_*` env names still work via
 > the alias shim in `hooks/lib.sh` (`CHITTA_*` wins if both are set).

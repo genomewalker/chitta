@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>chitta-field — Organic Memory Substrate</title>
-<meta name="description" content="chitta-field: a pure Rust organic memory substrate for chitta. Sparse associative codes, write-ahead log, multi-writer design, and sub-millisecond recall via cortical posting index.">
+<meta name="description" content="chitta-field: a Rust memory store for chitta. Sparse associative codes, write-ahead log, multi-writer design, and sub-millisecond recall via cortical posting index.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta property="og:title" content="chitta-field — Organic Memory Substrate">
-<meta property="og:description" content="A pure Rust organic memory substrate. Sparse associative codes, WAL, multi-writer, sub-millisecond recall.">
+<meta property="og:description" content="A Rust memory store. Sparse associative codes, WAL, multi-writer, sub-millisecond recall.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="favicon.svg">
 <meta name="twitter:card" content="summary">
@@ -401,8 +401,8 @@
 <!-- ═══ OVERVIEW ═══ -->
 <section class="cf-page-section" id="overview">
   <div class="container">
-    <div class="reveal"><div class="section-divider"></div><h2 class="heading-section">What it is</h2></div>
-    <p class="section-intro reveal reveal-delay-1">chitta-field is the sole storage substrate for chitta. It was designed to eliminate NFS file handle issues and D-state hangs on shared filesystems. It is a pure Rust library compiled to <code>libchitta_field.a</code>, statically linked into the C++ daemon. Zero external processes. Zero network sockets. Zero OS file handles on startup beyond the WAL segments.</p>
+    <div class="reveal"><div class="section-divider"></div><h2 class="heading-section">Store overview</h2></div>
+    <p class="section-intro reveal reveal-delay-1">chitta-field is the sole storage substrate for chitta. It was designed to eliminate NFS file handle issues and D-state hangs on shared filesystems. It is a pure Rust library compiled to <code>libchitta_field.a</code>, statically linked into the C++ daemon. The library runs inside the daemon and uses files for snapshots, sidecars, and WAL segments.</p>
 
     <!-- Canvas animation -->
     <div class="cf-canvas-hero reveal reveal-delay-2">
@@ -444,7 +444,7 @@
     <div class="reveal"><div class="section-divider"></div><h2 class="heading-section">Sparse associative codes</h2></div>
     <div class="two-col">
       <div class="cf-prose reveal reveal-delay-1">
-        <p>Each memory is encoded as a <strong>sparse code</strong>: exactly 64 of 16,384 feature dimensions activate. The rest are zero. This is the same principle behind sparse distributed representations<sup><a href="#ref-9">9</a></sup> in biological cortex — high capacity, collision-resistant, and inherently associative.</p>
+        <p>Each memory is encoded as a <strong>sparse code</strong>: exactly 64 of 16,384 feature dimensions activate. The rest are zero. Sparse distributed representations<sup><a href="#ref-9">9</a></sup> associate memories through overlapping active features.</p>
         <p>Sparse codes are derived from the dense 768-dim BGE embedding by projecting through a learned sparse encoder. The result: two memories about the same concept share many active features. Two unrelated memories share almost none.</p>
         <p>This makes retrieval geometric: <em>find memories whose active features overlap most with the query's active features</em>. No distance function. No HNSW<sup><a href="#ref-4">4</a></sup> graph traversal. Just intersection and counting.</p>
         <p><strong>SSL NL gloss</strong>: SSL-encoded memories (compact triplet form) are passed through <code>gloss_ssl_content()</code> &mdash; a translation layer in <code>chitta/include/chitta/ssl_gloss.hpp</code> that converts triplets into readable English sentences <em>before</em> embedding. This closes the representation gap between compact SSL storage and natural-language BGE queries, so structured memories surface from prose questions.</p>
@@ -656,7 +656,7 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
 <section class="cf-page-section alt-bg" id="decay">
   <div class="container">
     <div class="reveal"><div class="section-divider"></div><h2 class="heading-section">Organic decay</h2></div>
-    <p class="section-intro reveal reveal-delay-1">Memories do not live forever. They decay through a demotion tier system driven by access recency and frequency. The daemon's subconscious thread runs demotion periodically — memories that are not accessed slide down the tiers and eventually become dormant. Frequent access promotes a memory back toward tier 0.</p>
+    <p class="section-intro reveal reveal-delay-1">Memories decay through a demotion tier system driven by access recency and frequency. The daemon's subconscious thread runs demotion periodically — memories that are not accessed slide down the tiers and eventually become dormant. Frequent access promotes a memory back toward tier 0.</p>
 
     <ul class="tier-list reveal reveal-delay-2">
       <li class="tier-item tier-item--0"><span class="tier-num">0</span><span class="tier-name">Hot</span><span class="tier-desc">Freshly accessed or recently stored. Full recall weight. Promoted on each access.</span></li>
@@ -725,7 +725,7 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
         <p>Partial cues converge to stored attractor basins. <code>attractor_settle()</code> iteratively blends query sparse codes with prototype centroids and follows directed transitions (3-5 steps). Pattern completion emerges naturally &mdash; a noisy query settles into the nearest stable memory representation.</p>
       </div>
       <div class="cf-feature-card">
-        <div class="cf-feature-icon">&#x26A1;</div>
+        <div class="cf-feature-icon">&nbsp;</div>
         <h3>Surprise-modulated plasticity</h3>
         <p>Reconstruction error (how poorly the encoder predicts a memory) serves as a surprise signal. High-surprise memories resist decay &mdash; they carry unique information. Low-surprise memories fade faster &mdash; they are redundant with existing knowledge. This balances accuracy and complexity, the core FEP tradeoff.</p>
       </div>
@@ -735,7 +735,7 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
         <p>An asymmetric energy-based network over memory co-activations. <code>settle()</code> propagates activation through multi-hop directed couplings with dynamic neighbor discovery. Seeds are clamped; connected memories activate via sigmoid gating. The result: given a few seed memories, the network completes the pattern.</p>
       </div>
       <div class="cf-feature-card">
-        <div class="cf-feature-icon">&#x2696;</div>
+        <div class="cf-feature-icon">&nbsp;</div>
         <h3>Free-energy merge criterion</h3>
         <p>Deduplication uses a principled accuracy-vs-complexity tradeoff instead of a fixed cosine threshold. Two memories merge when the complexity saving of eliminating one outweighs the prediction accuracy lost by combining their representations. <code>F<sub>merge</sub> = loss + &lambda; &middot; complexity &lt; 0</code>.</p>
       </div>
@@ -747,33 +747,33 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
 <!-- ═══ WHY NOT FLAT FILES ═══ -->
 <section class="cf-page-section alt-bg" id="why-not-flat-files">
   <div class="container">
-    <div class="reveal"><div class="section-divider"></div><h2 class="heading-section">Why not flat files?</h2></div>
-    <p class="section-intro reveal reveal-delay-1">The natural first instinct for agent memory is a <code>MEMORY.md</code> file. It works at a few hundred entries. Then it stops working &mdash; for reasons that are architectural, not incidental.</p>
+    <div class="reveal"><div class="section-divider"></div><h2 class="heading-section">Storage operations</h2></div>
+    <p class="section-intro reveal reveal-delay-1">chitta-field provides indexed retrieval, per-memory scoring, lifecycle maintenance, and graph relationships. It also imports and exports Markdown memory files.</p>
 
     <div class="cf-cards reveal reveal-delay-2">
       <div class="cf-card">
-        <h4 class="cf-card-title">Retrieval requires selection, not ingestion</h4>
-        <p class="cf-card-desc">A markdown file must be read in full to be searched. At 10,000+ memories the context window is the binding constraint &mdash; you cannot afford to inject everything. chitta-field selects the 5&ndash;15 most relevant memories from 24,000+ in under a millisecond using hybrid recall: semantic ANN + BM25 + cortical SDR bitset intersection + graph spreading activation.</p>
+        <h4 class="cf-card-title">Indexed retrieval</h4>
+        <p class="cf-card-desc">The documented retrieval example selects 5&ndash;15 memories from 24,000+ in under a millisecond using hybrid recall: semantic ANN + BM25 + cortical SDR bitset intersection + graph spreading activation. At 10,000+ memories, selection bounds the records injected into the context window.</p>
       </div>
       <div class="cf-card">
-        <h4 class="cf-card-title">Relevance &ne; recency</h4>
-        <p class="cf-card-desc">A flat file is ordered by insertion time. chitta-field scores each candidate on 18 composable factors &mdash; semantic similarity, ACT-R<sup><a href="#ref-1">1</a></sup> base-level activation, memory strength, confidence, epistemic status, affect valence, surprise boost, mood congruence, frustration escalation, prediction boost, integration kernel weight, and more. A two-month-old memory that perfectly matches beats a five-minute-old memory that partially matches.</p>
+        <h4 class="cf-card-title">Per-memory scoring</h4>
+        <p class="cf-card-desc">chitta-field scores each candidate on 18 composable factors &mdash; semantic similarity, ACT-R<sup><a href="#ref-1">1</a></sup> base-level activation, memory strength, confidence, epistemic status, affect valence, surprise boost, mood congruence, frustration escalation, prediction boost, integration kernel weight, and more. A two-month-old memory can rank above a five-minute-old memory when its combined score is higher.</p>
       </div>
       <div class="cf-card">
-        <h4 class="cf-card-title">Memory needs a lifecycle</h4>
-        <p class="cf-card-desc">Flat files grow forever. chitta-field implements per-memory decay, tiered demotion, auto-deduplication by embedding similarity, contradiction tracking, and distillation from episodic memories into durable wisdom nodes. The field actively forgets what no longer matters and strengthens what repeatedly proves useful.</p>
+        <h4 class="cf-card-title">Memory lifecycle</h4>
+        <p class="cf-card-desc">chitta-field implements per-memory decay, tiered demotion, auto-deduplication by embedding similarity, contradiction tracking, and distillation from episodic memories into durable wisdom nodes. Access and feedback affect memory strength and demotion.</p>
       </div>
       <div class="cf-card">
-        <h4 class="cf-card-title">Contradiction is a graph structure</h4>
-        <p class="cf-card-desc">Conflicting beliefs need operational representation &mdash; <code>contradicts</code>, <code>supersedes</code>, and <code>confirms</code> edges that are queryable and that suppress contradicted memories during scoring. Markdown can <em>describe</em> a contradiction; it cannot enforce or query one.</p>
+        <h4 class="cf-card-title">Contradiction edges</h4>
+        <p class="cf-card-desc">Conflicting beliefs need operational representation &mdash; <code>contradicts</code>, <code>supersedes</code>, and <code>confirms</code> edges that are queryable and that suppress contradicted memories during scoring. The scorer can use these typed edges during retrieval.</p>
       </div>
       <div class="cf-card">
-        <h4 class="cf-card-title">Multi-writer without merge conflicts</h4>
+        <h4 class="cf-card-title">Shared daemon access</h4>
         <p class="cf-card-desc">Claude Code and Codex sessions share the daemon over RPC. Its instance lock excludes a second owner of the same store; frozen evaluation runs use separate copied stores. Storage can reside on NFS, so filesystem stalls remain possible.</p>
       </div>
       <div class="cf-card">
-        <h4 class="cf-card-title">Flat files still matter</h4>
-        <p class="cf-card-desc">chitta syncs bidirectionally with Claude Code&rsquo;s built-in <code>MEMORY.md</code>. What the user writes there is absorbed into chitta; what chitta knows is injected back. Flat files are a fine human-readable interface and import surface. They are not a viable primary substrate at scale.</p>
+        <h4 class="cf-card-title">Markdown integration</h4>
+        <p class="cf-card-desc">chitta syncs bidirectionally with Claude Code&rsquo;s built-in <code>MEMORY.md</code>. What the user writes there is absorbed into chitta; what chitta knows is injected back. Markdown files provide a readable interface and import surface; the Rust store holds the indexed records.</p>
       </div>
     </div>
   </div>
@@ -795,7 +795,7 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
       </div>
 
       <div class="cf-feature-card">
-        <div class="cf-feature-icon">&#x26A1;</div>
+        <div class="cf-feature-icon">&nbsp;</div>
         <h3>SurpriseLearningStore</h3>
         <p>Hysteresis-gated credit accumulator that translates surprise magnitude into memory strength adjustments. Evidence is quadratic: <code>((s&minus;0.20)/0.80)²</code>. Credit decays at 0.85 per event; gate requires <code>|credit| &ge; 0.75</code> and streak &ge; 2 consecutive same-direction signals before a &plusmn;0.08 max delta fires. Post-apply bleed (0.35&times;) prevents rapid re-triggering. Also drives integration-kernel feedback via hard/soft magnitude thresholds. <em>WAL: UpdateSurpriseCredit (44).</em></p>
       </div>
@@ -807,7 +807,7 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
       </div>
 
       <div class="cf-feature-card">
-        <div class="cf-feature-icon">&#x2696;</div>
+        <div class="cf-feature-icon">&nbsp;</div>
         <h3>LearnedScoringModel</h3>
         <p>Online weight-delta overlay on the static <code>ScoringConfig</code>. Each factor carries a learned <code>delta</code> clamped to its own <code>[min_delta, max_delta]</code> range. The scorer calls <code>effective_weight(factor, baseline)</code> to get the calibrated value. Updates are full-model atomic snapshots keyed by monotonic <code>model_version</code>. <code>baseline_version</code> detects stale deltas after config bumps. EWMA loss and outcome count track calibration health. <em>WAL: UpdateScorerModel (47).</em></p>
       </div>
@@ -819,19 +819,19 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
       </div>
 
       <div class="cf-feature-card">
-        <div class="cf-feature-icon">&#x1F4D6;</div>
+        <div class="cf-feature-icon">&nbsp;</div>
         <h3>SkillRegistry</h3>
         <p>Append-only versioned registry of named skill blobs. Each skill maps to an ordered list of immutable <code>SkillVersion</code> records &mdash; version numbers are 1-based positional indices. <code>deprecate()</code> marks only the latest version; <code>search(query)</code> does case-insensitive substring matching across ID, tags, and content of non-deprecated latest versions. New uploads are immutable; revision requires a new version upload.</p>
       </div>
 
       <div class="cf-feature-card">
-        <div class="cf-feature-icon">&#x1F464;</div>
+        <div class="cf-feature-icon">&nbsp;</div>
         <h3>UserModelRegistry</h3>
         <p>Key-value registry of typed entity records (<code>user</code>, <code>org</code>, <code>person</code>) with opaque JSON payloads and observation counting. <code>upsert()</code> performs a full overwrite; <code>observe()</code> increments the observation count without touching the payload. Supports <code>list_by_type</code> queries. State is reconstructable from higher-level WAL events rather than having its own op type.</p>
       </div>
 
       <div class="cf-feature-card">
-        <div class="cf-feature-icon">&#x1F5C2;</div>
+        <div class="cf-feature-icon">&nbsp;</div>
         <h3>Session / Transcript / Task</h3>
         <p>First-class domain registries for AI session management. <code>SessionRegistry</code> tracks active Claude instances with heartbeats and message queues. <code>TranscriptRegistry</code> indexes conversation turns by session with episode creation. <code>TaskRegistry</code> handles sadhana agents, long-running tasks, dream cycles, and background workers &mdash; each as a typed state machine persisted to WAL. <em>WAL: SessionEvent (16), TranscriptEvent (17), TaskEvent (18).</em></p>
       </div>
@@ -845,7 +845,7 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
     <div class="cf-feature-grid reveal reveal-delay-2">
 
       <div class="cf-feature-card">
-        <div class="cf-feature-icon">&#x1F4FC;</div>
+        <div class="cf-feature-icon">&nbsp;</div>
         <h3>EventTape</h3>
         <p>Append-only log of <code>(tool_id, entity_key, outcome_class, session_id, ts_ms)</code> with deterministic entity canonicalization (path stripping, FQN lowercasing, URL hostname). Tool and entity names interned to <code>u16</code>/<code>u32</code>. Serialized in <code>FullSnapshot</code>. Also records <code>DecisionPoint</code> branch events (chosen sym + typed rejection reasons). Phase 12: <code>compress_low_surprisal(threshold)</code> tombstones predictable success events.</p>
       </div>
@@ -857,55 +857,55 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
       </div>
 
       <div class="cf-feature-card">
-        <div class="cf-feature-icon">&#x2696;</div>
+        <div class="cf-feature-icon">&nbsp;</div>
         <h3>RefutationLedger</h3>
         <p>Tracks <code>support</code> (sym_a &rarr; expected sym_b) and <code>contradict</code> (sym_a &rarr; anything else) counts per Sequitur<sup><a href="#ref-25">25</a></sup> rule. Hysteresis: flip to <em>Refuted</em> at ratio &gt; 0.4, reinstate below 0.2. Antecedent index (<code>HashMap&lt;u64, Vec&lt;RefutEntry&gt;&gt;</code>) enables O(1) per-event checks. On refutation, writes a <code>refuted_by</code> triplet to the KG. Ephemeral; rebuilt from EventTape after each Sequitur pass.</p>
       </div>
 
       <div class="cf-feature-card">
-        <div class="cf-feature-icon">&#x1F4CA;</div>
+        <div class="cf-feature-icon">&nbsp;</div>
         <h3>HypothesisMarket</h3>
         <p>Wilson<sup><a href="#ref-2">2</a></sup> score CI (95%, z=1.96) + binary entropy per Sequitur rule. <code>probe_value = H(p&#x0302;) &times; (1 &minus; |p&#x0302; &minus; 0.5| &times; 2)</code> — maximized at p&#x0302;=0.5 (maximum uncertainty), zero at certainty. <code>top_probes(k)</code> returns rules the system is most uncertain about, ranked by expected information gain. Drives Phase 14 self-directed experimentation. Ephemeral; rebuilt after each <code>consolidation_pass()</code>.</p>
       </div>
 
       <div class="cf-feature-card">
-        <div class="cf-feature-icon">&#x1F6E1;</div>
+        <div class="cf-feature-icon">&nbsp;</div>
         <h3>InterventionStore (CEC)</h3>
         <p>Shadow-to-active policy lifecycle for CEC interventions. Three policy kinds: <code>OpenTask</code>, <code>GuardPolicy</code>, <code>TurnInjection</code>. Shadow eval gate: minimum 20 events + <code>expected_lift &gt; 0.15</code>. Adversarial invariant: <code>fire_active()</code> checks <code>refutation_ratio &lt; 0.3</code> before firing — policies whose source rule is under active refutation are suspended. Auto-proposes tasks on Sequitur rule refutation and on Phase 14 experiment queue.</p>
       </div>
 
       <div class="cf-feature-card">
-        <div class="cf-feature-icon">&#x1F441;</div>
+        <div class="cf-feature-icon">&nbsp;</div>
         <h3>TuriyaMonitor</h3>
         <p>Pure read-only witness organ. Samples CDAWG state count, EventTape length, tracked/refuted Sequitur rules, HypothesisMarket mean probe_value, Q-value variance, FEP drift/shock EWMAs, and per-sample deltas after each <code>consolidation_pass()</code>. Rolling 100-sample <code>VecDeque</code>. Seven typed diagnoses in priority order: <code>refutation_flood</code>, <code>stale</code>, <code>q_collapse</code>, <code>high_uncertainty</code>, <code>fep_context_drift</code> (ewma_drift &gt; 0.5 — world-model going silently stale), <code>fep_emission_shock</code> (ewma_shock &gt; 0.3 — known context, novel outcomes), <code>healthy</code>. Persisted in <code>FullSnapshot</code> (V16). Zero write surface to any other organ.</p>
       </div>
 
       <div class="cf-feature-card">
-        <div class="cf-feature-icon">&#x1F300;</div>
+        <div class="cf-feature-icon">&nbsp;</div>
         <h3>FepPriorOrgan <span style="font-size:0.75em;opacity:0.6">(Phase 15)</span></h3>
         <p>Non-actuating generative model <code>P(sym | context)</code> over the EventTape symbol stream. Factored Dirichlet-multinomial emission: <code>P(tool | state) &middot; P(outcome | state, tool)</code> — entity marginalized. Latent context = CDAWG active state plus its k=4 suffix-link chain (soft posterior, not point-mass). Online Bayesian count update with exponential forgetting (<code>STATE_DECAY = 0.9995</code>). Free energy per step: <code>F = E<sub>q</sub>[&minus;log P(sym|z)] + KL(q<sub>t</sub> || prior<sub>z</sub>)</code> — variational bound, tractable. Two EWMA diagnostic signals fed to TuriyaMonitor: <code>ewma_drift</code> (rising KL → world-model going stale) and <code>ewma_shock</code> (high NLL + low KL → known context, novel outcome). Fully ephemeral — rebuilt from EventTape on each <code>consolidation_pass()</code>, not persisted in snapshot.</p>
       </div>
 
       <div class="cf-feature-card">
-        <div class="cf-feature-icon">&#x1F5C2;</div>
+        <div class="cf-feature-icon">&nbsp;</div>
         <h3>MemoryKind lattice <span style="font-size:0.75em;opacity:0.6">(Phase 16)</span></h3>
-        <p>Four typed memory kinds inferred at write time from <code>kind</code> tag, <code>realm</code>, and content prefix: <code>Thought</code> (speculation, synthesis), <code>Observation</code> (recorded external fact), <code>Decision</code> (chosen action with rationale), <code>CodeFact</code> (symbol, callgraph, file, type). Static edge-legality matrix enforced in <code>add_assoc_edge()</code> before materialization — <code>(Observation, Thought)</code> and <code>(Decision, Thought)</code> are illegal (rationalization: speculation laundered into fact). Existing memories default to <code>Observation</code> via <code>#[serde(default)]</code> on upgrade. The highest-ROI addition for provenance hygiene: prevents a whole class of hallucinated provenance chains by construction.</p>
+        <p>Four typed memory kinds inferred at write time from <code>kind</code> tag, <code>realm</code>, and content prefix: <code>Thought</code> (speculation, synthesis), <code>Observation</code> (recorded external fact), <code>Decision</code> (chosen action with rationale), <code>CodeFact</code> (symbol, callgraph, file, type). Static edge-legality matrix enforced in <code>add_assoc_edge()</code> before materialization — <code>(Observation, Thought)</code> and <code>(Decision, Thought)</code> are illegal (rationalization: speculation laundered into fact). Existing memories default to <code>Observation</code> via <code>#[serde(default)]</code> on upgrade. The edge-legality check rejects these invalid provenance chains before insertion.</p>
       </div>
 
       <div class="cf-feature-card">
-        <div class="cf-feature-icon">&#x1F9ED;</div>
+        <div class="cf-feature-icon">&nbsp;</div>
         <h3>QueryRouter <span style="font-size:0.75em;opacity:0.6">(Phase 16)</span></h3>
         <p>Typed query grammar over <code>RecallRequest</code> IR: <code>kind_filter</code>, <code>realm</code>, <code>subject</code>, <code>predicate</code>, <code>freetext</code>, <code>time_from_ms</code>/<code>time_to_ms</code>, <code>causal_tool</code>/<code>causal_entity</code>. <code>route()</code> returns a <code>DispatchKind</code> — <code>Exact</code> | <code>Fuzzy</code> | <code>Temporal</code> | <code>Causal</code> | <code>Hybrid</code> | <code>NeedsDisambiguation(Vec&lt;UnboundSlot&gt;)</code>. LLM called only when the grammar leaves a named unbound slot — every token spend corresponds to a specific, auditable hole. Fully bound requests execute zero-token deterministic relational algebra. Four falsifiability metrics written per <code>consolidation_pass()</code>: token-displacement ratio, deterministic replay rate, router error rate, contradiction yield.</p>
       </div>
 
       <div class="cf-feature-card">
-        <div class="cf-feature-icon">&#x1F4DC;</div>
+        <div class="cf-feature-icon">&nbsp;</div>
         <h3>MemProvenance lattice <span style="font-size:0.75em;opacity:0.6">(Phase 17)</span></h3>
         <p>First-class provenance axis on every <code>MemoryPayload</code>: <code>Human</code>, <code>Claude</code>, <code>Codex</code>, <code>OpenWeightDistilled</code>, <code>OpenWeightGenerated</code>. <code>can_write_kind(kind)</code> gate: open-weight-generated writes always enter the <code>candidate</code> band — forbidden from direct <code>Decision</code> or <code>CodeFact</code> writes. <code>candidate: bool</code> on payload; promoted only by <code>witness_memory()</code> on a closed-loop signal (user <code>[correction]</code>, tool-result outcome, or router hit-rate delta). Candidate-laundering guard in <code>add_assoc_edge()</code>: if <code>src.candidate &amp;&amp; !dst.candidate</code>, the edge is rejected — a quarantined memory cannot cite established knowledge as evidence. Stored with <code>#[serde(default)]</code>; no snapshot migration required.</p>
       </div>
 
       <div class="cf-feature-card">
-        <div class="cf-feature-icon">&#x2694;</div>
+        <div class="cf-feature-icon">&nbsp;</div>
         <h3>Reconciler (R0) <span style="font-size:0.75em;opacity:0.6">(Phase 17)</span></h3>
         <p>CPU-native deliberation operator — no model call, deterministically replayable. <code>reconcile_all()</code> scans all assoc_edges for MemoryKind legality violations and candidate&rarr;established laundering; results returned as <code>illegal_edges</code>, <code>unresolved</code>. <code>detect_contradictions()</code> groups payloads by <code>(realm, first-6-word content prefix)</code> — kind mismatches within the same prefix group produce a <code>conflict_score=0.6</code> pair; same-kind body divergence produces <code>0.4</code>. Capped at 50 pairs to avoid O(n²) on large stores. R0/R1 split is inviolable: R0 ops are structural graph traversal; R1 (model proposal) produces only proposals that R0 validates before commit. Results logged to triplet KG as <code>(contradiction:A-B, &ldquo;conflict_score&rdquo;, &ldquo;0.6&rdquo;)</code> entries.</p>
       </div>
@@ -1018,7 +1018,7 @@ cmake --build chitta/build --parallel
 <!-- CLOSING -->
 <section class="closing">
   <div class="container">
-    <h2 class="closing-title heading-display reveal">Memory that behaves like memory.</h2>
+    <h2 class="closing-title heading-display reveal">Rust memory store</h2>
     <p class="closing-body reveal reveal-delay-1">An embedded Rust store with durable snapshots and WAL, derived search indexes and explicit ownership. Memories can decay and strengthen over time while sessions share one daemon.</p>
     <div class="reveal reveal-delay-2">
       <a href="https://github.com/genomewalker/chitta-field" target="_blank" rel="noopener" class="btn btn-primary">Explore the source</a>
@@ -1054,7 +1054,7 @@ cmake --build chitta/build --parallel
 <footer class="footer">
   <div class="container">
     <p class="footer-text">
-      Built with conviction. Grounded in philosophy.
+      Persistent memory for Claude Code and Codex.
       <span class="footer-sep"></span>
       <a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a>
     </p>

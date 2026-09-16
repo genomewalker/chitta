@@ -429,7 +429,7 @@ public:
             "expand_memory", "query", "list_by_status", "list_memories_brief",
             "recall_by_priority", "memory_type_stats", "smart_recall", "hybrid_recall",
             "recall_lanes",
-            "recall_session", "recall_spreading", "structured_recall", "route_stats",
+            "recall_session", "recall_spreading", "structured_recall",
             "ask", "expand_query", "recall_last_action", "recall_failure_pattern",
             "recall_causal_antecedent", "recall_hdcbind", "recall_counterfactual",
             "refutation_stats", "recall_motif_value", "recall_analogy", "span_query",
@@ -1211,6 +1211,67 @@ private:
     // ═══════════════════════════════════════════════════════════════════════
     // register_tools() — all tool schemas and handler bindings
     // ═══════════════════════════════════════════════════════════════════════
+
+    // Every registration row owns its published metadata and member binding.
+    // Keep literal handler slots in the rows: the frozen contract checker also
+    // inventories hidden handlers by scanning handlers_["name"] expressions.
+    struct ToolRegistration {
+        const char* name;
+        const char* description; // nullptr for an unlisted handler
+        json params_schema;
+        ToolResult (FieldRpcHandler::*handler)(const json&);
+        std::function<ToolResult(const json&)>& binding;
+    };
+    void register_tool_table(std::initializer_list<ToolRegistration> registrations);
+
+    ToolResult registered_repl_session_list(const json&);
+    ToolResult registered_version_check(const json&);
+    ToolResult registered_embed_coverage(const json&);
+    ToolResult registered_embed_probe(const json& p);
+    ToolResult registered_stageb_set_surface(const json& p);
+    ToolResult registered_pending_embed_ids(const json& p);
+    ToolResult registered_prune_episodes(const json& p);
+    ToolResult registered_realm_list(const json&);
+    ToolResult registered_realm_detect(const json&);
+    ToolResult registered_skill_list(const json&);
+    ToolResult registered_agent_list(const json&);
+    ToolResult registered_surprise_learning_stats(const json& p);
+    ToolResult registered_upsert_wisdom_candidate(const json& p);
+    ToolResult registered_update_wisdom_lifecycle(const json& p);
+    ToolResult registered_query_wisdom_candidates(const json& p);
+    ToolResult registered_wisdom_promotion_stats(const json& p);
+    ToolResult registered_attach_debt_evidence(const json& p);
+    ToolResult registered_update_scorer_model(const json& p);
+    ToolResult registered_learned_scorer_stats(const json& p);
+    ToolResult registered_effective_scorer_weights(const json& p);
+    ToolResult registered_start_intervention(const json& p);
+    ToolResult registered_add_observation(const json& p);
+    ToolResult registered_close_intervention(const json& p);
+    ToolResult registered_record_attribution(const json& p);
+    ToolResult registered_query_interventions(const json& p);
+    ToolResult registered_get_intervention(const json& p);
+    ToolResult registered_intervention_stats(const json& p);
+    ToolResult registered_list_open_interventions(const json& p);
+    ToolResult registered_register_task(const json& p);
+    ToolResult registered_update_task(const json& p);
+    ToolResult registered_add_delegation(const json& p);
+    ToolResult registered_link_evidence(const json& p);
+    ToolResult registered_add_probe(const json& p);
+    ToolResult registered_resolve_probe(const json& p);
+    ToolResult registered_set_criterion(const json& p);
+    ToolResult registered_get_task(const json& p);
+    ToolResult registered_query_tasks(const json& p);
+    ToolResult registered_agent_protocol_stats(const json& p);
+    ToolResult registered_enroll_wisdom_lineage(const json& p);
+    ToolResult registered_transition_wisdom_lineage(const json& p);
+    ToolResult registered_close_rederive(const json& p);
+    ToolResult registered_query_wisdom_lineages(const json& p);
+    ToolResult registered_get_wisdom_lineage(const json& p);
+    ToolResult registered_wisdom_lineage_stats(const json& p);
+    ToolResult registered_tick_lineage_staleness(const json& p);
+    ToolResult registered_lineage_expiry_check(const json& p);
+
+    struct RecallPipeline;
 
     void register_tools();
     void register_memory_core_tools();

@@ -95,10 +95,12 @@ silently rewritten to current code. No private state or daemon was accessed.
 Dated appendices record this limitation and the learning memo's matching
 SwarmWorld numbers. The MDL/analogy memo makes no external numerical claim.
 
-The requested “Hermes refactor post” has no author, title or URL in any scoped
-file. Searches found several different Hermes refactors; assigning one would
-be guessing. It remains unidentified, with no external numbers attributed to
-it. [65](#ref-65)
+The requested Hermes source is Nous Research’s “Refactoring Hermes with 1,393
+agents”, published 2026-09. One direct fetch returned HTTP 200 and confirmed
+the title and September 2–4, 2026 run dates. The article text does not state
+an exact publication day; publication is recorded at month precision as
+requested. Structured metadata contains a September 15 timestamp. The browser
+open failed before the direct fetch. [65](#ref-65)
 
 Astra's title/content could be fetched with the browser although curl returned
 403; the claimed publication day remains unverified. [41](#ref-41) Other failed
@@ -114,14 +116,14 @@ authors, while modern Hopfield's arXiv abstract page supplied its metadata.
 
 ## Validation
 
-Final inventory: 73 entries — 59 resolved, 12 metadata/evidence corrections,
-2 unresolvable; 26 newly introduced references (the added count overlaps the
-verification statuses). The two unresolved entries are the unidentified Hermes
-post and Astra's exact publication day. The status log covers 96 URLs, including
+Final inventory: 73 entries — 60 resolved, 12 metadata/evidence corrections,
+1 unresolvable; 26 newly introduced references (the added count overlaps the
+verification statuses). The unresolved entry is Astra's exact publication day.
+The status log covers 97 URLs, including
 replacement targets and failed metadata routes; no response bodies are committed.
 
 Both documentation gates passed with zero errors. The local-link check covered
-38 pages and 849 links, preserving 35 historical editor-style citations. The
+39 pages and 849 links, preserving 35 historical editor-style citations. The
 citation gate checked 240 page reference entries. Shell syntax and whitespace
 checks passed. A temporary fixture confirmed that the citation checker rejects
 canonical-text drift, unknown claim IDs, missing index rows, missing fetch
@@ -175,7 +177,7 @@ were changed; no live daemon or private configuration was accessed.
 - <a id="ref-61"></a>**[61]** Rolando Bosch. fidelis: zero-LLM agent memory for Claude Code and AI agents. Zenodo software archive, v0.0.94 (2026). [source](<https://doi.org/10.5281/zenodo.22248259>)
 - <a id="ref-62"></a>**[62]** Rolando Bosch. fidelis: zero-LLM agent memory for Claude Code and AI agents. Zenodo software archive, v0.0.97 (2026). [source](<https://doi.org/10.5281/zenodo.22730449>)
 - <a id="ref-63"></a>**[63]** Erica Butts and Salam Daher. Consistent Conversational State for Virtual Agents: Slot-Based Memory for Accurate Fact Retrieval. IVA, accepted poster (2026). [source](<https://doi.org/10.1145/3806774.3832787>) [source](<https://iva.acm.org/2026/accepted-papers/>)
-- <a id="ref-65"></a>**[65]** Unidentified author. Hermes refactor post. Publication details not supplied or identified (requested in audit brief, 2026-09-16).
+- <a id="ref-65"></a>**[65]** Nous Research. Refactoring Hermes with 1,393 agents. Nous Research (2026-09; exact publication day not stated in the article text; describes a run on September 2–4, 2026). [source](<https://nousresearch.com/refactoring-hermes-with-1393-agents>)
 - <a id="ref-67"></a>**[67]** A. Blumer, J. Blumer, D. Haussler, A. Ehrenfeucht, M. T. Chen, and J. Seiferas. The smallest automaton recognizing the subwords of a text. Theoretical Computer Science 40, 31–55 (1985). [source](<https://doi.org/10.1016/0304-3975(85)90157-4>)
 - <a id="ref-69"></a>**[69]** William R. Thompson. On the likelihood that one unknown probability exceeds another in view of the evidence of two samples. Biometrika 25(3–4), 285–294 (1933). [source](<https://doi.org/10.1093/biomet/25.3-4.285>)
 - <a id="ref-70"></a>**[70]** Sergey Brin and Lawrence Page. The Anatomy of a Large-Scale Hypertextual Web Search Engine. Computer Networks 30, 107–117 (1998). [source](<https://research.google/pubs/the-anatomy-of-a-large-scale-hypertextual-web-search-engine/>)

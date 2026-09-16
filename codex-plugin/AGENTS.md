@@ -14,7 +14,7 @@ the end of the file (#13386 [42](#ref-42), #37956 [43](#ref-43)). Anything that 
 4. **The worktree files are the state, not your context.** Do not rely on Astra's
    history-notes or context management to carry state across a headless run
    (#43194 [48](#ref-48), #43335 [49](#ref-49), #42449 [50](#ref-50)). The spec plus `Plan.md` and `Documentation.md` in the
-   worktree are the source of truth; if it isn't written down, it is lost.
+   worktree are the source of truth; record decisions and progress there before ending the run.
 5. **Keep tool output short.** `head`/`tail`/`--quiet`, never `cat` a large log.
    Astra tool loops can re-inject accumulated output — one run reached 3.5M tokens
    in 11 minutes (#44305 [51](#ref-51)).
@@ -69,8 +69,8 @@ Codex plugin cache, owned by `scripts/sync-installed-hooks.sh`.
 
 Two known MCP defects worth checking before blaming chitta: `bearer_token_env_var`
 does not always propagate (#41378 [46](#ref-46)) — verify the token actually reached the server —
-and streamable-HTTP sessions leak (#41600 [47](#ref-47)), which an idle-session timeout on
-`chitta-mcp-http` will address.
+and streamable-HTTP sessions leak (#41600 [47](#ref-47)); an idle-session timeout on
+`chitta-mcp-http` is a proposed mitigation.
 
 **Your Bash exit codes log as unknown, not success.** Your `PostToolUse` carries no
 exit code and `PostToolUseFailure` never fires (#34289 [44](#ref-44)), so
