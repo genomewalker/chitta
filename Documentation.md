@@ -89,3 +89,36 @@ to refresh citation usage locations, then rerun the read-only citations gate.
 The generated References blocks must remain intact inside the main landmark.
 
 Superproject main merge: retained both sides of the add/add `Documentation.md` conflict and both the chaos and current-truth additions in `docs/EVALS.md`. `docs/FIELD_PERF.md` merged automatically with References last. Refreshed only citation usage line numbers in `docs/CITATIONS.md` after the merge shifted documentation lines. The merged link gate passed (102 pages, 3,110 links), citation gate passed, and site structure passed (79 pages). Main introduced no further native, harness or public-contract changes relative to the tested pointer-update commit.
+
+## Phase 9 — complete code index (2026-09-16)
+
+The read-only live baseline was 39 files / 440 symbols under `chitta` and no
+files under `project:chitta`. Indexing stopped at 500 files by default; watcher
+incremental requests returned before extracting symbols; project labels were
+exact-string filtered; provenance spawned Git once per file; symbol embedding
+ran synchronously; and code-file JSON overflowed a fixed 128 KiB buffer.
+
+The structural pass now uses deterministic Git file selection, includes
+initialized submodules, honors `.gitignore` and `.chittaignore`, repairs missing
+coverage on incremental requests, and extracts symbols without embeddings by
+default. File listings accept bare/project-prefixed labels and grow buffers.
+The Git installer preserves existing hooks and starts background indexing on
+commit/checkout. Deployment is left to the orchestrator.
+
+An empty scratch mind indexed 709/711 tracked supported files (99.72%; 588/590
+without submodules), plus three untracked supported files, in 42.007 seconds.
+The two excluded tracked paths are under `.scripts/`, explicitly gitignored.
+The store held 9,139 unique symbols: C/C++ 2,553; Python 2,024; Rust 2,694;
+Markdown 1,868. There were 10,204 extraction records before the existing store's
+(kind, name, file) deduplication, and 70,615 callsites. Scratch mind files used
+26,021,158 bytes before shutdown (includes WAL/source registry, excludes logs).
+This is a code-only empty-mind test, not a frozen-replica recall evaluation.
+
+Validation: Rust 296 passed / 2 ignored; native CTest; MCP 159 tests; SMRITI 46
+tests; all hook shell fixtures; CI ruff check/format; bash syntax and shellcheck
+on changed scripts. Scratch lifecycle fixtures cover first-event full repair,
+project aliases, rename and deletion. Native collection fixtures cover >500
+files, tracked ignore rules, quoting, deterministic ordering and deletion.
+Git hook probes cover both events, preservation and idempotent installation.
+Contracts regenerated: existing `learn_codebase` gains optional `embed`; no new
+RPC in this step. Recall scoring and snapshot/WAL formats are unchanged.

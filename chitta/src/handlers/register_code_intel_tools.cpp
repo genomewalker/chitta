@@ -19,7 +19,8 @@ void FieldRpcHandler::register_code_intel_tools() {
                 {"project",{{"type","string"},{"description","Project name (defaults to repo/dir name)"}}},
                 {"branch",{{"type","string"},{"description","Branch, tag, or commit to clone (remote only)"}}},
                 {"max_files",{{"type","integer"}}},{"exclude",{{"type","string"}}},
-                {"incremental",{{"type","boolean"}}},{"force",{{"type","boolean"}}}
+                {"incremental",{{"type","boolean"}}},{"force",{{"type","boolean"}}},
+                {"embed",{{"type","boolean"},{"description","Embed symbols synchronously (default false; use embed_symbols separately)"}}}
             }},{"required",{"path"}}},
             &FieldRpcHandler::tool_learn_codebase, handlers_["learn_codebase"]},
 

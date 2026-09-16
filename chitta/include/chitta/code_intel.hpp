@@ -506,40 +506,14 @@ public:
         return result;
     }
 
-    // Collect source file paths without parsing (for two-pass hash-then-parse).
+    // Git honors tracked files, untracked edits, .gitignore and .chittaignore.
+    // Paths and subprocess arguments never pass through a shell.
+    static std::string git_output(const std::vector<std::string>& args);
+    static std::string project_name(const std::string& path);
     std::vector<std::string> collect_source_files(
         const std::string& path,
         const std::vector<std::string>& exclude = {"node_modules", ".git", "build", "__pycache__", "venv"},
-        size_t max_files = 1000
-    ) {
-        std::vector<std::string> files;
-        if (std::filesystem::is_regular_file(path)) {
-            if (!detect_language(path).empty()) files.push_back(path);
-            return files;
-        }
-        if (!std::filesystem::is_directory(path)) return files;
-
-        std::function<void(const std::filesystem::path&)> traverse;
-        traverse = [&](const std::filesystem::path& dir) {
-            if (files.size() >= max_files) return;
-            for (const auto& entry : std::filesystem::directory_iterator(dir)) {
-                if (files.size() >= max_files) return;
-                std::string name = entry.path().filename().string();
-                if (entry.is_directory()) {
-                    bool skip = false;
-                    for (const auto& ex : exclude) {
-                        if (name == ex) { skip = true; break; }
-                    }
-                    if (!skip) traverse(entry.path());
-                } else if (entry.is_regular_file()) {
-                    if (!detect_language(entry.path().string()).empty())
-                        files.push_back(entry.path().string());
-                }
-            }
-        };
-        traverse(path);
-        return files;
-    }
+        size_t max_files = 0);
 
     // Extract only the specified files (parse with tree-sitter).
     ExtractionResult extract_files(const std::unordered_set<std::string>& file_paths) {

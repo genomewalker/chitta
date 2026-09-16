@@ -570,6 +570,13 @@ if(CHITTA_BUILD_TESTS)
     target_compile_options(repository_index_test PRIVATE -UNDEBUG)
     target_link_libraries(repository_index_test PRIVATE chitta OpenSSL::Crypto)
     add_test(NAME repository_index_test COMMAND repository_index_test)
+    add_executable(code_index_test src/code_index_test.cpp src/code_intel.cpp)
+    target_compile_options(code_index_test PRIVATE -UNDEBUG)
+    target_link_libraries(code_index_test PRIVATE chitta OpenSSL::Crypto)
+    add_test(NAME code_index_test COMMAND code_index_test)
+    add_test(NAME code_index_integration_test
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/code_index_integration_test.py
+                $<TARGET_FILE:chittad> $<TARGET_FILE:chitta_tool>)
     add_executable(value_fact_extract_test
         src/value_fact_extract_test.cpp src/value_fact_extractor.cpp)
     add_test(NAME value_fact_extract_test COMMAND value_fact_extract_test)

@@ -1057,6 +1057,7 @@ Learn codebase by extracting symbols. path can be a local directory or a remote 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `branch` | string | no | — | Branch, tag, or commit to clone (remote only) |
+| `embed` | boolean | no | — | Embed symbols synchronously (default false; use embed_symbols separately) |
 | `exclude` | string | no | — |  |
 | `force` | boolean | no | — |  |
 | `incremental` | boolean | no | — |  |

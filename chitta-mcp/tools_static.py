@@ -944,6 +944,9 @@ TOOLS = [Tool(**row) for row in [{'description': 'Multi-dimensional semantic sea
   'inputSchema': {'properties': {'branch': {'description': 'Branch, tag, or commit to clone '
                                                            '(remote only)',
                                             'type': 'string'},
+                                 'embed': {'description': 'Embed symbols synchronously (default '
+                                                          'false; use embed_symbols separately)',
+                                           'type': 'boolean'},
                                  'exclude': {'type': 'string'},
                                  'force': {'type': 'boolean'},
                                  'incremental': {'type': 'boolean'},
