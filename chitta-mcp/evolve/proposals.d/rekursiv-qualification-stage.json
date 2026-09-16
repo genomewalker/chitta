@@ -1,0 +1,34 @@
+{
+  "id": "rekursiv-qualification-stage",
+  "title": "Independent qualification stage before an evolve verdict is recorded",
+  "mechanism": "After a cycle's own evaluate/measure step, a second agent with no access to the candidate's transcript re-runs the measurement on a fresh replica copy from the same frozen family and the same pinned config, compares against the bet's bands, and only then the verdict memory is written with two timestamps: completion (candidate's own result) and qualification (independent re-measurement); a candidate whose qualification is missing or disagrees is 'unqualified', never 'accepted'",
+  "expected_gain": {
+    "metric": "evolve accepted-bet rate per cycle",
+    "delta": -0.05,
+    "confidence": 0.3,
+    "rationale": "rekursiv.ai's auto-autoresearch run kept preliminary and independently reviewed results separate and had the coordinator qualify without backdating; a review gap left 35 completed panels unqualified, i.e. unreviewed results were the failure mode. Expect fewer accepted bets at first (false accepts removed) and a trustworthy verdict history"
+  },
+  "cost": {
+    "effort_h": 10,
+    "blast_radius": 3,
+    "scope": "chitta-mcp/evolve/cycle.py (evaluate/measure/verdict_for), chitta-mcp/evolve/bets.py (resolution fields), scripts/evolve-cycle.sh"
+  },
+  "evidence": [
+    {
+      "source": "https://rekursiv.ai/blog/autoautoresearch/",
+      "claim": "implementation and evidence artifacts kept preliminary results separate from independently reviewed results; the coordinator independently checks the original triplet and accepts the result without backdating that decision to when the evidence became ready"
+    },
+    {
+      "source": "https://rekursiv.ai/blog/autoautoresearch/",
+      "claim": "a later review gap left 35 completed panels unqualified after a service interruption: evidence needs someone responsible for checking and passing it on"
+    },
+    {
+      "source": "https://github.com/rekursiv-ai/priml/tree/main/priml/baselines/nanochat",
+      "claim": "experiments inherit from a named parent recipe and are scored as delta BPB against the parent at the same budget over pinned seeds"
+    }
+  ],
+  "source": "hypothesis",
+  "already_have": false,
+  "verifiability": "self_verifying",
+  "prior_effort": "none"
+}
