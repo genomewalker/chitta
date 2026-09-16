@@ -42,5 +42,11 @@ python3 runner.py
 ## Comparison to fastedit
 
 Pattern labels (P1 `add_guard` … P22 `remove_parameter`) follow
-[parcadei/fastedit](https://github.com/parcadei/fastedit) for
+[parcadei/fastedit](https://github.com/parcadei/fastedit) [64](#ref-64) for
 comparability. Test cases are independently authored.
+
+<!-- BEGIN CITATIONS -->
+## References
+
+- <a id="ref-64"></a>**[64]** parcadei. fastedit: AST-aware fast code editing via local 1.7B model. GitHub repository (accessed 2026-09-16). [source](<https://github.com/parcadei/fastedit>)
+<!-- END CITATIONS -->

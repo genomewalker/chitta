@@ -522,7 +522,7 @@ body::before {
 <header class="page-header">
   <div class="container">
     <div class="page-header-badge reveal">Skills Reference</div>
-    <h1 class="reveal reveal-delay-1">31 skills. Invoke with /.</h1>
+    <h1 class="reveal reveal-delay-1">31 slash-command skills</h1>
     <p class="page-header-sub reveal reveal-delay-2">Skills are slash commands that expand into specialized prompts. They are namespaced by plugin, so each is invoked as <code class="style-18fae4fbe7">/chitta:&lt;name&gt;</code>. They guide Claude through structured workflows&thinsp;&mdash;&thinsp;from soul initialization to autonomous development rituals.</p>
     <p class="reveal reveal-delay-2 style-2dee830ea7">Status as of 2026-09-16 · Names follow the repository's skill directories; maintenance suffixes were retained during the rename.</p>
   </div>
@@ -557,13 +557,13 @@ body::before {
       </div>
       <div class="tools-list">
         <div class="tool-row"><span class="tool-name">/chitta:init</span><span class="tool-desc">Initialize the soul with foundational beliefs and wisdom</span></div>
-        <div class="tool-row"><span class="tool-name">/chitta:checkpoint</span><span class="tool-desc">Capture a moment of clarity before moving forward</span></div>
-        <div class="tool-row"><span class="tool-name">/chitta:reawaken</span><span class="tool-desc">Restore context and momentum via Pratyabhij&ntilde;&#x0101; (recognition)</span></div>
-        <div class="tool-row"><span class="tool-name">/chitta:explore</span><span class="tool-desc">RLM-style recursive memory exploration &mdash; navigate the memory graph instead of taking a top-k dump</span></div>
+        <div class="tool-row"><span class="tool-name">/chitta:checkpoint</span><span class="tool-desc">Save task status, decisions, active files, and next steps as a checkpoint</span></div>
+        <div class="tool-row"><span class="tool-name">/chitta:reawaken</span><span class="tool-desc">Restore task context from a checkpoint using Pratyabhij&ntilde;&#x0101; (recognition)</span></div>
+        <div class="tool-row"><span class="tool-name">/chitta:explore</span><span class="tool-desc">RLM<sup><a href="#ref-71">71</a></sup>-style recursive memory exploration &mdash; navigate the memory graph instead of taking a top-k dump</span></div>
         <div class="tool-row"><span class="tool-name">/chitta:health</span><span class="tool-desc">Soul system health check with remediation</span></div>
         <div class="tool-row"><span class="tool-name">/chitta:introspect</span><span class="tool-desc">Soul self-examination (Sv&#x0101;dhy&#x0101;ya)</span></div>
         <div class="tool-row"><span class="tool-name">/chitta:migrate</span><span class="tool-desc">Import soul data from SQLite or shared chitta files</span></div>
-        <div class="tool-row"><span class="tool-name">/chitta:remember</span><span class="tool-desc">Quickly save a memory to the soul</span></div>
+        <div class="tool-row"><span class="tool-name">/chitta:remember</span><span class="tool-desc">Save a memory to chitta</span></div>
       </div>
     </div>
 
@@ -577,7 +577,7 @@ body::before {
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
       <div class="tools-list">
-        <div class="tool-row"><span class="tool-name">/chitta:recap</span><span class="tool-desc">Token-savvy session continuation. Rebuilds working context from the transcript and soul memories in roughly 1500 tokens instead of replaying full history</span></div>
+        <div class="tool-row"><span class="tool-name">/chitta:recap</span><span class="tool-desc">Rebuild working context from transcripts and chitta memories in approximately 1500 tokens</span></div>
         <div class="tool-row"><span class="tool-name">/chitta:resume</span><span class="tool-desc">Resume a thread by loading its ~800-token context capsule</span></div>
         <div class="tool-row"><span class="tool-name">/chitta:tasks</span><span class="tool-desc">Browse and resume tasks, threads, and background jobs across sessions</span></div>
       </div>
@@ -594,7 +594,7 @@ body::before {
       </div>
       <div class="tools-list">
         <div class="tool-row"><span class="tool-name">/chitta:antahkarana</span><span class="tool-desc">Multi-perspective reasoning through cognitive voices</span></div>
-        <div class="tool-row"><span class="tool-name">/chitta:ultrathink</span><span class="tool-desc">First-principles deep thinking for significant problems</span></div>
+        <div class="tool-row"><span class="tool-name">/chitta:ultrathink</span><span class="tool-desc">Analyze assumptions, constraints, and alternative explanations</span></div>
       </div>
     </div>
 
@@ -643,7 +643,7 @@ body::before {
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
       <div class="tools-list">
-        <div class="tool-row"><span class="tool-name">/chitta:epsilon-yajna</span><span class="tool-desc">Convert verbose memories to SSL v0.4 format &mdash; the skill is both encoder and decoder</span></div>
+        <div class="tool-row"><span class="tool-name">/chitta:epsilon-yajna</span><span class="tool-desc">Convert stored memories to SSL v0.4 format and check that the result can be decoded</span></div>
         <div class="tool-row"><span class="tool-name">/chitta:mermaid</span><span class="tool-desc">Render Mermaid diagrams as ASCII/Unicode art or SVG</span></div>
         <div class="tool-row"><span class="tool-name">/chitta:distill-pending</span><span class="tool-desc">Process pending transcript distillation</span></div>
       </div>
@@ -677,7 +677,7 @@ body::before {
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
       <div class="tools-list">
-        <div class="tool-row"><span class="tool-name">/chitta:locomo-benchmark</span><span class="tool-desc">Run the LoCoMo benchmark for long-term conversational memory</span></div>
+        <div class="tool-row"><span class="tool-name">/chitta:locomo-benchmark</span><span class="tool-desc">Run the LoCoMo<sup><a href="#ref-17">17</a></sup> benchmark for long-term conversational memory</span></div>
       </div>
     </div>
 
@@ -692,6 +692,18 @@ body::before {
 </section>
 
 <!-- FOOTER -->
+<!-- BEGIN CITATIONS -->
+<section id="references" class="references">
+  <div class="container">
+  <h2 class="heading-section">References</h2>
+  <ol>
+    <li id="ref-17" value="17">Adyasha Maharana, Dong-Ho Lee, Sergey Tulyakov, Mohit Bansal, Francesco Barbieri, and Yuwei Fang. Evaluating Very Long-Term Conversational Memory of LLM Agents. ACL (2024); arXiv:2402.17753. <a href="https://arxiv.org/abs/2402.17753">https://arxiv.org/abs/2402.17753</a> <a href="https://aclanthology.org/2024.acl-long.747/">https://aclanthology.org/2024.acl-long.747/</a></li>
+    <li id="ref-71" value="71">Alex L. Zhang, Tim Kraska, and Omar Khattab. Recursive Language Models. arXiv:2512.24601 (2025; revised 2026). <a href="https://arxiv.org/abs/2512.24601">https://arxiv.org/abs/2512.24601</a></li>
+  </ol>
+  </div>
+</section>
+<!-- END CITATIONS -->
+
 </main>
 <footer class="footer site-footer">
   <div class="container">
@@ -719,21 +731,7 @@ body::before {
 })();
 
 /* Smooth scroll for TOC chips */
-document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
-  anchor.addEventListener('click', function(e) {
-    var target = document.querySelector(this.getAttribute('href'));
-    if (target) {
-      e.preventDefault();
-      var offset = 140;
-      var top = target.getBoundingClientRect().top + window.pageYOffset - offset;
-      window.scrollTo({ top: top, behavior: 'smooth' });
-      // Expand the category if collapsed
-      if (target.classList.contains('collapsed')) {
-        target.classList.remove('collapsed');
-      }
-    }
-  });
-});
+/* Native anchors preserve URL history, focus and reduced-motion behavior. */
 
 /* ═══════════════════════════════════════════
    SCROLL SPY - Highlight active TOC section

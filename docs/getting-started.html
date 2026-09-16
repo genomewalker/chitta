@@ -4,15 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>chitta — Getting Started — chitta</title>
-<meta name="description" content="Install chitta, configure hooks, and give Claude Code a persistent memory in under 5 minutes.">
+<meta name="description" content="Install chitta and configure persistent memory hooks for Claude Code and Codex.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta property="og:title" content="Getting Started — chitta">
-<meta property="og:description" content="Install chitta, configure hooks, and give Claude Code a persistent memory in under 5 minutes.">
+<meta property="og:description" content="Install chitta and configure persistent memory hooks for Claude Code and Codex.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="favicon.svg">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Getting Started — chitta">
-<meta name="twitter:description" content="Install chitta, configure hooks, and give Claude Code a persistent memory in under 5 minutes.">
+<meta name="twitter:description" content="Install chitta and configure persistent memory hooks for Claude Code and Codex.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -58,8 +58,8 @@
 <header class="page-header">
   <div class="container">
     <div class="page-header-badge reveal">Getting Started</div>
-    <h1 class="reveal reveal-delay-1">Two commands. That's it.</h1>
-    <p class="page-header-sub reveal reveal-delay-2">Register the marketplace, add the plugin. Everything else is automatic.</p>
+    <h1 class="reveal reveal-delay-1">Installation and setup</h1>
+    <p class="page-header-sub reveal reveal-delay-2">Register the marketplace and install the plugin. The installer builds or downloads binaries, configures hooks, and sets up the daemon.</p>
     <p class="reveal reveal-delay-2 style-2dee830ea7">Status as of 2026-09-16 <a href="CLI.md">CLI and startup reference</a>.</p>
   </div>
 </header>
@@ -85,7 +85,7 @@
   <div class="container">
     <div class="reveal">
       <div class="section-divider"></div>
-      <h2 class="section-title">Install</h2>
+      <h2 class="section-title">Installation</h2>
     </div>
 
     <div class="steps-list">
@@ -129,9 +129,9 @@
     </div>
 
     <div class="verify-card reveal reveal-delay-4 style-605fcdb1c6">
-      <p class="style-0ca8e4f994">That's it.</p>
-      <p class="style-2f48d0a867">On your next Claude Code session, <code class="style-18fae4fbe7">smart-install.sh</code> runs automatically &mdash; it builds the binaries, fetches the embedding model, and configures hooks and permissions. The daemon starts, memory awakens.</p>
-      <p class="style-06d705bf18">Upgrading from the old <code class="style-18fae4fbe7">cc-soul</code> marketplace? Nothing you have breaks &mdash; every <code class="style-18fae4fbe7">CC_SOUL_*</code> variable, your stored realms and your existing store all keep working. The three commands to move to the renamed marketplace are in <a href="https://github.com/genomewalker/chitta/blob/main/docs/RENAME.md" target="_blank" rel="noopener">the rename note</a>.</p>
+      <p class="style-0ca8e4f994">Installer startup</p>
+      <p class="style-2f48d0a867">On your next Claude Code session, <code class="style-18fae4fbe7">smart-install.sh</code> runs automatically &mdash; it builds the binaries, fetches the embedding model, and configures hooks and permissions. The daemon starts and loads the store.</p>
+      <p class="style-06d705bf18">Upgrading from the old <code class="style-18fae4fbe7">cc-soul</code> marketplace: every <code class="style-18fae4fbe7">CC_SOUL_*</code> variable, your stored realms and your existing store all keep working. The three commands to move to the renamed marketplace are in <a href="https://github.com/genomewalker/chitta/blob/main/docs/RENAME.md" target="_blank" rel="noopener">the rename note</a>.</p>
     </div>
   </div>
 </section>
@@ -142,7 +142,7 @@
     <div class="reveal">
       <div class="section-divider"></div>
       <h2 class="section-title">Codex</h2>
-      <p class="style-8ed602b1b4">chitta also works as a Codex plugin. The same daemon, the same tools, the same memory &mdash; hooks wired into Codex&rsquo;s lifecycle events so memory flows automatically across both harnesses.</p>
+      <p class="style-8ed602b1b4">chitta also works as a Codex plugin. Its lifecycle hooks connect to the same daemon, tools, and memory store.</p>
     </div>
     <div class="steps-list">
       <div class="step-card reveal reveal-delay-1">
@@ -170,7 +170,7 @@
           <span class="step-number">3</span>
           <div class="step-info">
             <h3 class="step-title">Start a Codex session</h3>
-            <p class="step-desc">Memory from Claude Code sessions is immediately available in Codex, and vice versa. One soul, two harnesses.</p>
+            <p class="step-desc">Claude Code and Codex can retrieve memories from each other’s sessions when both use the same daemon and store.</p>
           </div>
         </div>
         <div class="code-block"><span class="comment"># In a Codex session:</span>
@@ -185,7 +185,7 @@
   <div class="container">
     <div class="reveal">
       <div class="section-divider"></div>
-      <h2 class="section-title">What Smart Install Does</h2>
+      <h2 class="section-title">Installer operations</h2>
     </div>
     <div class="prereq-card reveal reveal-delay-1">
       <ul class="prereq-list">
@@ -199,7 +199,7 @@
         <li>Trains the <strong>hook intent classifier</strong> in the background if it is missing, from a bundled corpus with no API calls. A regex fallback is active until it finishes</li>
       </ul>
     </div>
-    <p class="reveal reveal-delay-2 style-ee2014c5f6">Smart install only runs when the version changes or binaries are missing. Subsequent sessions start instantly.</p>
+    <p class="reveal reveal-delay-2 style-ee2014c5f6">Smart install only runs when the version changes or binaries are missing. Subsequent sessions skip that installation step. Warm daemon startup measured about 9.5 s on the documented store.</p>
   </div>
 </section>
 
@@ -208,7 +208,7 @@
   <div class="container">
     <div class="reveal">
       <div class="section-divider"></div>
-      <h2 class="section-title">What Is Running</h2>
+      <h2 class="section-title">Processes</h2>
     </div>
     <div class="env-table-wrap reveal reveal-delay-1">
       <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0">
@@ -233,7 +233,7 @@
   <div class="container">
     <div class="reveal">
       <div class="section-divider"></div>
-      <h2 class="section-title">Useful Skills</h2>
+      <h2 class="section-title">Maintenance skills</h2>
     </div>
     <div class="env-table-wrap reveal reveal-delay-1">
       <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0">
@@ -277,7 +277,7 @@
   <div class="container">
     <div class="reveal">
       <div class="section-divider"></div>
-      <h2 class="section-title">Verify</h2>
+      <h2 class="section-title">Verification</h2>
     </div>
     <div class="verify-card reveal reveal-delay-1">
       <p class="style-f95a8bb3fc">Start a new Claude Code session. You should see status messages during startup:</p>
@@ -295,9 +295,9 @@
   <div class="container">
     <div class="reveal">
       <div class="section-divider"></div>
-      <h2 class="section-title">Companion Features</h2>
+      <h2 class="section-title">Workflow records</h2>
     </div>
-    <p class="reveal reveal-delay-1 style-8ed602b1b4">Beyond memory, chitta learns how you work. These features build a richer partnership over time &mdash; most activate automatically through hooks, but you can also use them directly.</p>
+    <p class="reveal reveal-delay-1 style-8ed602b1b4">Hooks record workflow patterns, goals, work modes, knowledge gaps, and prediction outcomes. The tools below also expose these records directly.</p>
 
     <div class="steps-list">
 
@@ -345,7 +345,7 @@
           <span class="step-number style-42bb9fa513">&target;</span>
           <div class="step-info">
             <h3 class="step-title">Goals</h3>
-            <p class="step-desc">Track long-term objectives with milestones and progress. Goals persist across sessions, so the soul always knows what you're working toward and how far you've come.</p>
+            <p class="step-desc">Track long-term objectives with milestones and progress stored across sessions.</p>
           </div>
         </div>
         <div class="code-block"><span class="comment"># Set a goal with milestones</span>
@@ -420,7 +420,7 @@
   <div class="container">
     <div class="reveal">
       <div class="section-divider"></div>
-      <h2 class="section-title">What to Do Next</h2>
+      <h2 class="section-title">Documentation and indexing</h2>
     </div>
 
     <div class="next-grid">
@@ -542,7 +542,7 @@
       <div class="troubleshoot-item reveal reveal-delay-3">
         <dt class="troubleshoot-symptom">Memory seems empty</dt>
         <dd class="troubleshoot-fix">
-          <p>This is normal for a fresh install. Memories build organically through usage &mdash; preferences, corrections, solutions, and insights accumulate as you work together.</p>
+          <p>This is normal for a fresh install. Hooks and distillation add preferences, corrections, solutions, and other records during use.</p>
         </dd>
       </div>
 
@@ -560,7 +560,7 @@
 <!-- BACK -->
 <section class="tools-section" id="readiness">
   <div class="container">
-    <h2>Verify readiness</h2>
+    <h2>Daemon readiness</h2>
     <p>Run <code>chitta health_check --json</code> against the intended daemon. A measured warm start takes about 9.5 s with sidecars; first start after deployment or a format change takes about 20 s. Allow 30 s before benchmarking recall because index maintenance may continue after readiness.</p>
     <p>Claude Code and Codex share one daemon and store. Use <code>CHITTA_SOCKET_PATH</code> for an alternate endpoint; do not start a second daemon on the same mind directory. <a href="CLI.md#startup-sidecars-and-instance-lock">Startup and instance-lock recovery</a> explains ownership and stale-lock handling.</p>
   </div>

@@ -429,7 +429,7 @@ public:
             "expand_memory", "query", "list_by_status", "list_memories_brief",
             "recall_by_priority", "memory_type_stats", "smart_recall", "hybrid_recall",
             "recall_lanes",
-            "recall_session", "recall_spreading", "structured_recall", "route_stats",
+            "recall_session", "recall_spreading", "structured_recall",
             "ask", "expand_query", "recall_last_action", "recall_failure_pattern",
             "recall_causal_antecedent", "recall_hdcbind", "recall_counterfactual",
             "refutation_stats", "recall_motif_value", "recall_analogy", "span_query",

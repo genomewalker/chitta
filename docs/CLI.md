@@ -317,7 +317,7 @@ chittad import_embeddings --in FILE.bin
 
 ### reindex
 
-Rebuild ANN indices (binary codes, coarse quantizer, LSH, HNSW) from current in-store embeddings. No embed model required.
+Rebuild ANN indices (binary codes, coarse quantizer, LSH [73](#ref-73), HNSW [4](#ref-4)) from current in-store embeddings. No embed model required.
 
 ```bash
 chittad reindex
@@ -518,3 +518,10 @@ chittad reindex
 ```
 
 This rebuilds binary codes, coarse quantizer, LSH, and HNSW from existing embeddings without re-embedding.
+
+<!-- BEGIN CITATIONS -->
+## References
+
+- <a id="ref-4"></a>**[4]** Yu. A. Malkov and D. A. Yashunin. Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs. IEEE TPAMI 42(4), 824–836 (2020); arXiv:1603.09320 (2016). [source](<https://arxiv.org/abs/1603.09320>) [source](<https://doi.org/10.1109/TPAMI.2018.2889473>)
+- <a id="ref-73"></a>**[73]** Aristides Gionis, Piotr Indyk, and Rajeev Motwani. Similarity Search in High Dimensions via Hashing. VLDB, 518–529 (1999). [source](<https://www.vldb.org/conf/1999/P49.pdf>)
+<!-- END CITATIONS -->

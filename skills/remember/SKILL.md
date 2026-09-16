@@ -1,6 +1,6 @@
 ---
 name: remember
-description: Quickly save a memory to the soul
+description: Save a memory to chitta
 execution: direct
 args: content to remember
 ---

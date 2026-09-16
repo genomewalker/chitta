@@ -1205,28 +1205,28 @@
     <p class="section-intro reveal reveal-delay-1"><strong>Sadhana</strong> (Sanskrit: साधना, "disciplined practice") — persistent autonomous agents that work toward goals through continuous sense-think-act cycles.</p>
 
     <div class="card card-dark reveal reveal-delay-2">
-      <p>Traditional AI assistants are reactive: you ask, they answer, context is lost. Sadhana inverts this paradigm. You define a goal, and an autonomous agent works toward it continuously — sensing the environment, thinking about next steps, acting, and learning from outcomes.</p>
+      <p>A sadhana stores a goal and runs scheduled cycles of observation, model reasoning, action, and outcome recording.</p>
     </div>
 
     <!-- Cycle Cards -->
     <div class="cycle-grid reveal reveal-delay-2">
       <div class="cycle-card cycle-card--sense">
-        <span class="cycle-icon">👁</span>
+        <span class="cycle-icon"></span>
         <h3 class="cycle-title">SENSE</h3>
         <p class="cycle-desc">Observe the current state by executing a shell command. What's the pipeline status? Are jobs running?</p>
       </div>
       <div class="cycle-card cycle-card--think">
-        <span class="cycle-icon">🧠</span>
+        <span class="cycle-icon"></span>
         <h3 class="cycle-title">THINK</h3>
         <p class="cycle-desc">Analyze the observation, recall relevant memories from past experience, decide the next action.</p>
       </div>
       <div class="cycle-card cycle-card--act">
-        <span class="cycle-icon">⚡</span>
+        <span class="cycle-icon"></span>
         <h3 class="cycle-title">ACT</h3>
         <p class="cycle-desc">Execute the decided action. Restart a job, send an alert, modify configuration, or wait.</p>
       </div>
       <div class="cycle-card cycle-card--learn">
-        <span class="cycle-icon">📚</span>
+        <span class="cycle-icon"></span>
         <h3 class="cycle-title">LEARN</h3>
         <p class="cycle-desc">Store outcomes in memory. Successes stay local; failures go global so all sadhanas learn.</p>
       </div>
@@ -1332,7 +1332,7 @@
       <div class="memory-arrow">→</div>
       <div class="memory-step memory-step--recall">
         <h3 class="memory-step-title">2. Recall</h3>
-        <p class="memory-step-desc">BM25 text search finds relevant memories. Up to 5 memories ranked by relevance.</p>
+        <p class="memory-step-desc">BM25<sup><a href="#ref-24">24</a></sup> text search finds relevant memories. Up to 5 memories ranked by relevance.</p>
       </div>
       <div class="memory-arrow">→</div>
       <div class="memory-step memory-step--inject">
@@ -1606,25 +1606,25 @@
 
     <div class="usecase-grid reveal reveal-delay-1">
       <div class="usecase-card">
-        <div class="usecase-icon">🔬</div>
+        <div class="usecase-icon">&nbsp;</div>
         <h3 class="usecase-title">Pipeline Monitoring</h3>
         <div class="usecase-cmd">/shepherd snakemake --cores 8</div>
         <p class="usecase-desc">Monitor Snakemake, Nextflow, or Slurm pipelines. Detects failures, recalls fixes from memory, restarts automatically.</p>
       </div>
       <div class="usecase-card">
-        <div class="usecase-icon">🧪</div>
+        <div class="usecase-icon">&nbsp;</div>
         <h3 class="usecase-title">Continuous Testing</h3>
         <div class="usecase-cmd">sadhana_start --goal "Run tests on file change"</div>
         <p class="usecase-desc">Watch for changes, run tests, fix issues. Goal: all tests pass.</p>
       </div>
       <div class="usecase-card">
-        <div class="usecase-icon">📊</div>
+        <div class="usecase-icon">&nbsp;</div>
         <h3 class="usecase-title">Server Monitoring</h3>
         <div class="usecase-cmd">sadhana_start --goal "Monitor health. Alert if CPU > 90%"</div>
-        <p class="usecase-desc">Continuous health checks with intelligent alerting.</p>
+        <p class="usecase-desc">Continuous health checks with threshold-based alerts.</p>
       </div>
       <div class="usecase-card">
-        <div class="usecase-icon">🚀</div>
+        <div class="usecase-icon">&nbsp;</div>
         <h3 class="usecase-title">Deployment Verification</h3>
         <div class="usecase-cmd">sadhana_start --goal "Verify deployment succeeded"</div>
         <p class="usecase-desc">Post-deployment monitoring until stability confirmed.</p>
@@ -1655,7 +1655,7 @@
           </div>
           <div class="dream-trigger-plus">+</div>
           <div class="dream-trigger-card">
-            <div class="dream-trigger-icon">🕐</div>
+            <div class="dream-trigger-icon">&nbsp;</div>
             <div class="dream-trigger-label">Cooldown &gt; 1 hr</div>
           </div>
           <div class="dream-trigger-arrow">→</div>
@@ -1669,7 +1669,7 @@
 
         <div class="dream-step dream-step--wander">
           <div class="dream-step-badge">1</div>
-          <div class="dream-step-icon">🌀</div>
+          <div class="dream-step-icon">&nbsp;</div>
           <div class="dream-step-body">
             <div class="dream-step-title">dream_wander()</div>
             <div class="dream-step-desc">Auto-select topic from memory</div>
@@ -1723,7 +1723,7 @@
         <div class="dream-connector-v"></div>
 
         <div class="dream-result-card">
-          <div class="dream-result-icon">💾</div>
+          <div class="dream-result-icon">&nbsp;</div>
           <div class="dream-result-text"><code>[dream]</code> memories stored · status → <code>woke</code></div>
         </div>
       </div>
@@ -1789,7 +1789,7 @@ mcp__chitta__dream_list {"limit": 10}</pre>
     <div class="reveal">
       <div class="section-divider"></div>
       <h2 class="heading-section">Autonomous Self-Improvement</h2>
-      <p class="section-intro">Sadhanas close the loop on their own substrate. Four interlocking mechanisms let the soul investigate bugs, distil learnings from every session, explore gaps during idle time, and synthesise findings into code changes — compounding with each cycle.</p>
+      <p class="section-intro">The historical examples below connect bug investigation, transcript distillation, idle exploration, and synthesis into a recurring development workflow.</p>
     </div>
 
     <!-- Self-Improvement Cycle Diagram -->
@@ -1825,25 +1825,25 @@ mcp__chitta__dream_list {"limit": 10}</pre>
           <!-- 4 nodes at compass points -->
           <div class="improve-node improve-node--top" data-step="1">
             <div class="improve-node-num">1</div>
-            <div class="improve-node-icon">🌱</div>
+            <div class="improve-node-icon">&nbsp;</div>
             <div class="improve-node-title">Seed</div>
             <div class="improve-node-desc">Curiosity gaps<br><code>gap + unresolved</code></div>
           </div>
           <div class="improve-node improve-node--right" data-step="2">
             <div class="improve-node-num">2</div>
-            <div class="improve-node-icon">🌙</div>
+            <div class="improve-node-icon">&nbsp;</div>
             <div class="improve-node-title">Dream</div>
             <div class="improve-node-desc">Web exploration<br><code>dream_wander</code></div>
           </div>
           <div class="improve-node improve-node--bottom" data-step="3">
             <div class="improve-node-num">3</div>
-            <div class="improve-node-icon">🔗</div>
+            <div class="improve-node-icon">&nbsp;</div>
             <div class="improve-node-title">Synthesize</div>
             <div class="improve-node-desc">Bridge findings<br><code>connect_temporal</code></div>
           </div>
           <div class="improve-node improve-node--left" data-step="4">
             <div class="improve-node-num">4</div>
-            <div class="improve-node-icon">✨</div>
+            <div class="improve-node-icon">&nbsp;</div>
             <div class="improve-node-title">Emerge</div>
             <div class="improve-node-desc">New gaps surface<br>cycle continues</div>
           </div>
@@ -1882,8 +1882,8 @@ mcp__chitta__dream_list {"limit": 10}</pre>
         <div class="improve-mech">
           <div class="improve-mech-num">4</div>
           <div>
-            <div class="improve-mech-title">The compounding effect</div>
-            <div class="improve-mech-body"><p>The soul runs <em>on</em> chitta — improving chitta's reliability directly improves the quality of every future session and every sadhana cycle. Each fix raises the floor for the next investigation. The substrate bootstraps itself.</p></div>
+            <div class="improve-mech-title">Outcome feedback</div>
+            <div class="improve-mech-body"><p>Investigation outcomes become records available to later sadhana cycles. Code changes require validation before their effects on reliability or task outcomes can be established.</p></div>
           </div>
         </div>
 
@@ -1892,7 +1892,7 @@ mcp__chitta__dream_list {"limit": 10}</pre>
 
     <!-- Compounding cascade -->
     <div class="reveal reveal-delay-3">
-      <h3 class="heading-sub style-ce9f2ef6c3">The Compounding Cycle</h3>
+      <h3 class="heading-sub style-ce9f2ef6c3">Investigation cycle</h3>
       <div class="cascade">
 
         <div class="cascade-step">
@@ -1927,10 +1927,10 @@ mcp__chitta__dream_list {"limit": 10}</pre>
 
         <div class="cascade-step">
           <div class="cascade-step-dot style-37e1f69526"></div>
-          <div class="cascade-step-text">Release — better code runs, raising the floor for every future cycle</div>
+          <div class="cascade-step-text">Release — subsequent runs use the reviewed changes</div>
         </div>
 
-        <div class="cascade-loop">↻ &nbsp; each cycle, the substrate improves the substrate</div>
+        <div class="cascade-loop">↻ &nbsp; cycle outcomes are stored for later retrieval</div>
       </div>
     </div>
 
@@ -1962,6 +1962,17 @@ mcp__chitta__dream_list {"limit": 10}</pre>
 
 
 <!-- FOOTER -->
+<!-- BEGIN CITATIONS -->
+<section id="references" class="references">
+  <div class="container">
+  <h2 class="heading-section">References</h2>
+  <ol>
+    <li id="ref-24" value="24">Stephen Robertson and Hugo Zaragoza. The Probabilistic Relevance Framework: BM25 and Beyond. Foundations and Trends in Information Retrieval 3(4), 333–389 (2009). <a href="https://doi.org/10.1561/1500000019">https://doi.org/10.1561/1500000019</a></li>
+  </ol>
+  </div>
+</section>
+<!-- END CITATIONS -->
+
 </main>
 <footer class="footer site-footer">
   <div class="container">
@@ -2178,17 +2189,7 @@ mcp__chitta__dream_list {"limit": 10}</pre>
 /* ═══════════════════════════════════════════
    SMOOTH SCROLL FOR TOC
    ═══════════════════════════════════════════ */
-document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
-  anchor.addEventListener('click', function(e) {
-    var target = document.querySelector(this.getAttribute('href'));
-    if (target) {
-      e.preventDefault();
-      var offset = 80;
-      var top = target.getBoundingClientRect().top + window.pageYOffset - offset;
-      window.scrollTo({ top: top, behavior: 'smooth' });
-    }
-  });
-});
+/* Native anchors preserve URL history, focus and reduced-motion behavior. */
 
 /* ═══════════════════════════════════════════
    SCROLL SPY - Highlight active TOC section

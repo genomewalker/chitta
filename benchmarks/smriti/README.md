@@ -67,8 +67,8 @@ An outcome-grounded memory benchmark for coding agents. Named for *smṛti*
 
 ## Motivation: the proxy-target gap
 
-Existing agent-memory benchmarks — [LoCoMo](../locomo/README.md),
-LongMemEval — score conversational QA recall: given a long dialogue history,
+Existing agent-memory benchmarks — [LoCoMo](../locomo/README.md) [17](#ref-17),
+LongMemEval [16](#ref-16) — score conversational QA recall: given a long dialogue history,
 can the system answer a question about it, measured by F1 against a reference
 answer. That is the wrong target for a coding agent's memory system. A coding
 agent's memory exists to make the agent *better at doing the next task*, not
@@ -91,7 +91,7 @@ For each task, the agent is run under multiple **memory conditions**
 produces one pass/fail outcome (from `check_cmd`) and one token count.
 Aggregated across conditions:
 
-- **SR** (success rate) per condition, with a Wilson 95% interval (small-n
+- **SR** (success rate) per condition, with a Wilson [2](#ref-2) 95% interval (small-n
   task counts make a naive proportion misleading).
 - **ΔSR** = SR(`on`) − SR(`off`) — memory's effect on task success. The
   headline number.
@@ -264,7 +264,7 @@ An unrecognized lane name raises `ValueError` immediately from
 | `off` | — | (unset; `CHITTA_HEADLESS=1` instead) | all memory | baseline — can the agent solve it cold |
 | `on` | — | (unset) | nothing | full system upper bound |
 | `ablate:semantic` | `semantic` / `sem` | `sem` | embedding/ANN recall | value of fuzzy semantic match |
-| `ablate:keyword` | `keyword` / `kw` | `kw` | BM25 lane | value of exact term overlap |
+| `ablate:keyword` | `keyword` / `kw` | `kw` | BM25 [24](#ref-24) lane | value of exact term overlap |
 | `ablate:graph` / `ablate:hybrid` | `graph`, `hybrid` / `hyb` | `hyb` | hybrid/triplet recall path | value of multi-hop + fused retrieval |
 | `ablate:context` | `context` / `ctx` | `ctx` | recency-weighted thread-context recall | value of conversational continuity |
 | `ablate:corrections` | `corrections` / `corr` | `corr` | `[correction]`-kind deterministic lookup | value of the durable-correction fast path |
@@ -272,7 +272,7 @@ An unrecognized lane name raises `ValueError` immediately from
 | `ablate:all` | — | `sem,ctx,hyb,kw,corr,xr` | every lane | sanity check: should ≈ `off` |
 
 `graph` and `hybrid` are both aliases for chitta's single `hyb` hook lane
-— there is no separate triplet/PageRank lane distinct from the hybrid
+— there is no separate triplet/PageRank [70](#ref-70) lane distinct from the hybrid
 path (this differs from the original design sketch, which assumed one).
 Each single-lane ablation keeps every other lane on, so its ΔSR is a
 marginal contribution, not that lane's total value (lanes overlap — see
@@ -532,3 +532,13 @@ python3 -m unittest tests/test_scaffold.py -v
    Python API) also takes `trials` as a required keyword arg with no
    default, and raises `ValueError` on `trials < 1` — a single trial is a
    coin flip, not a result.
+
+<!-- BEGIN CITATIONS -->
+## References
+
+- <a id="ref-2"></a>**[2]** Edwin B. Wilson. Probable Inference, the Law of Succession, and Statistical Inference. Journal of the American Statistical Association 22(158), 209–212 (1927). [source](<https://doi.org/10.1080/01621459.1927.10502953>)
+- <a id="ref-16"></a>**[16]** Di Wu, Hongwei Wang, Wenhao Yu, Yuwei Zhang, Kai-Wei Chang, and Dong Yu. LongMemEval: Benchmarking Chat Assistants on Long-Term Interactive Memory. ICLR (2025); arXiv:2410.10813 (2024). [source](<https://arxiv.org/abs/2410.10813>)
+- <a id="ref-17"></a>**[17]** Adyasha Maharana, Dong-Ho Lee, Sergey Tulyakov, Mohit Bansal, Francesco Barbieri, and Yuwei Fang. Evaluating Very Long-Term Conversational Memory of LLM Agents. ACL (2024); arXiv:2402.17753. [source](<https://arxiv.org/abs/2402.17753>) [source](<https://aclanthology.org/2024.acl-long.747/>)
+- <a id="ref-24"></a>**[24]** Stephen Robertson and Hugo Zaragoza. The Probabilistic Relevance Framework: BM25 and Beyond. Foundations and Trends in Information Retrieval 3(4), 333–389 (2009). [source](<https://doi.org/10.1561/1500000019>)
+- <a id="ref-70"></a>**[70]** Sergey Brin and Lawrence Page. The Anatomy of a Large-Scale Hypertextual Web Search Engine. Computer Networks 30, 107–117 (1998). [source](<https://research.google/pubs/the-anatomy-of-a-large-scale-hypertextual-web-search-engine/>)
+<!-- END CITATIONS -->

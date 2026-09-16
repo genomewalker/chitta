@@ -122,8 +122,8 @@
 <header class="page-header">
   <div class="container">
     <div class="page-header-badge reveal">Hook System</div>
-    <h1 class="reveal reveal-delay-1">Lifecycle-aware memory.</h1>
-    <p class="page-header-sub reveal reveal-delay-2">Hooks inject memories at the right moment. Individual scripts in <code class="style-18fae4fbe7">hooks/</code> handle each lifecycle event, configured via <code class="style-18fae4fbe7">hooks.json</code> (plugin) or <code class="style-18fae4fbe7">~/.claude/settings.json</code> (standalone).</p>
+    <h1 class="reveal reveal-delay-1">Lifecycle hooks</h1>
+    <p class="page-header-sub reveal reveal-delay-2">Hooks inject retrieved memories at session and prompt events. Individual scripts in <code class="style-18fae4fbe7">hooks/</code> handle each lifecycle event, configured via <code class="style-18fae4fbe7">hooks.json</code> (plugin) or <code class="style-18fae4fbe7">~/.claude/settings.json</code> (standalone).</p>
     <p class="reveal reveal-delay-2 style-2dee830ea7">Status as of 2026-09-16 <a href="HOOKS.md">Canonical hook contract and measurements</a>.</p>
   </div>
 </header>
@@ -381,7 +381,7 @@
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
       <div class="tools-content">
-        <p class="content-text">The hook system learns context&rarr;action patterns over time, anticipating what you need before you ask.</p>
+        <p class="content-text">The hook system records context&rarr;action patterns and surfaces matching predictions on subsequent prompts.</p>
         <div class="mapping-grid">
           <div class="mapping-row reveal">
             <div class="mapping-event">
@@ -516,7 +516,7 @@
 <section class="tools-section" id="native-lifecycle">
   <div class="container">
     <h2>Native lifecycle and daemon ledger</h2>
-    <p>Since September 15, ordinary prompt, SessionStart and Stop paths use bash/jq and native <code>chitta</code> calls for query cleanup, RPC parsing, registration, heartbeats and task cards. Explicit RLM or opt-in background features can still use Python. Measured prompt median fell from 822 to 635 ms and SessionStart from 693 to 599 ms on the loaded test node; these are measurements, not fixed budgets.</p>
+    <p>Since September 15, ordinary prompt, SessionStart and Stop paths use bash/jq and native <code>chitta</code> calls for query cleanup, RPC parsing, registration, heartbeats and task cards. Explicit RLM<sup><a href="#ref-71">71</a></sup> or opt-in background features can still use Python. Measured prompt median fell from 822 to 635 ms and SessionStart from 693 to 599 ms on the loaded test node; these are measurements, not fixed budgets.</p>
     <p><code>ledger_op</code> owns task threads, inbox, artifacts, bindings and leases in the daemon WAL and snapshots. Hooks call <code>session_register</code>, <code>session_heartbeat</code> and <code>ledger_op</code> directly. Python registry and ledger modules remain compatibility clients. Failed heartbeats are queued in the private mind's <code>queue.jsonl</code>.</p>
     <p><code>CHITTA_SOCKET_PATH</code> selects the daemon. The default socket is derived from the mind path and runtime directory. Test runs must isolate HOME, runtime, mind, queue and socket together. See <a href="HOOKS.md">HOOKS.md</a> for routing, enforcement, environment variables and full latency evidence.</p>
   </div>
@@ -528,6 +528,17 @@
 </section>
 
 <!-- FOOTER -->
+<!-- BEGIN CITATIONS -->
+<section id="references" class="references">
+  <div class="container">
+  <h2 class="heading-section">References</h2>
+  <ol>
+    <li id="ref-71" value="71">Alex L. Zhang, Tim Kraska, and Omar Khattab. Recursive Language Models. arXiv:2512.24601 (2025; revised 2026). <a href="https://arxiv.org/abs/2512.24601">https://arxiv.org/abs/2512.24601</a></li>
+  </ol>
+  </div>
+</section>
+<!-- END CITATIONS -->
+
 </main>
 <footer class="footer site-footer">
   <div class="container">
@@ -555,21 +566,7 @@
 })();
 
 /* Smooth scroll for TOC chips */
-document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
-  anchor.addEventListener('click', function(e) {
-    var target = document.querySelector(this.getAttribute('href'));
-    if (target) {
-      e.preventDefault();
-      var offset = 140;
-      var top = target.getBoundingClientRect().top + window.pageYOffset - offset;
-      window.scrollTo({ top: top, behavior: 'smooth' });
-      // Expand the category if collapsed
-      if (target.classList.contains('collapsed')) {
-        target.classList.remove('collapsed');
-      }
-    }
-  });
-});
+/* Native anchors preserve URL history, focus and reduced-motion behavior. */
 
 /* ═══════════════════════════════════════════
    SCROLL SPY - Highlight active TOC section

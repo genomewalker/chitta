@@ -8,34 +8,35 @@ automatic context injection and lifecycle management.
 **This page is the enforcement reference.** A hook is a deterministic gate;
 `CLAUDE.md` and `AGENTS.md` therefore point here rather than restating hook rules
 as prose. Per the [Claude Code memory
-doc](https://code.claude.com/docs/en/memory), "to block an action regardless…
+doc](https://code.claude.com/docs/en/memory), [34](#ref-34) "to block an action regardless…
 use a PreToolUse hook" — CLAUDE.md instructions "are not a hard enforcement
 layer." When a convention needs to actually hold, add it here, not there.
 
 **Sources for the 2026-09-13 documentation pass** (all verified that day):
-Anthropic, *The new rules of context engineering for Claude 5 generation models*
+Anthropic, *The new rules of context engineering for Claude 5 generation models [37](#ref-37)*
 (claude.com/blog, 2026-07-24);
 [Claude Code memory](https://code.claude.com/docs/en/memory) (target under 200
 lines per CLAUDE.md; imports expand inline and do not save context);
-[Prompting Claude Fable 5.1](https://platform.claude.com/docs/en/about-claude/models/prompting-claude-fable-5-1)
+[Prompting Claude Fable 5.1](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5-1) [35](#ref-35)
 (effort default `high`, levels `low|medium|high|xhigh|max`; re-sweep per model
 generation);
-[Agent Skills best practices](https://platform.claude.com/docs/en/agents/agent-skills/best-practices)
+[Skill authoring best practices](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices) [36](#ref-36)
 (`name` ≤64 chars, `description` ≤1024 chars in third person stating what and
 when, SKILL.md body under 500 lines, match freedom to fragility);
-Codex [AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md)
+Codex [AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md) [38](#ref-38)
 (combined `project_doc_max_bytes` 32 KiB; global, then git-root, then cwd, closer
-files overriding) and its approvals reference;
-`gpt-6-astra` (openai.com/index/gpt-6-astra, 2026-09-04).
+files overriding) and its approvals reference [39](#ref-39);
+`gpt-6-astra` ([announcement](https://openai.com/index/gpt-6-astra/) [41](#ref-41), 2026;
+the previously cited 2026-09-04 publication day is unverified).
 
 Community-verified Codex defects, GitHub issues Sept 2026, cited in
-`codex-plugin/AGENTS.md`: #13386 and #37956 (doc truncation is silent and drops
+`codex-plugin/AGENTS.md`: #13386 [42](#ref-42) and #37956 [43](#ref-43) (doc truncation is silent and drops
 the end of the file, so the project keeps combined `AGENTS.md` bytes under ~10 KB
-and puts critical rules first); #34289 (no `PostToolUse` exit code, see the
-PostToolUse warning above); #26602 (`-a/--ask-for-approval` must precede `exec`);
-#41378 (`bearer_token_env_var` propagation); #41600 (streamable-HTTP session
-leak); #43194, #43335, #42449 (context-management state loss — worktree files, not
-model memory, hold run state); #44305 (tool-output amplification).
+and puts critical rules first); #34289 [44](#ref-44) (no `PostToolUse` exit code, see the
+PostToolUse warning above); #26602 [45](#ref-45) (`-a/--ask-for-approval` must precede `exec`);
+#41378 [46](#ref-46) (`bearer_token_env_var` propagation); #41600 [47](#ref-47) (streamable-HTTP session
+leak); #43194 [48](#ref-48), #43335 [49](#ref-49), #42449 [50](#ref-50) (context-management state loss — worktree files, not
+model memory, hold run state); #44305 [51](#ref-51) (tool-output amplification).
 
 ---
 
@@ -185,7 +186,7 @@ instrumentation and changing load mean this table does not decompose the separat
 608 ms benchmark median.
 
 The final `grep -n 'python3' hooks/prompt-core.sh hooks/lib.sh` leaves only explicit
-RLM exploration, classifier invocation after required regex evidence, periodic
+RLM [71](#ref-71) exploration, classifier invocation after required regex evidence, periodic
 hint extraction (every sixth turn with transcript/model), and `registry_call`
 (used by compatibility/lifecycle callers, absent from the native prompt path).
 Installing the classifier model no longer starts Python on every ordinary turn;
@@ -628,10 +629,10 @@ name, except the new explicit `CHITTA_ALLOW_MCP_KILL` bypass
 | `CHITTA_MAX_WAIT`            | `5`          | Max seconds to wait for daemon responses                                 |
 | `CHITTA_CACHE_TTL_MIN`       | `60`         | Prompt-cache TTL in minutes; the `[cache-expired]` banner fires only past it (was a fixed 5 min) |
 | `CHITTA_MIN_QUERY_TOKENS`    | `1`          | Turns with fewer *distinctive* tokens (5+ chars, not in the generic-word list) than this run only the correction lanes; "Do all", "is it working now", "what else is missing" pull nothing. Exactly one distinctive token raises the admission floor to 70 |
-| `CHITTA_KW_SINGLE_TOKEN_MIN` | `60`         | Keyword rows need this BM25 confidence when the turn has fewer than two distinctive tokens |
+| `CHITTA_KW_SINGLE_TOKEN_MIN` | `60`         | Keyword rows need this BM25 [24](#ref-24) confidence when the turn has fewer than two distinctive tokens |
 | (no knob)                     | built in     | UNKNOWN-band anchor: a hybrid/keyword row is admitted only if it shares a *distinctive* turn token (5+ chars, not in the generic-word list in `prompt-core.sh`); "manage better short messages" anchors nothing, "session registry sqlite" does |
 | `CHITTA_PRETOOL_MIN_SIM`     | `0.6`        | `pre-tool-hook` "BEFORE RUNNING" injection requires this semantic similarity; the tag fallback (similarity 0) is never injected |
-| `CHITTA_FILE_TRACES`         | `1`          | On the first Read of a file per session, `pre-tool-hook` adds `[traces]`: up to two correction/wisdom/signal/preference memories whose text names that file (one keyword RPC, exact-name filter). Stigmergy per SwarmWorld (arXiv:2608.26081): reuse starts by observing the artifact. `0` disables |
+| `CHITTA_FILE_TRACES`         | `1`          | On the first Read of a file per session, `pre-tool-hook` adds `[traces]`: up to two correction/wisdom/signal/preference memories whose text names that file (one keyword RPC, exact-name filter). Stigmergy per SwarmWorld [14](#ref-14) (arXiv:2608.26081): reuse starts by observing the artifact. `0` disables |
 | (no knob)                     | built in     | `artifact-trace.sh` (PostToolUse Write) stores `[artifact] <path> sha:<8> purpose:<first comment>` as a shared signal for scripts written outside temp/scratch dirs, so later sessions fork the script instead of rewriting it. It is the trace the row above surfaces |
 | `CHITTA_CLI_AUTOSTART`       | unset        | `chitta mcp` no longer spawns a daemon when it cannot connect; set `1` to restore that for ad-hoc setups. The systemd unit owns the daemon |
 | `CHITTA_STORE_LOCK`          | `1`          | Store directory lock; `0` lets two processes open the same mind dir (never in production) |
@@ -779,7 +780,7 @@ The PreToolUse section handles matchers `Read`, `Edit`, `Write`, `Bash`, `Agent`
 
 ## Transparent Memory
 
-The key innovation is **transparent memory** — memories that surface automatically without explicit tool calls.
+**Transparent memory** is the prompt-hook path that injects retrieved memories without an explicit agent tool call.
 
 ### How It Works
 
@@ -1165,3 +1166,28 @@ none of the relocated tools was listed. Hook registrations are unchanged.
 - `scripts/debug-recall.sh`: Compare over-fetched candidates with final recall results for a query; supports `--limit` and `--fetch`.
 - `scripts/evolve-topology.sh`: Evolve conductor visibility matrices using archive fitness, ledger and stability gates; supports `--dry-run` and `--realm`.
 - `scripts/settle-predictions.sh`: Confirm expired open predictions without correction references; supports `--dry-run` and `--realm`.
+
+<!-- BEGIN CITATIONS -->
+## References
+
+- <a id="ref-14"></a>**[14]** Subhadeep Pal, Fiona Y. Wang, and Markus J. Buehler. SwarmWorld: Stigmergic technological evolution in societies of language-model agents. arXiv:2608.26081 (2026). [source](<https://arxiv.org/abs/2608.26081>) [source](<https://arxiv.org/html/2608.26081>)
+- <a id="ref-24"></a>**[24]** Stephen Robertson and Hugo Zaragoza. The Probabilistic Relevance Framework: BM25 and Beyond. Foundations and Trends in Information Retrieval 3(4), 333–389 (2009). [source](<https://doi.org/10.1561/1500000019>)
+- <a id="ref-34"></a>**[34]** Anthropic. How Claude remembers your project. Claude Code documentation (accessed 2026-09-16). [source](<https://code.claude.com/docs/en/memory>)
+- <a id="ref-35"></a>**[35]** Anthropic. Prompting Claude Fable 5.1. Claude Platform documentation (accessed 2026-09-16). [source](<https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5-1>)
+- <a id="ref-36"></a>**[36]** Anthropic. Skill authoring best practices. Claude Platform documentation (accessed 2026-09-16). [source](<https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices>)
+- <a id="ref-37"></a>**[37]** Thariq Shihipar. The new rules of context engineering for Claude 5 generation models. Anthropic blog (2026-07-24). [source](<https://www.claude.com/blog/the-new-rules-of-context-engineering-for-claude-5-generation-models>)
+- <a id="ref-38"></a>**[38]** OpenAI. Custom instructions with AGENTS.md. Codex documentation, ChatGPT Learn (accessed 2026-09-16). [source](<https://learn.chatgpt.com/docs/agent-configuration/agents-md>)
+- <a id="ref-39"></a>**[39]** OpenAI. Codex Security. Codex documentation, ChatGPT Learn (accessed 2026-09-16). [source](<https://developers.openai.com/codex/security/>)
+- <a id="ref-41"></a>**[41]** OpenAI. GPT-6 Astra: A new generation of intelligence. OpenAI (2026; exact publication day unverified). [source](<https://openai.com/index/gpt-6-astra/>)
+- <a id="ref-42"></a>**[42]** openai/codex issue contributors. AGENTS.md is silently truncated and instructions near the end ignored. GitHub issue #13386 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/13386>)
+- <a id="ref-43"></a>**[43]** openai/codex issue contributors. Docs: project_doc_max_bytes semantics are undocumented — the 22.5KB root AGENTS.md leaves ~9.7KB before nested files are truncated. GitHub issue #37956 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/37956>)
+- <a id="ref-44"></a>**[44]** openai/codex issue contributors. Hooks: PostToolUse payload carries no failure signal, and PostToolUseFailure never fires. GitHub issue #34289 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/34289>)
+- <a id="ref-45"></a>**[45]** openai/codex issue contributors. Docs list --ask-for-approval as global, but codex exec rejects the post-subcommand form. GitHub issue #26602 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/26602>)
+- <a id="ref-46"></a>**[46]** openai/codex issue contributors. Streamable HTTP MCP bearer_token_env_var reported as unset although present in parent shell. GitHub issue #41378 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/41378>)
+- <a id="ref-47"></a>**[47]** openai/codex issue contributors. MCP Streamable HTTP: sessions are opened but never terminated (1.8% DELETE ratio), exhausting remote server worker pools. GitHub issue #41600 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/41600>)
+- <a id="ref-48"></a>**[48]** openai/codex issue contributors. Experimental context management: native notes/history return 404 on Pro + Astra, while new_context can discard task state. GitHub issue #43194 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/43194>)
+- <a id="ref-49"></a>**[49]** openai/codex issue contributors. Token-budget new windows omit notes content, so the first LLM request has no task state. GitHub issue #43335 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/43335>)
+- <a id="ref-50"></a>**[50]** openai/codex issue contributors. Codex Desktop compaction requires unavailable notes tool, loses checkpoint, and repeats token-heavy work. GitHub issue #42449 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/42449>)
+- <a id="ref-51"></a>**[51]** openai/codex issue contributors. Codex tool loop causes context snowballing and multi-million-token input amplification. GitHub issue #44305 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/44305>)
+- <a id="ref-71"></a>**[71]** Alex L. Zhang, Tim Kraska, and Omar Khattab. Recursive Language Models. arXiv:2512.24601 (2025; revised 2026). [source](<https://arxiv.org/abs/2512.24601>)
+<!-- END CITATIONS -->

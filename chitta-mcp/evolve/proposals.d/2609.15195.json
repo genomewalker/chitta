@@ -1,0 +1,39 @@
+{
+  "id": "2609.15195",
+  "title": "HarnessVLN: Unifying Training-Free Embodied Navigation through an Agent Harness",
+  "mechanism": "Add a persistent Spatiotemporal Graph-style validator layer to chitta's recall/tool pipeline: before a tool-proposed action/answer is accepted, cross-check it against structured evidence (triplets/task_state) and geometric/logical feasibility, storing failure annotations for reuse, analogous to HarnessVLN's Harness validating planner proposals against spatial evidence and subgoal consistency",
+  "expected_gain": {
+    "metric": "SMRITI mui_credit (task success proxy)",
+    "delta": 0.03,
+    "confidence": 0.15,
+    "rationale": "chitta already has contradiction/conflict detection (detect_contradictions, conflict_inspector) and outcome-ledger fail-open logging but no pre-action validator that blocks/corrects a proposed tool action against stored evidence before execution, unlike HarnessVLN's harness-gates-planner design"
+  },
+  "cost": {
+    "effort_h": 6,
+    "blast_radius": 3,
+    "scope": "chitta-mcp/server.py tool-call dispatch, field_memory_recall.cpp evidence lookups, new validator module"
+  },
+  "evidence": [
+    {
+      "source": "https://arxiv.org/abs/2609.15195",
+      "claim": "HarnessVLN's Harness validates planner proposals against spatial evidence, geometric feasibility, and subgoal consistency before execution"
+    },
+    {
+      "source": "https://arxiv.org/abs/2609.15195",
+      "claim": "It maintains a persistent Spatiotemporal Graph with failure annotations for verification and recovery"
+    }
+  ],
+  "source": "hypothesis",
+  "already_have": false,
+  "kind": "sota-card",
+  "inventory": {
+    "path": "/projects/caeg/scratch/kbd606/tmp/chitta-truth-inventory.md",
+    "sha256": "6a2b73d936ff564571596f34659e799a58314c568673f3561f831fa6fc8150b1"
+  },
+  "created_at": "2026-09-16T00:42:20.286172+00:00",
+  "memory": {
+    "id": "16097471566379483144",
+    "realm": "project:chitta-evolve",
+    "type": "hypothesis"
+  }
+}

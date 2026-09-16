@@ -291,7 +291,6 @@ resolve_probe
 resonance_stats
 restore_code_intel_confidence
 retract_fact
-route_stats
 routed_recall
 sadhana_checkpoint
 sadhana_list

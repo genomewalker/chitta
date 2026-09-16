@@ -238,7 +238,7 @@ as misses; the diagnostic excludes CLI startup. **hit@3=0.00 < 0.30: the analogy
 lane is not ready for a hook.** No lane tuning or immutable eval edits were made.
 These correlated forward/reverse smoke tasks do not establish broad accuracy.
 
-2026-09-15 — **KEEP `recall_analogy` as explicit directed relation transfer**, per decision memo §2: on a private, freshly copied bbcaed33 family (generation 38047), the independent exact relation-join baseline and proportional RPC both achieve hit@1=14/14, hit@3=14/14, negative abstentions=14/14, unsupported answers=0, missing grounding=0. RPC errors=0; median latency=0.333 ms over 28 calls (baseline 1.627 ms over 14 positive two-graph-RPC joins; these timings have different workloads). All 14 negative argument triples are distinct and target existing subjects with other outgoing edges. Complete answer sets, citations, inputs and hashes: `benchmarks/analogy/baseline.json`, `results.json`, `replica-selection.txt`. Structural relevance tasks and endpoint VSA ranking are retired; indexed exact-subject joins bypass the 10,000-fact bound and reject legacy ID-collision neighbours, with supporting edges and explicit `reason` abstentions. HDC and `query_graph` are unchanged; no graph cleanup or deployment. This is the memo's small screening test, not broad analogy accuracy.
+2026-09-15 — **KEEP `recall_analogy` as explicit directed relation transfer**, per decision memo §2: on a private, freshly copied bbcaed33 family (generation 38047), the independent exact relation-join baseline and proportional RPC both achieve hit@1=14/14, hit@3=14/14, negative abstentions=14/14, unsupported answers=0, missing grounding=0. RPC errors=0; median latency=0.333 ms over 28 calls (baseline 1.627 ms over 14 positive two-graph-RPC joins; these timings have different workloads). All 14 negative argument triples are distinct and target existing subjects with other outgoing edges. Complete answer sets, citations, inputs and hashes: `benchmarks/analogy/baseline.json`, `results.json`, `replica-selection.txt`. Structural relevance tasks and endpoint VSA [10](#ref-10) ranking are retired; indexed exact-subject joins bypass the 10,000-fact bound and reject legacy ID-collision neighbours, with supporting edges and explicit `reason` abstentions. HDC and `query_graph` are unchanged; no graph cleanup or deployment. This is the memo's small screening test, not broad analogy accuracy.
 
 
 ## Explicit relation transfer — 2026-09-15
@@ -407,3 +407,9 @@ An initial overlapping Cargo archive/audit build failed with a missing object;
 subsequent build/test commands were serialized. The first metric invocation
 refused to run without an exported private socket; only the corrected socket-bound
 runs appear in the table. Neither failure is counted as a measurement.
+
+<!-- BEGIN CITATIONS -->
+## References
+
+- <a id="ref-10"></a>**[10]** Pentti Kanerva. Hyperdimensional Computing: An Introduction to Computing in Distributed Representation with High-Dimensional Random Vectors. Cognitive Computation 1, 139–159 (2009). [source](<https://doi.org/10.1007/s12559-009-9009-8>)
+<!-- END CITATIONS -->

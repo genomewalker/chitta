@@ -1,0 +1,39 @@
+{
+  "id": "2609.15800",
+  "title": "Navigating Sparse Evidence: Agentic Visual RAG via Explicit Context Selection and Consolidation",
+  "mechanism": "Add an explicit evidence-ledger step to chitta's multi-hop recall/agent loop: during exploration (multi-turn recall_smart/hybrid_recall calls, long_task sessions), append only query-relevant hits plus their source pointers (memory/triplet IDs) to a running textual ledger instead of relying on raw RRF-merged trajectory dumps; at turn/task termination, reload the pointed-to original memories and re-order them into an explicit evidence block that is handed to answer generation separately from exploration noise.",
+  "expected_gain": {
+    "metric": "LongMemEval longmemeval_s accuracy (%)",
+    "delta": 3.0,
+    "confidence": 0.2,
+    "rationale": "chitta already does single-shot hybrid RRF+rerank retrieval (chitta-mcp/server.py handle_recall_gateway) but has no cross-turn evidence ledger with source-pointer consolidation before final answer synthesis, so sparse/dispersed multi-hop evidence across sessions can still get diluted by exploration noise even after reranking."
+  },
+  "cost": {
+    "effort_h": 6.0,
+    "blast_radius": 4,
+    "scope": "hooks/prompt-core.sh (agent-loop wiring), chitta-mcp/server.py handle_recall_gateway/handle_recall_smart, chitta/src/handlers/field_memory_recall.cpp (source-pointer retrieval), benchmarks/longmemeval harness for eval"
+  },
+  "evidence": [
+    {
+      "source": "https://arxiv.org/abs/2609.15800",
+      "claim": "Paper: SCoRE retains only query-relevant observations and their source pointers in a maintained textual ledger during exploration, preserving earlier evidence while keeping visual context bounded."
+    },
+    {
+      "source": "https://arxiv.org/abs/2609.15800",
+      "claim": "Paper: at termination SCoRE reloads referenced original images and consolidates evidence into a logical sequence before answering, decoupling final reasoning from exploratory trial-and-error."
+    }
+  ],
+  "source": "hypothesis",
+  "already_have": false,
+  "kind": "sota-card",
+  "inventory": {
+    "path": "/projects/caeg/scratch/kbd606/tmp/chitta-truth-inventory.md",
+    "sha256": "6a2b73d936ff564571596f34659e799a58314c568673f3561f831fa6fc8150b1"
+  },
+  "created_at": "2026-09-16T00:42:06.679522+00:00",
+  "memory": {
+    "id": "16097471566379483142",
+    "realm": "project:chitta-evolve",
+    "type": "hypothesis"
+  }
+}

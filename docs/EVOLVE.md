@@ -49,7 +49,7 @@ The cycle resolves the Codex CLI as `CHITTA_CODEX_BIN`, else `~/.local/bin/codex
 else PATH: the bioinfo conda env carries an npm `@openai/codex` 0.151.0 that
 rejects `gpt-6-astra`.
 
-> Status as of 2026-09-15 — **MDL admission compression retired.** The reported
+> Status as of 2026-09-15 — **MDL [11](#ref-11) admission compression retired.** The reported
 > evaluation tally was **0 accepted / 461 judged across both models**: 237
 > historical native judgments plus 224 private-replay candidates (the replay
 > compared same-chunk and corpus-dictionary models on those same 224 candidates).
@@ -78,7 +78,7 @@ rejects `gpt-6-astra`.
 > Δ ≥ 3 over 20 tasks to retain; harness on `feat/learning-experiment`.
 >
 > The outcome ledger remains active: hooks record injections, command outcomes
-> and session ends; the offline joiner assigns per-memory Wilson-bound credit.
+> and session ends; the offline joiner assigns per-memory Wilson [2](#ref-2)-bound credit.
 > Null exit codes are excluded from the known-outcome set; the current joiner
 > can still count `likely_fail` heuristics as failures. Shared-window credit
 > is associational and confounded by task difficulty and co-injected memories;
@@ -374,3 +374,10 @@ write, so a memory outage leaves a recoverable artifact and a nonzero exit.
 The default never pushes. `--open-pr` is the caller's explicit authorization to
 push the accepted branch and create a PR using a body file. A failed/rejected or
 inconclusive cycle cannot publish. No automatic merge or live deployment exists.
+
+<!-- BEGIN CITATIONS -->
+## References
+
+- <a id="ref-2"></a>**[2]** Edwin B. Wilson. Probable Inference, the Law of Succession, and Statistical Inference. Journal of the American Statistical Association 22(158), 209–212 (1927). [source](<https://doi.org/10.1080/01621459.1927.10502953>)
+- <a id="ref-11"></a>**[11]** Jorma Rissanen. Modeling by shortest data description. Automatica 14(5), 465–471 (1978). [source](<https://doi.org/10.1016/0005-1098(78)90005-5>)
+<!-- END CITATIONS -->

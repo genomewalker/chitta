@@ -166,13 +166,106 @@ error on 2026-09-16. The owner reports that another worker has fixed it on a
 separate branch, which will be merged before this branch. The failing gate is
 recorded as an exception, not a pass; no tests were disabled or edited.
 
+## Marketing pass
+
+Status as of 2026-09-16. Baseline: `59338345`, merged from `main` into
+`chore/docs-cleanup` before editing. This pass replaces promotional copy with
+descriptions of storage, indexing, retrieval, maintenance, and agent workflows.
+Recorded measurements, command names, configuration values, and rename notes
+remain. Installation deadlines and predicted user outcomes were removed because
+they were unsupported promises, not measured results.
+
+Pages touched: all 16 top-level HTML pages — `404.html`, `architecture.html`,
+`benchmarks.html`, `changelog.html`, `chitta-field.html`, `cli.html`,
+`constellation.html`, `context.html`, `getting-started.html`, `hooks.html`,
+`index.html`, `philosophy.html`, `recall.html`, `sadhana.html`, `skills.html`,
+and `tools.html`. The changelog edit is limited to its footer; the rendered
+release-entry block is byte-identical. Layout containers, stylesheets, inline
+styles, scripts, navigation, link targets, and IDs are preserved. Removed
+decorative emoji leave their existing layout slots.
+
+Other edited reader entry points: `README.md`, the pointer in `CLAUDE.md`,
+`codex-plugin/AGENTS.md`, `.claude-plugin/plugin.json`, and both descriptions
+in `.claude-plugin/marketplace.json`. The plugin descriptions use the 344-entry
+count recorded in `API.md`. Markdown edits cover `API.md`, `HOOKS.md`,
+`PHILOSOPHY.md`, and this audit. The lean and shipped CLAUDE pointer variants
+were reviewed and already contain technical constraint summaries.
+
+Canonical skill edits: `checkpoint`, `epsilon-yajna`, `init`, `prog-review`,
+`reawaken`, `recap`, `remember`, and `ultrathink`, plus the completion
+message in `shepherd/reference/initialize-and-loop.md`. The corresponding
+Codex files were regenerated with `scripts/sync-skills.sh`.
+
+### Fixed-regex grep list
+
+The command below searches every tracked file in this pass's scope, including
+this audit and the generated skill mirror. Exclusions are preserved history:
+dated decisions, rename history, rendered changelog, the retired extractor and
+consolidation proposals, and the historical rerank result. Nested research posts,
+Vedanta notes, visualization archives/data, runtime sources, and `contracts/`
+are outside this top-level documentation pass. No current entry page is excluded
+except the changelog file, whose non-entry wrapper was separately reviewed.
+
+The fixed alternatives cover the requested terms and additional phrases found
+during review. Bracketing each alternative's first letter prevents the regex
+definition itself from becoming a match in this audit. Technical syntax such as
+shell negation, HTML comments, CSS priority, and SSL negation is preserved;
+rendered prose was separately checked for decorative emoji and exclamations.
+
+Run from the repository root:
+
+```bash
+pattern='\b([z]ero[[:space:]-]+configuration|[b]lazing|[s]tate[[:space:]-]+of[[:space:]-]+the[[:space:]-]+art|[r]evolutionary|[s]eamless|[p]owerful|[e]ffortless|[k]ey[[:space:]]+innovation|[y]ou['\''’]ll[[:space:]]+love|[g]ets[[:space:]]+smarter|[h]igh-performance|[t]oken-savvy|[s]ignal[[:space:]]+gold|[p]ure[[:space:]]+signal|[h]ighest-ROI|[r]icher[[:space:]]+partnership|[o]ne[[:space:]]+soul|[f]irst[[:space:]]+30[[:space:]]+days|[i]nstant[[:space:]]+recall|[s]tarts?[[:space:]]+instantly|[n]othing[[:space:]]+is[[:space:]]+lost|[s]oul[[:space:]]+awakens|[b]uilt[[:space:]]+with[[:space:]]+conviction|[g]rounded[[:space:]]+in[[:space:]]+philosophy|[g]row[[:space:]]+wiser|[n]ot[[:space:]]+stateless|[n]ot[[:space:]]+shallow|[p]rofound[[:space:]]+insight|[v]alidated[[:space:]]+by[[:space:]]+engineering|[i]nverts[[:space:]]+this[[:space:]]+paradigm|[j]ust[[:space:]]+works|[f]orever|[b]reakthrough[[:space:]]+moment|[t]he[[:space:]]+AI[[:space:]]+harness[[:space:]]+that[[:space:]]+learns)\b'
+git grep -n -i -E "$pattern" -- \
+  README.md AGENTS.md ':(glob)CLAUDE*.md' \
+  ':(glob).claude-plugin/*.md' ':(glob).claude-plugin/*.json' \
+  codex-plugin/AGENTS.md ':(glob)skills/**/*.md' \
+  ':(glob)codex-plugin/skills/**/*.md' \
+  ':(glob)docs/*.md' ':(glob)docs/*.html' \
+  ':!docs/DECISION-*' ':!docs/RENAME.md' ':!docs/changelog.html' \
+  ':!docs/STRUCTURED_EXTRACTOR_DESIGN.md' \
+  ':!docs/consolidation-redesign*.md' ':!docs/recall-rerank-eval-results.md'
+result=$?
+printf 'grep exit: %s (1 means zero matches)\n' "$result"
+test "$result" -eq 1
+```
+
+Exact result list:
+
+```text
+(no matching file:line entries)
+grep exit: 1 (1 means zero matches)
+```
+
+### Validation
+
+- `bash scripts/check-docs-links.sh`: 36 pages, 643 local links, **0 errors**.
+  The same 35 historical editor-style citations remain explicitly reported.
+- Fixed-regex grep: **0 matches** across the declared scope.
+- `bash scripts/check-skills-sync.sh`: **skills in sync** after regeneration.
+- Hooks: all **21 shell scripts passed**. The first run of
+  `test_session_start_cards.sh` encountered an address-in-use error because the
+  outer runner reused a scratch socket path across scripts. The unchanged test
+  passed all six cases with its own fresh scratch directory and socket.
+- MCP: **149 tests passed**. The earlier audit's SDK failure is absent after the
+  merge from main; no exception is needed for this pass.
+- SMRITI: **46 tests passed**.
+- Hook and unit-test child processes used temporary home, mind, queue, runtime,
+  and socket paths. The CLI discovery fixture used a client compiled from this
+  worktree into `/tmp`; no binaries were installed and no live daemon was used.
+- `git diff --check`: passed. No Python or shell source files were edited;
+  Ruff and changed-shell syntax checks are not applicable.
+- Hooks, existing tests, runtime sources, benchmarks, contracts, dated decision
+  memos, rename history, and `CHANGELOG.md` have no diff from the merged baseline.
+  `Plan.md` and `Documentation.md` remain untracked.
+
 ## Site UX pass
 
 Status as of 2026-09-16 · Unreleased + v5.72.0.
 
 All 79 HTML pages now share the same ordered static menu, home link, skip link, focusable main landmark, current-page marker, and repository/MIT/version/status footer. Each page has the `chitta — <page>` title format, language, viewport, description and favicon. The current-page marker is on the footer permalink for documents outside the menu (dream articles and 404).
 
-The existing design tokens and dark content palette remain. Navigation wraps without JavaScript; shared chrome follows light OS preference. Tables are named keyboard-scrollable regions; code scrolls; focus and reduced-motion rules are shared. Static style attributes moved to deduplicated CSS classes; visualization scripts retain runtime styles. Content is readable if reveal scripts do not run. Root-relative URLs support nested 404 requests.
+The existing design tokens and dark content palette remain. Navigation wraps without JavaScript; shared chrome follows light OS preference. Tables are named keyboard-scrollable regions; code scrolls; focus and reduced-motion rules are shared. Static style attributes moved to deduplicated CSS classes; visualization scripts retain runtime styles. Content is readable if reveal scripts do not run. Native fragment navigation now preserves URL history and skip-link focus; old scroll-only interceptors were removed. Root-relative URLs support nested 404 requests.
 
 ### Changes per page
 
@@ -185,7 +278,7 @@ Every row includes the common changes above. Dream article prose, dates and cita
 | [benchmarks.html](benchmarks.html) | Promoted every TOC category label to a heading; wrapped results tables. |
 | [brain-viz/index.html](brain-viz/index.html) | Added h1, description and favicon; added shared chrome around the existing architecture visualization. |
 | [changelog.html](changelog.html) | Release labels are h2, change categories h3; normalized status separator; preserved release history. |
-| [chitta-field.html](chitta-field.html) | Corrected card heading levels; wrapped tables; retained the existing References text and links. |
+| [chitta-field.html](chitta-field.html) | Corrected card heading levels; wrapped tables; retained the incoming References block byte-for-byte. |
 | [cli.html](cli.html) | Promoted TOC category labels to headings; extracted static styles; wrapped tables. |
 | [constellation.html](constellation.html) | Kept graph modes and data; extracted static styles; placed header and visualization in main. |
 | [context.html](context.html) | Included page header in main; extracted static styles; wrapped tables. |
@@ -350,8 +443,12 @@ Generated with `python3 scripts/check-site.py`. Chrome checks exact menu/footer 
 
 ### Verification and limits
 
-- `bash scripts/check-docs-links.sh`: recursive HTML plus existing Markdown checks; zero local link errors. Historical decision-memo path:line exemptions remain reported.
+- `bash scripts/check-docs-links.sh`: recursive HTML plus existing Markdown checks; 102 documents, 3,098 local links, zero errors. Historical decision-memo path:line exemptions remain reported.
 - Gate mutation tests: valid fixture plus 19 broken-page variants, URL resolution and script parsing checks pass. Ruff and shell syntax checks pass.
-- Repository-required hook suites pass after rerunning session cards in fresh scratch state (the first shared scratch socket was already bound). CLI discovery is skipped because this worktree has no built CLI. MCP: 149 tests pass on retry; the first run hit a process-start timing race before its PID fixture existed. SMRITI passes. All ran against temporary state and stubs, without contacting the live daemon.
+- Repository-required hook suites pass after rerunning session cards in fresh scratch state (the first shared scratch socket was already bound). CLI discovery is skipped because this worktree has no built CLI. MCP: 149 tests pass on retry; the first run hit a process-start timing race before its PID fixture existed. SMRITI: 46 tests pass. All ran against temporary state and stubs, without contacting the live daemon.
 - No browser is available: layout at actual viewport sizes, zoom, contrast, focus traversal, assistive technology, WebGL/canvas rendering, panel interaction and OS-theme appearance were not visually verified. Remote links, font/CDN availability and live visualization backends were not probed.
 - Additional JavaScript syntax verification could not start: the installed Node binary fails loading `sqlite3session_attach`. No JavaScript execution or browser interaction is claimed.
+
+### Final main integration
+
+Merged `main` again after the UX implementation. The incoming marketing copy, citation anchors, both earlier audit sections, bibliography CSS, and documentation CI job are retained. All 12 generated HTML References blocks match the incoming `main` byte-for-byte. The citation usage index is refreshed because layout changes moved source line numbers; canonical source records and bibliography content are unchanged. The structural gate still reports 79/79 pages passing after conflict resolution.

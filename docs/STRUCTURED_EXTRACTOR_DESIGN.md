@@ -43,7 +43,7 @@ Output schema emitted by the LLM (JSON lines, one per learning). Reuses SSL v0.4
 
 Kinds map 1:1 to existing queue `observe` categories (`tools_static.py:464`) — no daemon changes needed. Six kinds (not seven): `failure` folds into `lesson` with negative valence (`A:-*.*`), reducing taxonomy drift; `correction` stays separate because it carries 0.95 default confidence (`POLICY.md:111`) and triggers supersession (`POLICY.md:71`). `scope` is new: `partnership` routes preferences into `[partnership:pref]` (`stop-hook.sh:65`); `project`/`global` routes to the detected or `brahman` realm (`stop-hook.sh:129`).
 
-Evidence `turn_indices` unlocks later RLM-style grounding (current hook has no provenance beyond "regex match on [X]" — `stop-hook.sh:182`). Quotes are bounded to 240 chars to prevent prompt-echo inflation.
+Evidence `turn_indices` unlocks later RLM [71](#ref-71)-style grounding (current hook has no provenance beyond "regex match on [X]" — `stop-hook.sh:182`). Quotes are bounded to 240 chars to prevent prompt-echo inflation.
 
 ## 3. LLM call
 
@@ -117,3 +117,9 @@ OUTPUT: JSONL, max 8 objects.
 - **Location (1):** Hybrid — hook enqueues, daemon worker runs `distill.sh`-style extractor.
 - **Schema kinds (2):** `lesson, gotcha, decision, preference, correction, pattern` (six; failure folded into lesson-with-negative-valence).
 - **MVP scope:** one extractor script + one `distill_turn` queue tool + one `queue_write` line in `stop-hook.sh`; legacy regex stays behind env flag for v5.x.
+
+<!-- BEGIN CITATIONS -->
+## References
+
+- <a id="ref-71"></a>**[71]** Alex L. Zhang, Tim Kraska, and Omar Khattab. Recursive Language Models. arXiv:2512.24601 (2025; revised 2026). [source](<https://arxiv.org/abs/2512.24601>)
+<!-- END CITATIONS -->

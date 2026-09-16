@@ -1,6 +1,6 @@
 ---
 name: checkpoint
-description: Capture moment of clarity before moving forward
+description: Save a checkpoint of task status, decisions, active files, and next steps
 execution: direct
 ---
 
@@ -9,7 +9,7 @@ execution: direct
 ```ssl
 [checkpoint] moment of clarity, not backup
 
-when: before /clear | risky change | breakthrough | confusion | session end
+when: before /clear | risky change | discovery | confusion | session end
 
 capture:
   goal: intention, not task

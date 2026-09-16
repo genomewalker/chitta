@@ -26,6 +26,7 @@ Gates (no browser, network, service or third-party Python packages required):
 ```sh
 python3 scripts/check-site.py
 bash scripts/check-docs-links.sh
+bash scripts/check-citations.sh
 python3 -m unittest discover -s scripts/tests -p test_check_site.py
 ```
 
@@ -38,3 +39,7 @@ The per-page changes and exact checker table are recorded in
 `docs/DOCS-AUDIT-2026-09-16.md`, under “Site UX pass”. CSS contracts and parsed
 HTML do not prove visual layout, contrast, keyboard behavior in browsers,
 WebGL rendering, or live backend connectivity.
+
+After changing HTML line counts, run `bash scripts/check-citations.sh --write`
+to refresh citation usage locations, then rerun the read-only citations gate.
+The generated References blocks must remain intact inside the main landmark.

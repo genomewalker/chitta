@@ -21,6 +21,10 @@
     {
       "source": "https://arxiv.org/abs/2609.08558",
       "claim": "reports up to 27.29%/21.15% F1/BLEU-1 owner-vs-non-owner separation gap on CALFW under face-based personalization (abstract)"
+    },
+    {
+      "source": "https://arxiv.org/abs/1708.08197",
+      "claim": "Dataset provenance: Zheng, Deng and Hu introduce Cross-Age LFW (CALFW), with 3,000 positive face pairs selected to include age gaps; the biometric-memory performance numbers are from Qian et al., not this dataset paper."
     }
   ],
   "source": "hypothesis",

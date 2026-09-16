@@ -1,6 +1,6 @@
 ---
 name: recap
-description: "Token-savvy session continuation. Rebuilds working context from transcript + soul memories in ~1500 tokens instead of replaying full history. Use when starting a new session to continue previous work."
+description: "Rebuild working context from transcripts and chitta memories in approximately 1500 tokens. Use when starting a new session to continue previous work."
 ---
 
 # Recap: multimodel-safe session continuation
