@@ -24,6 +24,8 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 - OCaml code navigation: Functions, types, modules, classes/methods, calls, open/include imports and inheritance; implementation and interface grammars.
 
+- Elixir code navigation: Modules, protocols, functions/macros, calls and import/alias/require/use edges; declaration heads are excluded from calls.
+
 ## [Unreleased]
 
 - Add Make target/macro navigation, prerequisite links, calls and includes.

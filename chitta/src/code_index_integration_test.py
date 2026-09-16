@@ -151,6 +151,8 @@ def main():
                     ".hcl",
                     ".ml",
                     ".mli",
+                    ".ex",
+                    ".exs",
                     ".php",
                     ".phtml",
                     ".sql",

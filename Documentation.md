@@ -453,3 +453,13 @@ fixture has 6 definitions and 1 import edge. Fresh parsing averages 471.03
 and 495.24 microseconds/KiB respectively. Daemon size is 101,757,816 bytes
 (+8,881,296 for both parsers). Offline extraction/query fixtures pass.
 Contracts and recall scoring are unchanged.
+
+### Elixir
+
+Elixir navigation extracts modules/protocols, functions/macros, ordinary and
+qualified calls, and import/alias/require/use edges. Function heads are not
+recorded as calls; their bodies and captures remain navigable. The fixture has
+3 definitions and 5 query edges (2 calls, 2 imports, 1 reference). Fresh parsing
+averages 605.91 microseconds/KiB; daemon size is 103,176,808 bytes (+1,418,992).
+Offline extraction/query fixtures and the quick gate pass. Contracts and
+recall scoring are unchanged.

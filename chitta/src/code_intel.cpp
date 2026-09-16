@@ -35,6 +35,8 @@ extern "C" const TSLanguage* tree_sitter_hcl();
 extern "C" const TSLanguage* tree_sitter_ocaml();
 extern "C" const TSLanguage* tree_sitter_ocaml_interface();
 
+extern "C" const TSLanguage* tree_sitter_elixir();
+
 namespace chitta {
 const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
     if (language == "bash") return tree_sitter_bash();
@@ -55,11 +57,12 @@ const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
     if (language == "hcl") return tree_sitter_hcl();
     if (language == "ocaml") return tree_sitter_ocaml();
     if (language == "ocaml_interface") return tree_sitter_ocaml_interface();
+    if (language == "elixir") return tree_sitter_elixir();
 #endif
     return nullptr;
 }
 void CodeIntel::initialize_extended_parsers() {
-    for (const auto* language : {"bash", "r", "julia", "fortran", "nextflow", "snakemake", "perl", "make", "cmake", "sql", "kotlin", "scala", "zig", "hcl", "ocaml", "ocaml_interface", "php"}) {
+    for (const auto* language : {"bash", "r", "julia", "fortran", "nextflow", "snakemake", "perl", "make", "cmake", "sql", "kotlin", "scala", "zig", "hcl", "ocaml", "ocaml_interface", "elixir", "php"}) {
         if (!extended_grammar(language)) continue; // Optional grammar group disabled.
         auto* parser = ts_parser_new();
         if (!ts_parser_set_language(parser, extended_grammar(language))) {
@@ -79,6 +82,7 @@ std::string CodeIntel::detect_extended_language(const std::string& path) {
     if ((ext == ".tf" || ext == ".tfvars" || ext == ".hcl") && extended_grammar("hcl")) return "hcl";
     if (ext == ".ml" && extended_grammar("ocaml")) return "ocaml";
     if (ext == ".mli" && extended_grammar("ocaml_interface")) return "ocaml_interface";
+    if ((ext == ".ex" || ext == ".exs") && extended_grammar("elixir")) return "elixir";
     if ((ext == ".php" || ext == ".phtml") && extended_grammar("php")) return "php";
     if (ext == ".sql" || ext == ".ddl") return "sql";
     if (ext == ".cmake" || filename == "CMakeLists.txt") return "cmake";
@@ -722,6 +726,36 @@ void CodeIntel::extract_extended(TSNode root, const std::string& source,
                 auto base = text(field(node, "class"));
                 if (!base.empty()) result.type_relationships.push_back({parent, base, "inherits", path, uint32_t(node_line(node))});
             }
+        }
+        if (language == "elixir" && type == "call") {
+            auto target = field(node, "target");
+            auto name = text(target);
+            auto arguments = ast_find(node, "arguments");
+            auto first = ast_named_child(arguments, 0);
+            auto body = ast_find(node, "do_block");
+            if (name == "defmodule" || name == "defprotocol") {
+                auto declared = text(first);
+                define(node, declared, name == "defprotocol" ? "interface" : "module", parent, body);
+                if (!ts_node_is_null(body)) visit(body, declared);
+                return;
+            }
+            if (name == "def" || name == "defp" || name == "defmacro" || name == "defmacrop") {
+                auto head = first;
+                if (std::string(ast_type(head)) == "binary_operator") head = field(head, "left");
+                auto declared = text(std::string(ast_type(head)) == "call" ? field(head, "target") : head);
+                auto inline_body = ast_find(arguments, "keywords");
+                define(node, declared, name.starts_with("defmacro") ? "macro" : "function", parent, ts_node_is_null(body) ? inline_body : body);
+                if (!ts_node_is_null(body)) visit(body, declared);
+                if (!ts_node_is_null(inline_body)) visit(inline_body, declared);
+                return; // Function heads are declarations, not calls.
+            }
+            if (name == "import" || name == "alias" || name == "require" || name == "use")
+                result.imports.push_back({path, text(first), "", {}, uint32_t(node_line(node))});
+            else if (std::string(ast_type(target)) == "dot") {
+                auto left = field(target, "left");
+                auto scope = std::string(ast_type(left)) == "alias" ? text(left) : "";
+                call(node, text(field(target, "right")), parent, scope, scope.empty() ? text(left) : "");
+            } else call(node, name, parent);
         }
         for (uint32_t i = 0; i < ast_named_count(node); ++i) visit(ast_named_child(node, i), parent);
     };
