@@ -7,6 +7,7 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_DIR="$(dirname "$SCRIPT_DIR")"
+source "${SCRIPT_DIR}/lib.sh"
 
 # Binaries are installed to ~/.claude/bin/ by smart-install.sh
 CHITTA_CLI="${HOME}/.claude/bin/chittad"
@@ -51,23 +52,11 @@ run_with_timeout() {
     fi
 }
 
-# djb2 hash - must match C++ implementation in socket_server.hpp
-djb2_hash() {
-    local str="$1"
-    local hash=5381
-    local i c
-    for ((i=0; i<${#str}; i++)); do
-        c=$(printf '%d' "'${str:$i:1}")
-        hash=$(( ((hash << 5) + hash) + c ))
-        hash=$((hash & 0xFFFFFFFF))  # Keep 32-bit
-    done
-    echo "$hash"
-}
-
 MIND_HASH=$(djb2_hash "$MIND_PATH")
 
-# Use same socket directory as C++ daemon (XDG_RUNTIME_DIR > ~/.cache > /tmp)
-get_socket_dir() {
+# Keep the manager's existing directory creation and fallback policy.
+# lib.sh get_socket_dir also probes /run/user; lifecycle management does not.
+subconscious_socket_dir() {
     if [[ -n "$XDG_RUNTIME_DIR" && -w "$XDG_RUNTIME_DIR" ]]; then
         local dir="$XDG_RUNTIME_DIR/chitta"
         mkdir -p "$dir" 2>/dev/null
@@ -81,7 +70,7 @@ get_socket_dir() {
     fi
 }
 
-SOCKET_DIR="$(get_socket_dir)"
+SOCKET_DIR="$(subconscious_socket_dir)"
 LOCK_FILE="${SOCKET_DIR}/chitta-${MIND_HASH}.lock"
 SOCKET_PATH="${SOCKET_DIR}/chitta-${MIND_HASH}.sock"
 PID_FILE="${SOCKET_DIR}/chitta-${MIND_HASH}.pid"  # Daemon writes PID here

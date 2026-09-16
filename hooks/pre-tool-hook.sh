@@ -27,10 +27,6 @@ exec </dev/null  # stdin consumed; children must not inherit the still-open hook
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib.sh" 2>/dev/null || true
 
-json_escape() {
-    echo -n "$1" | jq -Rs '.' | sed 's/^"//;s/"$//'
-}
-
 _strict_mode_enabled() {
     case "${CHITTA_STRICT_MODE:-${CC_SOUL_STRICT_MODE:-}}" in
         1) return 0 ;;

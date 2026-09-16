@@ -1092,3 +1092,76 @@ Added median is the difference of arm medians; added p95 is the p95 of paired
 on-minus-off samples. Both targets (<25 ms median, <40 ms p95) pass; the existing
 relative regression bounds remain unchanged. Evidence: `/tmp/saddle-before.log`
 and `/tmp/saddle-sixth.log` on the measurement node.
+
+## Hook pruning audit (2026-09-16)
+
+The nine scripts below had no callers in `hooks.json`, the install manifest,
+other hooks, `scripts/`, `codex-plugin/`, `chitta-mcp/`, or this reference.
+The audit also checked repository-wide references and each script's git history.
+Historical changelog mentions describe old releases, not current hook wiring.
+No event registration or install-manifest entry changes in this cleanup.
+
+| Script | Verdict | Evidence / purpose |
+|---|---|---|
+| `bridge-holes.sh` | Moved to `scripts/` | Added by `013e909b` as G9 graph bridging; standalone `--dry-run`, `--realm`, `--max` interface, no lifecycle caller. |
+| `debug-recall.sh` | Moved to `scripts/` | Added by `9a4efca6` as the G0 recall diagnostic; compares fetched candidates and final recall results for an explicit query. |
+| `enrich-code.sh` | Delete | Old temp-file symbol enrichment adapter, last functional change `c820af65`; header claims a daemon caller, but no source reference remains. |
+| `evolve-topology.sh` | Moved to `scripts/` | Added by `013e909b`, maintained in `33aacc65`; explicit topology mutation with ledger gate and `--dry-run`, not an event hook. |
+| `ledger-autosave.sh` | Delete | Old January/February ledger wrapper sends an obsolete combined `ledger` action; current lifecycle hooks use `ledger_save`/`ledger_load`. |
+| `post-edit-hook.sh` | Delete | Historical May CEC/reindex hook; no current event or install entry. Current file-change reindexing is handled by `file-changed-hook.sh`; no new Edit event is enabled. |
+| `reparse-transcripts.sh` | Delete | Old whole-history backfill, last maintenance `c9defdbe`; truncates the queue and duplicates current transcript registration/parsing. It also exits at its first zero-valued post-increment under `set -e`. |
+| `settle-predictions.sh` | Moved to `scripts/` | Added by `cd8a7d1e` alongside distillation predictions; explicit expired-prediction sweep with realm and dry-run options. |
+| `yajna-batch.sh` | Delete | Old batch wrapper for absent `yajna_list`, with UUID-only result parsing and daemon autostart; last changes concern executable mode and historical startup safety. |
+
+The four retained operator tools now live at `scripts/<name>.sh`, with their
+executable modes and explicit operator interfaces preserved. They are not
+installed or automatically invoked; none sources `hooks/lib.sh` or appears in
+the install manifest.
+
+`lib.sh` now owns the identical JSON escaping, transcript-path decoding,
+lifecycle realm lookup, and DJB2 hashing implementations. The overwritten first
+`daemon_available` definition and the unreachable Python failure notification
+inside PostToolUse's success-only branch were removed. Queue serialization was
+already centralized; its native enqueue and documented jq bootstrap fallback
+remain intact. Different prompt/lifecycle realm policies and the manager's
+socket-directory creation policy remain distinct.
+
+Inline legacy aliases are retained where removal would change behavior: the
+alias shim intentionally leaves both names untouched when both are supplied,
+and an explicitly empty `CHITTA_*` still falls through to a nonempty `CC_SOUL_*`
+at those read sites. Entrypoint checks before sourcing the shim also need both
+names. Remaining Python calls implement reachable RLM, classification, hint,
+provenance, transcript snapshot, Stop saddle, lifecycle compatibility, or
+operator/background paths; they are not dead hot-path fallbacks.
+
+Shell inventory (`wc -l hooks/*.sh`, excluding tests): **46 scripts / 9,696 lines
+before**, **37 scripts / 8,585 lines after** (530 lines removed, 581 lines moved
+to four operator tools in `scripts/`). The supplied
+9,744-line estimate differs from the checked-out `31e3a26a` baseline. One focused
+helper regression test was added; the existing 19 hook tests are unchanged.
+
+Validation: all 20 hook tests passed after helper extraction. After deletions,
+19 passed in the full run; `test_session_start_concurrency.sh` failed its
+immediate post-kill process-state assertion, then passed unchanged in isolation
+(300 ms calls completed in 1.077 s; 350 ms deadline assertions passed). All
+46 SMRITI tests, both full CI Ruff commands, touched-shell `bash -n`, and
+` shellcheck -x --severity=warning` passed. MCP ran 136 tests with only the known
+`BoundedSessionManager._session_owners` error. Tests used the prescribed bioinfo
+CPython and isolated hook state. No native code changed or native build ran.
+After the operator relocation, all 20 hook tests and all 46 SMRITI tests passed;
+shell syntax and warning-level ShellCheck passed for all four moved tools.
+MCP again ran 136 tests with only the same pre-existing `_session_owners` error.
+
+**Contract check: `contracts unchanged`.** The original check failed because
+122 stale CLI-help snapshots remained in the baseline. Merging the orchestrator's
+`a28ead65` removed those snapshots; the check now passes with
+`CHITTA_PY=/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/bin/python3`.
+The install-manifest snapshot was regenerated and remains byte-identical because
+none of the relocated tools was listed. Hook registrations are unchanged.
+
+## Operator tools moved from hooks/ (2026-09-16)
+
+- `scripts/bridge-holes.sh`: Bridge sparsely connected memory-graph entities with suggested insights; supports `--dry-run`, `--realm`, and `--max`.
+- `scripts/debug-recall.sh`: Compare over-fetched candidates with final recall results for a query; supports `--limit` and `--fetch`.
+- `scripts/evolve-topology.sh`: Evolve conductor visibility matrices using archive fitness, ledger and stability gates; supports `--dry-run` and `--realm`.
+- `scripts/settle-predictions.sh`: Confirm expired open predictions without correction references; supports `--dry-run` and `--realm`.

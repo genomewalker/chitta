@@ -148,26 +148,6 @@ fi
 # Derive project directory from transcript path
 # Transcript path: ~/.claude/projects/-maps-projects-X-Y-Z/session.jsonl
 # Encoded path uses dashes, but dir names can have hyphens too (e.g., cc-soul)
-decode_project_path() {
-    local encoded="${1:1}"  # Skip leading dash
-    local path_so_far=""
-    IFS='-' read -ra PARTS <<< "$encoded"
-    for part in "${PARTS[@]}"; do
-        local test_path="$path_so_far/$part"
-        if [[ -d "$test_path" ]]; then
-            path_so_far="$test_path"
-        else
-            local alt_path="$path_so_far-$part"
-            if [[ -d "$alt_path" ]]; then
-                path_so_far="$alt_path"
-            else
-                path_so_far="$test_path"
-            fi
-        fi
-    done
-    echo "$path_so_far"
-}
-
 PROJECT_DIR=$(jq -r '.cwd // .project_dir // empty' <<< "$INPUT")
 if [[ -z "$PROJECT_DIR" && -n "$TRANSCRIPT_PATH" ]]; then
     PROJECT_ENCODED=$(dirname "$TRANSCRIPT_PATH" | xargs basename)
@@ -175,11 +155,7 @@ if [[ -z "$PROJECT_DIR" && -n "$TRANSCRIPT_PATH" ]]; then
 fi
 
 # Detect realm from project directory
-if [[ -n "$PROJECT_DIR" && -d "$PROJECT_DIR" ]]; then
-    REALM=$(cd "$PROJECT_DIR" && timeout "$MAX_WAIT" "$CHITTA_BIN" realm_detect 2>/dev/null || echo "brahman")
-else
-    REALM=$(timeout "$MAX_WAIT" "$CHITTA_BIN" realm_detect 2>/dev/null || echo "brahman")
-fi
+REALM=$(detect_project_realm "$PROJECT_DIR")
 
 # Native registration owns the session binding. Read an existing thread on
 # resume and claim its lease through ledger_op, preserving the adapter contract.
