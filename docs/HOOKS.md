@@ -1461,6 +1461,7 @@ connections. Runtime dispatch and dynamic import paths are not evaluated.
 | Nextflow | `.nf` | Processes, named/entry workflows and functions; includes, calls and channel routing through process outputs or pipes. Shell script bodies remain data. |
 | Snakemake | `.smk`, `Snakefile`, `snakefile` | Rules, checkpoints, modules, named input/output/params sections and Python definitions; calls, includes/module files and explicit `rules.NAME.output` dependencies. |
 | Perl | `.pl`, `.pm`, `.t`, `.perl` | Packages and subroutines with package scope; calls, `use`/`require`, and literal `use parent`/`use base` inheritance. |
+| SQL | `.sql`, `.ddl` | Tables, views, functions/procedures, calls and object references, including parsed SQL function bodies |
 | CMake | `.cmake`, `CMakeLists.txt` | Functions, macros, targets, command calls, includes/subdirectories, target dependencies |
 | Make | `.mk`, `.mak`, `Makefile`, `makefile`, `GNUmakefile`, `Makefile.*` | Literal targets, `define` macros, prerequisite links, built-in/macro calls and includes. Special targets such as `.PHONY` remain annotations. |
 

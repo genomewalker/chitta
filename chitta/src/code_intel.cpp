@@ -21,6 +21,7 @@ extern "C" const TSLanguage* tree_sitter_snakemake();
 extern "C" const TSLanguage* tree_sitter_perl();
 extern "C" const TSLanguage* tree_sitter_make();
 extern "C" const TSLanguage* tree_sitter_cmake();
+extern "C" const TSLanguage* tree_sitter_sql();
 
 namespace chitta {
 const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
@@ -33,10 +34,11 @@ const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
     if (language == "perl") return tree_sitter_perl();
     if (language == "make") return tree_sitter_make();
     if (language == "cmake") return tree_sitter_cmake();
+    if (language == "sql") return tree_sitter_sql();
     return nullptr;
 }
 void CodeIntel::initialize_extended_parsers() {
-    for (const auto* language : {"bash", "r", "julia", "fortran", "nextflow", "snakemake", "perl", "make", "cmake"}) {
+    for (const auto* language : {"bash", "r", "julia", "fortran", "nextflow", "snakemake", "perl", "make", "cmake", "sql"}) {
         auto* parser = ts_parser_new();
         if (!ts_parser_set_language(parser, extended_grammar(language))) {
             ts_parser_delete(parser);
@@ -49,6 +51,7 @@ std::string CodeIntel::detect_extended_language(const std::string& path) {
     auto ext = std::filesystem::path(path).extension().string();
     if (ext == ".sh" || ext == ".bash") return "bash";
     auto filename = std::filesystem::path(path).filename().string();
+    if (ext == ".sql" || ext == ".ddl") return "sql";
     if (ext == ".cmake" || filename == "CMakeLists.txt") return "cmake";
     if (ext == ".mk" || ext == ".mak" || filename == "Makefile" || filename == "makefile" || filename == "GNUmakefile" || filename.rfind("Makefile.", 0) == 0) return "make";
     if (ext == ".smk" || filename == "Snakefile" || filename == "snakefile") return "snakemake";
@@ -501,6 +504,28 @@ void CodeIntel::extract_extended(TSNode root, const std::string& source,
                                 result.callsites.back().kind = CallKind::Channel;
                             }
                 }
+            }
+        }
+        if (language == "sql") {
+            auto object_name = [&](TSNode object) {
+                auto name = text(field(object, "name"));
+                if (name.size() > 1 && name.front() == '\"' && name.back() == '\"') return name.substr(1, name.size() - 2);
+                for (auto& c : name) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                return name;
+            };
+            if (type == "create_table" || type == "create_view" || type == "create_function" || type == "create_procedure") {
+                auto name = object_name(ast_find(node, "object_reference"));
+                auto kind = type.substr(7);
+                define(node, name, kind, parent);
+                parent = name;
+            }
+            if (type == "invocation") call(node, object_name(ast_find(node, "object_reference")), parent);
+            if (type == "object_reference") {
+                auto name = object_name(node);
+                auto owner = ts_node_parent(node);
+                auto owner_type = std::string(ast_type(owner));
+                bool declaration = owner_type.starts_with("create_") && ts_node_eq(ast_find(owner, "object_reference"), node);
+                if (!declaration && !name.empty()) result.references.push_back({path, name, uint32_t(node_line(node))});
             }
         }
         for (uint32_t i = 0; i < ast_named_count(node); ++i) visit(ast_named_child(node, i), parent);

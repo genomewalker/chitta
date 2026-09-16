@@ -10,6 +10,8 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 - CMake code navigation extracts functions, macros, targets and dependencies; source collection avoids traversing ignored build caches.
 
+- SQL code navigation exposes tables, views, functions and object references.
+
 ## [Unreleased]
 
 - Add Make target/macro navigation, prerequisite links, calls and includes.

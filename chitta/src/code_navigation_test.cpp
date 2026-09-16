@@ -151,7 +151,7 @@ int main() {
         graph.open((root / (expected["language"].get<std::string>() + ".json")).string());
         graph.update(source.parent_path().string(), "grammar", sources, dirty, intel.extract_files(dirty), true);
         auto answer = graph.query({{"path", source.string()}, {"limit", 40}});
-        for (const auto& [key, kind] : std::vector<std::pair<std::string, std::string>>{{"calls", "calls"}, {"imports", "imports"}, {"inherits", "inherits"}})
+        for (const auto& [key, kind] : std::vector<std::pair<std::string, std::string>>{{"calls", "calls"}, {"imports", "imports"}, {"inherits", "inherits"}, {"references", "references"}})
             for (const auto& surface : expected.value(key, nlohmann::json::array())) {
                 bool found = false;
                 for (const auto& edge : answer["edges"]) found |= edge["kind"] == kind && edge["surface"] == surface;

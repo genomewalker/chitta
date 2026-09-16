@@ -1,0 +1,20 @@
+{
+  "file": "navigation.sql",
+  "language": "sql",
+  "symbols": {
+    "reads": "table",
+    "counts": "table",
+    "read_totals": "view",
+    "read_count": "function"
+  },
+  "calls": [
+    "count"
+  ],
+  "references": [
+    "reads",
+    "counts"
+  ],
+  "signatures": {
+    "read_count": "CREATE FUNCTION read_count()"
+  }
+}

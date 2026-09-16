@@ -371,3 +371,13 @@ pass. Git collection now excludes untracked ignores in its initial listing,
 then checks only tracked ignores, avoiding a redundant walk of build caches.
 Both tracked and untracked `.gitignore`/`.chittaignore` cases are verified.
 Contracts and recall scoring are unchanged.
+
+### SQL
+
+SQL navigation extracts tables, views, functions/procedures, calls and object
+references. The generated grammar parses SQL function bodies as statements,
+so their table references remain AST-backed. The fixture has 4 definitions,
+1 call and 32 reference records; extraction and query assertions verify both
+table references. Fresh parsing averages 323.00 microseconds/KiB.
+Daemon size is 81,139,352 bytes (+11,082,760). Offline builds and all language
+fixtures pass; contracts and recall scoring are unchanged.

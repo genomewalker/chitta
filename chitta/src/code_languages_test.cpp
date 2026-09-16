@@ -59,6 +59,8 @@ int main(int argc, char** argv) {
         }
         for (const auto& name : expected.value("inherits", nlohmann::json::array()))
             assert(std::any_of(result.type_relationships.begin(), result.type_relationships.end(), [&](const auto& i) { return i.base_name == name.get<std::string>(); }));
+        for (const auto& name : expected.value("references", nlohmann::json::array()))
+            assert(std::any_of(result.references.begin(), result.references.end(), [&](const auto& r) { return r.name == name.get<std::string>(); }));
         std::ifstream source_file(path);
         std::string source(std::istreambuf_iterator<char>(source_file), {});
         auto* parser = ts_parser_new();
