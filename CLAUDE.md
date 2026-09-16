@@ -70,6 +70,14 @@ bash scripts/dev-install.sh
   `TimeoutStopSec` is 300 s so a clean shutdown finishes its snapshot. If it
   still loops, `mv` the lock file aside; never delete a lock whose holder is
   another host.
+- **The lock's recorded holder is another login node**: the chittad user unit
+  lives in the shared home, so every node you log into starts it, and a unit on
+  another node retries the lock every 10 s until a restart here releases it
+  (2026-09-16: 85,272 retries on dandycomp03fl, then dandycomp08fl took over).
+  `<mind>/.daemon-node` names the primary host and the `primary-node.conf`
+  drop-in makes other nodes' units exit 75 without restarting; a node honours
+  it only after `systemctl --user daemon-reload` there. Stop the foreign unit
+  (`ssh <node> systemctl --user stop chittad`) rather than touching the lock.
 - Startup on the live store is ~9.5 s when the derived-state sidecars hit
   (`.lsh`, `.turbo`, `.organs` next to the snapshot family; since 2026-09-16,
   parallel snapshot decode included) and ~20 s on the first start after a
