@@ -1445,3 +1445,20 @@ contents and those per-pair reports remain outside the repository.
 - <a id="ref-51"></a>**[51]** openai/codex issue contributors. Codex tool loop causes context snowballing and multi-million-token input amplification. GitHub issue #44305 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/44305>)
 - <a id="ref-71"></a>**[71]** Alex L. Zhang, Tim Kraska, and Omar Khattab. Recursive Language Models. arXiv:2512.24601 (2025; revised 2026). [source](<https://arxiv.org/abs/2512.24601>)
 <!-- END CITATIONS -->
+
+### Code navigation languages
+
+Definitions and edges come from pinned tree-sitter grammars. Literal call syntax
+is EXTRACTED evidence; only unambiguous symbol resolution produces INFERRED
+connections. Runtime dispatch and dynamic import paths are not evaluated.
+
+| Language | Files | Definitions and edges |
+|---|---|---|
+| Bash / sh | `.sh`, `.bash` | Functions with signatures; literal command calls (resolved to known functions); `source` and `.` imports. Comments and heredocs remain data. |
+
+New grammars use CMake FetchContent with immutable commits. After populating the
+cache, configure with `FETCHCONTENT_FULLY_DISCONNECTED=ON`; a source mirror can
+be supplied through `FETCHCONTENT_SOURCE_DIR_TREE-SITTER-<LANGUAGE>`.
+`code_languages_test` parses fixtures without executing them and reports mean
+fresh-parse microseconds per KiB across 200 parses (file I/O and extraction are
+excluded). It also checks the real shell hook library.

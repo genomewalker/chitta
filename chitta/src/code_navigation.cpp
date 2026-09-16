@@ -45,11 +45,8 @@ std::vector<std::string> words(const std::string& text) {
     return out;
 }
 std::string language(const std::string& path) {
-    auto ext = fs::path(path).extension().string();
-    if (ext == ".c" || ext == ".h" || ext == ".cpp" || ext == ".hpp" || ext == ".cc" || ext == ".cxx" || ext == ".hxx") return "cpp";
-    if (ext == ".py" || ext == ".pyw") return "python";
-    if (ext == ".js" || ext == ".jsx" || ext == ".mjs" || ext == ".ts" || ext == ".tsx") return "javascript";
-    return ext;
+    auto lang = CodeIntel::detect_language(path);
+    return lang == "typescript" ? "javascript" : lang;
 }
 std::string contents(const std::string& path) {
     std::ifstream in(path, std::ios::binary);

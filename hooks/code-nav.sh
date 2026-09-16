@@ -7,7 +7,7 @@ bin=${CHITTA_BIN:-$HOME/.claude/bin/chitta}
 [[ -x "$bin" && -n "$path" ]] || exit 1
 if [[ "$mode" == read ]]; then
     case "$path" in
-        *.c|*.h|*.cpp|*.hpp|*.cc|*.cxx|*.hxx|*.py|*.pyw|*.js|*.jsx|*.mjs|*.ts|*.tsx|*.go|*.rs|*.java|*.rb|*.cs|*.swift|*.lua|*.md|*.markdown|*.mdown) ;;
+        *.sh|*.bash|*.c|*.h|*.cpp|*.hpp|*.cc|*.cxx|*.hxx|*.py|*.pyw|*.js|*.jsx|*.mjs|*.ts|*.tsx|*.go|*.rs|*.java|*.rb|*.cs|*.swift|*.lua|*.md|*.markdown|*.mdown) ;;
         *) exit 1 ;;
     esac
     root=$(git -C "$(dirname "$path")" rev-parse --show-toplevel 2>/dev/null) || exit 1

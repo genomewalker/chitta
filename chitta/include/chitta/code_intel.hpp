@@ -222,6 +222,7 @@ public:
 
         parsers_["lua"] = ts_parser_new();
         ts_parser_set_language(parsers_["lua"], tree_sitter_lua());
+        initialize_extended_parsers();
     }
 
     ~CodeIntel() {
@@ -231,7 +232,7 @@ public:
     }
 
     // Detect language from file extension
-    std::string detect_language(const std::string& path) {
+    static std::string detect_language(const std::string& path) {
         std::filesystem::path p(path);
         std::string ext = p.extension().string();
 
@@ -251,8 +252,10 @@ public:
         if (ext == ".lua") return "lua";
         if (ext == ".md" || ext == ".markdown" || ext == ".mdown") return "markdown";
 
-        return "";
+        return detect_extended_language(path);
     }
+
+    static const TSLanguage* extended_grammar(const std::string& language);
 
     // Each chunk ends before the next heading. Hierarchical names distinguish
     // repeated child headings; occurrence suffixes distinguish repeated siblings.
@@ -339,6 +342,7 @@ public:
         std::string lang = detect_language(path);
         if (lang.empty()) return symbols;
         if (lang == "markdown") return extract_markdown(path);
+        if (extended_grammar(lang)) return extract_file_full(path).symbols;
 
         auto it = parsers_.find(lang);
         if (it == parsers_.end()) return symbols;
@@ -440,6 +444,8 @@ public:
         } else if (lang == "lua") {
             extract_lua_full(root, source, path, result.symbols, result.callsites,
                             result.type_relationships, result.imports);
+        } else if (extended_grammar(lang)) {
+            extract_extended(root, source, path, lang, result);
         } else {
             // Languages without full extraction yet - symbols only
             if (lang == "java") {
@@ -606,6 +612,10 @@ public:
 
 private:
     std::unordered_map<std::string, TSParser*> parsers_;
+    void initialize_extended_parsers();
+    static std::string detect_extended_language(const std::string& path);
+    void extract_extended(TSNode root, const std::string& source, const std::string& path,
+                          const std::string& language, ExtractionResult& result);
 
     // Get text for a node
     std::string node_text(TSNode node, const std::string& source) {

@@ -220,6 +220,28 @@ target_include_directories(tree-sitter-parsers PUBLIC
 )
 target_link_libraries(tree-sitter-parsers PUBLIC tree-sitter)
 
+# Additional grammars use immutable revisions and the same offline source-cache
+# overrides as the original FetchContent dependencies. Compile each scanner
+# against its own generated headers (grammars can vendor different ABI headers).
+function(chitta_grammar name repository revision)
+    FetchContent_Declare(tree-sitter-${name}
+        GIT_REPOSITORY https://github.com/${repository}.git GIT_TAG ${revision})
+    FetchContent_GetProperties(tree-sitter-${name})
+    if(NOT tree-sitter-${name}_POPULATED)
+        FetchContent_Populate(tree-sitter-${name})
+    endif()
+    set(source "${tree-sitter-${name}_SOURCE_DIR}/src")
+    add_library(grammar-${name} STATIC "${source}/parser.c")
+    foreach(scanner scanner.c scanner.cc)
+        if(EXISTS "${source}/${scanner}")
+            target_sources(grammar-${name} PRIVATE "${source}/${scanner}")
+        endif()
+    endforeach()
+    target_include_directories(grammar-${name} PRIVATE "${source}")
+    target_link_libraries(tree-sitter-parsers PUBLIC grammar-${name})
+endfunction()
+chitta_grammar(bash tree-sitter/tree-sitter-bash 487734f87fd87118028a65a4599352fa99c9cde8)
+
 # Extract version from plugin.json
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../.claude-plugin/plugin.json" PLUGIN_JSON)
 string(REGEX MATCH "\"version\"[^:]*:[^\"]*\"([^\"]+)\"" _ ${PLUGIN_JSON})
@@ -571,6 +593,11 @@ if(CHITTA_BUILD_TESTS)
     target_compile_options(repository_index_test PRIVATE -UNDEBUG)
     target_link_libraries(repository_index_test PRIVATE chitta OpenSSL::Crypto)
     add_test(NAME repository_index_test COMMAND repository_index_test)
+    add_executable(code_languages_test src/code_languages_test.cpp src/code_intel.cpp)
+    target_compile_options(code_languages_test PRIVATE -UNDEBUG)
+    target_link_libraries(code_languages_test PRIVATE chitta OpenSSL::Crypto)
+    add_test(NAME code_languages_test COMMAND code_languages_test
+        "${CMAKE_CURRENT_SOURCE_DIR}/../hooks/tests/fixtures/codenav")
     add_executable(code_index_test src/code_index_test.cpp src/code_intel.cpp)
     target_compile_options(code_index_test PRIVATE -UNDEBUG)
     target_link_libraries(code_index_test PRIVATE chitta OpenSSL::Crypto)

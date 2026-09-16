@@ -233,3 +233,21 @@ MCP 159, SMRITI 46 and CI lint passed. The language-expansion follow-up added
 by the required main merge is marked pending, separately from the five steps
 in this work order. The benchmark approval trailer is carried forward because
 the immutable-eval checker reads the branch head message for the entire diff.
+
+## Phase 9 language expansion — Bash (2026-09-17)
+
+Shell hooks previously had no structural symbols. Bash/sh now uses the pinned
+`tree-sitter-bash` grammar with function signatures, source/dot imports and
+literal calls. Unresolved executables remain extracted syntax; graph resolution
+binds only known functions. The collector, graph language grouping and pre-read
+hook accept `.sh` and `.bash`. No recall scoring changes; contracts unchanged.
+
+The focused fixture yields 2 functions, 5 calls and 2 imports, with no heredoc
+definitions. Exact signature prefixes and the real `hooks/lib.sh` library pass.
+On compute, 200 fresh parses averaged 231.37 microseconds/KiB; the release daemon
+is 53,171,288 bytes, an increase of 1,399,056 bytes. Configuration and build used
+the cached pinned source with FetchContent fully disconnected. The quick gate
+passed, including contracts. Two existing test-only ShellCheck warnings now
+explicitly document intentional literal tilde paths. The initial JSON assertion
+compile/lifetime defects in the new test harness were fixed and rerun. The full
+gate and expanded repository coverage run follow the last language commit.

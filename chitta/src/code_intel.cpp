@@ -12,7 +12,73 @@
 
 extern char** environ;
 
+extern "C" const TSLanguage* tree_sitter_bash();
+
 namespace chitta {
+const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
+    if (language == "bash") return tree_sitter_bash();
+    return nullptr;
+}
+void CodeIntel::initialize_extended_parsers() {
+    for (const auto* language : {"bash"}) {
+        auto* parser = ts_parser_new();
+        if (!ts_parser_set_language(parser, extended_grammar(language))) {
+            ts_parser_delete(parser);
+            throw std::runtime_error(std::string("unsupported grammar ABI: ") + language);
+        }
+        parsers_[language] = parser;
+    }
+}
+std::string CodeIntel::detect_extended_language(const std::string& path) {
+    auto ext = std::filesystem::path(path).extension().string();
+    if (ext == ".sh" || ext == ".bash") return "bash";
+    return {};
+}
+
+void CodeIntel::extract_extended(TSNode root, const std::string& source,
+                                const std::string& path, const std::string& language,
+                                ExtractionResult& result) {
+    auto field = [](TSNode node, const char* name) {
+        return ts_node_child_by_field_name(node, name, std::strlen(name));
+    };
+    auto text = [&](TSNode node) { return ts_node_is_null(node) ? std::string{} : node_text(node, source); };
+    auto literal = [&](TSNode node) {
+        auto value = text(node);
+        if (value.size() > 1 && (value.front() == '\'' || value.front() == '"') && value.back() == value.front())
+            value = value.substr(1, value.size() - 2);
+        return value;
+    };
+    std::function<void(TSNode, std::string)> visit = [&](TSNode node, std::string parent) {
+        std::string type = ts_node_type(node);
+        if (language == "bash" && type == "function_definition") {
+            auto name = text(field(node, "name"));
+            auto body = field(node, "body");
+            auto signature = source.substr(ts_node_start_byte(node), ts_node_start_byte(body) - ts_node_start_byte(node));
+            while (!signature.empty() && std::isspace(static_cast<unsigned char>(signature.back()))) signature.pop_back();
+            result.symbols.push_back({"function", name, signature, path, node_line(node), node_end_line(node), parent});
+            parent = name;
+        }
+        if (language == "bash" && type == "command") {
+            auto name = text(field(node, "name"));
+            if (name == "source" || name == ".") {
+                auto target = literal(field(node, "argument"));
+                if (!target.empty()) result.imports.push_back({path, target, "", {}, uint32_t(node_line(node))});
+            } else if (!name.empty() && name.find_first_of("$`\"'") == std::string::npos) {
+                Callsite call;
+                call.file_path = path; call.start_byte = ts_node_start_byte(node); call.end_byte = ts_node_end_byte(node);
+                call.line = node_line(node); call.column = ts_node_start_point(node).column + 1;
+                call.caller_symbol = parent; call.callee_text = name; call.callee_leaf = name;
+                result.callsites.push_back(std::move(call));
+            }
+        }
+        for (uint32_t i = 0; i < ts_node_named_child_count(node); ++i) visit(ts_node_named_child(node, i), parent);
+    };
+    visit(root, "");
+    // Shell command syntax alone cannot distinguish an executable from a
+    // function. Keep literal calls as extracted evidence; graph resolution
+    // only binds them when a matching function exists in the indexed scope.
+}
+
 namespace {
 using json = nlohmann::json;
 std::string lower(std::string s) {
