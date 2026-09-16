@@ -21,6 +21,7 @@ MD_CITE = re.compile(r'\[(\d+)\]\(#ref-(\d+)\)')
 HTML_CITE = re.compile(r'<sup><a href="#ref-(\d+)">(\d+)</a></sup>')
 rows = {}
 errors = []
+warnings = []
 index_text = INDEX.read_text()
 for line in index_text.splitlines():
     if not re.match(r'^\| \d+ \|', line):
@@ -164,7 +165,9 @@ for key in rows:
     if WRITE:
         rows[key][3] = usage
     elif rows[key][3] != usage:
-        errors.append(f'index {key}: stale file:line usages (run --write)')
+        # Line numbers drift with every unrelated edit; staleness is reported,
+        # not fatal. `--write` refreshes the usage column.
+        warnings.append(f'index {key}: stale file:line usages (run --write)')
 
 if WRITE:
     lines = []
@@ -188,6 +191,8 @@ if log.exists():
 for url in set(u.rstrip('.,;') for u in URL.findall(index_text)):
     if url not in logged:
         errors.append(f'index URL has no recorded fetch: {url}')
+for w in warnings:
+    print('WARN: ' + w)
 if errors:
     for error in errors:
         print('ERROR:', error)

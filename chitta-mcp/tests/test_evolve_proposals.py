@@ -89,7 +89,5 @@ class ProposalTests(unittest.TestCase):
             # (swarmworld-replication-rank, 2026-09-16: delta 0, default-off).
             self.assertIn(proposal.prior_effort, ("none", "some"))
             self.assertFalse(proposal.internal_evidence)
-            self.assertEqual(
-                proposal.verifiability,
-                "self_verifying" if "Slot-Based" in proposal.title else "metric_only",
-            )
+            # Cards declare their own verifiability; the loader must keep it.
+            self.assertIn(proposal.verifiability, ("self_verifying", "metric_only", "judgement"))

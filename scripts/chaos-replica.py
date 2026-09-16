@@ -315,9 +315,11 @@ class Harness:
         else:
             fixture = self.args.fixture
         start = time.monotonic()
+        # The store waits up to CHITTA_STORE_LOCK_WAIT_S for a live holder
+        # (2026-09-16); the refusal itself is what this case asserts.
         result = subprocess.run(
             [str(fixture), str(self.field)],
-            env=self.env,
+            env={**self.env, "CHITTA_STORE_LOCK_WAIT_S": "0"},
             stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
