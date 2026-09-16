@@ -145,6 +145,7 @@ def main():
                     ".kts",
                     ".scala",
                     ".sc",
+                    ".zig",
                     ".php",
                     ".phtml",
                     ".sql",

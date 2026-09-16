@@ -420,3 +420,12 @@ Offline extraction/query fixtures pass. A saved-index regression also proves
 that unavailable parsers retain separate language identities instead of
 resolving calls across unrelated disabled languages. Contracts and recall
 scoring are unchanged.
+
+### Zig
+
+Zig navigation extracts functions and named structs/enums/unions/opaque types,
+ordinary and builtin calls, plus literal `@import`/`@cInclude` paths. The fixture
+has 4 definitions and 7 query edges (3 calls, 1 import, 3 references). Fresh
+parsing averages 405.45 microseconds/KiB; daemon size is 92,735,512 bytes
+(+709,360). Offline extraction/query fixtures pass. Contracts and recall
+scoring are unchanged.

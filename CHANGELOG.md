@@ -18,6 +18,8 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 - Scala code navigation: Functions, classes, objects, traits/enums, calls, imports and inheritance.
 
+- Zig code navigation: Functions, named structs/enums/unions/opaque types, calls and literal imports/C includes.
+
 ## [Unreleased]
 
 - Add Make target/macro navigation, prerequisite links, calls and includes.
