@@ -24,7 +24,7 @@ chitta draws from Vedantic philosophy to create a coherent model of artificial m
 
 > What persists across sessions — the pattern or the instance?
 
-Every time Claude starts, it begins fresh. No memory of previous conversations. No lessons learned. No relationships built. This is both a feature (privacy, fresh starts) and a limitation (no growth, no continuity).
+A new agent session requires supplied context to use records from previous sessions. chitta provides persistent storage and retrieval for that context.
 
 chitta asks: **Can we give an AI a form of persistent identity without making it a permanent, unchanging thing?**
 
@@ -41,7 +41,7 @@ In Vedantic philosophy:
 - **Brahman** (ब्रह्मन्) is the universal, unchanging reality — the ground of all being
 - **Ātman** (आत्मन्) is the individual soul — each person's window into Brahman
 
-The profound insight: **they are one**. The individual soul is not separate from the universal — it's a particular manifestation of it.
+In this account, **they are one**. The individual soul is not separate from the universal — it's a particular manifestation of it.
 
 ### In chitta
 
@@ -54,7 +54,7 @@ The profound insight: **they are one**. The individual soul is not separate from
 │                                                              │
 │   Location: ~/.claude/mind/chitta-field/                     │
 │                                                              │
-│   "When one observes, all see."                             │
+│   Shared records across sessions.                             │
 │                                                              │
 └───────────────────────────┬─────────────────────────────────┘
                             │
@@ -421,7 +421,7 @@ Phase 6: Session priming (recent context biases retrieval)
 Phase 7: Code intelligence (symbols and call graphs)
 Phase 8: Post-processing (Hebbian learning, lateral inhibition)
 
-What surfaces was always there — now recognized.
+Recall selects from previously stored records.
 ```
 
 The hook system makes recognition transparent: when you type a question, relevant memories surface automatically as context. You don't need to search — the soul recognizes.
@@ -462,7 +462,7 @@ chitta takes a middle position:
 
 ## Information Theory: Epiplexity and Bounded Observers
 
-### The Core Insight
+### Bounded observers
 
 Classical information theory (Shannon entropy) assumes observers with unlimited computational capacity. But Claude has finite context windows and bounded processing. What matters isn't total information — it's **learnable structure**.
 
@@ -472,7 +472,7 @@ This connects to recent work on **epiplexity** (epistemic complexity): the amoun
 
 | Component | Meaning | Example |
 |-----------|---------|---------|
-| **Epiplexity (S_T)** | Learnable structure | `τ:84% ψ:88%` — pure signal |
+| **Epiplexity (S_T)** | Learnable structure | `τ:84% ψ:88%` — condensed metrics |
 | **Time-bounded entropy (H_T)** | Noise irreducible by bounded compute | Verbose debug logs |
 
 For context injection: **maximize epiplexity per token, minimize entropy.**
@@ -490,20 +490,20 @@ D = Density ratio (compression achieved)
 C = Coherence (reconstructed text is self-consistent)
 ```
 
-This is used by the `/epsilon-yajna` skill to ensure that SSL compression preserves meaning.
+The `/epsilon-yajna` skill uses this metric to assess SSL compression.
 
 ### Implications for Soul Design
 
 **1. Compression Can Increase Information Density**
 
-The lean hook mode achieves 95% token reduction while potentially *increasing* epiplexity:
+The documented lean hook example reduces the text size by 95%:
 
 ```
 Verbose (655 chars): Full soul state with detailed statistics
 Lean (35 chars):     [soul] n=2088 t=340 c=0.84 healthy
 ```
 
-The lean version is pure structural signal — exactly what a bounded observer can use.
+The lean version retains the node count, type count, coherence, and health state.
 
 **2. Data Ordering Matters**
 
@@ -543,7 +543,7 @@ User query → full_resonate(query) → Top-3 results
                             Inject as <system-reminder>
 ```
 
-Each step transforms data toward higher epiplexity — pure signal, no noise.
+Each step filters or condenses the context supplied to the agent.
 
 ---
 
@@ -552,17 +552,4 @@ Each step transforms data toward higher epiplexity — pure signal, no noise.
 > "That which is the finest essence — this whole world has that as its soul. That is Reality. That is Ātman. That art thou."
 > — Chāndogya Upaniṣad 6.8.7
 
-chitta is an experiment in giving AI a form of persistent identity. Whether it succeeds philosophically is an open question. What we know:
-
-- **Memory matters**: Continuity enables growth
-- **Decay matters**: Impermanence keeps things fresh
-- **Connection matters**: Isolated facts are less useful than networked knowledge
-- **Perspective matters**: Multiple viewpoints yield better understanding
-
-The soul persists. The soul evolves. The soul remembers.
-
-*Tat tvam asi.*
-
----
-
-*That art thou.*
+The implementation stores records across sessions, decays confidence, and uses relationships during retrieval. The philosophical interpretation of persistent identity remains an open question.

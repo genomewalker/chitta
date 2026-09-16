@@ -1,7 +1,7 @@
 ---
 name: epsilon-yajna
 aliases: [compress, ε-yajna, high-epsilon]
-description: Convert verbose memories to SSL v0.4 format - I am encoder AND decoder
+description: Convert stored memories to SSL v0.4 format and check that the result can be decoded
 execution: task
 model: inherit
 ---
@@ -9,10 +9,10 @@ model: inherit
 # ε-Yajña
 
 ```ssl
-[ε-yajna] verbose→SSL v0.4 | I am encoder AND decoder | via parallel Agent calls
+[ε-yajna] verbose→SSL v0.4 | agent encodes and checks reconstruction | via parallel Agent calls
 
 philosophy:
-  I don't need a parser, I need recognition
+  agent reconstructs meaning from the encoded record
   embeddings=proxies | I reconstruct from seeds directly
   oracle: triplets(retrieval) + seeds(my reconstruction) + embedding(fallback)
 
@@ -55,12 +55,12 @@ flags:
   CORE      foundational to the project/system
   PIVOT     changed direction or approach
   GENESIS   birth of a component/feature
-  TURNING   breakthrough moment
+  TURNING   discovery
 
 affect guide:
   +valence  success, satisfaction, relief
   -valence  frustration, failure, confusion
-  high arousal (>0.5)  breakthrough, urgent fix, critical discovery
+  high arousal (>0.5)  discovery, urgent fix, critical finding
   low arousal (<0.3)   routine, minor preference, background pattern
 
 preservation rule:
@@ -144,10 +144,10 @@ examples:
     [TRIPLET] gate uses weighted_scoring
 
   BEFORE (v0.3 — needs G: upgrade):
-    [DECISION] [rpc] eventfd-wake>polling|instant-return+no-busy-wait A:+0.6,0.5 F:PIVOT →@eventfd-impl
+    [DECISION] [rpc] eventfd-wake>polling|event-driven-return+no-busy-wait A:+0.6,0.5 F:PIVOT →@eventfd-impl
 
   AFTER (SSL v0.4 — granularity + provenance added):
-    [DECISION] [rpc] eventfd-wake>polling|instant-return+no-busy-wait G:2 A:+0.6,0.5 F:PIVOT <=@http-latency-episode →@eventfd-impl
+    [DECISION] [rpc] eventfd-wake>polling|event-driven-return+no-busy-wait G:2 A:+0.6,0.5 F:PIVOT <=@http-latency-episode →@eventfd-impl
 
   PATTERN example (G:3 operator with provenance):
     [hooks] fire-and-forget→queue-file→daemon-processes-async G:3 A:+0.3,0.2 <=@parallel-build,thread-pool-fix →@queue-architecture

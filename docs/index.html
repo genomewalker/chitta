@@ -4,15 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>chitta — Persistent memory for Claude Code and Codex</title>
-<meta name="description" content="Claude Code that learns how you work. Persistent memory, code intelligence, and workflow adaptation across every session. Local-first. Zero configuration.">
+<meta name="description" content="Persistent memory for Claude Code and Codex, with code indexing, recall hooks, and a local daemon and store.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta property="og:title" content="chitta — Persistent memory for Claude Code and Codex">
-<meta property="og:description" content="Claude Code that learns how you work. Persistent memory, code intelligence, and workflow adaptation across every session. Local-first. Zero configuration.">
+<meta property="og:description" content="Persistent memory for Claude Code and Codex, with code indexing, recall hooks, and a local daemon and store.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="favicon.svg">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="chitta — Persistent memory for Claude Code and Codex">
-<meta name="twitter:description" content="Claude Code that learns how you work. Persistent memory, code intelligence, and workflow adaptation across every session.">
+<meta name="twitter:description" content="Persistent memory for Claude Code and Codex, with code indexing and recall hooks.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -58,9 +58,9 @@
     <div class="hero-ring"></div>
   </div>
   <div class="hero-content">
-    <h1 class="hero-title heading-display">The AI harness that learns how you work.</h1>
-    <p class="hero-subtitle">Persistent memory, code intelligence, and workflow adaptation across every session. Works with Claude Code and Codex. Local-first. Zero configuration.</p>
-    <p class="hero-aside">Install in 10 seconds. See the difference in your first conversation.</p>
+    <h1 class="hero-title heading-display">Persistent memory for coding agents</h1>
+    <p class="hero-subtitle">chitta stores memories, indexes code, and injects retrieved context into Claude Code and Codex sessions. A C++ daemon manages the local Rust store.</p>
+    <p class="hero-aside">Install the plugin, then configure the agent hooks.</p>
     <div class="hero-ctas">
       <a href="getting-started.html" class="btn btn-primary">Get started</a>
       <a href="tools.html" class="btn btn-outline">Explore the tools</a>
@@ -74,7 +74,7 @@
   <div class="container">
     <div class="quickstart-box reveal">
       <div class="quickstart-code">claude plugin install chitta@genomewalker-chitta</div>
-      <p class="quickstart-note" style="margin-bottom:var(--space-2);">Restart Claude Code. The soul awakens.</p>
+      <p class="quickstart-note" style="margin-bottom:var(--space-2);">Restart Claude Code to load the plugin.</p>
       <p class="quickstart-note" style="font-size:var(--text-xs);opacity:0.7;">Also works with Codex &mdash; see the <a href="getting-started.html#codex" style="color:var(--sandal-300);">Codex setup guide</a>.</p>
       <a href="getting-started.html" class="quickstart-link">Full setup guide &rarr;</a>
     </div>
@@ -88,7 +88,7 @@
       <div class="whats-new-header">
         <span class="whats-new-badge">Status as of 2026-09-16 · Unreleased + v5.72.0</span>
       </div>
-      <p class="whats-new-title">Native hooks, faster startup, explicit relation transfer</p>
+      <p class="whats-new-title">Native hooks, startup measurements, relation transfer</p>
       <p class="whats-new-desc">
         <strong>The project is now chitta.</strong> Plugin, marketplace and repository moved to the name the binaries always had. Every <code>CC_SOUL_*</code> variable, stored realm and existing store keeps working through an alias shim &mdash; see the <a href="https://github.com/genomewalker/chitta/blob/main/docs/RENAME.md" class="link-sandal" target="_blank" rel="noopener">rename note</a> for the three migration commands.
         <strong>Recall-biased pre-filter.</strong> Recall now widens the candidate pool and over-selects it with cheap scalar rules instead of cutting at the top of the ranking. On the 30-query golden set, mean nDCG@20 went from 0.435 to 0.487. <a href="recall.html" class="link-sandal">How recall works &rarr;</a>
@@ -106,18 +106,18 @@
   <div class="container">
     <div class="why-header reveal">
       <div class="section-divider"></div>
-      <h2 class="heading-section">Less re-explaining. More continuity.</h2>
+      <h2 class="heading-section">Memory across sessions</h2>
     </div>
 
     <div class="why-statements">
       <p class="why-statement reveal reveal-delay-1">
-        The system remembers <em>you</em>, not just the project.
+        The store holds <em>preferences</em>, corrections, and project records.
       </p>
       <p class="why-statement reveal reveal-delay-2">
-        Deep use strengthens high-signal memories. <em>Noise fades.</em>
+        Access reinforces memories. <em>Confidence decays over time.</em>
       </p>
       <p class="why-statement reveal reveal-delay-3">
-        Recognition feels native: <em>&ldquo;You mean the thing we already solved.&rdquo;</em>
+        Prompt hooks retrieve context from <em>previous sessions.</em>
       </p>
     </div>
   </div>
@@ -128,21 +128,21 @@
   <div class="container">
     <div class="vignettes-header reveal">
       <div class="section-divider"></div>
-      <h2 class="heading-section"><span class="vignette-title-sanskrit">Pratyabhijñā</span>&thinsp;&mdash;&thinsp;recognition, in action.</h2>
+      <h2 class="heading-section"><span class="vignette-title-sanskrit">Pratyabhijñā</span>&thinsp;&mdash;&thinsp;recall examples</h2>
     </div>
 
     <div class="vignettes-grid">
       <div class="vignette-card reveal reveal-delay-1">
-        <span class="vignette-prompt">&gt; </span>You ask about <span class="vignette-highlight">auth</span> and Claude surfaces that you chose JWT over sessions two weeks ago&thinsp;&mdash;&thinsp;with the reasoning you gave at the time.
+        <span class="vignette-prompt">&gt; </span>An <span class="vignette-highlight">auth</span> query can retrieve a stored decision to use JWT over sessions, with its date and recorded reasoning.
       </div>
       <div class="vignette-card reveal reveal-delay-2">
-        <span class="vignette-prompt">&gt; </span>You start <span class="vignette-highlight">debugging</span> and Claude says &ldquo;last time this happened, it was the connection pool&rdquo;&thinsp;&mdash;&thinsp;because it remembers.
+        <span class="vignette-prompt">&gt; </span>A <span class="vignette-highlight">debugging</span> query can retrieve a previous connection-pool failure and its recorded resolution.
       </div>
       <div class="vignette-card reveal reveal-delay-3">
-        <span class="vignette-prompt">&gt; </span>You run <span class="vignette-highlight">build</span> and Claude reminds you to lint first&thinsp;&mdash;&thinsp;because you always do, and it learned that.
+        <span class="vignette-prompt">&gt; </span>A <span class="vignette-highlight">build</span> query can retrieve a recorded convention to run the linter first.
       </div>
       <div class="vignette-card reveal reveal-delay-4">
-        <span class="vignette-prompt">&gt; </span>You start a <span class="vignette-highlight">snakemake</span> pipeline, type <code>/shepherd</code>, and go to sleep. Claude watches the pane, detects errors, applies fixes from memory, and restarts automatically. You wake to a completed pipeline or an actionable error report.
+        <span class="vignette-prompt">&gt; </span>The <code>/shepherd</code> skill monitors a <span class="vignette-highlight">snakemake</span> pipeline, detects errors, retrieves recorded fixes, and attempts restarts. It reports completion or unresolved errors.
       </div>
     </div>
   </div>
@@ -153,29 +153,29 @@
   <div class="container">
     <div class="bridge-header reveal">
       <div class="section-divider"></div>
-      <h2 class="heading-section">What makes chitta different?</h2>
-      <p class="bridge-subtext">Most memory systems store text. chitta learns how you think.</p>
+      <h2 class="heading-section">Memory records and retrieval</h2>
+      <p class="bridge-subtext">Stored content and metadata supply the retrieval and maintenance pipelines.</p>
     </div>
 
     <div class="reveal reveal-delay-1 comparison-grid">
       <div class="comparison-card">
-        <h3 class="comparison-card-title">Simple Memory</h3>
+        <h3 class="comparison-card-title">Stored records</h3>
         <ul class="comparison-list comparison-list--faded">
-          <li>Stores everything forever</li>
-          <li>Keyword search only</li>
-          <li>Same importance for all items</li>
-          <li>No pattern recognition</li>
-          <li>Manual organization required</li>
+          <li>Memory content and timestamps</li>
+          <li>Keywords and embeddings</li>
+          <li>Per-memory confidence</li>
+          <li>Observed workflow patterns</li>
+          <li>Realm and theme membership</li>
         </ul>
       </div>
       <div class="comparison-card comparison-card--highlight">
         <h3 class="comparison-card-title">chitta</h3>
         <ul class="comparison-list">
-          <li><span class="checkmark">&#10003;</span> Important memories strengthen, noise fades</li>
-          <li><span class="checkmark">&#10003;</span> Semantic search understands meaning</li>
-          <li><span class="checkmark">&#10003;</span> Confidence tracking per memory</li>
-          <li><span class="checkmark">&#10003;</span> Learns habits and anticipates needs</li>
-          <li><span class="checkmark">&#10003;</span> Self-organizing theme clusters</li>
+          <li><span class="checkmark">&nbsp;</span> Access reinforcement and confidence decay</li>
+          <li><span class="checkmark">&nbsp;</span> Embedding similarity search</li>
+          <li><span class="checkmark">&nbsp;</span> Confidence tracking per memory</li>
+          <li><span class="checkmark">&nbsp;</span> Habit matching and action prediction</li>
+          <li><span class="checkmark">&nbsp;</span> Self-organizing theme clusters</li>
         </ul>
       </div>
     </div>
@@ -191,7 +191,7 @@
   <div class="container">
     <div class="how-header reveal">
       <div class="section-divider"></div>
-      <h2 class="heading-section">A memory system that behaves like memory.</h2>
+      <h2 class="heading-section">Memory components</h2>
     </div>
 
     <div class="cards-grid">
@@ -203,8 +203,8 @@
             <circle cx="18" cy="18" r="17" stroke="#CBAF86" stroke-width="0.5" opacity="0.2"/>
           </svg>
         </div>
-        <h3 class="card-title">Understands Meaning, Not Keywords</h3>
-        <p class="card-desc">Finds what you meant, not just what you typed. Semantic embeddings anchor meaning so related concepts surface together.</p>
+        <h3 class="card-title">Semantic retrieval</h3>
+        <p class="card-desc">Semantic retrieval compares query and memory embeddings to rank related content.</p>
       </div>
 
       <div class="feature-card reveal reveal-delay-2">
@@ -215,8 +215,8 @@
             <circle cx="24" cy="8" r="2" fill="#9DB2D9" opacity="0.6"/>
           </svg>
         </div>
-        <h3 class="card-title">Knows What It's Sure About</h3>
-        <p class="card-desc">Tracks certainty over time. Memories you reinforce stay strong. Things you mention once fade naturally.</p>
+        <h3 class="card-title">Confidence tracking</h3>
+        <p class="card-desc">Tracks confidence over time through reinforcement and decay.</p>
       </div>
 
       <div class="feature-card reveal reveal-delay-3">
@@ -230,8 +230,8 @@
             <line x1="23" y1="16.5" x2="19" y2="22" stroke="#D46A4C" stroke-width="0.75" opacity="0.4"/>
           </svg>
         </div>
-        <h3 class="card-title">Finds What Matters</h3>
-        <p class="card-desc">Connected ideas activate together. Context flows through the knowledge graph to surface exactly what's relevant right now.</p>
+        <h3 class="card-title">Graph retrieval</h3>
+        <p class="card-desc">Graph traversal follows relationships between memories and contributes candidates to recall.</p>
       </div>
 
       <div class="feature-card reveal reveal-delay-1">
@@ -245,8 +245,8 @@
             <circle cx="12" cy="24.5" r="1.5" fill="#9DB2D9" opacity="0.2"/>
           </svg>
         </div>
-        <h3 class="card-title">Everything in One Place</h3>
-        <p class="card-desc">Single embedded database. No external services. Your memories stay on your machine, searchable in milliseconds.</p>
+        <h3 class="card-title">Local storage</h3>
+        <p class="card-desc">The daemon owns an embedded Rust store. Agent sessions query it through RPC.</p>
       </div>
 
       <div class="feature-card reveal reveal-delay-2">
@@ -256,8 +256,8 @@
             <path d="M8 26 L14 18 L20 22 L28 10 L28 26 Z" fill="#CBAF86" opacity="0.06"/>
           </svg>
         </div>
-        <h3 class="card-title">Token-Efficient Storage</h3>
-        <p class="card-desc">Memories compress to essential meaning. Up to 95% smaller than raw text, so more context fits in every conversation.</p>
+        <h3 class="card-title">Memory compression</h3>
+        <p class="card-desc">Memory compression stores condensed records for retrieval. The documented maximum size reduction is 95% relative to raw text.</p>
       </div>
 
       <div class="feature-card reveal reveal-delay-3">
@@ -268,8 +268,8 @@
             <circle cx="18" cy="18" r="2" fill="#D46A4C" opacity="0.5"/>
           </svg>
         </div>
-        <h3 class="card-title">Works While You're Away</h3>
-        <p class="card-desc">Background processing strengthens important memories and lets noise fade. The daemon learns even between sessions.</p>
+        <h3 class="card-title">Background maintenance</h3>
+        <p class="card-desc">The daemon runs memory reinforcement, decay, and consolidation between sessions.</p>
       </div>
 
       <div class="feature-card reveal reveal-delay-4">
@@ -284,7 +284,7 @@
             <path d="M26 30 L23 27" stroke="#CBAF86" stroke-width="0.75" opacity="0.3"/>
           </svg>
         </div>
-        <h3 class="card-title">Shepherds Your Pipelines</h3>
+        <h3 class="card-title">Pipeline monitoring</h3>
         <p class="card-desc">Autonomous monitoring for snakemake, nextflow, or slurm jobs. Sense-think-act loop detects errors, applies fixes from memory, restarts automatically.</p>
       </div>
 
@@ -297,8 +297,8 @@
             <circle cx="18" cy="12" r="1.5" fill="#9DB2D9" opacity="0.6"/>
           </svg>
         </div>
-        <h3 class="card-title">Learns Your Patterns</h3>
-        <p class="card-desc">Notices your workflows. If you always lint before commit, it learns that. Suggests what you'll need before you ask.</p>
+        <h3 class="card-title">Workflow patterns</h3>
+        <p class="card-desc">Records recurring trigger/action pairs, such as linting before a commit, and returns matching action predictions.</p>
       </div>
 
       <div class="feature-card reveal reveal-delay-2">
@@ -312,8 +312,8 @@
             <circle cx="24" cy="28" r="1.5" fill="#CBAF86" opacity="0.35"/>
           </svg>
         </div>
-        <h3 class="card-title">Tracks What You're Building</h3>
-        <p class="card-desc">Knows your goals and milestones. Adapts to your work mode&thinsp;&mdash;&thinsp;quiet in flow state, helpful when you're stuck.</p>
+        <h3 class="card-title">Goals and work modes</h3>
+        <p class="card-desc">Stores goals and milestones. Work-mode detection uses tool activity to distinguish modes such as building and debugging.</p>
       </div>
     </div>
   </div>
@@ -325,13 +325,13 @@
   <div class="container">
     <div class="chitta-field-header reveal">
       <div class="section-divider"></div>
-      <h2 class="heading-section"><span class="vignette-title-sanskrit">chitta-field</span>&thinsp;&mdash;&thinsp;memory as a living substrate.</h2>
+      <h2 class="heading-section"><span class="vignette-title-sanskrit">chitta-field</span>&thinsp;&mdash;&thinsp;Rust memory store</h2>
     </div>
 
     <div class="chitta-field-body">
       <div class="chitta-field-prose reveal reveal-delay-1">
         <p>Memory lives in <strong>chitta-field</strong>, an embedded Rust store linked into the daemon. Claude Code and Codex sessions share the daemon over RPC; one daemon owns each store through an instance lock.</p>
-        <p>Each memory is encoded as a <em>sparse code</em>: exactly 64 of 16,384 feature dimensions activate. Recall is driven by overlap between patterns, not keyword matching. Related memories find each other because they share activated neurons &mdash; the same way biological associative memory works.</p>
+        <p>Each memory is encoded as a <em>sparse code</em>: exactly 64 of 16,384 feature dimensions activate. Recall is driven by overlap between patterns, not keyword matching. Memories with overlapping active features become retrieval candidates.</p>
         <p>Snapshots and uncovered write-ahead log records recover the store. Ordinary WAL syncs are batched on a 200 ms timer; explicit durable operations force persistence. Warm sidecar startup measured about 9.5 s on the current live store, with about 20 s for the first start after deployment.</p>
       </div>
 
@@ -346,7 +346,7 @@
         </div>
         <div class="cf-stat">
           <span class="cf-stat-value">0.4%</span>
-          <span class="cf-stat-label">sparsity &mdash; signal, not noise</span>
+          <span class="cf-stat-label">sparsity</span>
         </div>
         <div class="cf-stat">
           <span class="cf-stat-value">&lt;1ms</span>
@@ -377,7 +377,7 @@
       </div>
       <div class="cf-detail-card">
         <h4 class="cf-detail-title">Organic Decay</h4>
-        <p class="cf-detail-desc">Memories move through tiers based on access frequency and recency. Hot memories stay warm. Cold memories demote over time. What you use survives; what you don't, fades into the background.</p>
+        <p class="cf-detail-desc">Memories move through tiers based on access frequency and recency. Frequently accessed memories are promoted; inactive memories are demoted over time.</p>
       </div>
     </div>
 
@@ -514,12 +514,12 @@
   <div class="container">
     <div class="chitta-field-header reveal">
       <div class="section-divider"></div>
-      <h2 class="heading-section"><span class="vignette-title-sanskrit">chitta-research</span>&thinsp;&mdash;&thinsp;autonomous research, grounded in memory.</h2>
+      <h2 class="heading-section"><span class="vignette-title-sanskrit">chitta-research</span>&thinsp;&mdash;&thinsp;autonomous research</h2>
     </div>
 
     <div class="chitta-field-body">
       <div class="chitta-field-prose reveal reveal-delay-1">
-        <p>chitta-research is a high-performance autonomous research system built on chitta-field. Seven specialized agents work in concert to explore a research agenda, build a structured belief graph, and store durable findings across sessions.</p>
+        <p>chitta-research is an autonomous research system built on chitta-field. Seven specialized agents coordinate to explore a research agenda, build a structured belief graph, and store durable findings across sessions.</p>
         <p>Each research session accumulates into a <em>belief graph</em>: ResearchProgram &rarr; Question &rarr; Hypothesis &rarr; ExperimentPlan &rarr; Run &rarr; Observation &rarr; Claim &rarr; Method. Findings persist in chittad &mdash; the same daemon that powers chitta.</p>
         <p>Brahman, the coordinating agent, enforces a research constitution: self-improvement depth cap, hard novelty stop, and a hypothesis backlog gate that prevents runaway recursion.</p>
       </div>
@@ -547,7 +547,7 @@
     <div class="cf-details reveal reveal-delay-2">
       <div class="cf-detail-card">
         <h4 class="cf-detail-title">Belief Graph</h4>
-        <p class="cf-detail-desc">Research accumulates as a typed graph: Programs link to Questions, Questions to Hypotheses, Hypotheses to ExperimentPlans and Runs. Claims and Methods are first-class nodes. Nothing is lost between sessions.</p>
+        <p class="cf-detail-desc">Research accumulates as a typed graph: Programs link to Questions, Questions to Hypotheses, Hypotheses to ExperimentPlans and Runs. Claims and Methods are first-class nodes. The graph is stored across sessions.</p>
       </div>
       <div class="cf-detail-card">
         <h4 class="cf-detail-title">Brahman Constitution</h4>
@@ -566,13 +566,13 @@
   </div>
 </section>
 
-<!-- FIRST 30 DAYS -->
+<!-- MEMORY WORKFLOWS -->
 <section class="progression" id="progression">
   <div class="container">
     <div class="progression-header reveal">
       <div class="section-divider"></div>
-      <h2 class="heading-section">The first 30 days.</h2>
-      <p class="subtext">chitta doesn't arrive fully formed. It grows through use.</p>
+      <h2 class="heading-section">Memory workflows</h2>
+      <p class="subtext">Indexing, stored observations, and recall supply context across sessions.</p>
     </div>
 
     <div class="timeline">
@@ -582,7 +582,7 @@
           <span class="timeline-line"></span>
         </div>
         <div class="timeline-content">
-          <h3 class="timeline-label">Day 1</h3>
+          <h3 class="timeline-label">Indexing</h3>
           <h4 class="timeline-title">Foundation</h4>
           <p class="timeline-desc">Basic recall and code indexing. chitta remembers what you tell it and indexes your codebase structure &mdash; symbols, call graphs, file relationships.</p>
         </div>
@@ -594,9 +594,9 @@
           <span class="timeline-line"></span>
         </div>
         <div class="timeline-content">
-          <h3 class="timeline-label">Week 1</h3>
+          <h3 class="timeline-label">Observation</h3>
           <h4 class="timeline-title">Adaptation</h4>
-          <p class="timeline-desc">Preferences learned, corrections absorbed. The soul starts adapting to your workflow and communication style &mdash; your conventions, your gotchas, your shortcuts.</p>
+          <p class="timeline-desc">Preferences, corrections, conventions, and recurring errors are stored as memory records.</p>
         </div>
       </div>
 
@@ -606,9 +606,9 @@
           <span class="timeline-line"></span>
         </div>
         <div class="timeline-content">
-          <h3 class="timeline-label">Week 2</h3>
+          <h3 class="timeline-label">Prediction</h3>
           <h4 class="timeline-title">Anticipation</h4>
-          <p class="timeline-desc">Patterns emerging, habits forming. The system predicts your next actions, surfaces relevant gotchas, and adapts to your work mode &mdash; flow, debugging, or blocked.</p>
+          <p class="timeline-desc">Observed context/action pairs supply predictions; work-mode records distinguish flow, debugging, and blocked states.</p>
         </div>
       </div>
 
@@ -617,9 +617,9 @@
           <span class="timeline-dot timeline-dot--final"></span>
         </div>
         <div class="timeline-content">
-          <h3 class="timeline-label">Month 1</h3>
-          <h4 class="timeline-title">Partnership</h4>
-          <p class="timeline-desc">Goals tracked, curiosity gaps filled, predictions calibrated. It feels like a collaborator who knows your project history and anticipates your needs &mdash; not a tool that forgets.</p>
+          <h3 class="timeline-label">Tracking</h3>
+          <h4 class="timeline-title">Goals and calibration</h4>
+          <p class="timeline-desc">Goal records track progress. Curiosity records track unresolved questions, and calibration records track prediction outcomes.</p>
         </div>
       </div>
     </div>
@@ -646,10 +646,10 @@
   <div class="container">
     <div class="tools-header reveal">
       <div class="section-divider"></div>
-      <h2 class="heading-section">Go deeper.</h2>
+      <h2 class="heading-section">Documentation</h2>
     </div>
     <p class="tools-intro reveal reveal-delay-1">
-      The full MCP tool surface, generated from a live daemon. 13 Sanskrit concepts made operational. Vedantic philosophy meets C++ engineering.
+      The MCP tool reference is generated from a live daemon. The architecture and philosophy pages describe the implementation and its 13 Sanskrit concepts.
     </p>
 
     <div class="tools-footer reveal reveal-delay-2">
@@ -671,10 +671,10 @@
   <div class="container">
     <div class="tools-header reveal">
       <div class="section-divider"></div>
-      <h2 class="heading-section">Archives.</h2>
+      <h2 class="heading-section">Archives</h2>
     </div>
     <p class="tools-intro reveal reveal-delay-1">
-      Static snapshots, kept because they are interesting, not because they are current. Each was generated once and is not refreshed on a schedule.
+      Static snapshots of earlier research and visualizations. Each was generated once and is not refreshed on a schedule.
     </p>
     <div class="tools-footer reveal reveal-delay-2">
       <a href="constellation.html" class="tools-link">Constellation &mdash; 2026-05-20</a>
@@ -689,9 +689,9 @@
 <!-- CLOSING -->
 <section class="closing">
   <div class="container">
-    <h2 class="closing-title heading-display reveal">Not stateless. Not shallow.</h2>
-    <p class="closing-body reveal reveal-delay-1">chitta is for developers who want their tools to grow wiser, not just louder.</p>
-    <p class="closing-sanskrit reveal reveal-delay-2"><span class="devanagari">तत् त्वम् असि</span>&thinsp;&mdash;&thinsp;Tat tvam asi&thinsp;&mdash;&thinsp;That art thou.</p>
+    <h2 class="closing-title heading-display reveal">System reference</h2>
+    <p class="closing-body reveal reveal-delay-1">Read the tool reference, recall pipeline, and evaluation results.</p>
+    <p class="closing-sanskrit reveal reveal-delay-2"><span class="devanagari">chitta</span>&thinsp;&mdash;&thinsp;daemon, store, MCP server, and hooks.</p>
     <div class="reveal reveal-delay-3">
       <a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener" class="btn btn-primary">Explore the system</a>
     </div>
@@ -702,7 +702,7 @@
 <footer class="footer">
   <div class="container">
     <p class="footer-text">
-      Built with conviction. Grounded in philosophy.
+      Persistent memory for Claude Code and Codex.
       <span class="footer-sep"></span>
       <a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a>
     </p>

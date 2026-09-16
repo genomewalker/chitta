@@ -1,6 +1,6 @@
 ---
 name: ultrathink
-description: First-principles deep thinking for significant problems
+description: Analyze a problem through assumptions, constraints, and alternative explanations
 execution: task
 ---
 

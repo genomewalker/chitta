@@ -11,17 +11,17 @@ rules. The checklists of what counts as dead code, a simplification, or an
 optimization were removed — that is standard practice, and listing it crowded out
 the part that is actually a constraint.
 
-## The ordering is the discipline
+## Review order
 
 Question the requirement, delete, simplify, then optimize, then automate — **in
 that order**. This is a strict ordering, not motivational advice: optimizing code
 that should have been deleted is the failure this skill exists to prevent. Skip
 ahead only when the user asked for a narrow task.
 
-The same ordering applies inside a performance question. Removing the work beats
-reducing passes, which beats a better algorithm, which beats a better
-representation, which beats less copying, which beats parallelism, which beats
-micro-optimizing. Reach for a later rung only when the earlier ones are spent.
+For performance work, check in this order: remove unnecessary work, reduce
+passes, change the algorithm, change the representation, reduce copying,
+parallelize, then optimize individual operations. Measure the effect of each
+candidate change.
 
 ## Evidence rules
 
@@ -37,8 +37,7 @@ micro-optimizing. Reach for a later rung only when the earlier ones are spent.
 
 ## Output
 
-Lead with the highest-leverage deletion or simplification, not the first thing you
-noticed. One-line verdict: delete, simplify, optimize, or automate. Keep
+Lead with the deletion or simplification with the largest supported effect. One-line verdict: delete, simplify, optimize, or automate. Keep
 correctness issues, maintainability issues, performance risk, and automation
 opportunities visibly separate — they carry different urgency and the reader
 triages on that. Offer a concrete patch where there's enough context to write one.

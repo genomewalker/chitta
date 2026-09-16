@@ -745,7 +745,7 @@ Session-level recall: groups chunk evidence by source session using noisy-OR agg
 
 ### `recall_smart` *(gateway)*
 
-Multi-lane retrieval planner: uses a fast LLM call to extract entities and speech-act type, then fans out to semantic, typed, spreading-activation, and session-level lanes, merging results with Reciprocal Rank Fusion. Best for complex queries.
+Multi-lane retrieval planner: uses an LLM call to extract entities and speech-act type, then fans out to semantic, typed, spreading-activation, and session-level lanes, merging results with Reciprocal Rank Fusion. Supports multi-part queries.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
@@ -2448,7 +2448,7 @@ Record a relationship milestone - achievements, personal context, significant mo
 
 ### `learn_outcome` *(gateway)*
 
-Record whether a suggestion/approach actually helped. Builds feedback loop for improving future suggestions.
+Record whether a suggestion/approach actually helped. Records outcomes for the suggestion feedback loop.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
@@ -3475,7 +3475,7 @@ Ingest external content (URL, file, directory) into memory via SSL distillation.
 
 ### `run_hint_enricher` *(gateway)*
 
-Generate retrieval hints for unprocessed memories using chitta-hint-tuned. Reads memories without a retrieval_hint tag, calls the local hint model, stores each hint as a derived memory (kind=hint, tags=retrieval_hint), and marks the source memory with hint:done. Run after a session to enrich new memories for better recall.
+Generate retrieval hints for unprocessed memories using chitta-hint-tuned. Reads memories without a retrieval_hint tag, calls the local hint model, stores each hint as a derived memory (kind=hint, tags=retrieval_hint), and marks the source memory with hint:done. Run after a session to add retrieval hints to new memories.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
