@@ -138,7 +138,12 @@ public:
     static bool is_read(const std::string& op) {
         static const std::set<std::string> reads = {
             "thread_get", "thread_list",   "session_get",      "session_list", "lease_list",
-            "inbox_list", "artifact_list", "artifact_lineage", "counts"};
+            "inbox_list", "artifact_list", "artifact_lineage", "counts",
+            // Hook assembly returns queue payloads/cards without mutating state.
+            // Classify explicitly: unknown operations (including hook_turn) must
+            // retain the write dispatch and durable sync boundary.
+            "hook_handoff_prepare", "hook_handoff_context", "hook_task_context",
+            "hook_session_context", "hook_stop_checkpoint", "hook_stop_progress", "hook_post_tool", "hook_pre_compact", "hook_compact_restore", "hook_saddle", "hook_pre_tool", "hook_ancillary", "hook_session_start"};
         return reads.count(op) != 0;
     }
 private:

@@ -5,8 +5,6 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
-import shlex
-import shutil
 import statistics
 import subprocess
 import tempfile
@@ -25,6 +23,21 @@ def main():
         base = Path(tmp)
         mind = base / "home/.claude/mind"
         mind.mkdir(parents=True)
+        cli = base / "event-response"
+        subprocess.run(
+            [
+                os.environ.get("CXX", "g++"),
+                "-std=c++17",
+                "-O2",
+                "-pthread",
+                "-I" + str(ROOT / "chitta/include"),
+                str(ROOT / "hooks/tests/event-response.cpp"),
+                "-lcrypto",
+                "-o",
+                str(cli),
+            ],
+            check=True,
+        )
         env = dict(
             os.environ,
             HOME=str(base / "home"),
@@ -34,7 +47,7 @@ def main():
             CHITTA_QUEUE=str(base / "queue"),
             CHITTA_SOCKET_PATH=str(base / "absent.sock"),
             CHITTA_PLUGIN_DIR=str(ROOT),
-            CHITTA_BIN="/bin/true",
+            CHITTA_BIN=str(cli),
         )
         for key in ("CHITTA_HEADLESS", "CC_SOUL_HEADLESS"):
             env.pop(key, None)
@@ -138,30 +151,22 @@ def main():
         assert sum(e["event"] == "saddle" for e in events) == 1
         assert events[-1]["n_fails"] == 3
 
-        # PreToolUse must not start Python, even for a new open saddle.
-        stubs = base / "stubs"
-        stubs.mkdir()
-        calls = base / "python-calls"
-        (stubs / "python3").write_text(
-            "#!/bin/sh\nprintf called >> " + shlex.quote(str(calls)) + "\nexit 91\n"
-        )
-        (stubs / "python3").chmod(0o755)
+        # Native policy is mandatory. A failed/stalled RPC must not run the
+        # deleted shell detector or acknowledge a notice that was never emitted.
         (mind / ".saddle_test-saddle").unlink()
-        stub_env = dict(env, PATH=str(stubs) + os.pathsep + env["PATH"])
-        assert "[saddle]" in pre(extra_env=stub_env)
-        assert not calls.exists(), "per-call saddle check started Python"
-
-        # The timed jq process includes tail parsing and similarity evaluation.
-        # A stalled detector must fail open without writing a dedupe marker.
-        (stubs / "jq").write_text(
-            '#!/bin/sh\nif [ "$1" = "-Rrs" ]; then exec sleep 10; fi\nexec '
-            + shlex.quote(shutil.which("jq"))
-            + ' "$@"\n'
+        missing = dict(env, CHITTA_BIN="/bin/false")
+        assert pre(extra_env=missing).strip() == "[chitta] daemon unavailable; context not loaded."
+        assert not (mind / ".saddle_test-saddle").exists()
+        stalled = base / "stalled-cli"
+        stalled.write_text(
+            '#!/bin/sh\nif [ "$1" = realm_detect ]; then echo project:test; else exec sleep 10; fi\n'
         )
-        (stubs / "jq").chmod(0o755)
-        (mind / ".saddle_test-saddle").unlink()
+        stalled.chmod(0o755)
         started = time.monotonic()
-        assert not pre(extra_env=stub_env).strip()
+        assert (
+            pre(extra_env=dict(env, CHITTA_BIN=str(stalled), CHITTA_MAX_WAIT="0.3")).strip()
+            == "[chitta] daemon unavailable; context not loaded."
+        )
         assert 0.28 < time.monotonic() - started < 0.8
         assert not (mind / ".saddle_test-saddle").exists()
 
@@ -197,7 +202,7 @@ def main():
         print("PreToolUse 25 runs/arm: " + json.dumps(stats))
         print(
             "PASS: saddle notices, dedupe, time/session/shape gates, Codex unknowns, "
-            "Stop telemetry, malformed/bounded ledger, no Python startup, timeout, latency"
+            "Stop telemetry, malformed/bounded ledger, native policy transport, timeout, latency"
         )
 
 

@@ -1,4 +1,4 @@
-"""Byte-for-byte Bash/jq vs Python reference saddle checks on isolated ledgers."""
+"""Byte-for-byte native RPC vs Python reference saddle checks on isolated ledgers."""
 
 from __future__ import annotations
 
@@ -23,6 +23,8 @@ SPEC.loader.exec_module(saddle)
 
 def main():
     now = int(time.time() * 1000) - 10000
+    # Compilation can exceed a minute on shared builders; fixture ages are fixed.
+    saddle.time.time = lambda: (now + 10000) / 1000
     cmd = "curl https://broken.test/retry/9"
     rows = [
         dict(
@@ -156,10 +158,27 @@ def main():
 
     with tempfile.TemporaryDirectory(prefix="saddle-parity-") as tmp:
         base = Path(tmp)
+        cli = base / "event-response"
+        subprocess.run(
+            [
+                os.environ.get("CXX", "g++"),
+                "-std=c++17",
+                "-O2",
+                "-pthread",
+                "-I" + str(ROOT / "chitta/include"),
+                str(ROOT / "hooks/tests/event-response.cpp"),
+                "-lcrypto",
+                "-o",
+                str(cli),
+            ],
+            check=True,
+        )
         env = dict(
             os.environ,
             HOME=str(base),
-            CHITTA_BIN="/bin/true",
+            CHITTA_BIN=str(cli),
+            CHITTA_HOOK_NOW=str(now + 10000),
+            CHITTA_PLUGIN_DIR=str(ROOT),
             CHITTA_SOCKET_PATH=str(base / "absent.sock"),
         )
         for key in ("CHITTA_HEADLESS", "CC_SOUL_HEADLESS"):

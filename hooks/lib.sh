@@ -29,8 +29,8 @@ _CHITTA_ALIAS_VARS=(
     CHECKPOINT_INTERVAL CTX_LANE DEEP_SEARCH DISCIPLINE_ENFORCE
     EDIT_REINDEX_RATE ENRICH_INTERVAL HEADLESS HOOK_BUDGET_MS HOOK_ENFORCE
     HOOK_STATE_DIR INDEX_INTERVAL LEAN LEGACY_MARKERS LOOP_LIMIT LOOP_WARN
-    LEDGER_POLICY MAX_INDEX_FILES MAX_OUTPUT_CHARS MAX_WAIT MCP_DIR MODEL PLUGIN_DIR
-    PROMPT_CONTEXT REINDEX_RATE_LIMIT RETAG_INTERVAL RLM_MODE RLM_QUERY SADHANA_MAX
+    MAX_INDEX_FILES MAX_OUTPUT_CHARS MAX_WAIT MCP_DIR MODEL PLUGIN_DIR
+    REINDEX_RATE_LIMIT RETAG_INTERVAL SADHANA_MAX
     SADHANA_TIMEOUT SNAPSHOT_TIMEOUT STOP_BOOTSTRAP_BYTES
     STOP_ENRICH_INTERVAL STOP_GRACE STOP_MAX_INCREMENT_BYTES STORE_INTERVAL
     STRICT_MODE STRICT_MODE_DEFAULT SUBAGENT_BASH_RECALL UNKNOWN_SILENCE
@@ -51,14 +51,17 @@ unset _v _old _new
 # the particular file they need exists.
 resolve_cc_soul_root() {
     local candidate real_root
-    for candidate in \
-        "${CHITTA_PLUGIN_DIR:-${CC_SOUL_PLUGIN_DIR:-}}" \
-        "$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")")")"; do
-        if [[ -n "$candidate" && -d "$candidate/chitta-mcp" ]]; then
-            printf '%s\n' "$candidate"
-            return 0
-        fi
-    done
+    candidate=${CHITTA_PLUGIN_DIR:-${CC_SOUL_PLUGIN_DIR:-}}
+    if [[ -n "$candidate" && -d "$candidate/chitta-mcp" ]]; then
+        printf '%s\n' "$candidate"
+        return 0
+    fi
+    real_root=$(realpath "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")
+    candidate=${real_root%/hooks/*}
+    if [[ -d "$candidate/chitta-mcp" ]]; then
+        printf '%s\n' "$candidate"
+        return 0
+    fi
 
     # Marketplace installs are versioned. `sort -V` makes the newest installed
     # source the compatibility fallback for copied ~/.claude/hooks scripts.
@@ -76,13 +79,8 @@ resolve_cc_soul_root() {
     return 1
 }
 
-# Shared session_registry.py invocation used by session-start, session-end,
-# codex-session-start, prompt-core, and stop-core hooks. Resolves the plugin
-# root the same way each of those call sites did, is a no-op (fail-open,
-# non-fatal) when the registry script isn't present, and never propagates the
-# invoked subprocess's own exit status — callers that need a fallback path
-# when the registry itself is missing can branch on this function's return
-# code instead (1 = registry not found, 0 = registry was invoked).
+# Shared, bounded session-registry transport. Nonzero means the adapter did
+# not acknowledge the call; hooks emit the minimal unavailable envelope.
 # Usage: printf '%s' "$INPUT" | registry_call <timeout_s> <subcmd> [args...]
 registry_call() {
     local t="$1" subcmd="$2"
@@ -97,202 +95,12 @@ registry_call() {
     timeout "$t" python3 "$registry" "$subcmd" "$@" >/dev/null 2>&1
 }
 
-# Per-Bash saddle check. Python remains the offline/Stop reference. The caller
-# bounds tail parsing and comparison with a 300 ms jq timeout.
-# Usage: saddle_check HOOK_JSON LEDGER MIND_DIR [MINUTES FAILS SIMILARITY]
-saddle_check() (
-    local input="$1" ledger="$2" mind="$3" marker
-    local result identity notice previous marker_fd
-    [[ -s "$ledger" ]] || return 1
-    result=$(tail -c 1048577 -- "$ledger" | tail -n 4097 | timeout -s KILL 0.3s jq -Rrs \
-        --argjson input "$input" \
-        --argjson minutes "${4:-7}" --argjson min_fails "${5:-3}" \
-        --argjson threshold "${6:-0.8}" '
-        def ws: "[\\s\\x{001c}-\\x{001f}\\x{0085}]";
-        def strip: sub("^" + ws + "+"; "") | sub(ws + "+$"; "");
-        # Unicode 13 lowercase ranges (start,end,stride,delta), generated from
-        # Python 3.9 str.lower; jq ascii_downcase alone changes command identity.
-        # ASCII commands bypass the table. U+0130 expands; sigma is contextual.
-        def lower:
-            ascii_downcase | if test("[^\\x{00}-\\x{7f}]") then
-            gsub("(?<pre>\\p{Cased}\\p{Case_Ignorable}*)Σ(?!\\p{Case_Ignorable}*\\p{Cased})";
-                 .pre + "ς") |
-            ("[
-            [192,214,1,32],[216,222,1,32],[256,302,2,1],[306,310,2,1],[313,327,2,1],
-            [330,374,2,1],[376,376,1,-121],[377,381,2,1],[385,385,1,210],[386,388,2,1],
-            [390,390,1,206],[391,391,1,1],[393,394,1,205],[395,395,1,1],[398,398,1,79],
-            [399,399,1,202],[400,400,1,203],[401,401,1,1],[403,403,1,205],[404,404,1,207],
-            [406,406,1,211],[407,407,1,209],[408,408,1,1],[412,412,1,211],[413,413,1,213],
-            [415,415,1,214],[416,420,2,1],[422,422,1,218],[423,423,1,1],[425,425,1,218],
-            [428,428,1,1],[430,430,1,218],[431,431,1,1],[433,434,1,217],[435,437,2,1],
-            [439,439,1,219],[440,440,1,1],[444,444,1,1],[452,452,1,2],[453,453,1,1],
-            [455,455,1,2],[456,456,1,1],[458,458,1,2],[459,475,2,1],[478,494,2,1],
-            [497,497,1,2],[498,500,2,1],[502,502,1,-97],[503,503,1,-56],[504,542,2,1],
-            [544,544,1,-130],[546,562,2,1],[570,570,1,10795],[571,571,1,1],[573,573,1,-163],
-            [574,574,1,10792],[577,577,1,1],[579,579,1,-195],[580,580,1,69],[581,581,1,71],
-            [582,590,2,1],[880,882,2,1],[886,886,1,1],[895,895,1,116],[902,902,1,38],
-            [904,906,1,37],[908,908,1,64],[910,911,1,63],[913,929,1,32],[931,939,1,32],
-            [975,975,1,8],[984,1006,2,1],[1012,1012,1,-60],[1015,1015,1,1],[1017,1017,1,-7],
-            [1018,1018,1,1],[1021,1023,1,-130],[1024,1039,1,80],[1040,1071,1,32],[1120,1152,2,1],
-            [1162,1214,2,1],[1216,1216,1,15],[1217,1229,2,1],[1232,1326,2,1],[1329,1366,1,48],
-            [4256,4293,1,7264],[4295,4295,1,7264],[4301,4301,1,7264],[5024,5103,1,38864],[5104,5109,1,8],
-            [7312,7354,1,-3008],[7357,7359,1,-3008],[7680,7828,2,1],[7838,7838,1,-7615],[7840,7934,2,1],
-            [7944,7951,1,-8],[7960,7965,1,-8],[7976,7983,1,-8],[7992,7999,1,-8],[8008,8013,1,-8],
-            [8025,8031,2,-8],[8040,8047,1,-8],[8072,8079,1,-8],[8088,8095,1,-8],[8104,8111,1,-8],
-            [8120,8121,1,-8],[8122,8123,1,-74],[8124,8124,1,-9],[8136,8139,1,-86],[8140,8140,1,-9],
-            [8152,8153,1,-8],[8154,8155,1,-100],[8168,8169,1,-8],[8170,8171,1,-112],[8172,8172,1,-7],
-            [8184,8185,1,-128],[8186,8187,1,-126],[8188,8188,1,-9],[8486,8486,1,-7517],[8490,8490,1,-8383],
-            [8491,8491,1,-8262],[8498,8498,1,28],[8544,8559,1,16],[8579,8579,1,1],[9398,9423,1,26],
-            [11264,11310,1,48],[11360,11360,1,1],[11362,11362,1,-10743],[11363,11363,1,-3814],[11364,11364,1,-10727],
-            [11367,11371,2,1],[11373,11373,1,-10780],[11374,11374,1,-10749],[11375,11375,1,-10783],[11376,11376,1,-10782],
-            [11378,11378,1,1],[11381,11381,1,1],[11390,11391,1,-10815],[11392,11490,2,1],[11499,11501,2,1],
-            [11506,11506,1,1],[42560,42604,2,1],[42624,42650,2,1],[42786,42798,2,1],[42802,42862,2,1],
-            [42873,42875,2,1],[42877,42877,1,-35332],[42878,42886,2,1],[42891,42891,1,1],[42893,42893,1,-42280],
-            [42896,42898,2,1],[42902,42920,2,1],[42922,42922,1,-42308],[42923,42923,1,-42319],[42924,42924,1,-42315],
-            [42925,42925,1,-42305],[42926,42926,1,-42308],[42928,42928,1,-42258],[42929,42929,1,-42282],[42930,42930,1,-42261],
-            [42931,42931,1,928],[42932,42942,2,1],[42946,42946,1,1],[42948,42948,1,-48],[42949,42949,1,-42307],
-            [42950,42950,1,-35384],[42951,42953,2,1],[42997,42997,1,1],[65313,65338,1,32],[66560,66599,1,40],
-            [66736,66771,1,40],[68736,68786,1,64],[71840,71871,1,32],[93760,93791,1,32],[125184,125217,1,34]
-            ]" | fromjson) as $ranges |
-            explode | map(. as $c | if . == 304 then [105,775]
-                else (first($ranges[] | select($c >= .[0] and $c <= .[1]
-                      and ($c - .[0]) % .[2] == 0)) // [0,0,1,0]) as $r |
-                     [$c + $r[3]] end) | add | implode
-            else . end;
-        def normalize:
-            strip | lower | gsub("\\p{Nd}+"; "#")
-            | gsub(ws + "+"; " ") | .[:60];
-        # SequenceMatcher(None,a,b): longest contiguous block, earliest a/b
-        # tie, then recurse left/right. With <=60 characters autojunk is off.
-        def block($a; $b):
-            (reduce range(0; $b|length) as $j ({}; .[$b[$j]|tostring] += [$j])) as $positions |
-            reduce range(0; $a|length) as $i
-                ({best:[0,0,0], prev:{}};
-                 .prev as $prev | .next = {} |
-                 reduce ($positions[$a[$i]|tostring] // [])[] as $j (. ;
-                     if $a[$i] == $b[$j] then
-                         (($prev[($j-1)|tostring] // 0) + 1) as $n |
-                         .next[$j|tostring] = $n |
-                         if $n > .best[2] then .best = [$i+1-$n,$j+1-$n,$n] else . end
-                     else . end) | .prev = .next) | .best;
-        def matched($a; $b):
-            block($a; $b) as [$i,$j,$n] |
-            if $n == 0 then 0 else
-                $n + (if $i > 0 and $j > 0 then matched($a[:$i];$b[:$j]) else 0 end)
-                   + (if $i+$n < ($a|length) and $j+$n < ($b|length)
-                      then matched($a[$i+$n:];$b[$j+$n:]) else 0 end)
-            end;
-        def similar($a; $b):
-            if $a == $b then true
-            elif 2 * ([($a|length),($b|length)]|min) / (($a|length)+($b|length)) < $threshold
-            then false
-            else 2 * matched($a|explode; $b|explode) / (($a|length)+($b|length)) >= $threshold end;
-        def truth: . != null and . != false and . != 0 and . != "" and . != [] and . != {};
-        def failed:
-            if .exit_code == null then .likely_fail | truth
-            else .exit_code | if type == "boolean" then .
-                elif type == "number" then (if . < 0 then ceil else floor end) != 0
-                elif type == "string" then
-                    try (strip | select(test("^[+-]?[0-9]+(_[0-9]+)*$"))
-                         | gsub("_"; "") | tonumber != 0) catch false
-                else false end // false end;
-        # Python json.dumps defaults to ASCII escaping, including surrogate pairs.
-        def hex4:
-            . as $n | [4096,256,16,1 | . as $d |
-                "0123456789abcdef"[(($n / $d | floor) % 16):][0:1]] | join("");
-        def pyjson:
-            tojson | explode | map(if . < 128 then [.] | implode
-                elif . <= 65535 then "\\u" + hex4
-                else . - 65536 | "\\u" + ((55296 + (. / 1024 | floor)) | hex4)
-                    + "\\u" + ((56320 + (. % 1024)) | hex4) end) | join("");
-        ($input.session_id // "" | tostring) as $sid |
-        select($sid|test("\\A[a-zA-Z0-9_-]+\\z")) |
-        ($input.tool_input.command // "") as $cmd |
-        (if (env.CHITTA_HOOK_NOW // "" | test("^[1-9][0-9]{12}$"))
-         then (env.CHITTA_HOOK_NOW | tonumber) else (now * 1000) end) as $now |
-        (utf8bytelength > 1048576) as $partial |
-        # One extra byte detects truncation without stat. If that byte is a
-        # newline, Python starts at the next record and discards that too.
-        split("\n")[:-1] |
-        if $partial then (if .[0] == "" then .[2:] else .[1:] end) else . end |
-        .[-4096:] |
-        map(select(contains("bash_outcome") and contains($sid)) |
-            fromjson? | select(type == "object") |
-            select(.session_id == $sid and .event == "bash_outcome") |
-            select(.ts|type == "number") |
-            select(.ts >= $now - $minutes * 60000 and .ts <= $now) |
-            select(.cmd_head|type == "string") | select(.cmd_head|strip|length > 0)) |
-        sort_by(.ts) |
-        reduce .[] as $row ([];
-            if $row|failed then
-                ($row.cmd_head|normalize) as $shape |
-                ([to_entries[] | select(similar(.value.shape;$shape)) | .key][0]) as $idx |
-                if $idx == null then . + [{shape:$shape,fails:[$row]}]
-                else .[$idx].fails += [$row] end
-            elif $row.exit_code == 0 or $row.exit_code == "0" or $row.exit_code == false
-            then if length == 0 then . else
-                ($row.cmd_head|normalize) as $shape |
-                map(select(similar(.shape;$shape)|not)) end else . end) |
-        map(select((.fails|length) >= $min_fails and similar(.shape; $cmd|normalize))) |
-        # max() in Python keeps the first group on timestamp ties.
-        sort_by(-.fails[-1].ts) | .[0] | select(. != null) |
-        . as $g | .fails[-1].stderr_head as $err |
-        (if $err|truth then $err|tostring else "error unavailable" end
-         | strip | gsub(ws + "+"; " ") | .[:160]) as $excerpt |
-        ($sid + ":" + ($g.fails[0].ts|tostring) + ":" + $g.shape),
-        ("[saddle] this command shape failed \($g.fails|length)× in \($minutes) min "
-         + "(last: \($excerpt)). Change approach or read the error before retrying." | pyjson)
-    ') || return 1
-    [[ -n "$result" ]] || return 1
-    identity=${result%%$'\n'*}
-    notice=${result#*$'\n'}
-    # Same nonblocking advisory lock and line-based marker as Python check().
-    marker="$(runtime_state_dir "$mind")/.saddle_${identity%%:*}"
-    mkdir -p "${marker%/*}" || return 1
-    exec {marker_fd}<>"$marker" || return 1
-    flock -n "$marker_fd" || return 1
-    while IFS= read -r previous || [[ -n "$previous" ]]; do
-        [[ "$previous" != "$identity" ]] || return 1
-    done <&"$marker_fd"
-    printf '%s\n' "$identity" >>"$marker" || return 1
-    printf '{"hookSpecificOutput": {"hookEventName": "PreToolUse", "additionalContext": %s}}\n' "$notice"
-)
-
-# Preserve Python's left-to-right, non-greedy markup stripping. Bound each sed
-# substitution at the FIRST matching close, including nested reminders.
-clean_query() {
-    local text rest tag prefix matched closer cleaned="" old_nocasematch=0
-    local opener='<(task-notification|system-reminder|command-name|command-message|local-command-[[:alnum:]_]+)[^>]*>'
-    text=$(cat)
-    shopt -q nocasematch && old_nocasematch=1
-    shopt -s nocasematch
-    while [[ "$text" =~ $opener ]]; do
-        matched=${BASH_REMATCH[0]} tag=${BASH_REMATCH[1]}
-        prefix=${text%%"$matched"*}
-        rest=${text#*"$matched"}
-        closer="</$tag>"
-        # \w+ can backtrack when the opening local-command name is longer
-        # than its close; [^>]* then consumes the remaining name characters.
-        while [[ ! "$rest" =~ $closer && "$tag" == local-command-* && ${#tag} -gt 15 ]]; do
-            tag=${tag%?}
-            closer="</$tag>"
-        done
-        if [[ "$rest" =~ $closer ]]; then
-            closer=${BASH_REMATCH[0]}
-            cleaned+=$(printf '%s' "$prefix$matched${rest%%"$closer"*}$closer" |
-                sed -Ez 's@<(task-notification|system-reminder|command-name|command-message|local-command-[[:alnum:]_]+)[^>]*>.*</\1>@@I'; printf '.')
-            cleaned=${cleaned%.}
-            text=${rest#*"$closer"}
-        else
-            cleaned+="$prefix$matched"
-            text=$rest
-        fi
-    done
-    (( old_nocasematch )) || shopt -u nocasematch
-    # Python str.strip also includes C0 separators, NEL and nonbreaking spaces.
-    local space=$'\t\n\v\f\r\034\035\036\037 \u0085\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000'
-    space=${space//$'\n'/\\n}
-    printf '%s' "$cleaned$text" | sed -Ez "s/^[$space]+//; s/[$space]+$//"
+# Bounded ledger-tail transport and local notice acknowledgement; policy is native.
+saddle_check() {
+    local root
+    root=$(resolve_cc_soul_root) || return 1
+    printf '%s' "$1" | python3 -S "$root/chitta-mcp/hook_client.py" saddle-check \
+        "$2" "$3" "${4:-7}" "${5:-3}" "${6:-0.8}"
 }
 
 # Direct liveness RPC also renews the daemon-owned thread lease. Preserve the
@@ -356,73 +164,9 @@ daemon_available() {
     [[ -S "$(get_socket_path)" ]]
 }
 
-# Shared Pre/PostToolUse JSON string escaping and lifecycle path decoding.
-json_escape() {
-    echo -n "$1" | jq -Rs '.' | sed 's/^"//;s/"$//'
-}
-
-decode_project_path() {
-    local encoded="${1:1}"  # Skip leading dash
-    local path_so_far=""
-    local part
-    local -a PARTS
-    IFS='-' read -ra PARTS <<< "$encoded"
-    for part in "${PARTS[@]}"; do
-        local test_path="$path_so_far/$part"
-        if [[ -d "$test_path" ]]; then
-            path_so_far="$test_path"
-        else
-            local alt_path="$path_so_far-$part"
-            if [[ -d "$alt_path" ]]; then
-                path_so_far="$alt_path"
-            else
-                path_so_far="$test_path"
-            fi
-        fi
-    done
-    echo "$path_so_far"
-}
-
-# Lifecycle lookup; prompt-core's cached local realm detection is distinct.
-# Uses caller CHITTA_BIN/MAX_WAIT and preserves output on CLI failure.
-detect_project_realm() {
-    local project_dir="$1"
-    if [[ -n "$project_dir" && -d "$project_dir" ]]; then
-        (cd "$project_dir" && timeout "$MAX_WAIT" "$CHITTA_BIN" realm_detect 2>/dev/null || echo "brahman")
-    else
-        timeout "$MAX_WAIT" "$CHITTA_BIN" realm_detect 2>/dev/null || echo "brahman"
-    fi
-}
-
-# Get current session ID from environment or registry
-get_session_id() {
-    # First check environment
-    if [[ -n "${CLAUDE_SESSION_ID:-}" ]]; then
-        echo "$CLAUDE_SESSION_ID"
-        return
-    fi
-
-    # Use CLI sql_query to lookup session by PID (no netcat)
-    local claude_pid=${PPID:-$$}
-    if [[ -n "$claude_pid" && "$claude_pid" != "0" ]]; then
-        local result
-        result=$(chitta sql_query --query "SELECT session_id FROM session_registry WHERE pid = $claude_pid AND status = 'active' LIMIT 1" --text-only 2>/dev/null)
-        # Extract UUID from result (handles table format output)
-        local session_id
-        session_id=$(echo "$result" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
-        if [[ -n "$session_id" ]]; then
-            echo "$session_id"
-            return
-        fi
-    fi
-
-    # Fallback to empty (caller should handle default)
-    echo ""
-}
-
 # Get next turn index atomically (flock-protected increment)
 get_next_turn() {
-    local session_id="${1:-$(get_session_id)}"
+    local session_id="${1:-}"
     [[ -z "$session_id" ]] && echo 0 && return
 
     local state_dir
@@ -495,7 +239,7 @@ queue_write() {
     # "multi-line jq output truncates the JSONL entry" class of parse errors.
     # CHITTA_QUEUE_PATH lets the binary honor non-default queue locations
     # (test fixtures, isolated checkouts).
-    mkdir -p "$(dirname "$queue_file")"
+    [[ -d "${queue_file%/*}" ]] || mkdir -p "${queue_file%/*}"
     local chitta_bin="${CHITTA_BIN:-$HOME/.claude/bin/chitta}"
     if [[ -x "$chitta_bin" ]]; then
         CHITTA_QUEUE_PATH="$queue_file" "$chitta_bin" queue_write "$tool" "$args" >/dev/null 2>&1 && return

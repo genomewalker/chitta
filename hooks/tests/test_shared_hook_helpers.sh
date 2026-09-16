@@ -1,34 +1,33 @@
 #!/bin/bash
-# Regression coverage for helpers shared by multiple lifecycle/tool hooks.
+# Local envelopes retain exact queue bytes and project-path identity.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-T=$(mktemp -d)
-trap 'rm -rf "$T"' EXIT
-source "$ROOT/hooks/lib.sh"
-
-# Escaped contents must retain whitespace, Unicode and JSON control characters.
-for value in '' 'plain' $'"quote" \\ slash\n\tcarriage\rα' $'tail\n\n'; do
-    expected=$(printf '%s' "$value" | jq -Rs .)
-    [[ "\"$(json_escape "$value")\"" == "$expected" ]]
-done
-
-# Directory existence resolves dash ambiguity; nonexistent components survive.
-mkdir -p "$T/project-name/sub dir"
-for path in "$T/project-name" "$T/project-name/sub dir" "$T/missing/child"; do
-    [[ "$(decode_project_path "${path//\//-}")" == "$path" ]]
-done
-[[ "$(decode_project_path '')" == '' ]]
-
-cat > "$T/chitta" <<'STUB'
-#!/bin/bash
-[[ "$1" == realm_detect ]] || exit 9
-printf '%s\n' "$PWD"
-exit "${REALM_EXIT:-0}"
-STUB
-chmod +x "$T/chitta"
-export CHITTA_BIN="$T/chitta" MAX_WAIT=2
-[[ "$(detect_project_realm "$T/project-name")" == "$T/project-name" ]]
-[[ "$(detect_project_realm "$T/missing")" == "$PWD" ]]
-[[ "$(detect_project_realm '')" == "$PWD" ]]
-[[ "$(REALM_EXIT=1 detect_project_realm "$T")" == "$T"$'\nbrahman' ]]
-printf 'shared hook helpers: passed\n'
+PYTHONDONTWRITEBYTECODE=1 python3 - "$ROOT" <<'PY'
+import json
+import os
+import sys
+import tempfile
+import uuid
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / 'chitta-mcp'))
+from hook_client import Client
+from hook_session import project_dir
+with tempfile.TemporaryDirectory(prefix='envelope') as temporary:
+    base = Path(temporary)
+    os.environ.update(CHITTA_DB_PATH=str(base/'mind'), CHITTA_QUEUE=str(base/'queue'), CHITTA_RUNTIME_LOCAL='0')
+    client=Client({'session_id':'envelope'})
+    values=('', 'plain', '"quote" \\ slash\n\tcarriage\rα', 'tail\n\n')
+    for value in values:
+        client.queue('observe', {'category':'wisdom','content':value,'id':18446744073709551614})
+    raw=(base/'queue').read_bytes().splitlines()
+    assert len(raw)==len(values), 'one complete JSONL record per acknowledged write'
+    records=[json.loads(line) for line in raw]
+    assert [row['args']['content'] for row in records]==list(values)
+    assert all(row['args']['id']==18446744073709551614 for row in records)
+    assert len({uuid.UUID(row['ack_id']) for row in records})==len(values)
+    (base/'project-name/sub dir').mkdir(parents=True)
+    for path in (base/'project-name',base/'project-name/sub dir',base/'missing/child'):
+        assert project_dir({'transcript_path':'/home/projects/'+str(path).replace('/','-')+'/session.jsonl'})==str(path)
+    assert project_dir({})==''
+print('ok: exact Unicode/u64 JSONL records, unique queue acknowledgements and project paths')
+PY

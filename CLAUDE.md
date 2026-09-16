@@ -111,6 +111,11 @@ The live plugin loads hooks and MCP python from `~/.claude/hooks/*` and the
 marketplace checkout, never from this repo directly. `scripts/dev-install.sh`
 symlinks those paths back here, so editing the repo is editing the live plugin.
 
+- **Never merge a branch that touches `hooks/` in this checkout.** The live
+  hooks are symlinks here, so conflict markers in `pre-tool-hook.sh` turn the
+  PreToolUse hook into a syntax error that blocks every Read, Write and Bash
+  call (2026-09-17). Merge in a separate worktree, resolve, run
+  `scripts/gate-quick.sh`, then `git merge --ff-only` here.
 - Run `dev-install.sh` after touching hooks or MCP python. It symlinks, then
   calls `sync-installed-hooks.sh` for the plugin and Codex caches in the same
   step. Hooks go live on the next invocation; MCP python needs the restart.

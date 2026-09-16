@@ -18,6 +18,19 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
   scoped query needs them, preserving recall ordering across restart. Add the
   frozen 20-question `benchmarks/codenav` navigation and byte-proxy gate.
 
+- Retire shell policy compatibility in Phase 5b: hooks and daemon ship together;
+  missing/late native replies produce one safe unavailable line. Prompt and
+  ancillary policy execute in the daemon; local safety and file/queue envelopes
+  remain. Pure ledger assembly no longer forces store sync.
+- Reduce `hooks/*.sh` from 8,988 to 2,696 lines. Seventy adjacent fixture pairs
+  match. Five-repeat full-wall medians: prompt 194.7 ms, SessionStart 200.1 ms,
+  Stop 691.6 ms, Bash 83.4 ms. Both Codex and positive handoff variants meet the
+  median gates. See [the superseding report](docs/PHASE5B-POLICY-RETIRE-REPORT.md)
+  for per-family boundaries, attribution, full validation and retained outliers.
+- Remove obsolete prompt/ledger/per-lane RPC selectors, the hook-local admission
+  and distillation fallback paths, and stale unregistered ancillary operations.
+  No advertised RPC or storage schema changed; contracts remain unchanged.
+
 - Record Phase 5 verification and unmet exit gates in
   `docs/PHASE5-POLICY-REPORT.md`: 30 measured paired fixtures match, but shell
   lines grow 8,743 → 8,988; prompt medians 415/457 ms and Bash added overhead

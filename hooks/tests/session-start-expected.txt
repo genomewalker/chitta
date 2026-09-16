@@ -1,0 +1,34 @@
+
+━━━ inbox (project:latency) ━━━
+• inbox task
+
+━━━ active threads ━━━
+  ⟳  active task [12345678]
+[soul] m=10 t=20
+[ledger] previous (idle)
+
+[topology]
+Themes: 4m: theme
+Active: wisdom:3
+Recent (project:latency):
+  #7 [wisdom] recent
+Total: 10 memories (2 critical, 1 pinned)
+[/topology]
+
+[recall:project:latency]
+#7 [80%] [wisdom] scoped answer
+
+[/recall:project:latency]
+[soul] If context above is sparse for the current task, call mcp__chitta__recall or mcp__chitta__smart_context for deeper retrieval.
+
+[recent-corrections]
+keep correction α
+[/recent-corrections]
+
+[compliance] missed corrections
+
+[probe] hedging×3 — direct, drop qualifiers
+
+
+⚠️ BEFORE RUNNING: [cache] Recent cache break detected:
+cache warning

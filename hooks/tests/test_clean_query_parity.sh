@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PYTHONDONTWRITEBYTECODE=1 python3 - "$ROOT" <<'PY'
 import re
-import subprocess
+from pathlib import Path
 import sys
 
 fixtures = [
@@ -29,12 +29,14 @@ fixtures = [
     '<sys<command-name>x</command-name>tem-reminder>keep</system-reminder>',
     'quotes " \' \\ $HOME `echo nope`\t<local-command-a-b>keep</local-command-a-b>',
 ]
+sys.path.insert(0, str(Path(sys.argv[1]) / "chitta-mcp"))
+from hook_prompt import clean_query
+
 pattern = r'<(task-notification|system-reminder|command-name|command-message|local-command-\w+)[^>]*>.*?</\1>'
 assert len(fixtures) == 20
 for index, prompt in enumerate(fixtures, 1):
     expected = re.sub(pattern, '', prompt + '\n', flags=re.DOTALL | re.IGNORECASE).strip()
-    result = subprocess.run(['bash', '-c', 'source "$1/hooks/lib.sh"; clean_query', '_', sys.argv[1]],
-                            input=prompt + '\n', text=True, capture_output=True, check=True)
-    assert result.stdout == expected, (index, repr(expected), repr(result.stdout), result.stderr)
+    result = clean_query(prompt + '\n')
+    assert result == expected, (index, repr(expected), repr(result))
 print('ok: all 20 clean_query fixtures match the original Python cleaner byte for byte')
 PY

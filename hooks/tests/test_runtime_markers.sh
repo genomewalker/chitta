@@ -21,12 +21,13 @@ for placement in ("0", "1"):
         runtime = base / "run"
         runtime.mkdir()
         cli = base / "cli"
-        cli.write_text('#!/bin/bash\ncase "$1" in queue_write) exit 1;; *) echo "{}";; esac\n')
-        cli.chmod(0o755)
+        subprocess.run([os.environ.get("CXX", "g++"), "-std=c++17", "-O2", "-pthread",
+                        "-I" + str(root / "chitta/include"), str(root / "hooks/tests/event-response.cpp"),
+                        "-lcrypto", "-o", str(cli)], check=True)
         env = {k: v for k, v in os.environ.items()
                if not k.startswith(("CHITTA_", "CC_SOUL_", "MIND"))}
         env.update(HOME=str(base / "home"), CHITTA_DB_PATH=str(mind),
-                   CHITTA_BIN=str(cli), CHITTA_RUNTIME_LOCAL=placement,
+                   CHITTA_BIN=str(cli), CHITTA_RUNTIME_LOCAL=placement, CHITTA_PLUGIN_DIR=str(root),
                    XDG_RUNTIME_DIR=str(runtime), CHITTA_SOCKET_PATH=str(base / "socket"),
                    CHITTA_DISABLE_CONSOLIDATION="1", CHITTA_STRICT_MODE="0",
                    CHITTA_HOOK_BUDGET_MS="3000", CHITTA_HOOK_RPC_BUDGET_S="0")

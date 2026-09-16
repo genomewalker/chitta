@@ -233,3 +233,96 @@ MCP 159, SMRITI 46 and CI lint passed. The language-expansion follow-up added
 by the required main merge is marked pending, separately from the five steps
 in this work order. The benchmark approval trailer is carried forward because
 the immutable-eval checker reads the branch head message for the entire diff.
+
+# Phase 5b shell policy retirement — 2026-09-16
+
+Step 1 makes `prompt_context` the only prompt retrieval/admission implementation.
+Failed, invalid or late replies emit one unavailable line and exit successfully;
+there is no batch/per-lane retry, shell fusion/admission or local CLI policy path.
+Native-policy synthetic integration retains ablation, small-realm and query-gate
+coverage. The failed-RPC and pipeline-timeout fixtures now expect the unavailable
+line instead of legacy admission. Other shared lib helpers still have callers.
+
+Verification: 70 adjacent unchanged/candidate output/status pairs passed on the
+private frozen replica, including 40 warm-up pairs; native prompt execution and
+lane accounting were required. All 28 shell tests, 159 MCP, 46 SMRITI, eight hook
+Python tests, CI Ruff check/format, touched-shell syntax/ShellCheck and contracts
+passed. Before controls preserved a first warm-up difference and intermittent
+150 ms Stop compatibility-probe timeouts; the final control matched all bytes.
+Step 2 must eliminate that probe fallback and require native ledger execution.
+Evidence is untracked under `/tmp/chitta-p5b-retire/evidence`. Prompt shell:
+1,937 → 1,274 lines; all top-level hooks: 8,988 → 8,325. No daemon changes yet.
+
+Step 2 retires Stop/SessionStart compatibility assembly and the 150 ms native
+probe. Cards, handoff payloads and lightweight/event/rich checkpoints now come
+from `ledger_op`; new private operations are `hook_stop_progress` and
+`hook_stop_checkpoint`, within the unchanged open `op`/`args` schema. Transcript
+slicing, git inspection, durable local queues and cursor acknowledgement remain
+client-side. Invalid/late assembly replies use the one-line unavailable output.
+The chaos fixture now expects that line and proves recovery via `prompt_context`;
+synthetic ledger fixtures execute production C++ policy. A detached heartbeat
+assertion now waits for the existing handshake instead of racing its completion.
+
+Regression attribution: pure hook ledger operations were absent from the read
+classification, causing unconditional store sync after non-mutating assembly.
+Explicit read classification removes it; real-dispatch tests count sync calls
+with global locking both enabled and disabled, preserving sync for `hook_turn`
+and unknown operations. The isolated capsule assembly comparison was only
+73.46 → 76.66 ms across Phase 5, so it does not explain the whole historical
+130 ms rise. Full-wall measurements varied substantially; all failed attempts
+are retained outside git. Stop also decodes input/snapshot fields once, avoids
+empty span capture, and avoids redundant queue-directory creation.
+
+Verification: 70 byte-identical adjacent pairs with native prompt/ledger required;
+28 hook shell tests, 159 MCP, 46 SMRITI, eight hook Python, CI Ruff, shell syntax
+and ShellCheck, and 33 CTests passed. Five measured repetitions after four
+warmups, pinned private replica: Stop 664.518 ms; Codex Stop 719.875 ms. The
+additional handoff variant measured 939.137 ms and remains a performance concern
+for the broader retirement in step 3. No timings are inferred from internal
+assembly spans. Top-level shell lines: 8,325 → 8,033; Stop 1,143 → 1,026;
+SessionStart 833 → 658. Contracts remain unchanged. Evidence:
+`/tmp/chitta-p5b-retire/evidence/step2-sync-{parity,timing,ctest}*`.
+
+Step 3 (2026-09-17): native read plans now own ancillary decisions and the
+remaining prompt/SessionStart policy. Python keeps local transcript/git/file/
+terminal input, queue/marker acknowledgement and bounded process transport.
+Shell PreToolUse safety_check stays local. hook_apply is an explicitly classified
+allowlisted write; pure assembly plans are reads. Distillation uses distill_now.
+Retired unregistered SQL/probe/watch calls; run-ledger preserves its historical
+zero count instead of issuing a query-less recall. No Rust/scoring/schema edits.
+
+Final shell total: 8,033 -> 2,696 (Phase 5 starting point 8,988). Verified 70
+byte-identical adjacent fixture pairs with native pipeline/ledger required;
+32 hook shell tests, 159 MCP, 46 SMRITI, nine hook Python, CI Ruff, shell syntax and
+ShellCheck. All 33 CTests pass across the final run and two unchanged isolated
+reruns of synchronization assertions; an earlier complete run passed 33/33.
+
+The documentation control exposed new helper processes escaping frontend cleanup.
+Restored shell-equivalent process-group ownership, added an actual PID/group
+regression, and individually terminated 134 verified private notifier processes.
+No live or other-stream process was targeted. Clean runs leave no notifiers.
+Removed duplicate root/default/context/handoff decoding work. Standard-library
+Stop helper startup measured 132.232ms vs 101.251ms with -S (seven interleaved pairs);
+the hook now skips site initialization and all nine Python tests also pass with -S.
+
+Final five-repeat full-wall medians after four warmups and no concurrent own
+tests: prompt 194.693ms, Codex prompt 194.931ms, SessionStart 200.101ms,
+Stop 691.566ms, Codex Stop 615.021ms, handoff Stop 610.999ms, Bash 83.397ms,
+Codex Bash 64.529ms. Median gates pass; substantial tail outliers remain in the
+report. Earlier missed gates and helper-leak runs are retained, not presented as
+final qualification. Current evidence: step3-stdlib-parity and
+step3-qualified-final under /tmp/chitta-p5b-retire/evidence. Docs are a separate
+fourth commit. Plan.md and all raw evidence remain untracked.
+
+Step 4 (2026-09-17): the superseding Phase 5b report records per-family boundaries,
+2,696 shell lines, qualified full-wall medians, retained tail outliers, process
+lifecycle and startup-cost findings, and validation. HOOKS.md removes retired
+selectors; the original Phase 5 report has a dated supersession notice; CHANGELOG
+points at the new evidence. The implementation remains exactly 31236c0e. Final
+documentation controls compare all ten fixtures before/after, with no golden
+fixture changes. No push or deployment; Plan.md and raw evidence stay untracked.
+
+The final shell suite had one 3-second saddle subprocess timeout during concurrent
+fixture compilation; all other 31 passed. The saddle test passed unchanged in
+isolation, including its timeout/latency assertions. Both logs remain in scratch
+evidence and the report records the rerun.

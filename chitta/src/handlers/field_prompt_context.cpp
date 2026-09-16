@@ -1,11 +1,23 @@
 #include "chitta/rpc/field_handler.hpp"
 #include "chitta/prompt_fusion.hpp"
+#include <chitta/hook_prompt_policy.hpp>
+#include <chitta/llm_http.hpp>
+#include <filesystem>
 
 namespace chitta {
 ToolResult FieldRpcHandler::tool_prompt_context(const json& params) {
     try {
+        const auto hook_started = std::chrono::steady_clock::now();
         auto state = params.at("state");
         if (!state.is_object()) return ToolResult::error("state must be an object");
+        const bool hook = state.contains("input");
+        auto envelope = state;
+        json plan;
+        if (hook) {
+            plan = hook_policy::prompt_prepare(envelope);
+            if (plan.value("skip", false)) return ToolResult::ok("", {{"hook",plan}});
+            state = plan.at("policy_state");
+        }
         json retrieval;
         if (state.contains("retrieval")) {
             auto request = state.at("retrieval");
@@ -99,6 +111,29 @@ ToolResult FieldRpcHandler::tool_prompt_context(const json& params) {
             result["retrieval"] = retrieval;
             result["admission_ms"] = std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::steady_clock::now() - admission_started).count();
+        }
+        if (hook) {
+            auto invoke = [&](const std::string& tool, const json& args) {
+                if (tool == "$hook_classifier") {
+                    const auto model = mind_path_ + "/hook-classifier.bin";
+                    std::string intent;
+                    if (std::filesystem::is_regular_file(model)) {
+                        const std::string script = "import fasttext,sys; m=fasttext.load_model(sys.argv[1]); t=sys.argv[2].strip().replace(chr(10),' '); l,s=m.predict(t,k=1); print(l[0].replace('__label__','') if s[0]>=0.55 and l[0]!='__label__neutral' else '')";
+                        intent = hook_ledger::trim(fork_exec_capture({"python3", "-c", script, model, args.at("query").get<std::string>()}, 1));
+                    }
+                    return json{{"text",""},{"structured",{{"intent",intent}}}};
+                }
+                const auto handler = handlers_.find(tool);
+                if (handler == handlers_.end()) throw std::runtime_error("missing hook dependency: " + tool);
+                const auto reply = handler->second(args);
+                if (reply.is_error) throw std::runtime_error(reply.text);
+                return json{{"text",reply.text},{"structured",reply.structured}};
+            };
+            result["lane_ms"] = state.at("lane_ms");
+            result["lane_timeout"] = state.at("lane_timeout");
+            envelope["hook_ms"] = envelope.value("pin_timings", false) ? 0 :
+                std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - hook_started).count();
+            result["hook"] = hook_policy::prompt_finish(envelope, plan, result, invoke);
         }
         return ToolResult::ok(result.at("fused_block").get<std::string>(), result);
     } catch (const std::exception& error) {

@@ -48,8 +48,14 @@ before changing the default. A hook environment alone cannot change an already
 running daemon's policy. See [FIELD_PERF.md](FIELD_PERF.md) for inventory and
 measurements. Stream tests use private copies from `scripts/eval-replica.sh`.
 
-Phase 5's measured implementation and unmet line/latency exit gates are recorded
-in [the policy migration report](PHASE5-POLICY-REPORT.md).
+Phase 5b retires the shell policy compatibility paths. Hooks and the daemon ship
+together; migrated policy hooks never try an older RPC or recompute policy locally. A missing,
+invalid or late reply emits `[chitta] daemon unavailable; context not loaded.` and
+exits zero. Local PreToolUse safety checks still run before the RPC.
+See [the Phase 5b retirement report](PHASE5B-POLICY-RETIRE-REPORT.md) for current
+line counts, fixture parity, full wall timings and the family-by-family boundary.
+Dated measurements below are historical; their compatibility switches and paths
+are superseded by Phase 5b.
 
 ### Phase 5 prompt admission and fusion (2026-09-16)
 
@@ -62,14 +68,17 @@ sharing cached embeddings for identical queries. Different context and temporal
 query strings keep their existing embedding identities. Each lane reports
 `complete`, `degraded`, `timeout` or `empty` plus elapsed milliseconds. These
 fields describe retrieval; they do not remove or reorder its results.
-The daemon and `chitta prompt_context --local` compile the same pure admission policy;
-retrieval, score values and result ordering remain unchanged.
+The prompt hook gathers local state and makes exactly one `prompt_context` call.
+The daemon prepares the query, invokes the existing retrieval handlers, admits
+results and renders the response. The local CLI admission command is not a hook
+fallback. Retrieval score values and result ordering remain unchanged.
 
 The compatibility C2 bands are KNOWN at raw maxrel >= 81 and UNKNOWN below.
 THIN remains merged into KNOWN, as in the existing hook calibration. Display
 calibration, lane fairness, per-session deduplication and output truncation are
-preserved. The hook retains its real deadline, timeout fallback, and final
-end-to-end elapsed value because a daemon cannot measure hook setup/rendering.
+preserved. The client bounds the RPC by its remaining real budget and keeps local
+file/queue acknowledgement. Outcome telemetry measures client elapsed time;
+daemon spans measure internal work. Qualification uses external full wall time.
 
 ### Phase 5 ledger assembly (2026-09-16)
 
@@ -80,13 +89,35 @@ handoff, task and normal/clear/compact ledger cards in the daemon. Responses use
 operation to queue. Stop keeps visible transcript parsing, git branch/path
 inspection, cursor management and durable queue acknowledgement local. A valid
 prepare response enables queued `ledger_op(op=hook_turn)` for that Stop process;
-its transcript event payload is unchanged. Unknown/invalid/late replies retain
-the previous shell path, with a 150 ms probe budget.
+its transcript event payload is unchanged. Unknown/invalid/late replies emit the
+single unavailable line. The 150 ms compatibility probe and shell card/capsule
+implementations are removed. Pure assembly operations are classified as reads,
+so they do not force a field-store sync.
 
 The queue dispatcher now handles `ledger_op` through the ledger's existing
 transaction/WAL path. Previously queued capsule `session_bind` operations were
 silently skipped. The isolated daemon test requires a real queued capsule to
 round-trip before passing. No snapshot/WAL format or advertised tool changes.
+
+### Phase 5b ancillary policy (2026-09-17)
+
+`ledger_op` read operations `hook_pre_tool`, `hook_post_tool`, `hook_pre_compact`,
+`hook_compact_restore`, `hook_saddle`, `hook_ancillary` and `hook_session_start`
+return rendered output and acknowledged local/queue updates. The separate
+`hook_apply` operation is a write, with an explicit allowlist for deferred native
+handlers. These use the existing open `op`/`args` schema.
+
+Python envelopes handle transcript slicing, file hashes, git/terminal inspection,
+process timeouts and local marker/queue writes. Shell PreToolUse keeps
+`safety_check`. Codex wrappers keep event/schema normalization. Distillation uses
+`distill_now`; Dream sweep sends transcript counts and paths, receives native
+selection/synthesis, and keeps only its local lock, scan and processed-file ACK.
+
+Retired controls: `CHITTA_PROMPT_CONTEXT`, `CHITTA_LEDGER_POLICY`,
+`CHITTA_RECALL_LANES_RPC` and their `CC_SOUL_*` aliases no longer select an
+implementation. `CHITTA_SQZ_DEDUP` and the unused `CHITTA_LEAN` hook option are
+also retired. `CHITTA_ABLATE_LANES` still controls evaluation ablation; it does
+not select a shell implementation. Models for distillation are daemon-owned.
 
 ### Phase 6 runtime placement and embedding workers (2026-09-16)
 
@@ -97,11 +128,9 @@ round-trip before passing. No snapshot/WAL format or advertised tool changes.
 | `CHITTA_EMBED_WRITE_WORKERS` | `0` | `0` preserves the existing embedding lane. Positive values enable dedicated document workers and a separate two-worker Unix write-RPC pool. Clamped to leave one of `CHITTA_EMBED_CONTEXTS` free when possible. |
 | `CHITTA_EMBED_WRITE_DEPTH` | `64` | Maximum queued document jobs, excluding active workers; 1–65536. |
 | `CHITTA_EMBED_WRITE_WAIT_MS` | `1000` | Actual document-inference callers wait for admission at most this long; 1–60000 ms. Cache-warming calls remain nonblocking because legacy callers can hold the global write lock. |
-| `CHITTA_PROMPT_CONTEXT` | `1` | One daemon call runs existing recall lanes, fuses their text and applies admission for both frontends. It retains the existing `MAX_WAIT + 1` timeout and legacy lane fallback; standalone admission has a 150 ms RPC / 250 ms native CLI fallback. `0` selects the previous shell implementation. Retrieval scoring is unchanged. |
-| `CHITTA_HOOK_PROFILE` | unset | Measurement only: write the complete prompt policy response to this private file, including lane statuses and daemon embedding, retrieval and admission milliseconds. The parity harness uses this only in `measure` mode. |
-| `CHITTA_LEDGER_POLICY` | `1` | Use daemon ledger/card assembly for SessionStart and Stop. `0` selects the previous shell path; `CC_SOUL_LEDGER_POLICY` remains an alias. |
+| `CHITTA_HOOK_PROFILE` | unset | Measurement only: write the complete prompt policy response to this private file, including lane statuses and daemon embedding, retrieval and admission milliseconds. The parity harness uses this in `measure` mode or with `--require-pipeline`. |
 | `CHITTA_LEDGER_PROFILE` | unset | Evaluation only: private destination for the validated ledger assembly response. `--require-ledger` checks this and Stop's queued capsule/turn payloads. |
-| `CHITTA_HOOK_NOW` | unset | Parity evaluation only: 13-digit positive Unix milliseconds. Pins shell wall timestamps and displayed lane/total durations to zero; explicit date parsing, real timeout flags and prompt budget enforcement remain unpinned. Use with `CHITTA_RECALL_NOW` on a private replica and `scripts/bench-hook-parity.py`. Invalid values are ignored. |
+| `CHITTA_HOOK_NOW` | unset | Parity evaluation only: 13-digit positive Unix milliseconds. Pins hook wall timestamps and displayed lane/total durations to zero; explicit date parsing, real timeout flags and prompt budget enforcement remain unpinned. Use with `CHITTA_RECALL_NOW` on a private replica and `scripts/bench-hook-parity.py`. Invalid values are ignored. |
 | `CHITTA_RECALL_NOW` | unset | Evaluation only: positive Unix milliseconds, fixed once per daemon for Rust recall scoring. Write/WAL clocks remain real. Unset or invalid uses the wall clock. The restart gate records and reuses one value across processes. |
 | `CHITTA_RECALL_EMBED_WAIT_MS` | `50` | Query and variant embedding wait, 1–60000 ms; invalid values retain 50 ms. Replica identity evaluation uses 10000 ms and rejects missing embeddings, preventing load-dependent semantic-lane loss. Production fallback remains 50 ms unless explicitly overridden. |
 | `CHITTA_MAX_QUEUE_DEPTH` | `256` | Existing RPC cap also bounds the opt-in Unix write pool and its additional admission waiting room; a full pool is retried for one second without blocking socket polling. |
@@ -252,7 +281,7 @@ All lifecycle hooks write JSON `hookSpecificOutput` schema on stdout. This is no
 |-------------------------|------------------|--------------------------------------------------------------------------------------|
 | `session-start-hook.sh` | SessionStart     | Realm detection, code re-indexing, soul context injection, ledger restore, git diff  |
 | `prompt-hook.sh`        | UserPromptSubmit | Wraps `prompt-core.sh`: six-lane realm-scoped recall, admission filtering, code symbol injection, anticipation prediction, learning hints |
-| `prompt-core.sh`        | UserPromptSubmit | The recall fan-out and admission policy itself. See the [recall pipeline page](https://genomewalker.github.io/chitta/recall.html) |
+| `prompt-core.sh`        | UserPromptSubmit | Local state envelope and one daemon `prompt_context` call; native query preparation, fusion, admission and rendering. See the [recall pipeline page](https://genomewalker.github.io/chitta/recall.html) |
 | `stop-hook.sh`          | Stop             | Extract `[SOLUTION]`, `[GOTCHA]`, `[PREFERENCE]`, `[DECISION]`, `[FAILURE]`, `[PATTERN]`, `[LEARN]` blocks; anticipation recording; ledger save |
 | `pre-compact-hook.sh`   | PreCompact       | Save ledger checkpoint before context compaction                                     |
 | `pre-tool-hook.sh`      | PreToolUse       | Safety checks, file dedup, large-file truncation, Write guards, Agent routing, ScheduleWakeup budgeting |
@@ -845,16 +874,14 @@ name, except the new code-navigation controls and explicit `CHITTA_ALLOW_MCP_KIL
 | `CHITTA_STORE_LOCK_WAIT_S`   | `45`         | How long a starting daemon polls (250 ms) for a store lock held by a live holder — the previous instance finishing its shutdown snapshot, or a unit on another login node; `0` fails at once. A stale same-host lock is replaced immediately; another host's live lock is never overridden (2026-09-16) |
 | `CHITTA_SOCKET_PATH`         | derived      | Daemon socket override, honoured by the CLI and by `get_socket_path` in every hook; the SMRITI runner and `eval-replica.sh` set it so hooks talk to the frozen replica |
 | `CHITTA_QUEUE`               | `<mind>/queue.jsonl` | Fire-and-forget write queue shared by hooks, MCP and the daemon; derived from the mind dir (`/tmp` does not persist across nodes). `CHITTA_QUEUE_PATH` is a legacy alias, `CHITTA_NO_QUEUE=1` disables consumption |
-| `CHITTA_RECALL_LANES_RPC`    | `1`          | One `recall_lanes` RPC for all prompt-hook lanes (default on since 2026-09-13; `0` = six CLI processes) |
 | `CHITTA_MCP_LAG_INTERVAL_MS` | `250`        | MCP asyncio scheduling-delay sampling interval in milliseconds            |
 | `CHITTA_MCP_LAG_WARN_MS`     | `200`        | Scheduling delay that increments `over_count` and logs a warning          |
-| `CHITTA_LEAN`                | `false`      | Ultra-lean context mode (stats only)                                     |
 | `DEBUG_SOUL`                  | `0`          | `1` = enable debug output to stderr                                      |
 | `SUBCONSCIOUS_INTERVAL`       | `60`         | Daemon cycle interval in seconds                                         |
 
 This table covers the enforcement and budget knobs only. The hook scripts read
-far more than this — around 97 distinct `CHITTA_*` / `CC_SOUL_*` names, most of
-them internal. Enumerate the full set with:
+far more than this — additional internal controls. Native hook settings are passed by the Python
+envelopes in `chitta-mcp/hook_*.py`; enumerate shell names with:
 
 ```bash
 grep -ohE 'CHITTA_[A-Z_]+|CC_SOUL_[A-Z_]+' hooks/*.sh | sort -u
