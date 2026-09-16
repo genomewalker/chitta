@@ -847,7 +847,7 @@ chitta remember --content "[correction] WRONG: ... CORRECT: ..." \
 
 The subconscious daemon runs background processing without consuming main context tokens.
 
-Status 2026-09-14: query embedding uses one model with `CHITTA_EMBED_CONTEXTS` contexts (default 4, clamp 1..16) and an exact-query LRU (`CHITTA_EMBED_CACHE`, default 512, 0 disables; health_check reports hits/misses/coalesced); the isolated 768-d eval replica passed 17 CTests and bit identity across contexts, but repeated 12-call recall_lanes median total was 1794.5 ms (target <1500 ms unmet); see [measurements](../Plan.md).
+Status 2026-09-14: query embedding uses one model with `CHITTA_EMBED_CONTEXTS` contexts (default 4, clamp 1..16) and an exact-query LRU (`CHITTA_EMBED_CACHE`, default 512, 0 disables; health_check reports hits/misses/coalesced); the isolated 768-d eval replica passed 17 CTests and bit identity across contexts, but repeated 12-call recall_lanes median total was 1794.5 ms (target <1500 ms unmet); see measurements (recorded in the 2026-09-14 stream notes; the numbers are the ones quoted here).
 
 ### Lifecycle
 

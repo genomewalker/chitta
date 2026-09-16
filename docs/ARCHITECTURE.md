@@ -1,6 +1,10 @@
 # chitta Architecture
 
-Status as of 2026-09-16.
+Status as of 2026-09-16. Rewritten as a 150-line overview from the 1,131-line
+2026-09-02 version; the long form (build steps, predicate tables, decay rates,
+confidence model, embedder circuit breaker) is preserved in git history:
+`git show 33aacc65:docs/ARCHITECTURE.md`. Treat it as historical detail, not
+current truth, where the two disagree.
 
 chitta is a C++ daemon over an embedded Rust store, with a native CLI,
 Python MCP gateways and shell hooks for Claude Code and Codex. This describes
