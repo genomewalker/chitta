@@ -90,6 +90,20 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
   bounded wait, rejecting incomplete semantic lanes instead of accepting fallback.
 - `no_learn` semantic recall preserves stored competitive weights and refresh
   timestamps; learning and maintenance continue to refresh them normally.
+
+- 2026-09-16: private-replica RPC stress tool with 12 writers/12 readers for
+  300 seconds, total 30-second call deadlines, named Rust lock maxima, count
+  and payload/state checks, and SIGKILL/WAL replay verification. Corrected
+  read-induced access-state comparison verifies 18,901 observe and 21,378
+  remember acknowledgements; Rust hold limits remain unmet. Diagnostic and
+  incomplete-gate runs exit nonzero; reproduction and limits are documented.
+- 2026-09-16: `CHITTA_GLOBAL_LOCK=0` bypasses the dispatcher, queue and background
+  global mutex without changing WAL-sync classification. Default 1 retains the
+  existing policy: all three 300-second mixed-client workloads exceeded the
+  50 ms Rust hold gate. Named timing records now survive native stderr writes.
+  CTest 30/30, Rust 291 passed, chaos 9/9; same-copy restart identity 20/20
+  versus 18/20 before, fixed controls 20/20. Inventory and limitations are in
+  `docs/FIELD_PERF.md`.
 - 2026-09-16 follow-up validation: 200/200 writes, zero errors, embeddings
   drained; recall p95 113.9 ms during writes / 162.8 ms full window; cached
   restart 16.10 s. Full-window latency and restart gates remain unmet. Chaos
@@ -175,6 +189,16 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 - Chained `git add … && git commit` commands are captured as milestones.
 
 ### Fixed
+- 2026-09-16 (Phase 1c): measure real Rust component RwLock waits and holds,
+  including timed reads and unwinding. Named diagnostics log first use, maxima,
+  and every wait or hold over 50 ms; archive poisoning remains intact.
+- 2026-09-16 (Phase 1b): publish queue metadata and callbacks under narrow
+  mutexes, initialize sadhana before background readers, and join foreground
+  RPC and compaction workers before destroying their captured state.
+- 2026-09-16 (Phase 1a): task-ledger reads, revision allocation, WAL append,
+  and table publication now share a dedicated transaction mutex instead of
+  depending on the RPC dispatcher lock. A 24-client regression verifies one
+  lease winner, sequential revisions, and replay equality.
 - Nightly literature cards were rejected by the proposal loader (source URL
   instead of a kind, prose `blast_radius`, zero effort) and silently skipped by
   the selector; the watch now writes the loader's contract.

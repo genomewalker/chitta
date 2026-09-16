@@ -21,10 +21,10 @@ ToolResult FieldRpcHandler::tool_sadhana_start(const json& params) {
     if (params.contains("goal_dsl") && params["goal_dsl"].is_object())
         goal_dsl = params["goal_dsl"];
 
-    int64_t id = sadhana_manager_->create(goal, provider, model, interval, realm, goal_dsl, max_turns);
+    int64_t id = sadhana_manager_.load()->create(goal, provider, model, interval, realm, goal_dsl, max_turns);
     if (id == 0) return ToolResult::error("Failed to create sadhana");
 
-    if (!sadhana_manager_->start(id))
+    if (!sadhana_manager_.load()->start(id))
         return ToolResult::error("Created sadhana " + std::to_string(id) + " but failed to start");
 
     json result = {{"id", id}, {"state", "running"}, {"goal", goal.substr(0, 100)}};
@@ -38,7 +38,7 @@ ToolResult FieldRpcHandler::tool_sadhana_pause(const json& params) {
     auto [id, id_str] = parse_id(params, "id");
     if (id == 0) return ToolResult::error("Invalid sadhana ID");
 
-    if (!sadhana_manager_->pause(id))
+    if (!sadhana_manager_.load()->pause(id))
         return ToolResult::error("Failed to pause sadhana " + std::to_string(id));
 
     return ToolResult::ok("Paused sadhana " + std::to_string(id),
@@ -52,7 +52,7 @@ ToolResult FieldRpcHandler::tool_sadhana_resume(const json& params) {
     auto [id, id_str] = parse_id(params, "id");
     if (id == 0) return ToolResult::error("Invalid sadhana ID");
 
-    if (!sadhana_manager_->resume(id))
+    if (!sadhana_manager_.load()->resume(id))
         return ToolResult::error("Failed to resume sadhana " + std::to_string(id));
 
     return ToolResult::ok("Resumed sadhana " + std::to_string(id),
@@ -69,7 +69,7 @@ ToolResult FieldRpcHandler::tool_sadhana_stop(const json& params) {
     bool success  = params.value("success", true);
     std::string reason = params.value("reason", "");
 
-    if (!sadhana_manager_->stop(id, success, reason))
+    if (!sadhana_manager_.load()->stop(id, success, reason))
         return ToolResult::error("Failed to stop sadhana " + std::to_string(id));
 
     json result = {{"id", id}, {"state", success ? "done" : "failed"}, {"reason", reason}};
@@ -83,11 +83,11 @@ ToolResult FieldRpcHandler::tool_sadhana_status(const json& params) {
     auto [id, id_str] = parse_id(params, "id");
     if (id == 0) return ToolResult::error("Invalid sadhana ID");
 
-    auto opt = sadhana_manager_->get(id);
+    auto opt = sadhana_manager_.load()->get(id);
     if (!opt) return ToolResult::error("Sadhana " + std::to_string(id) + " not found");
 
     size_t history_limit = params.value("history_limit", 20);
-    auto history = sadhana_manager_->get_history(id, history_limit);
+    auto history = sadhana_manager_.load()->get_history(id, history_limit);
 
     json result;
     result["id"]               = opt->id;
@@ -122,7 +122,7 @@ ToolResult FieldRpcHandler::tool_sadhana_list(const json& params) {
     std::string realm = params.value("realm", "");
     size_t limit      = params.value("limit", 50);
 
-    auto sadhanas = sadhana_manager_->list(state, realm, limit);
+    auto sadhanas = sadhana_manager_.load()->list(state, realm, limit);
 
     json result;
     result["sadhanas"] = json::array();
@@ -154,7 +154,7 @@ ToolResult FieldRpcHandler::tool_sadhana_set_model(const json& params) {
     std::string model = params.value("model", "");
     if (model.empty()) return ToolResult::error("model is required");
 
-    if (!sadhana_manager_->set_model(id, model))
+    if (!sadhana_manager_.load()->set_model(id, model))
         return ToolResult::error("Failed to set model for sadhana " + std::to_string(id));
 
     return ToolResult::ok("Set model to " + model + " for sadhana " + std::to_string(id),
@@ -171,7 +171,7 @@ ToolResult FieldRpcHandler::tool_sadhana_set_goal(const json& params) {
     std::string goal = params.value("goal", "");
     if (goal.empty()) return ToolResult::error("goal is required");
 
-    if (!sadhana_manager_->set_goal(id, goal))
+    if (!sadhana_manager_.load()->set_goal(id, goal))
         return ToolResult::error("Failed to set goal for sadhana " + std::to_string(id));
 
     return ToolResult::ok("Updated goal for sadhana " + std::to_string(id),
@@ -188,7 +188,7 @@ ToolResult FieldRpcHandler::tool_sadhana_set_interval(const json& params) {
     int interval = params.value("interval", 0);
     if (interval <= 0) return ToolResult::error("interval must be positive");
 
-    if (!sadhana_manager_->set_interval(id, interval))
+    if (!sadhana_manager_.load()->set_interval(id, interval))
         return ToolResult::error("Failed to set interval for sadhana " + std::to_string(id));
 
     return ToolResult::ok(
@@ -206,7 +206,7 @@ ToolResult FieldRpcHandler::tool_sadhana_set_max_turns(const json& params) {
     int max_turns = params.value("max_turns", -1);
     if (max_turns < 0) return ToolResult::error("max_turns must be >= 0 (0 = use global default)");
 
-    if (!sadhana_manager_->set_max_turns(id, max_turns))
+    if (!sadhana_manager_.load()->set_max_turns(id, max_turns))
         return ToolResult::error("Failed to set max_turns for sadhana " + std::to_string(id));
 
     std::string msg = max_turns == 0
@@ -226,7 +226,7 @@ ToolResult FieldRpcHandler::tool_sadhana_checkpoint(const json& params) {
     std::string summary = params.value("summary", "");
     if (summary.empty()) return ToolResult::error("summary is required");
 
-    if (!sadhana_manager_->checkpoint(id, status, summary))
+    if (!sadhana_manager_.load()->checkpoint(id, status, summary))
         return ToolResult::error("Checkpoint failed for sadhana " + std::to_string(id));
 
     return ToolResult::ok("Checkpoint [" + status + "] for sadhana " + std::to_string(id),
@@ -243,7 +243,7 @@ ToolResult FieldRpcHandler::tool_dream_cancel(const json& params) {
 
     // Stop the underlying sadhana so it doesn't keep ticking after cancel.
     if (sadhana_manager_)
-        sadhana_manager_->stop(dream_id, /*success=*/false, "cancelled");
+        sadhana_manager_.load()->stop(dream_id, /*success=*/false, "cancelled");
 
     field_store_->emit_event("dream", "cancelled", std::to_string(dream_id), "");
 
@@ -261,7 +261,7 @@ ToolResult FieldRpcHandler::tool_dream_force_woke(const json& params) {
 
     // Stop the underlying sadhana as successfully completed.
     if (sadhana_manager_)
-        sadhana_manager_->stop(dream_id, /*success=*/true, "force-woke");
+        sadhana_manager_.load()->stop(dream_id, /*success=*/true, "force-woke");
 
     field_store_->emit_event("dream", "force_woke", std::to_string(dream_id), "[force-woke]");
 
@@ -279,7 +279,7 @@ ToolResult FieldRpcHandler::tool_dream_start(const json& params) {
 
     std::string realm          = params.value("realm", "brahman");
     std::string publish_path   = params.value("publish_path", "");
-    const auto& cfg = sadhana_manager_->config();
+    const auto& cfg = sadhana_manager_.load()->config();
     std::string brain_provider = params.value("brain_provider", cfg.default_brain_provider);
     std::string brain_model    = params.value("brain_model",    cfg.default_brain_model);
 
@@ -297,13 +297,13 @@ ToolResult FieldRpcHandler::tool_dream_start(const json& params) {
     if (!publish_path.empty()) goal_dsl["publish_path"] = publish_path;
 
     std::string goal = "[dream] Explore: " + topic;
-    int64_t sadhana_id = sadhana_manager_->create(
+    int64_t sadhana_id = sadhana_manager_.load()->create(
         goal, brain_provider, brain_model, 0, realm, goal_dsl);
 
     if (sadhana_id == 0)
         return ToolResult::error("Failed to create dream sadhana");
 
-    if (!sadhana_manager_->start(sadhana_id)) {
+    if (!sadhana_manager_.load()->start(sadhana_id)) {
         return ToolResult::error(
             "Created dream sadhana " + std::to_string(sadhana_id) + " but failed to start");
     }
@@ -404,7 +404,7 @@ ToolResult FieldRpcHandler::tool_dream_wander(const json& params) {
         topic = seeds[static_cast<size_t>(now_ms) % seeds.size()];
     }
 
-    const auto& cfg = sadhana_manager_->config();
+    const auto& cfg = sadhana_manager_.load()->config();
     json start_params = {
         {"topic",          topic},
         {"realm",          realm},
@@ -459,7 +459,7 @@ ToolResult FieldRpcHandler::tool_dream_status(const json& params) {
 
     json dream = {{"sadhana_id", dream_id}};
     if (sadhana_manager_) {
-        auto opt = sadhana_manager_->get(dream_id);
+        auto opt = sadhana_manager_.load()->get(dream_id);
         if (opt) {
             dream["state"]      = sadhana_state_to_string(opt->state);
             dream["iterations"] = opt->iterations;
@@ -503,12 +503,12 @@ ToolResult FieldRpcHandler::tool_impl_start(const json& params) {
         "implement the change in " + repo + ", "
         "run review gate, commit only if approved.";
 
-    int64_t sadhana_id = sadhana_manager_->create(
+    int64_t sadhana_id = sadhana_manager_.load()->create(
         goal, "local", "gemma4:26b", interval, realm, goal_dsl, max_turns);
     if (!sadhana_id)
         return ToolResult::error("Failed to create impl sadhana");
 
-    if (!sadhana_manager_->start(sadhana_id))
+    if (!sadhana_manager_.load()->start(sadhana_id))
         return ToolResult::error("Failed to start impl sadhana");
 
     json result = {
@@ -533,12 +533,12 @@ ToolResult FieldRpcHandler::tool_think_wander(const json& params) {
     json goal_dsl = {{"kind", "think"}};
     std::string goal = "[think] Internal memory synthesis: find patterns, connect gaps";
 
-    int64_t sadhana_id = sadhana_manager_->create(
+    int64_t sadhana_id = sadhana_manager_.load()->create(
         goal, "local", "gemma4:26b", 0, realm, goal_dsl, 10);
     if (!sadhana_id)
         return ToolResult::error("Failed to create think sadhana");
 
-    if (!sadhana_manager_->start(sadhana_id))
+    if (!sadhana_manager_.load()->start(sadhana_id))
         return ToolResult::error("Failed to start think sadhana");
 
     return ToolResult::ok("Think sadhana #" + std::to_string(sadhana_id) + " started",

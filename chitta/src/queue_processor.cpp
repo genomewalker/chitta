@@ -935,7 +935,7 @@ void QueueProcessor::run() try {
                 // (health_check, msg_inbox, …) stalls. run_distillation takes
                 // &handler_ and acquires the lock itself for the brief writes.
                 std::unique_lock<std::shared_mutex> _lk;
-                if (tool != "distill_trigger") {
+                if (tool != "distill_trigger" && FieldRpcHandler::global_lock_enabled()) {
                     _lk = handler_.acquire_lock();
                 }
                 // Lock-hold profiler: log if this queued write holds the exclusive
@@ -955,7 +955,7 @@ void QueueProcessor::run() try {
                             std::cerr << "[lockprof] EXCLUSIVE queue:" << tool << " held=" << ms
                                       << "ms (blocks all readers/recall while held)\n";
                     }
-                } _lp_guard{tool, _lp_h0, tool != "distill_trigger"};
+                } _lp_guard{tool, _lp_h0, _lk.owns_lock()};
 
                 QueueToolDispatch dispatch{
                     field_store_, handler_, queue_count_, queue_fail_count_, args,

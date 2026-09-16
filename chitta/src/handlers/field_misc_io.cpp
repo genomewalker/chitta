@@ -85,12 +85,12 @@ ToolResult FieldRpcHandler::tool_health_check_start(const json& params) {
 
     std::string goal = "[health] Monitor memory quality in realm=" + realm;
 
-    int64_t id = sadhana_manager_->create(
+    int64_t id = sadhana_manager_.load()->create(
         goal, "local", "gemma4:26b", interval, realm, goal_dsl, max_turns);
 
     if (id == 0) return ToolResult::error("Failed to create health-check sadhana");
 
-    if (!sadhana_manager_->start(id))
+    if (!sadhana_manager_.load()->start(id))
         return ToolResult::error("Created sadhana " + std::to_string(id) + " but failed to start");
 
     return ToolResult::ok("Started health-check sadhana " + std::to_string(id),

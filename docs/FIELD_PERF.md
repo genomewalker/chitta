@@ -1,5 +1,204 @@
 # chitta-field performance
 
+## Phase 1 synchronization inventory — 2026-09-16
+
+This inventory covers the registered handler surface and its maintenance,
+queue, backfill, distillation and subconscious callers. An FFI call releases
+its Rust guards before returning; separate FFI calls are not one transaction.
+
+| Mutable state / caller | Synchronization and publication | Evidence |
+| --- | --- | --- |
+| Task-ledger tables, indexes and revisions | Dedicated transaction mutex covers read/validate, WAL append and publication; reads return copies. Persistence callbacks must not reenter the ledger. | `chitta/include/chitta/task_ledger.hpp:78`, `chitta/src/handlers/field_task_ledger.cpp:23` |
+| Query embedding LRU and in-flight requests | Cache mutex and shared futures; inference outside the mutex; hit/miss counters atomic. | `chitta/include/chitta/rpc/field_handler.hpp:101` |
+| Health/soul memory and spectral caches | Separate mutexes, single-flight refresh outside locks, stale values while refreshing. One store lifetime per daemon. | `chitta/src/handlers/field_system.cpp:19`, `chitta/src/handlers/field_system.cpp:61` |
+| Distillation model and enabled flag | `distill_mutex_` for the string; atomic flag. | `chitta/include/chitta/rpc/field_handler.hpp:235` |
+| Embedding jobs and cached vectors | Separate queue/cache mutexes; pressure flags atomic. | `chitta/include/chitta/embed_queue.hpp:254`, `chitta/include/chitta/embed_queue.hpp:261` |
+| Embedding contexts / model | Per-context mutexes and bounded semaphore; model immutable after construction. | `chitta/include/chitta/vak_llama.hpp:86` |
+| Subconscious queues / stats | Separate event, embedding, suggestion, anticipation and tool-sequence mutexes; counters/timestamps atomic. | `chitta/include/chitta/mind/subconscious.hpp:116`, `chitta/include/chitta/mind/subconscious.hpp:276` |
+| Subconscious callbacks / load probe | Setter and copy-out mutex; invoke copies outside that mutex; initial callbacks installed before starting workers. | `chitta/include/chitta/mind/subconscious.hpp:226`, `chitta/src/simple_cli.cpp:401` |
+| Sadhana state and subscriptions | Manager mutex and subscription mutex; counters atomic. Construct and set stream callback before readers start; handler pointer atomic. | `chitta/include/chitta/sadhana/sadhana_manager.hpp:218`, `chitta/include/chitta/sadhana/sadhana_manager.hpp:224`, `chitta/src/simple_cli.cpp:291` |
+| Queue counters and paths | Counter values atomic; pointer/path publication uses a dedicated mutex and copy-out snapshot. File scans and FFI calls occur after releasing it. | `chitta/include/chitta/rpc/field_handler.hpp:208` |
+| Write notification callback | Mutex on setter/copy; callback invoked outside lock so reentrant replacement is safe. | `chitta/include/chitta/rpc/field_handler.hpp:220` |
+| Registrations, schemas, recall callback, embed/subconscious/load pointers | Published during construction/startup before serving; thereafter immutable. Owners remain alive while workers drain. | `chitta/include/chitta/rpc/field_handler.hpp:162`, `chitta/src/simple_cli.cpp:274` |
+| RPC budgets and maintenance load/wait counters | Atomics; immutable configured limits. | `chitta/include/chitta/rpc/work_policy.hpp:101`, `chitta/include/chitta/rpc/field_handler.hpp:762` |
+| Consolidation admission | Atomic in-flight flag; request-local work and Rust-owned stored state. | `chitta/src/handlers/field_memory_recall.cpp:2165` |
+| RPC / compaction lifetime | Foreground pool explicitly drained before referenced locals die; owned compaction thread joined before pool and handlers are destroyed. | `chitta/src/simple_cli.cpp:264`, `chitta/src/simple_cli.cpp:1335` |
+| Queue lane / applied-ack state | One worker owns each lane. Existing checked `cf_sync` precedes applied-ack fsync/rename. Phase 1 changes acquisition only. | `chitta/src/queue_processor.cpp:182`, `chitta/src/queue_processor.cpp:937` |
+| Maintenance / distillation / backfill | Handler factories obey the startup switch; Rust collect/plan/apply phases own their state. Belief read/decide/write sequences lack a store-level compare-and-apply transaction. | `chitta/src/distillation.cpp:78`, `chitta/include/chitta/rpc/field_handler.hpp:352`, `chitta/src/simple_cli.cpp:534` |
+| Subconscious direct store writes | Startup injects a null global-mutex pointer when the shared switch is off; local queue locks remain. | `chitta/src/subconscious.cpp:106`, `chitta/src/simple_cli.cpp:284` |
+
+The acknowledgement policy is independent of acquisition: historically exclusive
+write classes call `FieldStore::sync()` after dispatch, while existing lock-free
+and subprocess classes retain the boundaries below. Bypassing a mutex must not
+silently bypass that sync. Multi-FFI belief maintenance remains unqualified for
+production without the global lock; component locks alone do not prevent stale
+read/decide/write decisions.
+
+Initial baseline on frozen snapshot da86decb: distinct-query restart identity
+15/20 then 18/20; both fixed-query controls 20/20. The lead confirmed the drift
+on unchanged main and replaced this stream's identity gate with no worse than
+before on the same copy/script plus fixed control 20/20. Reports remain outside
+git. The global-lock default remains subject to the 300-second stress gate.
+
+Step (b) validation, 2026-09-16: CTest 26/26, MCP 149/149, all 23 hook scripts,
+CI Ruff and chaos 9/9 pass. Same-copy distinct restart identity 20/20, fixed
+response and ordered-ID controls both 20/20. Current-truth remains 20/50;
+golden nDCG moves from 0.5708 to 0.5773 (both below the grader's 0.7 target).
+The inherited primary-node hook fixture initially saw the old binary; it passed
+with exit 75 after rebuilding the merged Phase 6 daemon.
+
+## Named Rust lock timings — 2026-09-16
+
+All 76 parking_lot component RwLocks in `chitta-field/src/field.rs` and the
+standard-library archive RwLock use guards from `chitta-field/src/profile.rs`.
+Acquisition attempts, wait and hold maxima are always measured, including timed
+read failures and unwinding. The archive retains standard-library poisoning.
+`[lockprof] RUST component=... mode=... held_us=... wait_us=...` is emitted on
+first use, new lifetime maxima, each 4096th completion, and every wait or hold
+over 50 ms. The guard releases its component before writing diagnostics.
+No profiling environment variable is required and no RPC or file format changes.
+
+Reports distinguish observed stress-interval timings from lifetime maxima that
+can include startup. Every over-threshold completion is logged even when its
+component had a larger startup maximum. Timing includes scheduler delays; these
+are real periods during which other clients cannot acquire the component.
+
+Step (c) validation, 2026-09-16: Rust release build and 291 tests pass (two
+existing fixtures ignored), CTest 26/26, MCP 149/149, hooks 23 scripts, SMRITI
+46/46, CI Ruff and chaos 9/9. Embedding identity remains 768 /
+nomic-embed-text-v1.5 / text-format 1, format ID 9230643459983636874.
+The same-copy distinct-query restart result is 15/20 against the 18/20 baseline:
+the revised no-worse gate is unmet. Both fixed-query controls remain 20/20.
+Current-truth is still 20/50 and golden nDCG is 0.5772. These are observations,
+not qualification to remove the global lock. The profiler observes 33 exercised
+components, with startup-inclusive maximum hold 705.761 ms and wait 71.131 ms.
+
+## Global-lock switch validation — 2026-09-16
+
+`CHITTA_GLOBAL_LOCK=1` retains the historical dispatcher policy; exactly `0`
+removes `rpc_mutex_` from every RPC, queue dispatch and background lock factory,
+including maintenance, distillation, backfill and subconscious callbacks.
+Configuration is frozen at startup. Unset or invalid values retain the global
+lock. This keeps removal disabled by default while the exit gate is unmet.
+The previous write classification still controls WAL sync independently of
+mutex ownership. Four policy tests cover both values, unset/invalid input,
+publication of configuration, real contention and the actual `cf_sync` calls.
+
+All three migrated workload classes ran for 300 seconds with 12 persistent
+writer clients and 12 reader clients on private copies, with the switch set to
+0. The first ledger stage preceded the all-tools bypass; the two memory classes
+used the final bypass. Background backfill and Rust touch flushing remain active
+on these quiesced copies. No client exceeded its 30-second deadline.
+
+| Initial 300 s class run | Acknowledged writes | Reader iterations | Maximum RPC (ms) | Rust hold / wait maximum (ms) | Holds >50 ms |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| ledger | 15,103 | 3,197 | 2,567.902 | 348.833 / 219.516 | 2,237 |
+| observe | 21,113 | 11,023 | 1,928.914 | 242.633 / 831.098 | 4,945 |
+| remember | 22,825 | 9,023 | 1,131.022 | 350.516 / 717.085 | 4,350 |
+
+All three runs had zero client errors, exact memory counts and no malformed Rust
+timing records. Ledger replay verified all 15,103 acknowledgements. Initial
+memory runs failed an overly strict replay comparison: the remember diagnostic
+showed only access_count 16,342→16,363 and last_accessed_ms advancing while
+verification itself called touching reads. The observe failure did not retain
+field differences and remains unexplained by that initial report. These initial
+failures are preserved; they are not clean replay results. The stress tool's
+corrected comparison and follow-up measurements are documented separately below.
+
+A preceding connection-per-call smoke run reset a connection after 88 ledger
+acknowledgements. Persistent-client runs avoid connection churn; the tool keeps
+that mode available as a separate diagnostic. An observe smoke also exposed a
+Rust/native stderr interleaving. The profiler now emits each short record in one
+write; the final observe and remember runs recorded 27,214 and 20,329 intact
+timing lines respectively.
+
+Final gates: Rust release build and 291 tests pass (two existing ignored), CTest
+30/30, MCP 149/149, hooks 23/23, SMRITI 46/46, CI Ruff and chaos 9/9 with the
+switch off and BLAS/OMP/Rayon threads limited to one. An initial CTest ledger
+takeover fixture hit its 75 ms fail-open client budget; its unchanged retry and
+the final full suite passed. Same-original-copy restart identity is **20/20
+after versus 18/20 before**, with both fixed controls **20/20**. Separate initial
+stress-copy identities were ledger 18/20, observe 18/20 and remember 15/20;
+the last failed its individual no-worse gate. Current-truth remains 20/50;
+golden nDCG is 0.5691 versus 0.5708 before (both below the grader's 0.7 target).
+Embedding identity and contracts are unchanged.
+
+**Removal is unqualified for every class:** every full workload exceeded the
+50 ms Rust hold gate. Maintenance/control, sadhana, code-intelligence and deletion
+workloads have not each received a dedicated 300-second mixed-client run.
+Factory tests and chaos coverage do not substitute for those runs. The live-week
+hold gate is also unmeasured; deployment and live writes are outside this stream.
+
+## Reproducing mixed RPC stress — 2026-09-16
+
+`scripts/stress-rpc.py` requires an explicitly named private replica, validates
+its metadata, daemon argv, socket peer and worktree executable, and refuses to
+run unless `CHITTA_GLOBAL_LOCK=0`. Start each class from a fresh copy of the
+stopped evaluation replica family, using its own mind and port:
+
+```sh
+export PATH=/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/bin:$PATH
+export CHITTA_LIVE_MIND=/absolute/path/to/stopped-eval-replica
+export CHITTA_EVAL_MIND=/tmp/my-private-lock-stress
+export CHITTA_EVAL_PORT=17439
+export CHITTA_BIN="$PWD/bin/chitta" CHITTAD_BIN="$PWD/bin/chittad"
+export CHITTA_GLOBAL_LOCK=0 CHITTA_NO_ASSOC_LEARN=1
+export OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 RAYON_NUM_THREADS=1
+bash scripts/eval-replica.sh start
+python3 scripts/stress-rpc.py --mind "$CHITTA_EVAL_MIND" \
+  --handler-class remember --report /tmp/my-lock-stress.json
+```
+
+Defaults are 12 writers, 12 readers and 300 seconds. Repeat with `ledger` and
+`observe` on separate copies. Each client uses a persistent socket; optional
+`--connection-mode per-call` also stresses connection churn. Each complete RPC
+has a monotonic 30-second deadline, including send, receive and JSON parsing.
+The tool checks exact memory counts, unique acknowledgements, payload and state
+for every recall hit (including newly published memories), then SIGKILLs only
+the validated scratch daemon and checks every acknowledgement after WAL replay.
+It reports interval and lifetime Rust lock maxima separately; absent or malformed
+profiling records cannot qualify a run. Exit 0 requires every exit gate, including
+identity; short runs and `--skip-identity` are diagnostic and always exit 1.
+
+The identity panel runs before any workload creates memories. To use the lead's
+no-worse exception, record the baseline before changing the binary using
+`scripts/stress-embed-recall.py --restart-only --mind COPY --label before
+--output /tmp/before.json`, then supply `--identity-baseline /tmp/before.json`
+when measuring that same copy after the change. The ordered query list and both
+fixed-query controls are checked; a baseline containing a `mind` field must name
+this copy. Without a baseline, the distinct-query gate requires 20/20. Never
+invoke `eval-replica.sh start` between the before/after measurements: it recopies
+the family. Reports, replica contents and logs stay outside git.
+
+Replay comparison excludes wall-time-decayed strength. All other payload and
+authored state must match exactly; access counts and timestamps must not regress.
+Decay rate may change only when access state advances. This matters because
+`get` and `expand_memory` enqueue touches and the Rust worker persists them even
+while a verification pass is reading other rows. The verifier therefore proves
+authored-state durability and monotonic access state, not byte identity of
+read-induced bookkeeping. A real captured access-only mismatch is accepted;
+injected payload/confidence changes and count/timestamp regressions are rejected.
+Socket-stall, non-replica and absent/malformed-profile negative checks also pass.
+
+Final corrected-verifier repeats ran concurrently for 300 seconds each on their
+already-mutated private copies, with 12 writers and 12 readers per daemon.
+Both passed counts, hit payload/state checks and every acknowledgement after
+SIGKILL/WAL replay, with zero client errors and zero malformed timing records:
+
+| Repeat class | Writes replayed | Reader iterations | Maximum RPC (ms) | Interval Rust hold / wait maximum (ms) | Holds >50 ms |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| observe | 18,901 | 11,539 | 3,291.325 | 727.692 / 1,331.772 | 4,663 |
+| remember | 21,378 | 9,383 | 1,149.374 | 736.738 / 669.846 | 3,995 |
+
+These repeats used `--skip-identity` because the original-copy identity panel
+had already finished and these copies contained stress writes. They exited 1,
+correctly: diagnostic runs cannot meet the full gate and the hold limit was
+exceeded. Their timing differences from the sequential initial runs are not
+performance deltas: corpus size and concurrent load differed. Initial stress
+copy identity comparisons against the original-copy baseline are diagnostic,
+not the lead's required same-copy comparison; the latter is the separate final
+20/20 versus 18/20 measurement above. No class is qualified for default removal.
+
 ## Acknowledged-write durability
 
 Status 2026-09-16 (Phase 6 source audit). A successful response is not a universal
