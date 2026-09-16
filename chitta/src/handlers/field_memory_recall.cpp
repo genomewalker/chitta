@@ -1271,6 +1271,7 @@ ToolResult FieldRpcHandler::RecallPipeline::format() {
     json results_json = handler.hits_to_results_json(hits, explain);
     auto sources = params.value("sources", true) && tag.empty() && !windowed
         ? handler.repository_index_.search(query, realm, std::min<size_t>(3, limit)) : json::array();
+    const size_t source_hits = sources.size();
     if (!sources.empty() && tag.empty()) {
         for (const auto& memory : results_json) {
             if (sources.size() >= limit) break;
@@ -1296,7 +1297,8 @@ ToolResult FieldRpcHandler::RecallPipeline::format() {
         max_rel = std::max(max_rel, std::max(dense, h.lexical_score));
     }
     bool weak = !hits.empty() && max_rel < 0.45f;
-    if (!results_json.empty() && results_json[0].contains("source_identity")) { max_rel = 1.0f; weak = false; }
+    // Repository BM25 scores are not calibrated similarities. Preserve the
+    // memory confidence used by prompt-hook bins; report source coverage separately.
 
     std::ostringstream ss;
     if (weak)
@@ -1337,6 +1339,7 @@ ToolResult FieldRpcHandler::RecallPipeline::format() {
     json meta = {{"results", results_json}, {"realm", realm},
                  {"status", recall_status},
                  {"atoms", atoms_json},
+                 {"source_hits", source_hits},
                  {"abstain", weak}, {"max_relevance", max_rel}};
     if (explain) meta["diagnostics"] = std::move(diagnostics);
     if (windowed) {

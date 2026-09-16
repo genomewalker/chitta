@@ -10,6 +10,10 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 ## [Unreleased]
 
+- Preserve calibrated recall confidence when repository sources are merged.
+  Source BM25 ranks have no similarity calibration, so `max_relevance` and
+  abstention retain their memory values; `source_hits` reports source coverage.
+
 - Add recall `sources` (boolean, default true). `sources=false` preserves the
   memory-only ranking for ID-based evaluations; regenerate the recall input
   contract, MCP static schema and generated tool documentation.
