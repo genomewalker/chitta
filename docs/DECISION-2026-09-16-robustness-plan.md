@@ -100,6 +100,7 @@
 
 ## Backlog (owner-listed, not yet scheduled)
 
+- Shutdown must finish an in-flight snapshot before exiting (the unit already allows 300 s): a SIGTERM mid-save abandons the family and the next start replays hours of WAL (105 s to ready on 2026-09-16 versus 10–18 s). Until then the operator checks the log before restarting (CLAUDE.md).
 - Production recall silently degrades under load: the 50 ms query-embedding deadline (`CHITTA_RECALL_EMBED_WAIT_MS`) drops the semantic lanes and falls back to keyword-only without any marker in the result. Found by the restart-identity stream on 2026-09-16 (13/20 identical restarts were exactly the ones with missing embeddings). Decide a budget that fits the prompt-hook p95 and mark degraded results (`status`) so the hook and the canary can count them.
 - **Independent qualification stage for evolve verdicts** (card
   `rekursiv-qualification-stage`, from rekursiv.ai's auto-autoresearch run):
