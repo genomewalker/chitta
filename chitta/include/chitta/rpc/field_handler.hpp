@@ -765,11 +765,19 @@ private:
     }
 
     // Read-path cache covers both dispatcher pre-embedding and internal lanes.
-    // The queue retains its existing 50ms fallback; direct inference uses the pool.
+    // Production retains its 50ms fallback. Replica evaluations may request a
+    // larger bounded wait so cold base/variant lanes cannot disappear under load.
     std::vector<float> embed_query(const std::string& query) {
+        static const auto wait = [] {
+            const char* value = std::getenv("CHITTA_RECALL_EMBED_WAIT_MS");
+            if (!value) return std::chrono::milliseconds(50);
+            char* end = nullptr;
+            const long ms = std::strtol(value, &end, 10);
+            return std::chrono::milliseconds(end != value && !*end && ms > 0 && ms <= 60000 ? ms : 50);
+        }();
         return query_embed_cache_.get(query, [&] {
             if (embed_queue_)
-                return embed_queue_->query(query, std::chrono::milliseconds(50));
+                return embed_queue_->query(query, wait);
             if (!yantra_) return std::vector<float>{};
             Artha a = yantra_->transform(query, EmbedMode::Query);
             return (a.certainty > 0.0f) ? a.nu.data : std::vector<float>{};
