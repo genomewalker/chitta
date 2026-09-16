@@ -161,6 +161,35 @@ fi
 # Detect realm from project directory
 REALM=$(detect_project_realm "$PROJECT_DIR")
 
+# BEGIN handoff capsule
+_load_handoff_capsule() {
+    local project branch args tid
+    [[ -d "$PROJECT_DIR" ]] || return 0
+    project=$(cd "$PROJECT_DIR" && pwd -P) || return 0
+    branch=$(git -C "$project" symbolic-ref --quiet --short HEAD 2>/dev/null ||
+        git -C "$project" rev-parse --short HEAD 2>/dev/null || true)
+    tid=$(jq -r '.thread_id // empty' <<< "$INPUT")
+    args=$(jq -nc --arg project "$project" --arg tid "$tid" \
+        '{project_dir:$project,limit:100} + (if $tid == "" then {} else {thread_id:$tid} end)')
+    timeout "$MAX_WAIT" "$CHITTA_BIN" ledger_op --op session_list --args "$args" --json |
+        jq -r --arg branch "$branch" --arg project "$project" '
+        [.value.rows[]? | (.metadata_json | fromjson? // {}) | .handoff // empty |
+         select(.version == 1 and .project_dir == $project and .branch == $branch)] |
+        sort_by(.saved_at) | last |
+        select(.verified == true and (.next_action | type == "string" and length > 0)) |
+        "[handoff]",
+        "Next action: \(.next_action)",
+        "Branch: \(.branch)",
+        "Artifacts: \((.artifact_paths // []) | join(", "))",
+        "Blocker: \(if .blocker == "" then "none recorded" else .blocker end)",
+        "Source: \(.source.kind) (session \(.source.session_id))",
+        "[/handoff]"'
+}
+if [[ "$IS_SUBAGENT" != true ]]; then
+    _launch_lane handoff _load_handoff_capsule
+fi
+# END handoff capsule
+
 # Native registration owns the session binding. Read an existing thread on
 # resume and claim its lease through ledger_op, preserving the adapter contract.
 _register_session() {
@@ -321,6 +350,10 @@ fi
 # ═══════════════════════════════════════════════════════════════════════════
 # Load and inject session state
 # ═══════════════════════════════════════════════════════════════════════════
+
+# Render the verified capsule before all other session context.
+_read_lane handoff HANDOFF_CAPSULE
+[[ -n "$HANDOFF_CAPSULE" ]] && printf '%s\n' "$HANDOFF_CAPSULE"
 
 # Get full ledger entry (not just summary)
 # ledger_load returns the most recent entry for the project

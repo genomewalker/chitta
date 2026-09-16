@@ -1,5 +1,37 @@
 # chitta Hooks System
 
+Repository knowledge is indexed by `learn_codebase`. Markdown chunks follow
+headings; code chunks follow symbols, with a file-scope fallback for shell and
+configuration. Recall recognizes repository questions (paths, environment
+variables, hook names and location questions) and includes at most three cited
+`[doc]`/`[code]` rows in its normal result limit. Each source row names the
+checkout, path, heading/symbol and SHA-256. Registered roots are realm scoped;
+the active checkout for a realm replaces its previous registration.
+
+FileChanged queues an incremental source refresh for every change and deletion.
+The 300-second directory throttle applies only to full symbol extraction.
+Queries hash sources again, and startup rebuilds chunks from registered roots,
+so missed watcher events cannot leave an old source chunk marked current.
+The root registry is a derived sidecar in the daemon mind; snapshot formats are
+unchanged. Queries with tag or historical time filters retain their memory lane.
+
+Hook artifact facts carry a full SHA-256 anchor in their payload: repository,
+relative path and heading/symbol scope (whole-file facts use `<file>`).
+The queue observe path also anchors hook `[done] input:/absolute/path` facts;
+an existing full hash is retained for delayed events, and legacy short hashes
+are left unanchored. Different done facts receive different scope identities.
+Rust rebuilds the anchor index on load and updates it for ingestion, content
+replacement, forgetting and foreign replay. FileChanged refresh checks anchors
+for the affected path; recall checks them again and shows `current`, `stale`,
+`missing` or `unavailable`. File IO occurs after releasing Rust index locks.
+
+A current hook observation supersedes earlier versions of the same realm,
+repository, path and scope through the existing `supersedes` relation. Delayed
+old observations cannot supersede the current source version. Recall excludes
+superseded anchored versions and moves stale/missing facts behind other facts
+only when scores are equal. Current and unanchored facts keep their original
+relative order; there is no general preference for unanchored memories.
+
 Status as of 2026-09-16.
 
 ### Phase 1 global-lock rollback switch (2026-09-16)
@@ -1251,6 +1283,53 @@ none of the relocated tools was listed. Hook registrations are unchanged.
 - `scripts/debug-recall.sh`: Compare over-fetched candidates with final recall results for a query; supports `--limit` and `--fetch`.
 - `scripts/evolve-topology.sh`: Evolve conductor visibility matrices using archive fitness, ledger and stability gates; supports `--dry-run` and `--realm`.
 - `scripts/settle-predictions.sh`: Confirm expired open predictions without correction references; supports `--dry-run` and `--realm`.
+
+## Handoff capsule (Phase 3, partial qualification)
+
+Stop stores a versioned `handoff` object in the task ledger's session metadata
+through the existing `ledger_op/session_bind` metadata merge. It records the last
+explicit `Next:`, `Next action:`, `Next step:` or `TODO:` line in the latest visible
+assistant response, excluding fenced examples and quoted lines. If absent, an
+explicit `next_action` or first `next_steps` entry in the bound thread's metadata
+is eligible. Thread titles are not inferred actions. `verified` means the action
+has this recorded source; it does not certify that an action has already passed
+its tests or remains feasible.
+
+The capsule includes the checked-out branch (or detached commit), up to 20 sorted
+paths from git's staged, unstaged and untracked changes, the last explicit blocker line, and
+source session/thread identifiers. No eligible action writes an unverified
+capsule, replacing that session's earlier action. SessionStart selects the newest
+capsule for the exact project directory and branch, optionally restricted by an
+explicit thread ID, and renders it before other session context. An unverified
+newest capsule suppresses older ones. An empty blocker is shown as `none recorded`.
+
+`hooks/tests/test_handoff_capsule.sh` tests the mechanics with synthetic inputs.
+Short completion responses such as `Done.` also replace an earlier capsule
+with an unverified one before Stop's short-response exit.
+
+`benchmarks/continuation/build.py` reads `~/.claude/projects/*/*.jsonl` read-only,
+orders sessions within each project directory by their earliest conversation
+timestamp, and takes the 20 newest consecutive pairs with a nonempty next-session first
+prompt. It retains the preceding last visible assistant response and explicit
+ledger/capsule fields, and records the next session's actual first prompt and
+first nontrivial tool call as ground truth. Transcript IDs and SHA-256 digests
+are retained. Fixture data goes outside the repository, by default to
+`/projects/caeg/scratch/kbd606/tmp/continuation-fixture/`.
+
+`benchmarks/continuation/score.py` replays the production visible-plan selector
+on preceding-session material only, with explicit ledger fields as fallback.
+The capsule's **next_action** must mention an exact target file path or complete
+command from the next session's first nontrivial tool call. A tool name alone,
+a shortened basename, similar wording, or a path only in the capsule's artifact
+list does not count. A known branch mismatch is a miss, matching SessionStart's
+branch filter. Missing evidence is a miss. This retrospective replay is
+identified as such; it is not evidence that old sessions wrote the new capsule.
+The expanded authorized source on 2026-09-16 contained **641 transcripts** in
+382 projects with conversation records, yielding 258 eligible pairs. The newest
+20 score **0/20**: all lack an explicit final plan line or usable ledger action.
+The required 18/20 gate is unmet; no cases or human labels were invented. The
+scorer reports each pair's IDs, branch information and failure reason; fixture
+contents and those per-pair reports remain outside the repository.
 
 <!-- BEGIN CITATIONS -->
 ## References

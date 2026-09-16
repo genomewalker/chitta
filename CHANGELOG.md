@@ -10,6 +10,36 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 ## [Unreleased]
 
+- Preserve calibrated recall confidence when repository sources are merged.
+  Source BM25 ranks have no similarity calibration, so `max_relevance` and
+  abstention retain their memory values; `source_hits` reports source coverage.
+
+- Add recall `sources` (boolean, default true). `sources=false` preserves the
+  memory-only ranking for ID-based evaluations; regenerate the recall input
+  contract, MCP static schema and generated tool documentation.
+
+- Index repository Markdown headings and code with source identities, SHA-256
+  validation on startup/query, deletion-aware FileChanged refresh and cited
+  `[doc]`/`[code]` recall rows. Frozen-family current-truth improves 20/50 to
+  36/50; the current-truth and golden recall exit gates remain unmet.
+
+### Added
+- Markdown heading extraction through code intel, including hierarchical heading
+  names, duplicate-heading disambiguation, fenced examples and Setext headings.
+  Repository recall integration now validates sources on startup and query.
+- Derived source anchors for hook file facts, with replay-safe lifecycle indexing,
+  same-anchor supersession, visible freshness state and equal-score stale demotion.
+  No snapshot format or queue dispatcher/ack-ledger changes.
+- Stop-to-SessionStart handoff capsules in task-ledger session metadata, carrying
+  an explicit next action, branch, artifact paths, blocker and source provenance.
+  Capsules render before other context on the matching project and branch;
+  turns without a verified action invalidate the previous session capsule.
+- Clear handoff capsules even on short completion turns; add transcript-pair
+  construction and strict continuation scoring with source digests. Read all
+  641 authorized transcripts, pair within project directories and select the
+  newest 20 cases. Both scorers produce 0/20 on that fixture: every preceding
+  session lacks an explicit final plan or usable ledger action. The 18/20 gate
+  remains unmet; scoring now reports branch mismatches and per-pair reasons.
 ### MCP surface reduction (Phase 4, 2026-09-16)
 
 - Advertised MCP discovery: **89 → 54 tools**, **11,027 → 6,326 estimated

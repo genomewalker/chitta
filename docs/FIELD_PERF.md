@@ -198,6 +198,122 @@ performance deltas: corpus size and concurrent load differed. Initial stress
 copy identity comparisons against the original-copy baseline are diagnostic,
 not the lead's required same-copy comparison; the latter is the separate final
 20/20 versus 18/20 measurement above. No class is qualified for default removal.
+### Phase 3 review follow-up (2026-09-16)
+
+Merged main's recall diagnostics and deterministic measurement behavior, with
+Rust `847e7e3` and superproject `68cd0a37`. Recall now accepts `sources=false`
+for memory-only evaluation. Source rows retain their citations, but their
+uncalibrated BM25 ranks no longer force calibrated confidence to one:
+`source_hits` reports their count separately. A private-replica check with
+three sources preserves memory order and `max_relevance=0.813876867` in both
+modes; before the confidence fix, source merging forced it to `1.0`.
+
+The paired native binaries use a fresh private `da86decb` copy from
+`learning-cut-20260915-frozen`, pinned recall time and a bounded embedding wait.
+The before binary has no source switch, so its golden memory-only control used
+an empty source-root registry. The same copy was then registered to this
+worktree under `project:cc-soul` for default current-truth evaluation. Both
+the source-toggle build and final build use `sources=false` for golden recall.
+
+| Gate | Before | After |
+| --- | --- | --- |
+| Golden nDCG@20, three runs | 0.480414590, 0.480414590, 0.480414590 | 0.480414590, 0.480414590, 0.480414590 |
+| Current-truth, default sources | 36/50; visible 20/30, holdout 16/20 | 36/50; visible 20/30, holdout 16/20 |
+| Original five strict probes | 3/5 | 3/5 |
+| Ordered identity, three restarts | 20/20 each | 20/20 each |
+| Within-process identity | 20/20 | 20/20 |
+| Chaos, single-threaded BLAS/OMP/Rayon | 9/9 | 9/9 |
+| Prompt-hook median | 890 ms | 929 ms |
+| Same 20 continuation pairs | 0/20 | 0/20 |
+
+No current-truth question outcome or class moved; wrong-confident answers remain
+zero. Prompt median increased 39 ms, within the before-run 241 ms noise allowance.
+The golden band stored in `benchmarks/noise.json` is **0.490965206–0.494473852**,
+measured on family `bbcaed33`; both requested `da86decb` arms miss it. The source
+toggle removes the mechanical displacement without tuning anchor demotion.
+The current 36/50 retention gate passes; the original 40/50 and five-probe 5/5
+goals remain unmet. No frozen questions or acceptance bands were changed.
+
+Native verification passes: Rust **293 tests**, 2 ignored (the same Rust
+artifact in both binaries); **26/26 CTests**, **159 MCP tests**, **46 SMRITI
+tests**, CI Ruff and shell syntax/ShellCheck. Format identity remains
+`9230643459983636874`; the embedding identity sidecar remains absent. Contract
+checks print `contracts unchanged` after the authorized recall input update.
+The before hook run passed 27/27; the concurrent after run passed 26/27, with
+the saddle timing case at 174.21 ms incremental p95 against its 150 ms limit.
+Rerunning that case alone after the stress runs passed at **36.76 ms**; both
+observations are retained, with no timeout or threshold changes.
+
+The continuation builder read 641 transcripts across 382 project directories
+with conversation records, producing 258 eligible consecutive pairs. The newest
+20 all lack an explicit final plan line or usable ledger next action: strict
+production-selector replay scores **0/20**, before and after. Four builder/scorer
+tests pass, including project isolation and branch rejection. This is a failed
+18/20 gate, not evidence that historical sessions wrote these capsules. Pair IDs,
+transcript SHA-256 digests, ground truth and individual failure reasons stay in
+`/projects/caeg/scratch/kbd606/tmp/continuation-fixture/`, outside Git.
+
+### Phase 3 source-index measurement (2026-09-16)
+
+Paired private copy of `learning-cut-20260915-frozen`, family `da86decb`:
+current-truth rose from 20/50 (visible 11/30, holdout 9/20) to 36/50
+(20/30, 16/20). Environment-variable and hook-location classes improved;
+the 40/50 gate remains unmet. Original five probes are preserved verbatim in
+`benchmarks/current_truth/original_probes.json`; its explicit deterministic
+rubric scored 0/5 before and 3/5 after, distinct from the historical human
+verdict of 2/5. The reconstructed frozen probes remain a separate report.
+Golden nDCG@20 fell from 0.480335 to 0.449095 (three runs each), outside the
+paired baseline noise band. Source rows occupy result slots previously used by
+memory IDs, which this golden panel grades; this is still a failed gate.
+Baseline ordered restart identity was 16/20, and baseline prompt median was
+935 ms with a 354 ms noise allowance. These are measurements, not a claim that
+Phase 3 is qualified for deployment.
+The indexed prompt median was 958 ms (+23 ms, inside that allowance).
+Verification: 26 CTests, 149 MCP tests (explicit stub binary), 46 SMRITI tests
+and all hook scripts passed. Replica chaos passed eight cases; its NFS lock
+case was skipped on the initial XFS scratch directory and must be rerun on NFS.
+
+### Phase 3 anchors and final paired checks (2026-09-16)
+
+The derived Rust anchor index adds no snapshot fields. Lifecycle tests cover
+foreign replay, load, changed/missing files and forgetting. A private-daemon
+fixture also passed current-state rendering, missed-watcher detection,
+same-scope supersession, independent scopes and delayed old events.
+
+On the same `da86decb` copy, current-truth remains **36/50** versus **20/50**:
+visible **20/30** versus **11/30**, holdout **16/20** versus **9/20**. The 16
+gains comprise seven environment-variable/default questions, seven hook
+questions, one operational-safety question and the rename date; no question
+regressed. Original strict probes are **3/5** (deploy, PostToolUse and field
+performance); reconstructed frozen probes are **1/5**. Neither probe rubric is
+the historical memo's human useful-hit judgment.
+
+Final-binary golden nDCG@20 over three runs was **0.452860, 0.449226,
+0.449226**, mean **0.450437**, below the paired baseline mean **0.480335** and
+its noise band. The final fixed-source ordered restart comparison was **16/20
+before and 15/20 after** (same queries, script and replica copy), failing the
+replacement gate. Earlier comparisons scored 13/20 while sources were changing
+and 16/20 before the final learning-order fix; those results are retained rather
+than selecting the passing repeat. Prompt median was **965 ms** versus
+**935 ms**, within the baseline's 354 ms allowance. The preceding binary's
+three-run golden mean was 0.445206 and prompt median was 893 ms.
+
+The complete final NFS chaos run passed **9/9**, including the unchanged 8-second
+hook deadline, with all three thread caps set to one. The initial XFS run's
+NFS skip was also rerun alone on NFS and passed. Rust release tests: **291
+passed, 2 ignored**; CTest **26/26**, MCP **149**, SMRITI **46**, hooks **27/27**.
+Format ID remains `9230643459983636874`; the embedding identity sidecar remains
+absent. Current-truth, original probes, golden recall and restart identity
+remain unqualified. Co-retrieval learning runs after source merging, so source
+IDs and displaced memory IDs do not receive memory co-occurrence updates.
+
+Continuation qualification is also unmet: the authorized transcript directory
+contains two conversational sessions and one title-only file. The construction
+script produced one consecutive pair; the strict production-selector replay
+scored **0/1**, short of **18/20**. Builder/scorer tests and the synthetic ledger
+capsule checks pass, including short completion invalidation, but do not replace
+the missing real cases. The extraction/scoring rule is documented in
+`docs/HOOKS.md`; transcript data and fixture output are outside the repository.
 
 ## Acknowledged-write durability
 
@@ -601,6 +717,50 @@ Rust implementation commit: `bc709a3` (committed before the superproject).
 These are sequential implementation measurements on a shared node, not an additive attribution experiment. `optimized` contains the discarded four-query batching experiment; `verified` restored exact single-query arithmetic. The primary final comparison uses the final implementation only. The clean restart uses a newly checkpointed family and is a load-path check, not the same-family retrieval control.
 
 2026-09-16 — Snapshot decode (V23 unchanged): four bounded Rayon workers decode immutable mmap section ranges, pre-size root maps, and overlap triplet-index reconstruction; keyword reverse reconstruction overlaps Turbo/HDC/lite startup. Two cold-process starts on the same scratch checkpoint plus one-row replay delta (Turbo cache hit both arms): snapshot **9195/7819 → 4263/3567 ms**, field_store **14999/14575 → 9516/9263 ms**. Targets <2500/<9000 ms were **not met**; triplet reconstruction remains 2944/2325 ms. The repeated-query restart gate is **20/20 byte-identical CLI JSON pairs**; the broader 20-query diagnostic is 19/20 after versus 18/20 in the warmed control (not a claim of universal determinism). Release build, 279 Rust tests (2 ignored), and all 16 CTests pass; current-main binary opens the new writer's checkpoint. Embedding constants remain 768/nomic-embed-text-v1.5/format-1; the worktree identity stamp was absent before/after and the main stamp hash is unchanged. OS caches and shared-host load were uncontrolled; overlapping phases must not be summed.
+
+## Historical Phase 3 preparation checkpoint, 2026-09-16 (not qualified)
+
+This records the earlier pre-authorization checkpoint and its different
+`bbcaed33` family. The source-index and anchor work and comparable `da86decb`
+measurements above supersede its implementation status and gates.
+
+The `feat/freshness` worktree adds Markdown heading extraction to the existing
+code-intel API and task-ledger handoff capsules. It does not yet implement the
+repository recall merge, startup/query hash validation, or the derived anchor
+index. The real-thread continuation gate is unmeasured: all 54 threads in the
+inspected replica have empty metadata; the four synthetic capsule checks are
+mechanics coverage only.
+
+Measurements on private copies of eval family `bbcaed33`, using the frozen
+panels and no-learn recall:
+
+| Measure | Before | Current worktree | Interpretation |
+|---|---:|---:|---|
+| Current truth | 13/50 | 14/50 | Below 40/50; no gain claimed with recall unchanged |
+| Reconstructed F2 fixtures | 1/5 | 1/5 | Original five prompts still unavailable |
+| Golden nDCG@20, three-run mean | 0.499994 | 0.502660 | Baseline already outside stored band; first-run variation |
+| Prompt median, five fixed-query panels | 892 ms | 912 ms | +20 ms, within baseline 2-SD allowance 250.4 ms |
+
+The before daemon was the installed binary running only on the scratch copy;
+the after daemon was built in this worktree. This is qualification evidence,
+not a controlled causal attribution. The compiled vector-space ID matches
+`9230643459983636874`; the worktree embedding stamp was absent before and after.
+Rust release tests: 289 passed, 2 ignored. All 25 CTests passed (the initial
+`embed_pool_test` skip was resolved by supplying the existing GGUF model).
+MCP: 149 passed; SMRITI: 46 passed. All 23 hook shell tests, CI ruff check/format,
+touched-shell syntax and CI ShellCheck warning gate passed. Contracts printed
+`contracts unchanged`. The capsule round-tripped through the real scratch ledger
+and survived a cold daemon restart; this remains a synthetic action check.
+
+Ordered IDs were identical for **11/20 distinct queries** across that restart;
+this fails the 20/20 gate. The recall implementation was not changed. The
+full-replica chaos run passed snapshot and second-instance cases, then failed
+WAL on a 60-second RPC timeout. A retry passed WAL, lock, disk and queue cases,
+then failed prompt-hook recovery on an 8-second timeout. The final attempt to
+run hook/MCP/format cases timed out during replica setup (120 seconds), followed
+by an NFS cleanup error; no additional cases ran. A clean 9/9 run is not
+established. These are retained failures, not acceptance evidence. Raw logs and
+reports stay outside git under `/tmp/chitta-p3-freshness`.
 
 ## Ordered recall identity across restart
 

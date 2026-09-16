@@ -347,6 +347,7 @@ set(CHITTA_WARN_FLAGS -Wall -Wextra)
 # Daemon/admin tool
 add_executable(chittad
     src/simple_cli.cpp
+    src/code_intel.cpp
     src/queue_processor.cpp
     src/daemon_lifecycle.cpp
     src/distillation.cpp
@@ -417,6 +418,8 @@ target_include_directories(chittad PRIVATE "${CHITTA_FIELD_INCLUDE}")
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 find_package(BLAS REQUIRED)
 target_link_libraries(chittad PRIVATE chitta "${CHITTA_FIELD_LIB}" dl pthread Python3::Python ${BLAS_LIBRARIES})
+find_package(OpenSSL REQUIRED)
+target_link_libraries(chittad PRIVATE OpenSSL::Crypto)
 if(CHITTA_WITH_LLAMA_CPP)
     target_link_libraries(chittad PRIVATE llama ggml)
 endif()
@@ -554,6 +557,10 @@ if(CHITTA_BUILD_TESTS)
     add_executable(callsite_extract_test src/callsite_extract_test.cpp)
     target_link_libraries(callsite_extract_test PRIVATE chitta)
     add_test(NAME callsite_extract_test COMMAND callsite_extract_test)
+    add_executable(repository_index_test ../hooks/tests/repository_index_test.cpp src/code_intel.cpp)
+    target_compile_options(repository_index_test PRIVATE -UNDEBUG)
+    target_link_libraries(repository_index_test PRIVATE chitta OpenSSL::Crypto)
+    add_test(NAME repository_index_test COMMAND repository_index_test)
     add_executable(value_fact_extract_test
         src/value_fact_extract_test.cpp src/value_fact_extractor.cpp)
     add_test(NAME value_fact_extract_test COMMAND value_fact_extract_test)

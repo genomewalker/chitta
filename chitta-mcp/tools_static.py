@@ -1660,6 +1660,11 @@ TOOLS = [Tool(**row) for row in [{'description': 'Multi-dimensional semantic sea
                                  'separation_mode': {'description': 'Diverse results via MMR '
                                                                     '(default: False)',
                                                      'type': 'boolean'},
+                                 'sources': {'default': True,
+                                             'description': 'Include indexed repository sources; '
+                                                            'false returns memory ranking only '
+                                                            '(default: True)',
+                                             'type': 'boolean'},
                                  'tag': {'description': 'Filter by tag', 'type': 'string'}},
                   'required': ['query'],
                   'type': 'object'},
