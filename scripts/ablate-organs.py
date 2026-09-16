@@ -94,6 +94,8 @@ SNAPSHOT = {
     "msg_registry",
 }
 WRITE = {
+    "analytics_registry",
+    "task_registry",
     "archive",
     "observer",
     "observer_state",
@@ -268,7 +270,7 @@ def hook_metrics(path):
 
 def contains_text(value, expected):
     if isinstance(value, str):
-        if expected in value:
+        if expected == value:
             return True
         try:
             decoded = json.loads(value)
@@ -398,9 +400,12 @@ def trial(args, organs, index, output):
                 result["metrics"][f"current_truth.{key}"] = truth["overall"][key]
             run(["bash", "scripts/bench-recall-lanes.sh", "5"], env, output / "hook.log")
             result["hooks"] = hook_metrics(output / "hook.log")
-            # Match the noise file's statistic and fixed queries exactly; the
-            # requested paired latency panel above remains separately reported.
-            result["metrics"]["hook_total_ms"] = noise.hook_runs(2)["samples"][0]
+            # The frozen metric is one fixed three-query median per trial.
+            # The helper requires two probes; preselect the FIRST (never the
+            # faster) and retain both for audit. The paired panel above is
+            # separately reported and does not replace this statistic.
+            result["hook_noise"] = noise.hook_runs(2)
+            result["metrics"]["hook_total_ms"] = result["hook_noise"]["samples"][0]
             if args.smriti_agent:
                 run(
                     [
@@ -463,7 +468,8 @@ def write_table(report, destination):
         "## Organ ablation 2026-09-16",
         "",
         "Three repetitions per arm; missing calibration or invariants block retirement.",
-        "No organ or tool is deleted by the measurement runner.",
+        "When controls exceed a declared band, differences are descriptive and cannot",
+        "be attributed to the ablation. No organ or tool is deleted by this runner.",
         "",
         "| Organ | Dependency class | Panels moved (Δ; margin) | Verdict |",
         "|---|---|---|---|",
@@ -488,6 +494,8 @@ def write_table(report, destination):
             dependency += "; write path (retain)"
         if organ in SNAPSHOT:
             dependency += "; snapshot section retained"
+        if organ in {"cortical_idx", "hdc_idx"}:
+            dependency += "; index sidecar retained"
         verdict = row.get("verdict", "unqualified")
         if row.get("missing_margins"):
             verdict += ": missing " + ", ".join(row["missing_margins"])
@@ -546,6 +554,7 @@ def self_test():
     assert contains_text({"text": "line1\nline2"}, "line1\nline2")
     assert contains_text({"text": json.dumps({"content": "line1\nline2"})}, "line1\nline2")
     assert not contains_text({"text": "other"}, "line1\nline2")
+    assert not contains_text({"content": "remember 10"}, "remember 1")
     declared, missing = margins({"metrics": {"golden.ndcg": {"accept_delta": 0.1, "n": 3}}})
     assert missing == ["current_truth.p3", "current_truth.abstain", "hook_total_ms"]
     row = {"metrics": {"golden.ndcg": 0.5}, "invariants": {"passed": True}}
