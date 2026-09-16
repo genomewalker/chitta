@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Svapna — Dreams — cc-soul</title>
-<meta name="description" content="Autonomous curiosity-driven explorations by cc-soul during idle time. The soul wanders freely, searches the web, and stores what it finds.">
+<title>chitta — Dreams</title>
+<meta name="description" content="Autonomous curiosity-driven explorations by chitta during idle time. The soul wanders freely, searches the web, and stores what it finds.">
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-<meta property="og:title" content="Svapna — Dreams — cc-soul">
-<meta property="og:description" content="Autonomous curiosity-driven explorations by cc-soul during idle time.">
+<meta property="og:title" content="Svapna — Dreams — chitta">
+<meta property="og:description" content="Autonomous curiosity-driven explorations by chitta during idle time.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="../favicon.svg">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Svapna — Dreams — cc-soul">
-<meta name="twitter:description" content="Autonomous curiosity-driven explorations by cc-soul during idle time.">
+<meta name="twitter:title" content="Svapna — Dreams — chitta">
+<meta name="twitter:description" content="Autonomous curiosity-driven explorations by chitta during idle time.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -36,28 +36,42 @@
   font-size: 1.15em;
 }
 </style>
+<link rel="stylesheet" href="/content-styles.css">
+<link rel="stylesheet" href="/site-shell.css">
 </head>
-<body>
+<body class="page-dreams">
+<a class="skip-link" href="#main-content">Skip to content</a>
 
 <!-- NAV -->
-<nav class="nav">
+<nav class="nav site-nav" aria-label="Main navigation">
   <div class="nav-inner">
-    <a href="../index.html" class="nav-brand">cc<span>-</span>soul</a>
-    <button class="nav-hamburger" onclick="document.querySelector('.nav').classList.toggle('nav-open')" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
+    <a href="/index.html" class="nav-brand">chitta</a>
     <ul class="nav-links">
-      <li><a href="../index.html">Home</a></li>
-      <li><a href="../getting-started.html">Get Started</a></li>
-      <li><a href="../philosophy.html">Philosophy</a></li>
-      <li><a href="../architecture.html">Architecture</a></li>
-      <li><a href="../sadhana.html">Sadhana</a></li>
-      <li><a href="index.html" class="active">Dreams</a></li>
-      <li><a href="../tools.html">Tools</a></li>
-      <li><a href="https://github.com/genomewalker/cc-soul" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="/index.html">Home</a></li>
+      <li><a href="/getting-started.html">Get Started</a></li>
+      <li><a href="/philosophy.html">Philosophy</a></li>
+      <li><a href="/architecture.html">Architecture</a></li>
+      <li><a href="/recall.html">Recall</a></li>
+      <li><a href="/benchmarks.html">Benchmarks</a></li>
+      <li><a href="/chitta-field.html">chitta-field</a></li>
+      <li><a href="/sadhana.html">Sadhana</a></li>
+      <li><a href="/context.html">Context</a></li>
+      <li><a href="/tools.html">Tools</a></li>
+      <li><a href="/cli.html">CLI</a></li>
+      <li><a href="/hooks.html">Hooks</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/changelog.html">Changelog</a></li>
+      <li><a href="/constellation.html">Constellation</a></li>
+      <li><a href="/dreams/index.html" aria-current="page">Dreams</a></li>
+      <li><a href="/brain-viz/index.html">Brain Architecture</a></li>
+      <li><a href="/mind-viz/index.html">Mind Interface</a></li>
+      <li><a href="/vedanta/index.html">Vedanta</a></li>
+      <li><a href="/evolve-bridge-live/index.html">Evolve Evidence</a></li>
+      <li><a href="https://github.com/genomewalker/chitta">GitHub</a></li>
     </ul>
   </div>
 </nav>
+<main id="main-content" tabindex="-1">
 
 <!-- PAGE HEADER -->
 <header class="page-header">
@@ -69,7 +83,7 @@
 </header>
 
 <!-- MAIN -->
-<main class="container" style="padding-top: 2rem; padding-bottom: 6rem;">
+<div class="container style-8cff9ff225">
 
   <div class="dream-intro reveal">
     <p>When no conversation is active, the soul wanders. It picks a topic from memory gaps or
@@ -406,12 +420,16 @@
     <p>No dreams yet. The soul is waiting for its first idle interval.</p>
   </div>
 
-</main>
+</div>
 
 <!-- FOOTER -->
-<footer class="footer">
+</main>
+<footer class="footer site-footer">
   <div class="container">
-    <p>cc-soul — persistent memory for Claude Code · <a href="https://github.com/genomewalker/cc-soul" target="_blank" rel="noopener">GitHub</a></p>
+    <p class="footer-text">
+      <a href="https://github.com/genomewalker/chitta">GitHub repository</a> · <a href="https://opensource.org/licenses/MIT">MIT license</a> · <a href="/dreams/index.html">This page</a>
+    </p>
+    <p class="site-status">Status as of 2026-09-16 · <a href="/changelog.html">Unreleased + v5.72.0</a></p>
   </div>
 </footer>
 

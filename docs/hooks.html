@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hook System — chitta</title>
+<title>chitta — Hook System — chitta</title>
 <meta name="description" content="Lifecycle-aware memory hooks for chitta. Plugin hooks and settings hooks connect Claude Code events to the soul — session start, prompts, responses, tool use, and compaction.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta property="og:title" content="Hook System — chitta">
@@ -81,49 +81,55 @@
 }
 .submenu-toc-link:hover, .submenu-toc-link.active { color: var(--sandal-300); }
 </style>
+<link rel="stylesheet" href="/content-styles.css">
+<link rel="stylesheet" href="/site-shell.css">
 </head>
-<body>
+<body class="page-hooks">
+<a class="skip-link" href="#main-content">Skip to content</a>
 
 <!-- NAV -->
-<nav class="nav">
+<nav class="nav site-nav" aria-label="Main navigation">
   <div class="nav-inner">
-    <a href="index.html" class="nav-brand">chitta</a>
-    <button class="nav-hamburger" onclick="document.querySelector('.nav').classList.toggle('nav-open')" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
+    <a href="/index.html" class="nav-brand">chitta</a>
     <ul class="nav-links">
-      <li><a href="getting-started.html">Get Started</a></li>
-      <li><a href="philosophy.html">Philosophy</a></li>
-      <li><a href="architecture.html">Architecture</a></li>
-      <li><a href="recall.html">Recall</a></li>
-      <li><a href="benchmarks.html">Benchmarks</a></li>
-      <li><a href="chitta-field.html">chitta-field</a></li>
-      <li><a href="sadhana.html">Sadhana</a></li>
-      <li><a href="context.html">Context</a></li>
-      <li><a href="tools.html">Tools</a></li>
-      <li><a href="cli.html">CLI</a></li>
-      <li><a href="hooks.html" class="active">Hooks</a></li>
-      <li><a href="skills.html">Skills</a></li>
-      <li><a href="changelog.html">Changelog</a></li>
-      <li><a href="constellation.html">Constellation</a></li>
-      <li><a href="dreams/index.html">Dreams</a></li>
-      <li><a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="/index.html">Home</a></li>
+      <li><a href="/getting-started.html">Get Started</a></li>
+      <li><a href="/philosophy.html">Philosophy</a></li>
+      <li><a href="/architecture.html">Architecture</a></li>
+      <li><a href="/recall.html">Recall</a></li>
+      <li><a href="/benchmarks.html">Benchmarks</a></li>
+      <li><a href="/chitta-field.html">chitta-field</a></li>
+      <li><a href="/sadhana.html">Sadhana</a></li>
+      <li><a href="/context.html">Context</a></li>
+      <li><a href="/tools.html">Tools</a></li>
+      <li><a href="/cli.html">CLI</a></li>
+      <li><a href="/hooks.html" aria-current="page">Hooks</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/changelog.html">Changelog</a></li>
+      <li><a href="/constellation.html">Constellation</a></li>
+      <li><a href="/dreams/index.html">Dreams</a></li>
+      <li><a href="/brain-viz/index.html">Brain Architecture</a></li>
+      <li><a href="/mind-viz/index.html">Mind Interface</a></li>
+      <li><a href="/vedanta/index.html">Vedanta</a></li>
+      <li><a href="/evolve-bridge-live/index.html">Evolve Evidence</a></li>
+      <li><a href="https://github.com/genomewalker/chitta">GitHub</a></li>
     </ul>
   </div>
 </nav>
+<main id="main-content" tabindex="-1">
 
 <!-- PAGE HEADER -->
 <header class="page-header">
   <div class="container">
     <div class="page-header-badge reveal">Hook System</div>
     <h1 class="reveal reveal-delay-1">Lifecycle-aware memory.</h1>
-    <p class="page-header-sub reveal reveal-delay-2">Hooks inject memories at the right moment. Individual scripts in <code style="color: var(--aura-300);">hooks/</code> handle each lifecycle event, configured via <code style="color: var(--aura-300);">hooks.json</code> (plugin) or <code style="color: var(--aura-300);">~/.claude/settings.json</code> (standalone).</p>
-    <p class="reveal reveal-delay-2" style="font-family: var(--font-mono); font-size: var(--text-xs); color: #565f89; margin-top: var(--space-3);">Status as of 2026-09-16. <a href="HOOKS.md">Canonical hook contract and measurements</a>.</p>
+    <p class="page-header-sub reveal reveal-delay-2">Hooks inject memories at the right moment. Individual scripts in <code class="style-18fae4fbe7">hooks/</code> handle each lifecycle event, configured via <code class="style-18fae4fbe7">hooks.json</code> (plugin) or <code class="style-18fae4fbe7">~/.claude/settings.json</code> (standalone).</p>
+    <p class="reveal reveal-delay-2 style-2dee830ea7">Status as of 2026-09-16 <a href="HOOKS.md">Canonical hook contract and measurements</a>.</p>
   </div>
 </header>
 
 <!-- TABLE OF CONTENTS -->
-<nav class="submenu-toc">
+<nav class="submenu-toc" aria-label="On this page">
   <div class="submenu-toc-inner">
     <a href="#sec-events" class="submenu-toc-link" data-section="sec-events">Event Types</a>
     <a href="#sec-modes" class="submenu-toc-link" data-section="sec-modes">Hook Configuration</a>
@@ -145,7 +151,7 @@
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><path d="M3 10 L8 5 L8 8 L17 8 L17 12 L8 12 L8 15 Z" stroke="#CBAF86" stroke-width="1.2" fill="none"/></svg>
         </div>
-        <span class="tools-category-name">Event Types</span>
+        <h2 class="tools-category-name">Event Types</h2>
         <span class="tools-category-count">9 events</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
@@ -290,7 +296,7 @@
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="7" height="12" rx="1.5" stroke="#9DB2D9" stroke-width="1.2"/><rect x="11" y="4" width="7" height="12" rx="1.5" stroke="#9DB2D9" stroke-width="1.2"/></svg>
         </div>
-        <span class="tools-category-name">Hook Configuration</span>
+        <h2 class="tools-category-name">Hook Configuration</h2>
         <span class="tools-category-count">plugin &amp; settings</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
@@ -315,7 +321,7 @@
             </div>
           </div>
         </div>
-        <p class="content-text" style="margin-top: var(--space-5);"><strong>Two roots, on purpose.</strong> Inside <code>hooks.json</code>, lifecycle handlers resolve against <code>${CLAUDE_PLUGIN_ROOT}</code> &mdash; the plugin cache &mdash; while the <code>PreToolUse</code> matchers and most <code>PostToolUse</code> matchers resolve against <code>${HOME}/.claude/hooks</code>. A source checkout is neither. That is why editing a checkout changes nothing until you install, and why <code>scripts/dev-install.sh</code> symlinks both live paths back at your checkout. A plugin update can replace those symlinks with a fresh clone, so re-run it afterwards.</p>
+        <p class="content-text style-e72da4b454"><strong>Two roots, on purpose.</strong> Inside <code>hooks.json</code>, lifecycle handlers resolve against <code>${CLAUDE_PLUGIN_ROOT}</code> &mdash; the plugin cache &mdash; while the <code>PreToolUse</code> matchers and most <code>PostToolUse</code> matchers resolve against <code>${HOME}/.claude/hooks</code>. A source checkout is neither. That is why editing a checkout changes nothing until you install, and why <code>scripts/dev-install.sh</code> symlinks both live paths back at your checkout. A plugin update can replace those symlinks with a fresh clone, so re-run it afterwards.</p>
       </div>
     </div>
 
@@ -325,7 +331,7 @@
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="8" r="5" stroke="#D46A4C" stroke-width="1.2"/><path d="M8 13 L8 16 L12 16 L12 13" stroke="#D46A4C" stroke-width="1" opacity="0.5"/><line x1="10" y1="5" x2="10" y2="11" stroke="#D46A4C" stroke-width="0.75" opacity="0.4"/></svg>
         </div>
-        <span class="tools-category-name">Proactive Learning</span>
+        <h2 class="tools-category-name">Proactive Learning</h2>
         <span class="tools-category-count">4 detectors</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
@@ -370,7 +376,7 @@
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><path d="M10 3 L17 10 L10 17 L3 10 Z" stroke="#CBAF86" stroke-width="1.2"/><circle cx="10" cy="10" r="2" fill="#CBAF86" opacity="0.3"/></svg>
         </div>
-        <span class="tools-category-name">Anticipation</span>
+        <h2 class="tools-category-name">Anticipation</h2>
         <span class="tools-category-count">predict &rarr; observe &rarr; strengthen</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
@@ -414,7 +420,7 @@
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><path d="M4 4 L10 4 L10 8 L16 8 L16 16 L4 16 Z" stroke="#9DB2D9" stroke-width="1.2"/><line x1="7" y1="11" x2="13" y2="11" stroke="#9DB2D9" stroke-width="0.75" opacity="0.5"/><line x1="7" y1="13" x2="11" y2="13" stroke="#9DB2D9" stroke-width="0.75" opacity="0.5"/></svg>
         </div>
-        <span class="tools-category-name">Key Scripts</span>
+        <h2 class="tools-category-name">Key Scripts</h2>
         <span class="tools-category-count">11 scripts</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
@@ -428,7 +434,7 @@
         <div class="tool-row reveal"><span class="tool-name">artifact-trace.sh</span><span class="tool-desc">PostToolUse:Write &mdash; records reusable script artifacts with path, hash and purpose.</span></div>
         <div class="tool-row reveal"><span class="tool-name">log-bash-history.sh</span><span class="tool-desc">PostToolUse async handler &mdash; appends every Bash command to history for pattern learning.</span></div>
         <div class="tool-row reveal"><span class="tool-name">memory-intercept.sh</span><span class="tool-desc">PostToolUse:Write async handler &mdash; captures Write operations to learn what you build.</span></div>
-        <div class="tool-row reveal"><span class="tool-name">subconscious.sh</span><span class="tool-desc">Daemon lifecycle management &mdash; start, stop, restart, status, and health checks for the <code style="color: var(--aura-300);">chittad</code> background process.</span></div>
+        <div class="tool-row reveal"><span class="tool-name">subconscious.sh</span><span class="tool-desc">Daemon lifecycle management &mdash; start, stop, restart, status, and health checks for the <code class="style-18fae4fbe7">chittad</code> background process.</span></div>
         <div class="tool-row reveal"><span class="tool-name">distill.sh</span><span class="tool-desc">Background transcript distillation &mdash; processes conversation transcripts into compressed wisdom nodes.</span></div>
       </div>
     </div>
@@ -439,7 +445,7 @@
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><circle cx="6" cy="10" r="3" stroke="#D46A4C" stroke-width="1.2"/><circle cx="14" cy="10" r="3" stroke="#D46A4C" stroke-width="1.2"/><line x1="9" y1="10" x2="11" y2="10" stroke="#D46A4C" stroke-width="1.5" opacity="0.6"/></svg>
         </div>
-        <span class="tools-category-name">Socket Communication</span>
+        <h2 class="tools-category-name">Socket Communication</h2>
         <span class="tools-category-count">daemon protocol</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
@@ -482,7 +488,7 @@
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><path d="M10 3 L10 12 M7 9 L10 12 L13 9" stroke="#CBAF86" stroke-width="1.2"/><rect x="4" y="14" width="12" height="3" rx="1" stroke="#CBAF86" stroke-width="1" opacity="0.5"/></svg>
         </div>
-        <span class="tools-category-name">Installation</span>
+        <h2 class="tools-category-name">Installation</h2>
         <span class="tools-category-count">settings.json</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
@@ -522,13 +528,13 @@
 </section>
 
 <!-- FOOTER -->
-<footer class="footer">
+</main>
+<footer class="footer site-footer">
   <div class="container">
     <p class="footer-text">
-      Built with conviction. Grounded in philosophy.
-      <span class="footer-sep"></span>
-      <a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/genomewalker/chitta">GitHub repository</a> · <a href="https://opensource.org/licenses/MIT">MIT license</a> · <a href="/hooks.html">This page</a>
     </p>
+    <p class="site-status">Status as of 2026-09-16 · <a href="/changelog.html">Unreleased + v5.72.0</a></p>
   </div>
 </footer>
 

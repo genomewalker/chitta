@@ -1,0 +1,152 @@
+/* Former static style attributes; shared classes keep specificity low. */
+.style-02247be830 { color:var(--dim);font-size:9px }
+.style-06d705bf18 { font-size: var(--text-sm); color: var(--ash-300); line-height: 1.8; margin-top: var(--space-3); }
+.style-071c3424f4 { height:68vh;min-height:460px;display:none }
+.style-088871257a { padding:4px 8px;position:relative;z-index:2 }
+.style-09342f6dd1 { margin-top: var(--space-4); }
+.style-0aba7a7bc4 { font-size:0.75em;opacity:0.6 }
+.style-0bde53dbba { background:rgba(157,178,217,0.15) }
+.style-0c3bbec257 { background:#ff66cc }
+.style-0c76f71c0f { font-size: var(--text-sm); color: var(--ash-300); line-height: 1.7; }
+.style-0ca8e4f994 { font-size: var(--text-sm); color: var(--lotus-200); margin-bottom: var(--space-3); }
+.style-0e575237fe { stop-color:#CBAF86;stop-opacity:0.4 }
+.style-110207e7f1 { border-color:var(--cyan);color:var(--cyan); }
+.style-150dc8dcfd { font-family:var(--font-mono);font-size:11px;color:var(--aura-300);margin-bottom:6px }
+.style-153eaf0736 { overflow-y:auto;max-height:calc(100% - 36px);scrollbar-width:thin;scrollbar-color:var(--dim2) transparent; }
+.style-1552366efe { color:var(--text-primary) }
+.style-17b0df4a25 { color: var(--cyan); }
+.style-1801483095 { font-size:13px;line-height:1.75;color:var(--ash-300) }
+.style-182ca33126 { background:#bf5fff }
+.style-18fae4fbe7 { color: var(--aura-300); }
+.style-1a884d7b6e { background:#ff2266 }
+.style-1aa0a94c5d { margin-bottom:var(--space-5) }
+.style-1b18e67aa2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-top: var(--space-4); }
+.style-1bfa919d06 { background: var(--indigo-700); border-radius: var(--radius-md); padding: var(--space-5); border-top: 2px solid var(--aura-300); }
+.style-1d46a4d8ca { width: 17%; background: var(--sandal-300); }
+.style-27825e55d7 { font-family: var(--font-display); font-size: var(--text-xl); color: var(--lotus-200); font-weight: 500; margin-bottom: var(--space-4); }
+.style-2967545c78 { max-width: 860px; }
+.style-296d727a0b { max-width:640px }
+.style-29ef0023fa { width:100%;background:rgba(0,20,40,0.8);border:1px solid var(--b-cyan);color:var(--text);padding:4px 8px;font-size:10px;font-family:inherit;outline:none; }
+.style-2b4660b157 { text-align: center; margin-top: 1.5rem; }
+.style-2c14cabd6a { font-size: var(--text-sm); color: var(--ash-300); margin-top: var(--space-3); line-height: 1.8; }
+.style-2d45c42ab9 { margin-bottom:var(--space-2); }
+.style-2dee830ea7 { font-family: var(--font-mono); font-size: var(--text-xs); color: #565f89; margin-top: var(--space-3); }
+.style-2f48d0a867 { font-size: var(--text-sm); color: var(--ash-300); line-height: 1.8; }
+.style-32f94288b4 { margin-top: var(--space-2); line-height: 1.8; }
+.style-37e1f69526 { background:#6ad4d4 }
+.style-3c7eb11627 { max-width:660px;line-height:1.8;color:var(--ash-300);margin-top:var(--space-5) }
+.style-3d4af7fdb5 { background:#0d1117;border:1px solid var(--cyan);border-radius:4px;padding:18px;width:520px;max-width:90vw;font-family:inherit; }
+.style-3df4d990ec { color:var(--dim);font-size:10px;margin-top:6px;min-height:14px; }
+.style-419ffe78d3 { background: var(--indigo-700); border-radius: var(--radius-md); padding: var(--space-5); border-top: 2px solid var(--sandal-300); }
+.style-42bb9fa513 { font-size: var(--text-2xl); }
+.style-43b5972c7b { display:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:500px;max-height:70vh;z-index:200; }
+.style-45b9c2b2c0 { background:#55bb55 }
+.style-46298095ee { background:#d46a6a }
+.style-4633269286 { font-family: var(--font-display); font-size: var(--text-lg); color: var(--sandal-300); margin-bottom: var(--space-2); }
+.style-46d0a43b8f { background:#d4a76a }
+.style-48a5c3e191 { font-family: var(--font-display); font-size: var(--text-xl); color: var(--lotus-200); font-weight: 500; margin-top: var(--space-6); margin-bottom: var(--space-2); }
+.style-4ad1729b52 { line-height: 1.9; }
+.style-4b7c316065 { display:flex;justify-content:space-between;align-items:center;margin-bottom:12px; }
+.style-4ed0a3e9cc { background:rgba(157,178,217,0.25) }
+.style-5096e3739e { background:#7bb3f5 }
+.style-51a231f070 { width:100%;background:rgba(0,20,40,0.8);border:1px solid var(--b-violet);color:var(--text);padding:4px 8px;font-size:10px;font-family:inherit;outline:none; }
+.style-51fb7d200a { margin-top:4px;width:100%;background:rgba(0,20,40,0.8);border:1px solid var(--b-cyan);color:var(--text);padding:3px;font-size:9px;font-family:inherit; }
+.style-53f611e985 { width: 100%; background: var(--ember-400); }
+.style-545b090db3 { background: #b07219; }
+.style-565889a8b9 { background:#ff7b00 }
+.style-565c8b4407 { width: 0%; background: var(--sandal-300); }
+.style-56cb561998 { background:rgba(203,175,134,0.7) }
+.style-593d751a0f { margin: 0 1rem; color: var(--lotus-600); }
+.style-5d228a8a69 { font-size: 0.85rem; color: var(--text-dim); margin-top: 0.5rem; }
+.style-6002529ccd { margin: 0 auto; }
+.style-605fcdb1c6 { margin-top: var(--space-7); }
+.style-61681435cf { stop-color:#9DB2D9;stop-opacity:0.4 }
+.style-64dbdf59da { background: #00ADD8; }
+.style-6592600bca { max-width:660px;margin:var(--space-5) 0 0;padding-left:var(--space-4);border-left:2px solid rgba(203,175,134,0.35);font-size:13px;line-height:1.8;color:var(--ash-300) }
+.style-65b153098c { background:rgba(203,175,134,0.8) }
+.style-65cc588dae { color:var(--sandal-300) }
+.style-66045f59fa { list-style:none;padding:0;line-height:2 }
+.style-6afa24e36f { background: #f1e05a; }
+.style-6b2c8f7873 { color:var(--cyan);font-size:11px;letter-spacing:.1em;margin-bottom:10px; }
+.style-6e0b83649a { overflow-y:auto;max-height:calc(70vh - 100px);scrollbar-width:thin;scrollbar-color:var(--dim2) transparent;padding:4px 8px;position:relative;z-index:2; }
+.style-71f2fe6248 { color: var(--purple); }
+.style-72d2417252 { color: rgba(185,189,199,0.5); }
+.style-732bebd427 { display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-5);max-width:800px }
+.style-7480b36b8b { font-family: var(--font-display); font-size: var(--text-xl); color: var(--lotus-200); font-weight: 500; margin-bottom: var(--space-3); }
+.style-74d098c999 { text-align: center; color: var(--lotus-300); }
+.style-7572c92433 { font-size: var(--text-sm); color: var(--ash-300); margin-top: var(--space-4); line-height: 1.8; }
+.style-77206fff3f { color:var(--ash-500);font-size:0.68rem;letter-spacing:.08em;text-transform:uppercase; }
+.style-7794a70a0a { display:flex;gap:6px;margin:6px 0 4px; }
+.style-7817ee87f8 { color:var(--aura-300); }
+.style-78c32e1c9c { display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center; }
+.style-79dd94a014 { font-size: var(--text-sm); color: var(--ash-300); line-height: 1.7; max-width: 720px; margin-bottom: var(--space-4); }
+.style-7bff81ed59 { width:100%;height:180px;background:#111;color:var(--fg);border:1px solid var(--dim2);border-radius:3px;padding:8px;font-family:inherit;font-size:12px;resize:vertical;box-sizing:border-box; }
+.style-7c8440eec3 { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--ash-300); font-weight: 400; }
+.style-7ed318d3ab { background: #3572A5; }
+.style-8093e29d31 { background: #701516; }
+.style-821c960a1a { font-family: var(--font-display); font-size: var(--text-xl); color: var(--lotus-200); font-weight: 500; margin-top: var(--space-7); margin-bottom: var(--space-3); }
+.style-846605f629 { color:var(--text-secondary);margin-bottom:var(--space-4) }
+.style-84a8551ed1 { margin-top:var(--space-6) }
+.style-8564946be9 { color: var(--sandal-300); font-weight: 500; }
+.style-856c742b60 { margin-top:var(--space-3); }
+.style-85d374d0ec { background: #178600; }
+.style-864b884823 { color:var(--text-secondary);margin:var(--space-4) 0 var(--space-3) }
+.style-899ff1a54f { font-size:var(--text-xs);opacity:0.7; }
+.style-8cff9ff225 { padding-top: 2rem; padding-bottom: 6rem; }
+.style-8ddb60f14f { font-style:italic;opacity:0.6;font-size:0.7em }
+.style-8ed602b1b4 { font-size: var(--text-sm); color: var(--ash-300); margin-bottom: var(--space-6); line-height: 1.8; }
+.style-9172abebd9 { overflow-y:auto;max-height:calc(70vh - 40px);scrollbar-width:thin;scrollbar-color:var(--dim2) transparent;padding:8px;position:relative;z-index:2; }
+.style-92d00c5ca1 { background:#00ffee }
+.style-92e7a6c310 { color:var(--sandal-300); }
+.style-9463ff4798 { cursor:pointer }
+.style-96302bd618 { background:rgba(212,106,76,0.8) }
+.style-96890ead09 { background: #3178c6; }
+.style-9a9f45a01f { display:flex;gap:12px;flex-wrap:wrap;justify-content:center;position:relative;z-index:2 }
+.style-9d3b6577d0 { background:#00ff8c }
+.style-a080790f98 { font-size:var(--text-xl) }
+.style-a379d74947 { background: #f34b7d; }
+.style-a9e1d4d6f5 { color:var(--lotus-200) }
+.style-aa26ac38c5 { background:none;border:1px solid rgba(203,175,134,0.2);color:var(--sandal-300);font-family:inherit;font-size:0.68rem;padding:3px 10px;cursor:pointer;border-radius:3px; }
+.style-aaeaec805c { background:rgba(212,106,76,0.85) }
+.style-ab9b336663 { font-size:8px;letter-spacing:1px;color:var(--dim) }
+.style-aeacbf351d { font-size:9px;letter-spacing:1px }
+.style-afccd1dd2e { font-style:italic }
+.style-afe53ef55a { color:var(--text-secondary);margin-bottom:var(--space-3) }
+.style-b0455c230f { color:var(--dim) }
+.style-b4a3100d87 { font-size:var(--text-xs);color:var(--ash-400);font-weight:400; }
+.style-b5f42767e6 { background:#b08ad4 }
+.style-bc8d3e66d2 { color: var(--text-secondary); line-height: 1.9; margin: var(--space-4) 0 var(--space-4) var(--space-5); }
+.style-be5411e749 { margin-top:var(--space-5) }
+.style-c02f865c46 { margin-top: var(--space-6); }
+.style-c2f6d5aa4a { display:none;position:fixed;right:10px;top:50%;transform:translateY(-50%);width:340px;max-height:70vh;z-index:200; }
+.style-c5dcedecd0 { display:flex;gap:8px;margin-top:10px;justify-content:flex-end; }
+.style-cd740c83af { color:var(--dim);font-size:8px;letter-spacing:1.5px }
+.style-cdc229237c { font-size:var(--text-xs);color:rgba(185,189,199,0.45);margin-top:var(--space-3); }
+.style-ce9f2ef6c3 { margin-top:var(--space-8) }
+.style-cf1aa60fc8 { color:#D46A4C }
+.style-cfc6221463 { margin-top:var(--space-7) }
+.style-d2d64174ff { font-size: var(--text-sm); color: var(--ash-300); margin-bottom: var(--space-3); }
+.style-d3ec43172c { height:68vh;min-height:460px }
+.style-d43f1e02bf { background:#00d4ff }
+.style-db6da295de { margin-top:var(--space-5);max-width:640px }
+.style-dbfef246b1 { font-size: var(--text-xs); color: var(--ash-400); font-weight: 400; }
+.style-dd48b8545c { width: 17%; background: var(--ember-400); }
+.style-dfd4308180 { border-top-color: var(--aura-300); }
+.style-e297a2e8fe { font-size:0.65rem;opacity:0.6 }
+.style-e72da4b454 { margin-top: var(--space-5); }
+.style-e997fa3020 { background: #dea584; }
+.style-ea9493b959 { width: 33%; background: var(--aura-300); }
+.style-eb0f911f22 { overflow-y:auto;max-height:calc(70vh - 80px);scrollbar-width:thin;scrollbar-color:var(--dim2) transparent;padding:4px 8px;position:relative;z-index:2; }
+.style-ee1da29a63 { font-family: var(--font-display); font-size: var(--text-xl); color: var(--lotus-200); font-weight: 500; margin-top: var(--space-6); margin-bottom: var(--space-3); }
+.style-ee2014c5f6 { font-size: var(--text-sm); color: var(--ash-300); margin-top: var(--space-5); line-height: 1.8; }
+.style-f0360befee { border-top-color: var(--sandal-300); }
+.style-f0cc7da76d { font-family: var(--font-display); font-size: var(--text-lg); color: var(--aura-300); margin-bottom: var(--space-2); }
+.style-f488d20b3b { display:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:560px;max-height:70vh;z-index:200; }
+.style-f57b2eeb36 { font-family: var(--font-display); font-size: var(--text-xl); color: var(--lotus-200); font-weight: 500; margin-top: var(--space-6); margin-bottom: var(--space-4); }
+.style-f5897321e6 { padding-top:6px;color:#2d3149;font-size:0.7rem; }
+.style-f686171027 { border-top-color: var(--ember-400); }
+.style-f71ce5314c { background:#ffcc00 }
+.style-f95a8bb3fc { font-size: var(--text-sm); color: var(--ash-300); margin-bottom: var(--space-4); line-height: 1.8; }
+.style-facd08238e { display:flex;gap:var(--space-5);flex-wrap:wrap;margin-top:var(--space-5); }
+.style-fb5ec070f2 { text-align: center; }
+.style-ff5a28b832 { width: 0%; background: var(--aura-300); }

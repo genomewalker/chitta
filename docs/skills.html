@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>31 Skills — chitta</title>
+<title>chitta — 31 Skills — chitta</title>
 <meta name="description" content="Complete reference for all 31 slash-command skills in chitta. Memory operations, reasoning, development rituals, pipeline monitoring, maintenance, system management, and benchmarking.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta property="og:title" content="31 Skills — chitta">
@@ -480,49 +480,56 @@ body::before {
 }
 .submenu-toc-link:hover, .submenu-toc-link.active { color: var(--sandal-300); }
 </style>
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/content-styles.css">
+<link rel="stylesheet" href="/site-shell.css">
 </head>
-<body>
+<body class="page-skills">
+<a class="skip-link" href="#main-content">Skip to content</a>
 
 <!-- NAV -->
-<nav class="nav">
+<nav class="nav site-nav" aria-label="Main navigation">
   <div class="nav-inner">
-    <a href="index.html" class="nav-brand">chitta</a>
-    <button class="nav-hamburger" onclick="document.querySelector('.nav').classList.toggle('nav-open')" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
+    <a href="/index.html" class="nav-brand">chitta</a>
     <ul class="nav-links">
-      <li><a href="getting-started.html">Get Started</a></li>
-      <li><a href="philosophy.html">Philosophy</a></li>
-      <li><a href="architecture.html">Architecture</a></li>
-      <li><a href="recall.html">Recall</a></li>
-      <li><a href="benchmarks.html">Benchmarks</a></li>
-      <li><a href="chitta-field.html">chitta-field</a></li>
-      <li><a href="sadhana.html">Sadhana</a></li>
-      <li><a href="context.html">Context</a></li>
-      <li><a href="tools.html">Tools</a></li>
-      <li><a href="cli.html">CLI</a></li>
-      <li><a href="hooks.html">Hooks</a></li>
-      <li><a href="skills.html" class="active">Skills</a></li>
-      <li><a href="changelog.html">Changelog</a></li>
-      <li><a href="constellation.html">Constellation</a></li>
-      <li><a href="dreams/index.html">Dreams</a></li>
-      <li><a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="/index.html">Home</a></li>
+      <li><a href="/getting-started.html">Get Started</a></li>
+      <li><a href="/philosophy.html">Philosophy</a></li>
+      <li><a href="/architecture.html">Architecture</a></li>
+      <li><a href="/recall.html">Recall</a></li>
+      <li><a href="/benchmarks.html">Benchmarks</a></li>
+      <li><a href="/chitta-field.html">chitta-field</a></li>
+      <li><a href="/sadhana.html">Sadhana</a></li>
+      <li><a href="/context.html">Context</a></li>
+      <li><a href="/tools.html">Tools</a></li>
+      <li><a href="/cli.html">CLI</a></li>
+      <li><a href="/hooks.html">Hooks</a></li>
+      <li><a href="/skills.html" aria-current="page">Skills</a></li>
+      <li><a href="/changelog.html">Changelog</a></li>
+      <li><a href="/constellation.html">Constellation</a></li>
+      <li><a href="/dreams/index.html">Dreams</a></li>
+      <li><a href="/brain-viz/index.html">Brain Architecture</a></li>
+      <li><a href="/mind-viz/index.html">Mind Interface</a></li>
+      <li><a href="/vedanta/index.html">Vedanta</a></li>
+      <li><a href="/evolve-bridge-live/index.html">Evolve Evidence</a></li>
+      <li><a href="https://github.com/genomewalker/chitta">GitHub</a></li>
     </ul>
   </div>
 </nav>
+<main id="main-content" tabindex="-1">
 
 <!-- PAGE HEADER -->
 <header class="page-header">
   <div class="container">
     <div class="page-header-badge reveal">Skills Reference</div>
     <h1 class="reveal reveal-delay-1">31 skills. Invoke with /.</h1>
-    <p class="page-header-sub reveal reveal-delay-2">Skills are slash commands that expand into specialized prompts. They are namespaced by plugin, so each is invoked as <code style="color: var(--aura-300);">/chitta:&lt;name&gt;</code>. They guide Claude through structured workflows&thinsp;&mdash;&thinsp;from soul initialization to autonomous development rituals.</p>
-    <p class="reveal reveal-delay-2" style="font-family: var(--font-mono); font-size: var(--text-xs); color: #565f89; margin-top: var(--space-3);">Status as of 2026-09-16. Names follow the repository's skill directories; maintenance suffixes were retained during the rename.</p>
+    <p class="page-header-sub reveal reveal-delay-2">Skills are slash commands that expand into specialized prompts. They are namespaced by plugin, so each is invoked as <code class="style-18fae4fbe7">/chitta:&lt;name&gt;</code>. They guide Claude through structured workflows&thinsp;&mdash;&thinsp;from soul initialization to autonomous development rituals.</p>
+    <p class="reveal reveal-delay-2 style-2dee830ea7">Status as of 2026-09-16 · Names follow the repository's skill directories; maintenance suffixes were retained during the rename.</p>
   </div>
 </header>
 
 <!-- TABLE OF CONTENTS -->
-<nav class="submenu-toc">
+<nav class="submenu-toc" aria-label="On this page">
   <div class="submenu-toc-inner">
     <a href="#cat-memory" class="submenu-toc-link" data-section="cat-memory">Memory Operations</a>
     <a href="#cat-continuity" class="submenu-toc-link" data-section="cat-continuity">Session Continuity</a>
@@ -544,7 +551,7 @@ body::before {
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="4" stroke="#CBAF86" stroke-width="1.5"/><circle cx="10" cy="10" r="8" stroke="#CBAF86" stroke-width="0.75" opacity="0.4"/></svg>
         </div>
-        <span class="tools-category-name">Memory Operations</span>
+        <h2 class="tools-category-name">Memory Operations</h2>
         <span class="tools-category-count">8 skills</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
@@ -565,7 +572,7 @@ body::before {
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><path d="M4 10 a6 6 0 1 1 3 5.2" stroke="#9DB2D9" stroke-width="1.2" fill="none"/><path d="M4 6 V10 H8" stroke="#9DB2D9" stroke-width="1.2"/></svg>
         </div>
-        <span class="tools-category-name">Session Continuity</span>
+        <h2 class="tools-category-name">Session Continuity</h2>
         <span class="tools-category-count">3 skills</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
@@ -581,7 +588,7 @@ body::before {
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><path d="M10 3 L17 10 L10 17 L3 10 Z" stroke="#9DB2D9" stroke-width="1.2"/><circle cx="10" cy="10" r="2" fill="#9DB2D9" opacity="0.3"/></svg>
         </div>
-        <span class="tools-category-name">Reasoning</span>
+        <h2 class="tools-category-name">Reasoning</h2>
         <span class="tools-category-count">2 skills</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
@@ -596,7 +603,7 @@ body::before {
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><path d="M7 5 L3 10 L7 15" stroke="#D46A4C" stroke-width="1.2"/><path d="M13 5 L17 10 L13 15" stroke="#D46A4C" stroke-width="1.2"/><line x1="11" y1="4" x2="9" y2="16" stroke="#D46A4C" stroke-width="0.75" opacity="0.5"/></svg>
         </div>
-        <span class="tools-category-name">Development</span>
+        <h2 class="tools-category-name">Development</h2>
         <span class="tools-category-count">6 skills</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
@@ -615,7 +622,7 @@ body::before {
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><path d="M3 6 L10 3 L17 6 L10 9 Z" stroke="#CBAF86" stroke-width="1.2" fill="none"/><path d="M6 8 V13 L10 15 L14 13 V8" stroke="#CBAF86" stroke-width="1" opacity="0.6"/></svg>
         </div>
-        <span class="tools-category-name">Learning &amp; Curiosity</span>
+        <h2 class="tools-category-name">Learning &amp; Curiosity</h2>
         <span class="tools-category-count">3 skills</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
@@ -631,7 +638,7 @@ body::before {
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><path d="M12 3 L14 5 L5 14 L3 12 Z" stroke="#CBAF86" stroke-width="1.2"/><circle cx="15" cy="5" r="2" stroke="#CBAF86" stroke-width="0.75" opacity="0.4"/></svg>
         </div>
-        <span class="tools-category-name">Maintenance</span>
+        <h2 class="tools-category-name">Maintenance</h2>
         <span class="tools-category-count">3 skills</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
@@ -647,7 +654,7 @@ body::before {
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="14" height="14" rx="2" stroke="#9DB2D9" stroke-width="1.2"/><line x1="7" y1="7" x2="13" y2="7" stroke="#9DB2D9" stroke-width="0.75" opacity="0.6"/><line x1="7" y1="10" x2="13" y2="10" stroke="#9DB2D9" stroke-width="0.75" opacity="0.6"/><line x1="7" y1="13" x2="10" y2="13" stroke="#9DB2D9" stroke-width="0.75" opacity="0.6"/></svg>
         </div>
-        <span class="tools-category-name">System</span>
+        <h2 class="tools-category-name">System</h2>
         <span class="tools-category-count">5 skills</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
@@ -665,7 +672,7 @@ body::before {
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><path d="M3 15 L7 8 L11 11 L17 4" stroke="#D46A4C" stroke-width="1.2" fill="none"/><circle cx="17" cy="4" r="1.5" stroke="#D46A4C" stroke-width="0.75" opacity="0.5"/></svg>
         </div>
-        <span class="tools-category-name">Benchmarking</span>
+        <h2 class="tools-category-name">Benchmarking</h2>
         <span class="tools-category-count">1 skill</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
@@ -685,13 +692,13 @@ body::before {
 </section>
 
 <!-- FOOTER -->
-<footer class="footer">
+</main>
+<footer class="footer site-footer">
   <div class="container">
     <p class="footer-text">
-      Built with conviction. Grounded in philosophy.
-      <span class="footer-sep"></span>
-      <a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/genomewalker/chitta">GitHub repository</a> · <a href="https://opensource.org/licenses/MIT">MIT license</a> · <a href="/skills.html">This page</a>
     </p>
+    <p class="site-status">Status as of 2026-09-16 · <a href="/changelog.html">Unreleased + v5.72.0</a></p>
   </div>
 </footer>
 

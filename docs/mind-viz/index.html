@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>chitta — neural interface</title>
+<title>chitta — Mind interface</title>
 <script src="https://unpkg.com/3d-force-graph@1/dist/3d-force-graph.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -30,15 +30,15 @@ body {
   color: var(--text);
   font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
   font-size: 11px;
-  overflow: hidden;
-  width: 100vw;
-  height: 100vh;
+  overflow: auto;
+  width: 100%;
+  min-height: 100vh;
 }
 
 /* ── Background grid ───────────────────────────────────────────────────────── */
 body::before {
   content: '';
-  position: fixed;
+  position: absolute;
   inset: 0;
   background-image:
     linear-gradient(rgba(0,212,255,0.025) 1px, transparent 1px),
@@ -56,7 +56,7 @@ body::before {
 
 /* ── Panel base ────────────────────────────────────────────────────────────── */
 .panel {
-  position: fixed;
+  position: absolute;
   background: var(--panel-bg);
   border: 1px solid var(--b-cyan);
   box-shadow: var(--glow-c);
@@ -385,23 +385,59 @@ body::before {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--dim2); border-radius: 2px; }
 </style>
+<meta name="description" content="Mind interface — explore chitta’s memory system.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/content-styles.css">
+<link rel="stylesheet" href="/site-shell.css">
 </head>
-<body>
+<body class="page-mind-viz">
+<a class="skip-link" href="#main-content">Skip to content</a>
+<nav class="nav site-nav" aria-label="Main navigation">
+  <div class="nav-inner">
+    <a href="/index.html" class="nav-brand">chitta</a>
+    <ul class="nav-links">
+      <li><a href="/index.html">Home</a></li>
+      <li><a href="/getting-started.html">Get Started</a></li>
+      <li><a href="/philosophy.html">Philosophy</a></li>
+      <li><a href="/architecture.html">Architecture</a></li>
+      <li><a href="/recall.html">Recall</a></li>
+      <li><a href="/benchmarks.html">Benchmarks</a></li>
+      <li><a href="/chitta-field.html">chitta-field</a></li>
+      <li><a href="/sadhana.html">Sadhana</a></li>
+      <li><a href="/context.html">Context</a></li>
+      <li><a href="/tools.html">Tools</a></li>
+      <li><a href="/cli.html">CLI</a></li>
+      <li><a href="/hooks.html">Hooks</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/changelog.html">Changelog</a></li>
+      <li><a href="/constellation.html">Constellation</a></li>
+      <li><a href="/dreams/index.html">Dreams</a></li>
+      <li><a href="/brain-viz/index.html">Brain Architecture</a></li>
+      <li><a href="/mind-viz/index.html" aria-current="page">Mind Interface</a></li>
+      <li><a href="/vedanta/index.html">Vedanta</a></li>
+      <li><a href="/evolve-bridge-live/index.html">Evolve Evidence</a></li>
+      <li><a href="https://github.com/genomewalker/chitta">GitHub</a></li>
+    </ul>
+  </div>
+</nav>
+<main id="main-content" tabindex="-1">
+<div class="mind-workspace">
 <div id="graph-container"></div>
 
 <!-- Header -->
 <div class="panel" id="hud-header">
   <span class="bk tl"></span><span class="bk tr"></span>
-  <div class="hdr-logo">CHITTA</div>
+  <h1 class="hdr-logo">chitta mind interface</h1>
   <span class="hdr-sep">◈</span>
   <div class="hdr-status">
     <span class="ph-dot" id="conn-dot"></span>
-    <span id="conn-label" style="color:var(--dim);font-size:8px;letter-spacing:1.5px">CONNECTING</span>
+    <span class="style-cd740c83af" id="conn-label">CONNECTING</span>
   </div>
   <span class="hdr-sep">·</span>
   <div class="hdr-badge" id="hdr-mem-badge">— MEM</div>
-  <span id="hdr-total" style="font-size:9px;letter-spacing:1px"></span>
-  <span id="hdr-time" style="font-size:8px;letter-spacing:1px;color:var(--dim)"></span>
+  <span class="style-aeacbf351d" id="hdr-total"></span>
+  <span class="style-ab9b336663" id="hdr-time"></span>
   <span class="hdr-sep">·</span>
   <span class="hdr-btn" onclick="toggleBrowser()" title="Memory Browser">◉ MEM</span>
   <span class="hdr-btn" onclick="toggleSkills()" title="Skill Registry">◆ SKILL</span>
@@ -436,39 +472,39 @@ body::before {
 <div class="panel" id="hud-instances">
   <span class="bk tl"></span><span class="bk tr"></span><span class="bk bl"></span><span class="bk br"></span>
   <div class="ph"><span class="ph-dot amber"></span><span class="ph-label">active instances</span><span class="ph-right" id="inst-count">0</span></div>
-  <div class="inst-list pb" id="instances-list"><span style="color:var(--dim)">scanning…</span></div>
+  <div class="inst-list pb" id="instances-list"><span class="style-b0455c230f">scanning…</span></div>
 </div>
 
 <!-- Inspector -->
 <div class="panel panel-violet" id="hud-inspector">
   <span class="bk tl"></span><span class="bk tr"></span><span class="bk bl"></span><span class="bk br"></span>
   <div class="ph"><span class="ph-dot violet"></span><span class="ph-label">memory inspector</span></div>
-  <div class="pb" style="overflow-y:auto;max-height:calc(100% - 36px);scrollbar-width:thin;scrollbar-color:var(--dim2) transparent;">
+  <div class="pb style-153eaf0736">
     <div class="insp-kind-row">
       <span class="insp-kind-tag" id="insp-kind-tag">—</span>
       <span class="insp-close" onclick="closeInspector()">✕</span>
     </div>
     <div class="insp-content" id="insp-content">—</div>
     <div class="insp-meta" id="insp-meta"></div>
-    <div style="display:flex;gap:6px;margin:6px 0 4px;">
+    <div class="style-7794a70a0a">
       <button class="mem-btn" onclick="openEdit()">edit</button>
       <button class="mem-btn mem-btn-red" onclick="deleteMemory()">forget</button>
     </div>
     <div class="insp-assoc-hdr">▸ associations</div>
-    <div class="assoc-list" id="insp-assocs"><span style="color:var(--dim)">—</span></div>
+    <div class="assoc-list" id="insp-assocs"><span class="style-b0455c230f">—</span></div>
   </div>
 </div>
 
 <!-- Memory edit modal -->
-<div id="mem-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
-  <div style="background:#0d1117;border:1px solid var(--cyan);border-radius:4px;padding:18px;width:520px;max-width:90vw;font-family:inherit;">
-    <div style="color:var(--cyan);font-size:11px;letter-spacing:.1em;margin-bottom:10px;">EDIT MEMORY <span id="modal-id" style="color:var(--dim)"></span></div>
-    <textarea id="modal-content" style="width:100%;height:180px;background:#111;color:var(--fg);border:1px solid var(--dim2);border-radius:3px;padding:8px;font-family:inherit;font-size:12px;resize:vertical;box-sizing:border-box;"></textarea>
-    <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end;">
+<div class="style-78c32e1c9c" id="mem-modal">
+  <div class="style-3d4af7fdb5">
+    <div class="style-6b2c8f7873">EDIT MEMORY <span class="style-b0455c230f" id="modal-id"></span></div>
+    <textarea class="style-7bff81ed59" id="modal-content"></textarea>
+    <div class="style-c5dcedecd0">
       <button class="mem-btn" onclick="closeEdit()">cancel</button>
-      <button class="mem-btn" style="border-color:var(--cyan);color:var(--cyan);" onclick="saveEdit()">save</button>
+      <button class="mem-btn style-110207e7f1" onclick="saveEdit()">save</button>
     </div>
-    <div id="modal-status" style="color:var(--dim);font-size:10px;margin-top:6px;min-height:14px;"></div>
+    <div class="style-3df4d990ec" id="modal-status"></div>
   </div>
 </div>
 
@@ -480,67 +516,67 @@ body::before {
 </div>
 
 <!-- Memory Browser -->
-<div class="panel" id="hud-browser" style="display:none;position:fixed;right:10px;top:50%;transform:translateY(-50%);width:340px;max-height:70vh;z-index:200;">
+<div class="panel style-c2f6d5aa4a" id="hud-browser">
   <span class="bk tl"></span><span class="bk tr"></span><span class="bk bl"></span><span class="bk br"></span>
-  <div class="ph"><span class="ph-dot cyan"></span><span class="ph-label">memory browser</span><span class="ph-right" style="cursor:pointer" onclick="toggleBrowser()">✕</span></div>
-  <div style="padding:4px 8px;position:relative;z-index:2">
-    <input id="mem-search" type="text" placeholder="search memories…" autocomplete="off" spellcheck="false"
-           style="width:100%;background:rgba(0,20,40,0.8);border:1px solid var(--b-cyan);color:var(--text);padding:4px 8px;font-size:10px;font-family:inherit;outline:none;">
-    <select id="mem-kind-filter" style="margin-top:4px;width:100%;background:rgba(0,20,40,0.8);border:1px solid var(--b-cyan);color:var(--text);padding:3px;font-size:9px;font-family:inherit;">
+  <div class="ph"><span class="ph-dot cyan"></span><span class="ph-label">memory browser</span><span class="ph-right style-9463ff4798" onclick="toggleBrowser()">✕</span></div>
+  <div class="style-088871257a">
+    <input class="style-29ef0023fa" id="mem-search" type="text" placeholder="search memories…" autocomplete="off" spellcheck="false"
+          >
+    <select class="style-51fb7d200a" id="mem-kind-filter">
       <option value="">all kinds</option>
       <option value="wisdom">wisdom</option><option value="episode">episode</option>
       <option value="habit">habit</option><option value="belief">belief</option>
       <option value="correction">correction</option><option value="insight">insight</option>
     </select>
   </div>
-  <div id="mem-results" style="overflow-y:auto;max-height:calc(70vh - 100px);scrollbar-width:thin;scrollbar-color:var(--dim2) transparent;padding:4px 8px;position:relative;z-index:2;">
-    <span style="color:var(--dim);font-size:9px">Type to search…</span>
+  <div class="style-6e0b83649a" id="mem-results">
+    <span class="style-02247be830">Type to search…</span>
   </div>
 </div>
 
 <!-- Skills Panel -->
-<div class="panel" id="hud-skills" style="display:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:500px;max-height:70vh;z-index:200;">
+<div class="panel style-43b5972c7b" id="hud-skills">
   <span class="bk tl"></span><span class="bk tr"></span><span class="bk bl"></span><span class="bk br"></span>
-  <div class="ph"><span class="ph-dot"></span><span class="ph-label">skill registry</span><span class="ph-right" style="cursor:pointer" onclick="toggleSkills()">✕</span></div>
-  <div id="skills-content" style="overflow-y:auto;max-height:calc(70vh - 40px);scrollbar-width:thin;scrollbar-color:var(--dim2) transparent;padding:8px;position:relative;z-index:2;">
-    <span style="color:var(--dim);font-size:9px">Loading…</span>
+  <div class="ph"><span class="ph-dot"></span><span class="ph-label">skill registry</span><span class="ph-right style-9463ff4798" onclick="toggleSkills()">✕</span></div>
+  <div class="style-9172abebd9" id="skills-content">
+    <span class="style-02247be830">Loading…</span>
   </div>
 </div>
 
 <!-- Agents Panel -->
-<div class="panel" id="hud-agents" style="display:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:500px;max-height:70vh;z-index:200;">
+<div class="panel style-43b5972c7b" id="hud-agents">
   <span class="bk tl"></span><span class="bk tr"></span><span class="bk bl"></span><span class="bk br"></span>
-  <div class="ph"><span class="ph-dot amber"></span><span class="ph-label">agent registry</span><span class="ph-right" style="cursor:pointer" onclick="toggleAgents()">✕</span></div>
-  <div id="agents-content" style="overflow-y:auto;max-height:calc(70vh - 40px);scrollbar-width:thin;scrollbar-color:var(--dim2) transparent;padding:8px;position:relative;z-index:2;">
-    <span style="color:var(--dim);font-size:9px">Loading…</span>
+  <div class="ph"><span class="ph-dot amber"></span><span class="ph-label">agent registry</span><span class="ph-right style-9463ff4798" onclick="toggleAgents()">✕</span></div>
+  <div class="style-9172abebd9" id="agents-content">
+    <span class="style-02247be830">Loading…</span>
   </div>
 </div>
 
 <!-- Triplet Explorer -->
-<div class="panel panel-violet" id="hud-triplets" style="display:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:560px;max-height:70vh;z-index:200;">
+<div class="panel panel-violet style-f488d20b3b" id="hud-triplets">
   <span class="bk tl"></span><span class="bk tr"></span><span class="bk bl"></span><span class="bk br"></span>
-  <div class="ph"><span class="ph-dot violet"></span><span class="ph-label">triplet explorer</span><span class="ph-right" style="cursor:pointer" onclick="toggleTriplets()">✕</span></div>
-  <div style="padding:4px 8px;position:relative;z-index:2">
-    <input id="triplet-search" type="text" placeholder="entity name…" autocomplete="off" spellcheck="false"
-           style="width:100%;background:rgba(0,20,40,0.8);border:1px solid var(--b-violet);color:var(--text);padding:4px 8px;font-size:10px;font-family:inherit;outline:none;">
+  <div class="ph"><span class="ph-dot violet"></span><span class="ph-label">triplet explorer</span><span class="ph-right style-9463ff4798" onclick="toggleTriplets()">✕</span></div>
+  <div class="style-088871257a">
+    <input class="style-51a231f070" id="triplet-search" type="text" placeholder="entity name…" autocomplete="off" spellcheck="false"
+          >
   </div>
-  <div id="triplet-results" style="overflow-y:auto;max-height:calc(70vh - 80px);scrollbar-width:thin;scrollbar-color:var(--dim2) transparent;padding:4px 8px;position:relative;z-index:2;">
-    <span style="color:var(--dim);font-size:9px">Search for an entity to see its triplets…</span>
+  <div class="style-eb0f911f22" id="triplet-results">
+    <span class="style-02247be830">Search for an entity to see its triplets…</span>
   </div>
 </div>
 
 <!-- Legend -->
 <div class="panel" id="hud-legend">
   <span class="bk tl"></span><span class="bk tr"></span><span class="bk bl"></span><span class="bk br"></span>
-  <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;position:relative;z-index:2">
-    <div class="legend-item"><div class="legend-dot" style="background:#bf5fff"></div><span class="legend-lbl">wisdom</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#00d4ff"></div><span class="legend-lbl">belief</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#00ff8c"></div><span class="legend-lbl">habit</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#ffcc00"></div><span class="legend-lbl">episode</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#ff7b00"></div><span class="legend-lbl">milestone</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#ff2266"></div><span class="legend-lbl">correction</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#00ffee"></div><span class="legend-lbl">preference</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#ff66cc"></div><span class="legend-lbl">dream</span></div>
+  <div class="style-9a9f45a01f">
+    <div class="legend-item"><div class="legend-dot style-182ca33126"></div><span class="legend-lbl">wisdom</span></div>
+    <div class="legend-item"><div class="legend-dot style-d43f1e02bf"></div><span class="legend-lbl">belief</span></div>
+    <div class="legend-item"><div class="legend-dot style-9d3b6577d0"></div><span class="legend-lbl">habit</span></div>
+    <div class="legend-item"><div class="legend-dot style-f71ce5314c"></div><span class="legend-lbl">episode</span></div>
+    <div class="legend-item"><div class="legend-dot style-565889a8b9"></div><span class="legend-lbl">milestone</span></div>
+    <div class="legend-item"><div class="legend-dot style-1a884d7b6e"></div><span class="legend-lbl">correction</span></div>
+    <div class="legend-item"><div class="legend-dot style-92d00c5ca1"></div><span class="legend-lbl">preference</span></div>
+    <div class="legend-item"><div class="legend-dot style-0c3bbec257"></div><span class="legend-lbl">dream</span></div>
   </div>
 </div>
 
@@ -635,7 +671,10 @@ tickClock();
 
 // ── Graph ─────────────────────────────────────────────────────────────────────
 function initGraph() {
-  graph = ForceGraph3D()(document.getElementById('graph-container'))
+  const graphContainer = document.getElementById('graph-container');
+  graph = ForceGraph3D()(graphContainer)
+    .width(graphContainer.clientWidth)
+    .height(graphContainer.clientHeight)
     .backgroundColor('#00040a')
     .showNavInfo(false)
     .nodeLabel(node => {
@@ -660,6 +699,9 @@ function initGraph() {
       if (document.getElementById('hud-inspector').classList.contains('visible')) closeInspector();
     });
   graph.d3Force('charge').strength(-90);
+  new ResizeObserver(() => {
+    graph.width(graphContainer.clientWidth).height(graphContainer.clientHeight);
+  }).observe(graphContainer);
 }
 
 // ── Glow ──────────────────────────────────────────────────────────────────────
@@ -913,25 +955,28 @@ function makeDraggable(panel) {
   handle.style.cursor = 'grab';
 
   handle.addEventListener('mousedown', e => {
+    if (window.matchMedia('(max-width: 900px)').matches) return;
     if (e.target.closest('.insp-close, input, button')) return;
 
     // Materialise position as explicit top/left (clearing right/bottom/transform)
     const rect = panel.getBoundingClientRect();
-    panel.style.left      = rect.left + 'px';
-    panel.style.top       = rect.top  + 'px';
+    const workspace = document.querySelector('.mind-workspace');
+    const bounds = workspace.getBoundingClientRect();
+    panel.style.left      = (rect.left - bounds.left) + 'px';
+    panel.style.top       = (rect.top - bounds.top) + 'px';
     panel.style.right     = 'auto';
     panel.style.bottom    = 'auto';
     panel.style.transform = 'none';
 
     const startX = e.clientX, startY = e.clientY;
-    const startL = rect.left,  startT = rect.top;
+    const startL = rect.left - bounds.left, startT = rect.top - bounds.top;
 
     handle.style.cursor = 'grabbing';
     document.body.style.userSelect = 'none';
 
     const onMove = ev => {
-      const maxL = window.innerWidth  - panel.offsetWidth;
-      const maxT = window.innerHeight - panel.offsetHeight;
+      const maxL = workspace.clientWidth - panel.offsetWidth;
+      const maxT = workspace.clientHeight - panel.offsetHeight;
       panel.style.left = Math.max(0, Math.min(maxL, startL + ev.clientX - startX)) + 'px';
       panel.style.top  = Math.max(0, Math.min(maxT, startT + ev.clientY - startY)) + 'px';
     };
@@ -964,7 +1009,7 @@ fetch(`${serverUrl}/health`).then(r=>r.json()).then(d=>{
 // ── Toggle panels ────────────────────────────────────────────────────────────
 function togglePanel(id) {
   const el = document.getElementById(id);
-  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  el.style.display = getComputedStyle(el).display === 'none' ? 'block' : 'none';
 }
 function toggleBrowser()  { togglePanel('hud-browser'); }
 function toggleSkills()   { togglePanel('hud-skills');  if (document.getElementById('hud-skills').style.display !== 'none') loadSkills(); }
@@ -1132,5 +1177,15 @@ function searchTriplets(entity) {
     }).catch(() => {});
 }
 </script>
+</div>
+</main>
+<footer class="footer site-footer">
+  <div class="container">
+    <p class="footer-text">
+      <a href="https://github.com/genomewalker/chitta">GitHub repository</a> · <a href="https://opensource.org/licenses/MIT">MIT license</a> · <a href="/mind-viz/index.html">This page</a>
+    </p>
+    <p class="site-status">Status as of 2026-09-16 · <a href="/changelog.html">Unreleased + v5.72.0</a></p>
+  </div>
+</footer>
 </body>
 </html>

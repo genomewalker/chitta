@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Getting Started — chitta</title>
+<title>chitta — Getting Started — chitta</title>
 <meta name="description" content="Install chitta, configure hooks, and give Claude Code a persistent memory in under 5 minutes.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta property="og:title" content="Getting Started — chitta">
@@ -17,36 +17,42 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="/content-styles.css">
+<link rel="stylesheet" href="/site-shell.css">
 </head>
-<body>
+<body class="page-getting-started">
+<a class="skip-link" href="#main-content">Skip to content</a>
 
 <!-- NAV -->
-<nav class="nav">
+<nav class="nav site-nav" aria-label="Main navigation">
   <div class="nav-inner">
-    <a href="index.html" class="nav-brand">chitta</a>
-    <button class="nav-hamburger" onclick="document.querySelector('.nav').classList.toggle('nav-open')" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
+    <a href="/index.html" class="nav-brand">chitta</a>
     <ul class="nav-links">
-      <li><a href="getting-started.html" class="active">Get Started</a></li>
-      <li><a href="philosophy.html">Philosophy</a></li>
-      <li><a href="architecture.html">Architecture</a></li>
-      <li><a href="recall.html">Recall</a></li>
-      <li><a href="benchmarks.html">Benchmarks</a></li>
-      <li><a href="chitta-field.html">chitta-field</a></li>
-      <li><a href="sadhana.html">Sadhana</a></li>
-      <li><a href="context.html">Context</a></li>
-      <li><a href="tools.html">Tools</a></li>
-      <li><a href="cli.html">CLI</a></li>
-      <li><a href="hooks.html">Hooks</a></li>
-      <li><a href="skills.html">Skills</a></li>
-      <li><a href="changelog.html">Changelog</a></li>
-      <li><a href="constellation.html">Constellation</a></li>
-      <li><a href="dreams/index.html">Dreams</a></li>
-      <li><a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="/index.html">Home</a></li>
+      <li><a href="/getting-started.html" aria-current="page">Get Started</a></li>
+      <li><a href="/philosophy.html">Philosophy</a></li>
+      <li><a href="/architecture.html">Architecture</a></li>
+      <li><a href="/recall.html">Recall</a></li>
+      <li><a href="/benchmarks.html">Benchmarks</a></li>
+      <li><a href="/chitta-field.html">chitta-field</a></li>
+      <li><a href="/sadhana.html">Sadhana</a></li>
+      <li><a href="/context.html">Context</a></li>
+      <li><a href="/tools.html">Tools</a></li>
+      <li><a href="/cli.html">CLI</a></li>
+      <li><a href="/hooks.html">Hooks</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/changelog.html">Changelog</a></li>
+      <li><a href="/constellation.html">Constellation</a></li>
+      <li><a href="/dreams/index.html">Dreams</a></li>
+      <li><a href="/brain-viz/index.html">Brain Architecture</a></li>
+      <li><a href="/mind-viz/index.html">Mind Interface</a></li>
+      <li><a href="/vedanta/index.html">Vedanta</a></li>
+      <li><a href="/evolve-bridge-live/index.html">Evolve Evidence</a></li>
+      <li><a href="https://github.com/genomewalker/chitta">GitHub</a></li>
     </ul>
   </div>
 </nav>
+<main id="main-content" tabindex="-1">
 
 <!-- PAGE HEADER -->
 <header class="page-header">
@@ -54,7 +60,7 @@
     <div class="page-header-badge reveal">Getting Started</div>
     <h1 class="reveal reveal-delay-1">Two commands. That's it.</h1>
     <p class="page-header-sub reveal reveal-delay-2">Register the marketplace, add the plugin. Everything else is automatic.</p>
-    <p class="reveal reveal-delay-2" style="font-family: var(--font-mono); font-size: var(--text-xs); color: #565f89; margin-top: var(--space-3);">Status as of 2026-09-16. <a href="CLI.md">CLI and startup reference</a>.</p>
+    <p class="reveal reveal-delay-2 style-2dee830ea7">Status as of 2026-09-16 <a href="CLI.md">CLI and startup reference</a>.</p>
   </div>
 </header>
 
@@ -109,12 +115,12 @@
       </div>
 
       <!-- Step 3 (optional) -->
-      <div class="step-card reveal reveal-delay-3" style="border-top-color: var(--ember-400);">
+      <div class="step-card reveal reveal-delay-3 style-f686171027">
         <div class="step-header">
           <span class="step-number">3</span>
           <div class="step-info">
-            <h3 class="step-title">Register MCP Server <span style="font-family: var(--font-mono); font-size: var(--text-xs); color: var(--ash-300); font-weight: 400;">(optional)</span></h3>
-            <p class="step-desc">Gives Claude direct access to the chitta tools via <code style="color: var(--aura-300);">mcp__chitta__*</code> &mdash; a small default list, with the rest reachable through the <code style="color: var(--aura-300);">advanced</code> gateway. Without this, hooks still provide memory; MCP adds the toolkit. See <a href="tools.html">Tools</a>.</p>
+            <h3 class="step-title">Register MCP Server <span class="style-7c8440eec3">(optional)</span></h3>
+            <p class="step-desc">Gives Claude direct access to the chitta tools via <code class="style-18fae4fbe7">mcp__chitta__*</code> &mdash; a small default list, with the rest reachable through the <code class="style-18fae4fbe7">advanced</code> gateway. Without this, hooks still provide memory; MCP adds the toolkit. See <a href="tools.html">Tools</a>.</p>
           </div>
         </div>
         <div class="code-block"><span class="command">/chitta:cc-soul-mcp</span> <span class="comment"># Skill suffix retained after the chitta rename</span></div>
@@ -122,10 +128,10 @@
 
     </div>
 
-    <div class="verify-card reveal reveal-delay-4" style="margin-top: var(--space-7);">
-      <p style="font-size: var(--text-sm); color: var(--lotus-200); margin-bottom: var(--space-3);">That's it.</p>
-      <p style="font-size: var(--text-sm); color: var(--ash-300); line-height: 1.8;">On your next Claude Code session, <code style="color: var(--aura-300);">smart-install.sh</code> runs automatically &mdash; it builds the binaries, fetches the embedding model, and configures hooks and permissions. The daemon starts, memory awakens.</p>
-      <p style="font-size: var(--text-sm); color: var(--ash-300); line-height: 1.8; margin-top: var(--space-3);">Upgrading from the old <code style="color: var(--aura-300);">cc-soul</code> marketplace? Nothing you have breaks &mdash; every <code style="color: var(--aura-300);">CC_SOUL_*</code> variable, your stored realms and your existing store all keep working. The three commands to move to the renamed marketplace are in <a href="https://github.com/genomewalker/chitta/blob/main/docs/RENAME.md" target="_blank" rel="noopener">the rename note</a>.</p>
+    <div class="verify-card reveal reveal-delay-4 style-605fcdb1c6">
+      <p class="style-0ca8e4f994">That's it.</p>
+      <p class="style-2f48d0a867">On your next Claude Code session, <code class="style-18fae4fbe7">smart-install.sh</code> runs automatically &mdash; it builds the binaries, fetches the embedding model, and configures hooks and permissions. The daemon starts, memory awakens.</p>
+      <p class="style-06d705bf18">Upgrading from the old <code class="style-18fae4fbe7">cc-soul</code> marketplace? Nothing you have breaks &mdash; every <code class="style-18fae4fbe7">CC_SOUL_*</code> variable, your stored realms and your existing store all keep working. The three commands to move to the renamed marketplace are in <a href="https://github.com/genomewalker/chitta/blob/main/docs/RENAME.md" target="_blank" rel="noopener">the rename note</a>.</p>
     </div>
   </div>
 </section>
@@ -136,7 +142,7 @@
     <div class="reveal">
       <div class="section-divider"></div>
       <h2 class="section-title">Codex</h2>
-      <p style="font-size: var(--text-sm); color: var(--ash-300); margin-bottom: var(--space-6); line-height: 1.8;">chitta also works as a Codex plugin. The same daemon, the same tools, the same memory &mdash; hooks wired into Codex&rsquo;s lifecycle events so memory flows automatically across both harnesses.</p>
+      <p class="style-8ed602b1b4">chitta also works as a Codex plugin. The same daemon, the same tools, the same memory &mdash; hooks wired into Codex&rsquo;s lifecycle events so memory flows automatically across both harnesses.</p>
     </div>
     <div class="steps-list">
       <div class="step-card reveal reveal-delay-1">
@@ -154,7 +160,7 @@
           <span class="step-number">2</span>
           <div class="step-info">
             <h3 class="step-title">Wire Codex hooks</h3>
-            <p class="step-desc">Run the Codex hook configurator. Writes <code style="color:var(--aura-300);">~/.codex/hooks.json</code> with session-start, prompt, pre-tool, and stop handlers pointing at the same chitta daemon.</p>
+            <p class="step-desc">Run the Codex hook configurator. Writes <code class="style-7817ee87f8">~/.codex/hooks.json</code> with session-start, prompt, pre-tool, and stop handlers pointing at the same chitta daemon.</p>
           </div>
         </div>
         <div class="code-block"><span class="command">~/.claude/plugins/cache/genomewalker-chitta/chitta/$(cat ~/.claude/plugins/cache/genomewalker-chitta/.version)/scripts/configure-codex-hooks.sh</span></div>
@@ -193,7 +199,7 @@
         <li>Trains the <strong>hook intent classifier</strong> in the background if it is missing, from a bundled corpus with no API calls. A regex fallback is active until it finishes</li>
       </ul>
     </div>
-    <p class="reveal reveal-delay-2" style="font-size: var(--text-sm); color: var(--ash-300); margin-top: var(--space-5); line-height: 1.8;">Smart install only runs when the version changes or binaries are missing. Subsequent sessions start instantly.</p>
+    <p class="reveal reveal-delay-2 style-ee2014c5f6">Smart install only runs when the version changes or binaries are missing. Subsequent sessions start instantly.</p>
   </div>
 </section>
 
@@ -205,7 +211,8 @@
       <h2 class="section-title">What Is Running</h2>
     </div>
     <div class="env-table-wrap reveal reveal-delay-1">
-      <table class="env-table">
+      <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0">
+<table class="env-table">
         <thead><tr><th>Process</th><th>Role</th></tr></thead>
         <tbody>
           <tr><td><span class="env-var-name">chittad</span></td><td><span class="env-var-desc">The daemon. Holds the store, answers every recall over a Unix socket, runs distillation on a timer. On Linux it is a systemd user service.</span></td></tr>
@@ -214,9 +221,10 @@
           <tr><td><span class="env-var-name">chitta_hintd</span></td><td><span class="env-var-desc">Optional. A small local hint model behind its own socket, built only when the build enables llama.cpp. Everything works without it.</span></td></tr>
         </tbody>
       </table>
+</div>
     </div>
-    <p class="reveal reveal-delay-2" style="font-size: var(--text-sm); color: var(--ash-300); margin-top: var(--space-5); line-height: 1.8;">Hooks do not run from a checkout. Lifecycle hooks execute from the plugin cache, and the tool hooks execute from <code style="color: var(--aura-300);">~/.claude/hooks</code>. Those are two different roots in the same configuration, so editing a source checkout changes nothing until you install. Working on chitta itself is what <code style="color: var(--aura-300);">scripts/dev-install.sh</code> is for: it symlinks both live paths back at your checkout, so an edit is live on the next hook invocation. Re-run it after any plugin update, which can replace the symlinks with a fresh clone.</p>
-    <p class="reveal reveal-delay-2" style="font-size: var(--text-sm); color: var(--ash-300); margin-top: var(--space-4); line-height: 1.8;">Nothing here needs a GPU. Distillation runs natively in the daemon. A GPU-backed model endpoint can be started on demand for heavier distillation through <code style="color: var(--aura-300);">chitta-gpu start</code>, which ships in the separate <a href="https://github.com/genomewalker/chitta-bridge" target="_blank" rel="noopener">chitta-bridge</a> repository, not here.</p>
+    <p class="reveal reveal-delay-2 style-ee2014c5f6">Hooks do not run from a checkout. Lifecycle hooks execute from the plugin cache, and the tool hooks execute from <code class="style-18fae4fbe7">~/.claude/hooks</code>. Those are two different roots in the same configuration, so editing a source checkout changes nothing until you install. Working on chitta itself is what <code class="style-18fae4fbe7">scripts/dev-install.sh</code> is for: it symlinks both live paths back at your checkout, so an edit is live on the next hook invocation. Re-run it after any plugin update, which can replace the symlinks with a fresh clone.</p>
+    <p class="reveal reveal-delay-2 style-7572c92433">Nothing here needs a GPU. Distillation runs natively in the daemon. A GPU-backed model endpoint can be started on demand for heavier distillation through <code class="style-18fae4fbe7">chitta-gpu start</code>, which ships in the separate <a href="https://github.com/genomewalker/chitta-bridge" target="_blank" rel="noopener">chitta-bridge</a> repository, not here.</p>
   </div>
 </section>
 
@@ -228,7 +236,8 @@
       <h2 class="section-title">Useful Skills</h2>
     </div>
     <div class="env-table-wrap reveal reveal-delay-1">
-      <table class="env-table">
+      <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0">
+<table class="env-table">
         <thead>
           <tr>
             <th>Command</th>
@@ -258,6 +267,7 @@
           </tr>
         </tbody>
       </table>
+</div>
     </div>
   </div>
 </section>
@@ -270,7 +280,7 @@
       <h2 class="section-title">Verify</h2>
     </div>
     <div class="verify-card reveal reveal-delay-1">
-      <p style="font-size: var(--text-sm); color: var(--ash-300); margin-bottom: var(--space-4); line-height: 1.8;">Start a new Claude Code session. You should see status messages during startup:</p>
+      <p class="style-f95a8bb3fc">Start a new Claude Code session. You should see status messages during startup:</p>
       <div class="code-block"><span class="comment">awakening...</span>
 <span class="comment">recalling context...</span>
 
@@ -287,14 +297,14 @@
       <div class="section-divider"></div>
       <h2 class="section-title">Companion Features</h2>
     </div>
-    <p class="reveal reveal-delay-1" style="font-size: var(--text-sm); color: var(--ash-300); margin-bottom: var(--space-6); line-height: 1.8;">Beyond memory, chitta learns how you work. These features build a richer partnership over time &mdash; most activate automatically through hooks, but you can also use them directly.</p>
+    <p class="reveal reveal-delay-1 style-8ed602b1b4">Beyond memory, chitta learns how you work. These features build a richer partnership over time &mdash; most activate automatically through hooks, but you can also use them directly.</p>
 
     <div class="steps-list">
 
       <!-- Habits -->
-      <div class="step-card reveal reveal-delay-1" style="border-top-color: var(--sandal-300);">
+      <div class="step-card reveal reveal-delay-1 style-f0360befee">
         <div class="step-header">
-          <span class="step-number" style="font-size: var(--text-2xl);">&circlearrowleft;</span>
+          <span class="step-number style-42bb9fa513">&circlearrowleft;</span>
           <div class="step-info">
             <h3 class="step-title">Habits</h3>
             <p class="step-desc">Recurring trigger&rarr;response patterns that strengthen each time they're observed. After building, always install and restart the daemon. After a test fails, always check the logs first. Habits surface these patterns so they become automatic.</p>
@@ -311,9 +321,9 @@
       </div>
 
       <!-- Anticipation -->
-      <div class="step-card reveal reveal-delay-2" style="border-top-color: var(--aura-300);">
+      <div class="step-card reveal reveal-delay-2 style-dfd4308180">
         <div class="step-header">
-          <span class="step-number" style="font-size: var(--text-2xl);">&Gt;</span>
+          <span class="step-number style-42bb9fa513">&Gt;</span>
           <div class="step-info">
             <h3 class="step-title">Anticipation</h3>
             <p class="step-desc">Context&rarr;action patterns that predict what you'll need next. When you open a particular file, anticipation predicts which tools and commands typically follow. The prompt hook surfaces these predictions automatically.</p>
@@ -330,9 +340,9 @@
       </div>
 
       <!-- Goals -->
-      <div class="step-card reveal reveal-delay-3" style="border-top-color: var(--ember-400);">
+      <div class="step-card reveal reveal-delay-3 style-f686171027">
         <div class="step-header">
-          <span class="step-number" style="font-size: var(--text-2xl);">&target;</span>
+          <span class="step-number style-42bb9fa513">&target;</span>
           <div class="step-info">
             <h3 class="step-title">Goals</h3>
             <p class="step-desc">Track long-term objectives with milestones and progress. Goals persist across sessions, so the soul always knows what you're working toward and how far you've come.</p>
@@ -350,9 +360,9 @@
       </div>
 
       <!-- Work Modes (Narrative) -->
-      <div class="step-card reveal reveal-delay-4" style="border-top-color: var(--sandal-300);">
+      <div class="step-card reveal reveal-delay-4 style-f0360befee">
         <div class="step-header">
-          <span class="step-number" style="font-size: var(--text-2xl);">&hellip;</span>
+          <span class="step-number style-42bb9fa513">&hellip;</span>
           <div class="step-info">
             <h3 class="step-title">Work Modes</h3>
             <p class="step-desc">The narrative engine tracks your session's work mode &mdash; exploring, building, debugging, reviewing &mdash; by observing tool usage and file patterns. The prompt hook displays your current mode, and anticipation uses it to filter predictions to what's relevant right now.</p>
@@ -366,9 +376,9 @@
       </div>
 
       <!-- Curiosity -->
-      <div class="step-card reveal reveal-delay-1" style="border-top-color: var(--aura-300);">
+      <div class="step-card reveal reveal-delay-1 style-dfd4308180">
         <div class="step-header">
-          <span class="step-number" style="font-size: var(--text-2xl);">?</span>
+          <span class="step-number style-42bb9fa513">?</span>
           <div class="step-info">
             <h3 class="step-title">Curiosity</h3>
             <p class="step-desc">Track knowledge gaps as you encounter them. When you hit something you don't understand, note it. Later, when the gap is resolved, record what you learned. This builds a map of your evolving understanding.</p>
@@ -386,9 +396,9 @@
       </div>
 
       <!-- Calibration -->
-      <div class="step-card reveal reveal-delay-2" style="border-top-color: var(--ember-400);">
+      <div class="step-card reveal reveal-delay-2 style-f686171027">
         <div class="step-header">
-          <span class="step-number" style="font-size: var(--text-2xl);">&percnt;</span>
+          <span class="step-number style-42bb9fa513">&percnt;</span>
           <div class="step-info">
             <h3 class="step-title">Calibration</h3>
             <p class="step-desc">Track prediction accuracy across domains. Was that architecture suggestion correct? Did the debugging approach work? Over time, calibration reveals where the soul's advice is reliable and where it needs improvement.</p>
@@ -450,7 +460,8 @@
     </div>
 
     <div class="env-table-wrap reveal reveal-delay-1">
-      <table class="env-table">
+      <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0">
+<table class="env-table">
         <thead>
           <tr>
             <th>Variable</th>
@@ -466,7 +477,7 @@
           </tr>
           <tr>
             <td><span class="env-var-name">CHITTA_BIN</span></td>
-            <td><span class="env-var-desc">Path to the <code style="color: var(--aura-300);">chitta</code> CLI binary</span></td>
+            <td><span class="env-var-desc">Path to the <code class="style-18fae4fbe7">chitta</code> CLI binary</span></td>
             <td><span class="env-var-default">~/.claude/bin/chitta</span></td>
           </tr>
           <tr>
@@ -481,6 +492,7 @@
           </tr>
         </tbody>
       </table>
+</div>
     </div>
   </div>
 </section>
@@ -560,13 +572,13 @@
 </section>
 
 <!-- FOOTER -->
-<footer class="footer">
+</main>
+<footer class="footer site-footer">
   <div class="container">
     <p class="footer-text">
-      Built with conviction. Grounded in philosophy.
-      <span class="footer-sep"></span>
-      <a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/genomewalker/chitta">GitHub repository</a> · <a href="https://opensource.org/licenses/MIT">MIT license</a> · <a href="/getting-started.html">This page</a>
     </p>
+    <p class="site-status">Status as of 2026-09-16 · <a href="/changelog.html">Unreleased + v5.72.0</a></p>
   </div>
 </footer>
 

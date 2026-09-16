@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sadhana: Autonomous Agents — chitta</title>
+<title>chitta — Sadhana: Autonomous Agents — chitta</title>
 <meta name="description" content="Sadhana: persistent autonomous agents that work toward goals through continuous sense-think-act cycles with memory integration.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta property="og:title" content="Sadhana: Autonomous Agents — chitta">
@@ -1130,50 +1130,56 @@
   text-align: center;
 }
 </style>
+<link rel="stylesheet" href="/content-styles.css">
+<link rel="stylesheet" href="/site-shell.css">
 </head>
-<body>
+<body class="page-sadhana">
+<a class="skip-link" href="#main-content">Skip to content</a>
 
 <!-- NAV -->
-<nav class="nav">
+<nav class="nav site-nav" aria-label="Main navigation">
   <div class="nav-inner">
-    <a href="index.html" class="nav-brand">chitta</a>
-    <button class="nav-hamburger" onclick="document.querySelector('.nav').classList.toggle('nav-open')" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
+    <a href="/index.html" class="nav-brand">chitta</a>
     <ul class="nav-links">
-      <li><a href="getting-started.html">Get Started</a></li>
-      <li><a href="philosophy.html">Philosophy</a></li>
-      <li><a href="architecture.html">Architecture</a></li>
-      <li><a href="recall.html">Recall</a></li>
-      <li><a href="benchmarks.html">Benchmarks</a></li>
-      <li><a href="chitta-field.html">chitta-field</a></li>
-      <li><a href="sadhana.html" class="active">Sadhana</a></li>
-      <li><a href="context.html">Context</a></li>
-      <li><a href="tools.html">Tools</a></li>
-      <li><a href="cli.html">CLI</a></li>
-      <li><a href="hooks.html">Hooks</a></li>
-      <li><a href="skills.html">Skills</a></li>
-      <li><a href="changelog.html">Changelog</a></li>
-      <li><a href="constellation.html">Constellation</a></li>
-      <li><a href="dreams/index.html">Dreams</a></li>
-      <li><a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="/index.html">Home</a></li>
+      <li><a href="/getting-started.html">Get Started</a></li>
+      <li><a href="/philosophy.html">Philosophy</a></li>
+      <li><a href="/architecture.html">Architecture</a></li>
+      <li><a href="/recall.html">Recall</a></li>
+      <li><a href="/benchmarks.html">Benchmarks</a></li>
+      <li><a href="/chitta-field.html">chitta-field</a></li>
+      <li><a href="/sadhana.html" aria-current="page">Sadhana</a></li>
+      <li><a href="/context.html">Context</a></li>
+      <li><a href="/tools.html">Tools</a></li>
+      <li><a href="/cli.html">CLI</a></li>
+      <li><a href="/hooks.html">Hooks</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/changelog.html">Changelog</a></li>
+      <li><a href="/constellation.html">Constellation</a></li>
+      <li><a href="/dreams/index.html">Dreams</a></li>
+      <li><a href="/brain-viz/index.html">Brain Architecture</a></li>
+      <li><a href="/mind-viz/index.html">Mind Interface</a></li>
+      <li><a href="/vedanta/index.html">Vedanta</a></li>
+      <li><a href="/evolve-bridge-live/index.html">Evolve Evidence</a></li>
+      <li><a href="https://github.com/genomewalker/chitta">GitHub</a></li>
     </ul>
   </div>
 </nav>
+<main id="main-content" tabindex="-1">
 
 <!-- PAGE HEADER -->
 <header class="page-header">
   <div class="container">
     <div class="page-header-badge reveal">Autonomous Agents</div>
     <h1 class="reveal reveal-delay-1">Sadhana</h1>
-    <p class="status-line">Status as of 2026-09-16. <a href="SADHANA.md">Canonical agent lifecycle</a> · <a href="EVOLVE.md">Separate evolve workflow</a>.</p>
+    <p class="status-line">Status as of 2026-09-16 <a href="SADHANA.md">Canonical agent lifecycle</a> · <a href="EVOLVE.md">Separate evolve workflow</a>.</p>
     <p class="page-header-sub">The animated agents, investigation stories and schedules below are illustrative historical examples, not live state or current configuration. Code changes now follow the isolated <a href="EVOLVE.md">evolve workflow</a>, with optional <code>--candidates N</code> and human merge/deployment.</p>
     <p class="page-header-sub reveal reveal-delay-2">Persistent agents that work toward goals through continuous sense-think-act cycles&thinsp;&mdash;&thinsp;with memory integration and self-learning.</p>
   </div>
 </header>
 
 <!-- STICKY TOP SUBMENU TOC -->
-<nav class="submenu-toc">
+<nav class="submenu-toc" aria-label="On this page">
   <div class="submenu-toc-inner">
     <a href="#concept" class="submenu-toc-link submenu-toc-link--concept" data-section="concept">Concept</a>
     <a href="#architecture" class="submenu-toc-link submenu-toc-link--arch" data-section="architecture">Architecture</a>
@@ -1260,7 +1266,7 @@
       </div>
 
       <div class="arch-connector">
-        <div style="text-align: center;">
+        <div class="style-fb5ec070f2">
           <div class="arch-connector-line"></div>
           <div class="arch-connector-label">Unix Socket</div>
         </div>
@@ -1278,7 +1284,7 @@
       </div>
 
       <div class="arch-connector">
-        <div style="text-align: center;">
+        <div class="style-fb5ec070f2">
           <div class="arch-connector-line"></div>
         </div>
       </div>
@@ -1320,17 +1326,17 @@
     <!-- Memory Flow -->
     <div class="memory-flow reveal reveal-delay-2">
       <div class="memory-step memory-step--query">
-        <h4 class="memory-step-title">1. Query</h4>
+        <h3 class="memory-step-title">1. Query</h3>
         <p class="memory-step-desc">Build search query from goal + current observation. Example: <code>"ssh connection refused server-x"</code></p>
       </div>
       <div class="memory-arrow">→</div>
       <div class="memory-step memory-step--recall">
-        <h4 class="memory-step-title">2. Recall</h4>
+        <h3 class="memory-step-title">2. Recall</h3>
         <p class="memory-step-desc">BM25 text search finds relevant memories. Up to 5 memories ranked by relevance.</p>
       </div>
       <div class="memory-arrow">→</div>
       <div class="memory-step memory-step--inject">
-        <h4 class="memory-step-title">3. Inject</h4>
+        <h3 class="memory-step-title">3. Inject</h3>
         <p class="memory-step-desc">Memories injected into think prompt. Agent sees past successes and failures.</p>
       </div>
     </div>
@@ -1338,12 +1344,12 @@
     <!-- Learning Cards -->
     <div class="learning-grid reveal reveal-delay-3">
       <div class="learning-card learning-card--failure">
-        <h4 class="learning-card-title">Failure Learning</h4>
+        <h3 class="learning-card-title">Failure Learning</h3>
         <p class="learning-card-desc">When an action fails, it's stored with <strong>Global visibility</strong> — all sadhanas across all projects can learn from it. Higher salience (0.8) and slow decay (0.03) ensure failures persist.</p>
         <span class="learning-card-tag">Global Visibility</span>
       </div>
       <div class="learning-card learning-card--success">
-        <h4 class="learning-card-title">Success Learning</h4>
+        <h3 class="learning-card-title">Success Learning</h3>
         <p class="learning-card-desc">Successful actions are stored with <strong>Private visibility</strong> — project-specific knowledge that doesn't clutter other realms. Normal salience and decay.</p>
         <span class="learning-card-tag">Private Visibility</span>
       </div>
@@ -1507,7 +1513,7 @@
                 <span class="tui-ev-content"><code>ssh fguerra@denbi-h-micro</code></span>
               </div>
             </div>
-            <div style="padding-top:6px;color:#2d3149;font-size:0.7rem;">
+            <div class="style-f5897321e6">
               › <span class="tui-cursor"></span>
             </div>
           </div>
@@ -1564,10 +1570,11 @@
       <p>The direct CLI does not advertise this tool as a subcommand. Use MCP/RPC or forward a <code>tools/call</code> request through <code>chitta mcp</code>; see <a href="SADHANA.md#start-and-manage">the complete example</a>. Start parameters differ from setter parameters.</p>
     </div>
 
-    <h3 style="font-family: var(--font-display); font-size: var(--text-xl); color: var(--lotus-200); font-weight: 500; margin-top: var(--space-6); margin-bottom: var(--space-4);" class="reveal">Management RPC tools</h3>
+    <h3 class="reveal style-f57b2eeb36">Management RPC tools</h3>
     <p>Names and arguments below describe RPC tools, not direct shell subcommands. Manager defaults are local/gemma4:26b, 300 s interval, 10 concurrent agents, 20 turns per cycle and a 600 s timeout. State persists as chitta-field task payloads and transitions. The <code>--no-autonomous</code> daemon option pauses restored agents.</p>
 
-    <table class="comp-table reveal reveal-delay-2">
+    <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0">
+<table class="comp-table reveal reveal-delay-2">
       <thead>
         <tr><th>Command</th><th>Description</th></tr>
       </thead>
@@ -1582,6 +1589,7 @@
         <tr><td class="class-name">sadhana_set_interval --id N --interval 300</td><td class="role-desc">Change tick interval</td></tr>
       </tbody>
     </table>
+</div>
   </div>
 </section>
 
@@ -1599,25 +1607,25 @@
     <div class="usecase-grid reveal reveal-delay-1">
       <div class="usecase-card">
         <div class="usecase-icon">🔬</div>
-        <h4 class="usecase-title">Pipeline Monitoring</h4>
+        <h3 class="usecase-title">Pipeline Monitoring</h3>
         <div class="usecase-cmd">/shepherd snakemake --cores 8</div>
         <p class="usecase-desc">Monitor Snakemake, Nextflow, or Slurm pipelines. Detects failures, recalls fixes from memory, restarts automatically.</p>
       </div>
       <div class="usecase-card">
         <div class="usecase-icon">🧪</div>
-        <h4 class="usecase-title">Continuous Testing</h4>
+        <h3 class="usecase-title">Continuous Testing</h3>
         <div class="usecase-cmd">sadhana_start --goal "Run tests on file change"</div>
         <p class="usecase-desc">Watch for changes, run tests, fix issues. Goal: all tests pass.</p>
       </div>
       <div class="usecase-card">
         <div class="usecase-icon">📊</div>
-        <h4 class="usecase-title">Server Monitoring</h4>
+        <h3 class="usecase-title">Server Monitoring</h3>
         <div class="usecase-cmd">sadhana_start --goal "Monitor health. Alert if CPU > 90%"</div>
         <p class="usecase-desc">Continuous health checks with intelligent alerting.</p>
       </div>
       <div class="usecase-card">
         <div class="usecase-icon">🚀</div>
-        <h4 class="usecase-title">Deployment Verification</h4>
+        <h3 class="usecase-title">Deployment Verification</h3>
         <div class="usecase-cmd">sadhana_start --goal "Verify deployment succeeded"</div>
         <p class="usecase-desc">Post-deployment monitoring until stability confirmed.</p>
       </div>
@@ -1633,7 +1641,7 @@
   <div class="container">
     <div class="reveal">
       <div class="section-divider"></div>
-      <h2 class="heading-section">Dream <span style="font-style:italic;opacity:0.6;font-size:0.7em">svapna</span></h2>
+      <h2 class="heading-section">Dream <span class="style-8ddb60f14f">svapna</span></h2>
       <p class="section-intro">A specialized sadhana for curiosity-driven exploration during idle time. When the daemon has been idle for 10+ minutes and no dream has run in the past hour, it wanders autonomously — picking topics from memory gaps, searching the web, and storing what it finds.</p>
     </div>
 
@@ -1723,7 +1731,7 @@
 
     <div class="reveal reveal-delay-2">
       <h3 class="heading-sub">Topic Selection Priority</h3>
-      <ol style="color: var(--text-secondary); line-height: 1.9; margin: var(--space-4) 0 var(--space-4) var(--space-5);">
+      <ol class="style-bc8d3e66d2">
         <li>Memories tagged <code>gap</code> + <code>unresolved</code></li>
         <li>Low-confidence memories (below 0.5)</li>
         <li>Hardcoded curiosity seeds (philosophy, consciousness, complexity)</li>
@@ -1731,7 +1739,8 @@
 
       <h3 class="heading-sub">Tools</h3>
       <div class="table-wrap">
-        <table class="data-table">
+        <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0">
+<table class="data-table">
           <thead><tr><th>Tool</th><th>Description</th></tr></thead>
           <tbody>
             <tr><td><code>dream_start</code></td><td>Start a dream exploring a specific topic</td></tr>
@@ -1740,11 +1749,13 @@
             <tr><td><code>dream_status</code></td><td>Full dream detail + sadhana history</td></tr>
           </tbody>
         </table>
+</div>
       </div>
 
       <h3 class="heading-sub">Dream Status</h3>
       <div class="table-wrap">
-        <table class="data-table">
+        <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0">
+<table class="data-table">
           <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
           <tbody>
             <tr><td><code>dreaming</code></td><td>Agent is actively exploring</td></tr>
@@ -1752,6 +1763,7 @@
             <tr><td><code>forgotten</code></td><td>Dream was abandoned (sadhana failed)</td></tr>
           </tbody>
         </table>
+</div>
       </div>
 
       <h3 class="heading-sub">Usage</h3>
@@ -1787,9 +1799,9 @@ mcp__chitta__dream_list {"limit": 10}</pre>
           <svg class="improve-orbit-svg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <linearGradient id="orbitGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:#CBAF86;stop-opacity:0.4"/>
-                <stop offset="50%" style="stop-color:#9DB2D9;stop-opacity:0.4"/>
-                <stop offset="100%" style="stop-color:#CBAF86;stop-opacity:0.4"/>
+                <stop class="style-0e575237fe" offset="0%"/>
+                <stop class="style-61681435cf" offset="50%"/>
+                <stop class="style-0e575237fe" offset="100%"/>
               </linearGradient>
               <marker id="arrowOrbit" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
                 <path d="M0,0 L0,6 L6,3 z" fill="rgba(203,175,134,0.6)"/>
@@ -1880,41 +1892,41 @@ mcp__chitta__dream_list {"limit": 10}</pre>
 
     <!-- Compounding cascade -->
     <div class="reveal reveal-delay-3">
-      <h3 class="heading-sub" style="margin-top:var(--space-8)">The Compounding Cycle</h3>
+      <h3 class="heading-sub style-ce9f2ef6c3">The Compounding Cycle</h3>
       <div class="cascade">
 
         <div class="cascade-step">
-          <div class="cascade-step-dot" style="background:#55bb55"></div>
+          <div class="cascade-step-dot style-45b9c2b2c0"></div>
           <div class="cascade-step-text">Code runs — bugs and gaps surface naturally</div>
         </div>
         <div class="cascade-connector"></div>
 
         <div class="cascade-step">
-          <div class="cascade-step-dot" style="background:#7bb3f5"></div>
+          <div class="cascade-step-dot style-5096e3739e"></div>
           <div class="cascade-step-text"><code>NativeDistiller</code> stores <code>[failure]</code> and <code>[gap]</code> memories from each session transcript</div>
         </div>
         <div class="cascade-connector"></div>
 
         <div class="cascade-step">
-          <div class="cascade-step-dot" style="background:#d4a76a"></div>
+          <div class="cascade-step-dot style-46d0a43b8f"></div>
           <div class="cascade-step-text"><code>dream_wander</code> picks gaps during idle time — explores solutions via web search</div>
         </div>
         <div class="cascade-connector"></div>
 
         <div class="cascade-step">
-          <div class="cascade-step-dot" style="background:#b08ad4"></div>
+          <div class="cascade-step-dot style-b5f42767e6"></div>
           <div class="cascade-step-text">Synthesis sadhana connects dream findings to existing code knowledge, files investigation tasks</div>
         </div>
         <div class="cascade-connector"></div>
 
         <div class="cascade-step">
-          <div class="cascade-step-dot" style="background:#d46a6a"></div>
+          <div class="cascade-step-dot style-46298095ee"></div>
           <div class="cascade-step-text">Investigation sadhana reads source, implements fix, builds and tests</div>
         </div>
         <div class="cascade-connector"></div>
 
         <div class="cascade-step">
-          <div class="cascade-step-dot" style="background:#6ad4d4"></div>
+          <div class="cascade-step-dot style-37e1f69526"></div>
           <div class="cascade-step-text">Release — better code runs, raising the floor for every future cycle</div>
         </div>
 
@@ -1923,20 +1935,20 @@ mcp__chitta__dream_list {"limit": 10}</pre>
     </div>
 
     <!-- Setting it up -->
-    <div class="reveal reveal-delay-3" style="margin-top:var(--space-8)">
+    <div class="reveal reveal-delay-3 style-ce9f2ef6c3">
       <h3 class="heading-sub">Setting It Up</h3>
 
-      <p style="color:var(--text-secondary);margin-bottom:var(--space-3)"><strong style="color:var(--text-primary)">Step 1 — Seed curiosity gaps</strong></p>
+      <p class="style-afe53ef55a"><strong class="style-1552366efe">Step 1 — Seed curiosity gaps</strong></p>
       <pre class="code-block">mcp__chitta__observe {
   "title": "[gap] Why does X happen?",
   "content": "Detailed question and context...",
   "tags": "gap,unresolved,curiosity,topic-name"
 }</pre>
 
-      <p style="color:var(--text-secondary);margin:var(--space-4) 0 var(--space-3)"><strong style="color:var(--text-primary)">Step 2 — Dreams auto-trigger from gaps</strong></p>
-      <p style="color:var(--text-secondary);margin-bottom:var(--space-4)">When the daemon is idle for 10+ minutes, <code>dream_wander</code> picks the highest-priority gap and launches an exploration sadhana. No manual trigger needed.</p>
+      <p class="style-864b884823"><strong class="style-1552366efe">Step 2 — Dreams auto-trigger from gaps</strong></p>
+      <p class="style-846605f629">When the daemon is idle for 10+ minutes, <code>dream_wander</code> picks the highest-priority gap and launches an exploration sadhana. No manual trigger needed.</p>
 
-      <p style="color:var(--text-secondary);margin-bottom:var(--space-3)"><strong style="color:var(--text-primary)">Step 3 — Start a synthesis sadhana</strong></p>
+      <p class="style-afe53ef55a"><strong class="style-1552366efe">Step 3 — Start a synthesis sadhana</strong></p>
       <pre class="code-block">mcp__chitta__sadhana_start {
   "goal": "Each cycle: review recent dreams (dream_list, dream_status),
   extract key insights, connect them to existing memories via
@@ -1950,13 +1962,13 @@ mcp__chitta__dream_list {"limit": 10}</pre>
 
 
 <!-- FOOTER -->
-<footer class="footer">
+</main>
+<footer class="footer site-footer">
   <div class="container">
     <p class="footer-text">
-      Built with conviction. Grounded in philosophy.
-      <span class="footer-sep"></span>
-      <a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/genomewalker/chitta">GitHub repository</a> · <a href="https://opensource.org/licenses/MIT">MIT license</a> · <a href="/sadhana.html">This page</a>
     </p>
+    <p class="site-status">Status as of 2026-09-16 · <a href="/changelog.html">Unreleased + v5.72.0</a></p>
   </div>
 </footer>
 

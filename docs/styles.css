@@ -2708,3 +2708,32 @@ section {
 .removed { color: rgba(185,189,199,0.5); }
 /* .path used standalone outside .db-paths context */
 .path { color: var(--aura-300); font-family: var(--font-mono); }
+
+/* Shared navigation: every destination remains available without JavaScript. */
+.site-nav { position: relative; transform: none; }
+.site-nav .nav-inner { align-items: flex-start; }
+.site-nav .nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+  position: static;
+  overflow: visible;
+  gap: 0.25rem 0.75rem;
+  padding: 0;
+  background: transparent;
+}
+.site-nav .nav-links a { display: block; padding: 0.35rem 0; }
+.site-nav a[aria-current="page"] { color: var(--sandal-300); text-decoration: underline; }
+@media (max-width: 700px) {
+  .site-nav .nav-inner { flex-direction: column; gap: 0.5rem; }
+  .site-nav .nav-links { display: flex; flex-wrap: wrap; width: 100%; }
+  .site-nav .nav-links a { padding: 0.5rem 0.25rem; }
+}
+
+/* Wide content scrolls within its own region, not the document. */
+.table-scroll { max-width: 100%; overflow-x: auto; margin-block: 1rem; }
+pre, .code-block, .quickstart-code { max-width: 100%; overflow-x: auto; }
+pre { white-space: pre; }
+code { overflow-wrap: anywhere; }
+img { max-width: 100%; height: auto; }
+main { min-width: 0; overflow-wrap: anywhere; }
