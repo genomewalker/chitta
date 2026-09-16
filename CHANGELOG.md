@@ -16,6 +16,8 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 - Kotlin code navigation: Functions, classes/objects, calls, imports and delegation/inheritance.
 
+- Scala code navigation: Functions, classes, objects, traits/enums, calls, imports and inheritance.
+
 ## [Unreleased]
 
 - Add Make target/macro navigation, prerequisite links, calls and includes.

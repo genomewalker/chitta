@@ -143,6 +143,8 @@ def main():
                 extensions = {
                     ".kt",
                     ".kts",
+                    ".scala",
+                    ".sc",
                     ".php",
                     ".phtml",
                     ".sql",

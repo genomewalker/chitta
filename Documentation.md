@@ -408,3 +408,15 @@ interface and has 5 definitions, 7 query edges (2 calls, 1 import, 2 inheritance
 548.10 microseconds/KiB; daemon size is 87,994,752 bytes (+5,755,640).
 Offline builds and all extraction/query fixtures pass. Contracts and recall
 scoring are unchanged.
+
+### Scala
+
+Scala navigation extracts functions, classes, objects, traits and enums, calls,
+imports and inheritance. The fixture has 6 definitions and 8 query edges
+(3 calls, 1 import, 1 inheritance, 3 references); fresh parsing averages
+590.45 microseconds/KiB. Daemon size is 92,026,152 bytes (+4,031,400).
+
+Offline extraction/query fixtures pass. A saved-index regression also proves
+that unavailable parsers retain separate language identities instead of
+resolving calls across unrelated disabled languages. Contracts and recall
+scoring are unchanged.

@@ -1,0 +1,24 @@
+{
+  "symbols": {
+    "Reads": "class",
+    "Counts": "class",
+    "total": "function",
+    "normalize": "function",
+    "Main": "object",
+    "run": "function"
+  },
+  "calls": [
+    "normalize",
+    "abs",
+    "total"
+  ],
+  "imports": [
+    "scala.math.abs"
+  ],
+  "inherits": [
+    "Reads"
+  ],
+  "file": "navigation.scala",
+  "language": "scala",
+  "extra": true
+}

@@ -26,6 +26,8 @@ extern "C" const TSLanguage* tree_sitter_php();
 
 extern "C" const TSLanguage* tree_sitter_kotlin();
 
+extern "C" const TSLanguage* tree_sitter_scala();
+
 namespace chitta {
 const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
     if (language == "bash") return tree_sitter_bash();
@@ -41,11 +43,12 @@ const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
 #ifdef CHITTA_EXTRA_GRAMMARS
     if (language == "php") return tree_sitter_php();
     if (language == "kotlin") return tree_sitter_kotlin();
+    if (language == "scala") return tree_sitter_scala();
 #endif
     return nullptr;
 }
 void CodeIntel::initialize_extended_parsers() {
-    for (const auto* language : {"bash", "r", "julia", "fortran", "nextflow", "snakemake", "perl", "make", "cmake", "sql", "kotlin", "php"}) {
+    for (const auto* language : {"bash", "r", "julia", "fortran", "nextflow", "snakemake", "perl", "make", "cmake", "sql", "kotlin", "scala", "php"}) {
         if (!extended_grammar(language)) continue; // Optional grammar group disabled.
         auto* parser = ts_parser_new();
         if (!ts_parser_set_language(parser, extended_grammar(language))) {
@@ -60,6 +63,7 @@ std::string CodeIntel::detect_extended_language(const std::string& path) {
     if (ext == ".sh" || ext == ".bash") return "bash";
     auto filename = std::filesystem::path(path).filename().string();
     if ((ext == ".kt" || ext == ".kts") && extended_grammar("kotlin")) return "kotlin";
+    if ((ext == ".scala" || ext == ".sc") && extended_grammar("scala")) return "scala";
     if ((ext == ".php" || ext == ".phtml") && extended_grammar("php")) return "php";
     if (ext == ".sql" || ext == ".ddl") return "sql";
     if (ext == ".cmake" || filename == "CMakeLists.txt") return "cmake";
@@ -592,6 +596,29 @@ void CodeIntel::extract_extended(TSNode root, const std::string& source,
                 }
             }
             if (type == "import_header") result.imports.push_back({path, text(ast_find(node, "identifier")), "", {}, uint32_t(node_line(node))});
+        }
+        if (language == "scala") {
+            if (type == "function_definition" || type == "function_declaration" || type == "class_definition" || type == "object_definition" || type == "trait_definition" || type == "enum_definition") {
+                auto name = text(field(node, "name"));
+                define(node, name, type.starts_with("function") ? "function" : type.substr(0, type.find('_')), parent, field(node, "body"));
+                auto bases = field(node, "extend");
+                for (uint32_t i = 0; i < ast_child_count(bases); ++i) {
+                    auto child = ast_child(bases, i);
+                    auto field_name = ts_node_field_name_for_child(bases, i);
+                    if (field_name && std::string(field_name) == "type") result.type_relationships.push_back({name, text(child), "inherits", path, uint32_t(node_line(child))});
+                }
+                parent = name;
+            }
+            if (type == "call_expression") {
+                auto fn = field(node, "function");
+                if (std::string(ast_type(fn)) == "field_expression") call(node, text(field(fn, "field")), parent, "", text(field(fn, "value")));
+                else call(node, text(fn), parent);
+            }
+            if (type == "import_declaration") {
+                auto target = text(node).substr(7);
+                while (!target.empty() && (target.back() == ';' || std::isspace(static_cast<unsigned char>(target.back())))) target.pop_back();
+                result.imports.push_back({path, target, "", {}, uint32_t(node_line(node))});
+            }
         }
         for (uint32_t i = 0; i < ast_named_count(node); ++i) visit(ast_named_child(node, i), parent);
     };

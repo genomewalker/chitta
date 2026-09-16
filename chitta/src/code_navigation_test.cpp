@@ -137,6 +137,19 @@ int main() {
             package_base = true;
         }
     assert(package_base);
+    // A saved index remains language-isolated when its parsers are unavailable.
+    auto unknown_a = root / "a.disabled_one", unknown_b = root / "b.disabled_two";
+    std::ofstream(unknown_a) << "caller invokes remote\n";
+    std::ofstream(unknown_b) << "remote definition\n";
+    chitta::ExtractionResult saved;
+    saved.symbols.push_back({"function", "caller", "caller()", unknown_a.string(), 1, 1, ""});
+    saved.symbols.push_back({"function", "remote", "remote()", unknown_b.string(), 1, 1, ""});
+    chitta::Callsite remote; remote.file_path = unknown_a.string(); remote.line = 1; remote.callee_leaf = "remote";
+    saved.callsites.push_back(remote);
+    chitta::CodeNavigation disabled;
+    disabled.update(root.string(), "disabled", {unknown_a.string(), unknown_b.string()}, {unknown_a.string(), unknown_b.string()}, saved, true);
+    auto isolated = disabled.query({{"path", unknown_a.string()}});
+    assert(isolated["edges"].size() == 1 && isolated["edges"][0]["confidence"] == "EXTRACTED");
     // Every grammar fixture must produce usable query edges, not just raw AST records.
     std::vector<fs::path> language_specs;
     for (const auto& item : fs::recursive_directory_iterator(fixture.parent_path().parent_path()))

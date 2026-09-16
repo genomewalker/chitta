@@ -46,6 +46,9 @@ std::vector<std::string> words(const std::string& text) {
 }
 std::string language(const std::string& path) {
     auto lang = CodeIntel::detect_language(path);
+    // Saved indexes may outlive an optional parser configuration. Never fold
+    // all disabled/unknown languages into one resolution namespace.
+    if (lang.empty()) return fs::path(path).extension().empty() ? fs::path(path).filename().string() : fs::path(path).extension().string();
     return lang == "typescript" ? "javascript" : lang;
 }
 std::string contents(const std::string& path) {
