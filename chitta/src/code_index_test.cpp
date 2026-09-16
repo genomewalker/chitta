@@ -16,7 +16,9 @@ int main() {
     write("ignored.cpp", "int ignored;\n");
     write("private.py", "secret = 1\n");
     write(".gitignore", "ignored.cpp\n");
-    write(".chittaignore", "private.py\n");
+    write(".chittaignore", "private.py\nuntracked.py\n");
+    write("untracked.py", "private = True\n");
+    chitta::CodeIntel::git_output({"-C", root.string(), "add", "-f", "ignored.cpp"});
     chitta::CodeIntel::git_output({"-C", root.string(), "add", "a.cpp", "private.py"});
     chitta::CodeIntel intel;
     auto files = intel.collect_source_files(root.string());

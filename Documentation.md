@@ -357,3 +357,17 @@ Offline builds, extraction and query-edge assertions pass for every language
 so far. Empty and truncated source tests exposed unsafe optional AST access;
 null-safe traversal fixes it. Exclusive AST end positions now keep a call
 following `endef` outside the macro. Contracts and recall scoring are unchanged.
+
+### CMake
+
+CMake navigation extracts functions, macros, build targets and command calls;
+includes and subdirectories point to files, while explicit target dependencies
+connect targets. The fixture has 5 definitions, 11 calls (one dependency),
+2 imports and 10 identifier references. Fresh parsing averages 442.69
+microseconds/KiB; daemon size is 70,056,592 bytes (+87,744).
+
+Offline extraction, all fixture query edges and source-collection regressions
+pass. Git collection now excludes untracked ignores in its initial listing,
+then checks only tracked ignores, avoiding a redundant walk of build caches.
+Both tracked and untracked `.gitignore`/`.chittaignore` cases are verified.
+Contracts and recall scoring are unchanged.

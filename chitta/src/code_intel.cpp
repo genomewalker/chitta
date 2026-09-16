@@ -20,6 +20,7 @@ extern "C" const TSLanguage* tree_sitter_nextflow();
 extern "C" const TSLanguage* tree_sitter_snakemake();
 extern "C" const TSLanguage* tree_sitter_perl();
 extern "C" const TSLanguage* tree_sitter_make();
+extern "C" const TSLanguage* tree_sitter_cmake();
 
 namespace chitta {
 const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
@@ -31,10 +32,11 @@ const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
     if (language == "snakemake") return tree_sitter_snakemake();
     if (language == "perl") return tree_sitter_perl();
     if (language == "make") return tree_sitter_make();
+    if (language == "cmake") return tree_sitter_cmake();
     return nullptr;
 }
 void CodeIntel::initialize_extended_parsers() {
-    for (const auto* language : {"bash", "r", "julia", "fortran", "nextflow", "snakemake", "perl", "make"}) {
+    for (const auto* language : {"bash", "r", "julia", "fortran", "nextflow", "snakemake", "perl", "make", "cmake"}) {
         auto* parser = ts_parser_new();
         if (!ts_parser_set_language(parser, extended_grammar(language))) {
             ts_parser_delete(parser);
@@ -47,6 +49,7 @@ std::string CodeIntel::detect_extended_language(const std::string& path) {
     auto ext = std::filesystem::path(path).extension().string();
     if (ext == ".sh" || ext == ".bash") return "bash";
     auto filename = std::filesystem::path(path).filename().string();
+    if (ext == ".cmake" || filename == "CMakeLists.txt") return "cmake";
     if (ext == ".mk" || ext == ".mak" || filename == "Makefile" || filename == "makefile" || filename == "GNUmakefile" || filename.rfind("Makefile.", 0) == 0) return "make";
     if (ext == ".smk" || filename == "Snakefile" || filename == "snakefile") return "snakemake";
     if (ext == ".pl" || ext == ".pm" || ext == ".t" || ext == ".perl") return "perl";
@@ -459,6 +462,47 @@ void CodeIntel::extract_extended(TSNode root, const std::string& source,
                 if (name.find('$') == std::string::npos) call(node, name, parent);
             }
         }
+        if (language == "cmake") {
+            auto args_of = [&](TSNode command) {
+                std::vector<std::string> args;
+                auto list = ast_find(command, "argument_list");
+                for (uint32_t i = 0; i < ast_named_count(list); ++i) args.push_back(literal(ast_named_child(list, i)));
+                return args;
+            };
+            auto lowercase = [](std::string value) {
+                for (auto& c : value) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                return value;
+            };
+            if (type == "function_def" || type == "macro_def") {
+                auto args = args_of(ast_named_child(node, 0));
+                if (!args.empty()) {
+                    auto name = lowercase(args[0]);
+                    define(node, name, type == "macro_def" ? "macro" : "function", parent, ast_find(node, "body"));
+                    parent = name;
+                }
+            }
+            if (type == "normal_command") {
+                auto name = lowercase(text(ast_find(node, "identifier")));
+                auto args = args_of(node);
+                call(node, name, parent);
+                if (!args.empty() && args[0].find('$') == std::string::npos) {
+                    if (name == "include" || name == "add_subdirectory") {
+                        auto target = args[0];
+                        if (name == "add_subdirectory") target += "/CMakeLists.txt";
+                        else if (std::filesystem::path(target).extension().empty()) target += ".cmake";
+                        result.imports.push_back({path, target, "", {}, uint32_t(node_line(node))});
+                    }
+                    if (name == "add_library" || name == "add_executable" || name == "add_custom_target")
+                        define(node, args[0], "target", parent);
+                    if (name == "target_link_libraries" || name == "add_dependencies")
+                        for (size_t i = 1; i < args.size(); ++i)
+                            if (args[i] != "PRIVATE" && args[i] != "PUBLIC" && args[i] != "INTERFACE" && args[i].find('$') == std::string::npos) {
+                                call(node, args[i], args[0]);
+                                result.callsites.back().kind = CallKind::Channel;
+                            }
+                }
+            }
+        }
         for (uint32_t i = 0; i < ast_named_count(node); ++i) visit(ast_named_child(node, i), parent);
     };
     visit(root, "");
@@ -579,10 +623,15 @@ std::vector<std::string> CodeIntel::collect_source_files(
         files.push_back(candidate.string());
     };
     if (!root.empty()) {
-        auto listed = git_output({"-C", root, "ls-files", "-z", "--cached", "--others", "--exclude-standard"});
-        std::vector<std::string> ignored_args = {"-C", root, "ls-files", "-z", "--cached", "--others", "--ignored", "--exclude-standard"};
-        if (fs::is_regular_file(fs::path(root) / ".chittaignore"))
-            ignored_args.push_back("--exclude-from=" + (fs::path(root) / ".chittaignore").string());
+        std::vector<std::string> listed_args = {"-C", root, "ls-files", "-z", "--cached", "--others", "--exclude-standard"};
+        std::vector<std::string> ignored_args = {"-C", root, "ls-files", "-z", "--cached", "--ignored", "--exclude-standard"};
+        if (fs::is_regular_file(fs::path(root) / ".chittaignore")) {
+            auto ignore = "--exclude-from=" + (fs::path(root) / ".chittaignore").string();
+            listed_args.push_back(ignore); ignored_args.push_back(ignore);
+        }
+        // Untracked ignores are already excluded by the first listing. Asking
+        // Git to enumerate them again walks potentially huge build caches.
+        auto listed = git_output(listed_args);
         std::unordered_set<std::string> ignored;
         std::istringstream excluded(git_output(ignored_args));
         for (std::string rel; std::getline(excluded, rel, '\0');) ignored.insert(rel);

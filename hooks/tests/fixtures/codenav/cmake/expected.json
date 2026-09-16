@@ -1,0 +1,32 @@
+{
+  "file": "navigation.cmake",
+  "language": "cmake",
+  "aliases": [
+    "CMakeLists.txt"
+  ],
+  "symbols": {
+    "normalize": "function",
+    "run": "function",
+    "report": "macro",
+    "reads": "target",
+    "counts": "target"
+  },
+  "calls": [
+    "normalize",
+    "message",
+    "run",
+    "report",
+    "reads"
+  ],
+  "imports": [
+    "config.cmake",
+    "src/CMakeLists.txt"
+  ],
+  "channels": [
+    [
+      "counts",
+      "reads"
+    ]
+  ],
+  "channel_count": 1
+}

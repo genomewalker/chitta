@@ -247,6 +247,7 @@ chitta_grammar(nextflow nextflow-io/tree-sitter-nextflow 69a72c6cf4e90609b8558fc
 chitta_grammar(snakemake osthomas/tree-sitter-snakemake 315d8f4a55800bcacc2e420d2865d7f64b33efe6)
 chitta_grammar(perl tree-sitter-perl/tree-sitter-perl aa5600c8df1eb9ed111db72e20c741dd73ec336a)
 chitta_grammar(make alemuller/tree-sitter-make a4b9187417d6be349ee5fd4b6e77b4172c6827dd)
+chitta_grammar(cmake uyha/tree-sitter-cmake 58993af75218bc99a1f5a04c832a5937e7c422cb)
 
 # Extract version from plugin.json
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../.claude-plugin/plugin.json" PLUGIN_JSON)

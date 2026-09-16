@@ -1461,6 +1461,7 @@ connections. Runtime dispatch and dynamic import paths are not evaluated.
 | Nextflow | `.nf` | Processes, named/entry workflows and functions; includes, calls and channel routing through process outputs or pipes. Shell script bodies remain data. |
 | Snakemake | `.smk`, `Snakefile`, `snakefile` | Rules, checkpoints, modules, named input/output/params sections and Python definitions; calls, includes/module files and explicit `rules.NAME.output` dependencies. |
 | Perl | `.pl`, `.pm`, `.t`, `.perl` | Packages and subroutines with package scope; calls, `use`/`require`, and literal `use parent`/`use base` inheritance. |
+| CMake | `.cmake`, `CMakeLists.txt` | Functions, macros, targets, command calls, includes/subdirectories, target dependencies |
 | Make | `.mk`, `.mak`, `Makefile`, `makefile`, `GNUmakefile`, `Makefile.*` | Literal targets, `define` macros, prerequisite links, built-in/macro calls and includes. Special targets such as `.PHONY` remain annotations. |
 
 New grammars use CMake FetchContent with immutable commits. After populating the
@@ -1475,3 +1476,6 @@ its AST distinguishes processes, workflows, process outputs and channel pipes.
 Its ABI-15 parser requires the pinned tree-sitter 0.25.10 runtime, which also
 accepts the older compiled grammars. Channel links resolve only unique indexed
 process/workflow producers; their evidence points to the routing expression.
+
+CMake navigation extracts functions, macros and build targets; `include` and
+`add_subdirectory` resolve to files, and explicit target dependencies form calls.
