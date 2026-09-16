@@ -2,6 +2,100 @@
 
 Status as of 2026-09-16. The dated results below preserve the `fix/field-perf` measurements on private eval copies, including unmet targets and the ancillary MCP SDK failure. Two original JSON artifacts are absent; their committed tables are linked instead. Current live startup is about 9.5 s with sidecar hits, about 20 s on the first start after deployment or a format change; see [startup and recovery](CLI.md#startup-sidecars-and-instance-lock). These current operational figures do not replace the historical control/experiment measurements below.
 
+## 2026-09-16: Phase 7 recovery gates
+
+Final authorized fixes: **9/9 full-copy chaos cases passed**, **25/25 CTests
+passed** (100.33 s), and **289 Rust library tests passed, 2 ignored** (53.26 s).
+Production commit: `b4c06294`; Rust submodule: `765b68e`.
+[Implementation and touched functions](../Documentation.md) describe the merge
+boundary; [dated JSON evidence](chaos-2026-09-16.json) preserves both failures
+and final results.
+
+| Case | Result | Native fixture recovery | Full replica recovery |
+|---|---|---:|---:|
+| SIGKILL during save | PASS | 1.129 s | 19.957 s |
+| Second opener | PASS | 1.193 s | 1.221 s |
+| Unlinked active WAL | PASS | 1.187 s | 11.868 s |
+| Stale / foreign lock on NFS | PASS | 1.178 s | 11.752 s |
+| ENOSPC during save | PASS | 1.240 s | 60.998 s |
+| Queue processing replay | PASS | 1.166 s | 12.354 s |
+| Restart during prompt hook | PASS | 0.503 s | 0.894 s |
+| HTTP MCP session restart | PASS | 0.002 s | 0.002 s |
+| Binary format probe under load | PASS | 0.016–0.024 s | 0.021 s |
+
+The WAL case restored **19,622 bytes** on the full replica (**733 bytes** on the
+native fixture), including a WAL-only pre-unlink memory. Both repeated queue
+replays preserved exact identity and state: **11.472 / 12.354 s** on the full
+copy and **1.150 / 1.166 s** on the native fixture. The queue proof also checks
+same-batch duplicate IDs, pruning on the next batch, and ack retention for
+coalesced saves. Its test helper disables decay for that one memory through the
+existing state-update FFI while the scratch daemon is stopped; this keeps the
+`get` view's wall-time-dependent strength stable without an equality tolerance.
+
+These are single shared-node observations; CTest and the final full-copy run
+used independent scratch stores concurrently. Recovery includes startup and
+invariant readback; ENOSPC includes the later successful save. Hook time measures
+the interrupted hook's exit, MCP time measures the stale-session call after
+listener readiness, and format time is the maximum of three real-model probes.
+The ledger survives the tested post-ack crash and snapshot compaction; it is not
+a transaction spanning store mutation and ack publication. The separate WAL-only
+confidence reconstruction diagnostic is documented in the implementation report.
+No services, installed binaries, source corpus, frozen evaluation files, or
+embedding identity were changed. The independent canary soak remains outside
+this completed recovery gate.
+
+### Original failure evidence
+
+Initial tests on `feat/chaos-tests`, before the authorized production fixes,
+exposed two defects. The original failure evidence follows. Cargo release: **288 passed, 2 ignored**. Native CTest:
+**23/25 passed**, with `chaos_wal_test` and `chaos_queue_test` failing. MCP (149),
+SMRITI, every hook fixture, CI Ruff check/format, and touched-shell parse and
+ShellCheck gates passed. No production recovery logic had changed at that point.
+
+Each CTest case uses its own 128-memory native snapshot family, copied by
+`eval-replica.sh`. The full-corpus runs use a separate NFS copy of `bbcaed33`,
+private ports/sockets and isolated hook HOME. Subsequent starts reopen the
+faulted copy; they never refresh it from the source. All process kills target
+captured scratch PIDs. The HTTP test restarts an owned MCP process, not a live
+systemd unit. CI reports NFS-only lock tests as skipped on non-NFS filesystems.
+
+| Case | Invariant / outcome | Native fixture recovery | Full replica recovery |
+|---|---|---:|---:|
+| SIGKILL during save | PASS: every acknowledged ID/content recovered; manifest unpublished at kill | 1.124 s | 21.918 s |
+| Second opener | PASS: refused with recorded holder PID | 1.192 s | 1.128 s |
+| Unlinked active WAL | **FAIL: an acknowledged post-unlink write disappeared** | ready 1.074 s, invariant failed | daemon-ready 9.342 s, invariant failed |
+| Stale / foreign lock on NFS | PASS: dead same-host holder replaced on a new inode and logged; foreign holder refused | 1.114 s | 41.560 s |
+| ENOSPC during save | PASS: manifest unchanged, acknowledged prefix recovered, next save succeeded | 1.214 s | 55.775 s including successful resave |
+| Queue processing replay | **FAIL: replay created a second memory with identical content after a snapshot** | ready 1.110 s, invariant failed | ready 10.592 s, duplicate IDs |
+| Restart during prompt hook | PASS: fails open within external 8 s budget; next hook completes recall | 0.485 s | 1.071 s |
+| HTTP MCP session restart | PASS: stale session returns explicit 404 within 5 s; new session/tool call succeeds | 0.001 s | 0.002 s |
+| Binary format probe under load | PASS: production `spawn_format_id_probe`, four real GGUF embedding workers and an atfork stall sentinel | 0.02016–0.02029 s (<1 s) | same native process test |
+
+Timings are single observations, not latency distributions. Second-opener time
+includes a readback; hook time measures the interrupted hook's exit, and MCP time
+measures the next call after the replacement listener is ready. Full-replica WAL
+9.342 s is the daemon's logged startup time, not successful durable recovery.
+The lock test holds the old inode while recording a verified dead PID: it models
+a retained NFS server lock; merely writing an unlocked stale file would not
+exercise the recovery branch.
+
+`save_fault_test.cpp` is a test-only preload library, never linked into release
+executables: `CHITTA_CHAOS_STORE` scopes interception to one scratch store;
+`CHITTA_CHAOS_PAUSE_ARM` stops at a temporary snapshot write, and
+`CHITTA_CHAOS_ENOSPC_ARM` returns real ENOSPC from that write and records a hit.
+This run used that deterministic error seam, not a privileged tmpfs/loop mount.
+
+The NFS failure is consistent with silly-renaming: the open unlinked inode can
+retain a nonzero link count, so append misses deletion; sync detects the missing
+path only after the first new operation was written to the abandoned inode.
+Queue replay is checked by exact identity **and state**, not only daemon health:
+a weaker ID-only check hid a confidence change; snapshotting before replay then
+exposed duplicate IDs. These failures originally exceeded the tests-only scope;
+the user subsequently authorized both production fixes. The independent week-long
+canary soak remains outstanding. The original failure assertions are retained.
+See [implementation and proof boundaries](../Documentation.md) and
+[machine-readable evidence](chaos-2026-09-16.json).
+
 ## Measurement boundary
 
 The supplied live baseline (134,129 memories, 7.95 GB RSS, 62 s first recall, hybrid p95 not supplied) is context, not the control arm. The scratch family is `bbcaed33`, generation 38047, snapshot sequence 206208172, with its selected WAL. It reports 133,724 records (133,712 live in detailed health), approximately 1.37M triplets, and 768-dimensional `nomic-embed-text-v1.5` embeddings. Both primary arms load the same validated family. Autonomous work is quiesced; this does not reproduce live writer contention.

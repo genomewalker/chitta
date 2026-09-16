@@ -1,0 +1,364 @@
+{
+  "date": "2026-09-16",
+  "baseline_commits": [
+    "528e2a1c",
+    "ea61ed39"
+  ],
+  "extra_wal_only_replay_diagnostic": [
+    {
+      "case": "queue",
+      "status": "FAIL",
+      "invariant": "recovered queue entry preserves memory identity and state",
+      "reason": "{'before_replay': {'confidence': 0.800000011920929, 'content': 'queue replay idempotence c7-x1a_w9e0', 'id': '16746969160969355265', 'realm': 'chaos', 'strength': 1.0, 'type': 'wisdom'}, 'after_replay': {'confidence': 1.0, 'content': 'queue replay idempotence c7-x1a_w9e0', 'id': '16746969160969355265', 'realm': 'chaos', 'strength': 1.0, 'type': 'wisdom'}}",
+      "recovery_s": 1.132,
+      "elapsed_s": 4.04
+    }
+  ],
+  "wal_only_no_requeue_control": {
+    "control": "restart without any pending or processing queue file",
+    "before": {
+      "confidence": 0.800000011920929,
+      "content": "WAL restart no requeue control",
+      "id": "16750034397524131841",
+      "realm": "chaos",
+      "strength": 1.0,
+      "type": "wisdom"
+    },
+    "after": {
+      "confidence": 1.0,
+      "content": "WAL restart no requeue control",
+      "id": "16750034397524131841",
+      "realm": "chaos",
+      "strength": 1.0,
+      "type": "wisdom"
+    }
+  },
+  "queue_recovery_log": "[queue] crash recovery: re-queued 0 items (skipped 0 checkpointed, 1 applied ack_ids)",
+  "baseline_artifacts": [
+    {
+      "artifact": "p7-chaos-real.json",
+      "results": [
+        {
+          "case": "snapshot",
+          "status": "PASS",
+          "invariant": "acknowledged prefix survives SIGKILL inside snapshot write",
+          "recovery_s": 21.918,
+          "elapsed_s": 25.763
+        },
+        {
+          "case": "second",
+          "status": "PASS",
+          "invariant": "second store instance refused with recorded holder PID",
+          "recovery_s": 1.128,
+          "elapsed_s": 1.128
+        },
+        {
+          "case": "wal",
+          "status": "FAIL",
+          "invariant": "post-unlink appends and snapshot-covered prefix survive restart",
+          "reason": "{'content': [{'text': 'Memory not found: 16718747613767139330', 'type': 'text'}], 'isError': True, 'structured': None}",
+          "recovery_s": null,
+          "elapsed_s": 96.258
+        }
+      ]
+    },
+    {
+      "artifact": "p7-chaos-real-other2.json",
+      "results": [
+        {
+          "case": "lock",
+          "status": "PASS",
+          "invariant": "NFS stale local holder replaced and logged; foreign holder refused",
+          "recovery_s": 41.56,
+          "elapsed_s": 43.266
+        },
+        {
+          "case": "disk",
+          "status": "PASS",
+          "invariant": "ENOSPC leaves manifest unchanged; prefix recovers and later save succeeds",
+          "recovery_s": 55.775,
+          "elapsed_s": 66.317
+        },
+        {
+          "case": "hook",
+          "status": "PASS",
+          "invariant": "in-flight hook fails open within 8s; next hook reaches recall",
+          "recovery_s": 1.071,
+          "elapsed_s": 18.648
+        },
+        {
+          "case": "mcp",
+          "status": "PASS",
+          "invariant": "old HTTP session recovers or returns clear 404 within 5s; new session succeeds",
+          "recovery_s": 0.002,
+          "elapsed_s": 3.515
+        }
+      ]
+    },
+    {
+      "artifact": "p7-chaos-real-queue2.json",
+      "results": [
+        {
+          "case": "queue",
+          "status": "FAIL",
+          "invariant": "recovered queue entry preserves memory identity and state",
+          "reason": "[{'confidence': 0.800000011920929, 'id': '16732262613127266305', 'lexical': 1.0, 'realm': 'chaos', 'relevance': 103.44645690917969, 'similarity': 0.0, 'text': 'queue replay idempotence c7-rnsff4og', 'ts_ms': 1789551719233, 'type': 'wisdom'}, {'confidence': 0.800000011920929, 'id': '16733534683656093697', 'lexical': 1.0, 'realm': 'chaos', 'relevance': 53.506080627441406, 'similarity': 0.0, 'text': 'queue replay idempotence c7-rnsff4og', 'ts_ms': 1789551777834, 'type': 'wisdom'}]",
+          "recovery_s": 10.592,
+          "elapsed_s": 82.797
+        }
+      ]
+    },
+    {
+      "artifact": "p7-chaos-clients.json",
+      "results": [
+        {
+          "case": "queue",
+          "status": "PASS",
+          "invariant": "recovered queue entry applied once by memory identity",
+          "recovery_s": 1.692,
+          "elapsed_s": 4.909
+        },
+        {
+          "case": "hook",
+          "status": "PASS",
+          "invariant": "in-flight hook fails open within 8s; next hook reaches recall",
+          "recovery_s": 1.236,
+          "elapsed_s": 3.797
+        },
+        {
+          "case": "mcp",
+          "status": "PASS",
+          "invariant": "old HTTP session recovers or returns clear 404 within 5s; new session succeeds",
+          "recovery_s": 0.002,
+          "elapsed_s": 3.683
+        }
+      ]
+    }
+  ],
+  "intermediate_effective_strength_clock_failure": [
+    {
+      "case": "snapshot",
+      "status": "PASS",
+      "invariant": "acknowledged prefix survives SIGKILL inside snapshot write",
+      "recovery_s": 21.119,
+      "elapsed_s": 25.981
+    },
+    {
+      "case": "second",
+      "status": "PASS",
+      "invariant": "second store instance refused with recorded holder PID",
+      "recovery_s": 1.233,
+      "elapsed_s": 1.233
+    },
+    {
+      "case": "wal",
+      "status": "PASS",
+      "invariant": "WAL-only prefix and post-unlink appends survive restart",
+      "recovery_s": 11.414,
+      "details": {
+        "recovered_segment_bytes": [
+          19617
+        ]
+      },
+      "elapsed_s": 98.129
+    },
+    {
+      "case": "lock",
+      "status": "PASS",
+      "invariant": "NFS stale local holder replaced and logged; foreign holder refused",
+      "recovery_s": 10.077,
+      "elapsed_s": 11.793
+    },
+    {
+      "case": "disk",
+      "status": "PASS",
+      "invariant": "ENOSPC leaves manifest unchanged; prefix recovers and later save succeeds",
+      "recovery_s": 58.039,
+      "elapsed_s": 75.601
+    },
+    {
+      "case": "queue",
+      "status": "FAIL",
+      "invariant": "recovered queue entry preserves memory identity and state",
+      "reason": "{'before_replay': {'confidence': 0.800000011920929, 'content': 'queue replay idempotence c7-ynvxwvh7', 'id': '16778913074722635777', 'realm': 'chaos', 'strength': 1.0, 'type': 'wisdom'}, 'after_replay': {'confidence': 0.800000011920929, 'content': 'queue replay idempotence c7-ynvxwvh7', 'id': '16778913074722635777', 'realm': 'chaos', 'strength': 0.9999999403953552, 'type': 'wisdom'}}",
+      "recovery_s": 10.775,
+      "elapsed_s": 63.075
+    }
+  ],
+  "production_commit": "b4c06294",
+  "rust_commit": "765b68e",
+  "rust_tests": {
+    "passed": 289,
+    "failed": 0,
+    "ignored": 2,
+    "seconds": 53.26
+  },
+  "ctest": {
+    "passed": 25,
+    "failed": 0,
+    "seconds": 100.33
+  },
+  "final_native_cases": [
+    {
+      "case": "snapshot",
+      "status": "PASS",
+      "invariant": "acknowledged prefix survives SIGKILL inside snapshot write",
+      "recovery_s": 1.129,
+      "elapsed_s": 1.311
+    },
+    {
+      "case": "second",
+      "status": "PASS",
+      "invariant": "second store instance refused with recorded holder PID",
+      "recovery_s": 1.193,
+      "elapsed_s": 1.193
+    },
+    {
+      "case": "wal",
+      "status": "PASS",
+      "invariant": "WAL-only prefix and post-unlink appends survive restart",
+      "recovery_s": 1.187,
+      "details": {
+        "recovered_segment_bytes": [
+          733
+        ]
+      },
+      "elapsed_s": 1.632
+    },
+    {
+      "case": "lock",
+      "status": "PASS",
+      "invariant": "NFS stale local holder replaced and logged; foreign holder refused",
+      "recovery_s": 1.178,
+      "elapsed_s": 2.523
+    },
+    {
+      "case": "disk",
+      "status": "PASS",
+      "invariant": "ENOSPC leaves manifest unchanged; prefix recovers and later save succeeds",
+      "recovery_s": 1.24,
+      "elapsed_s": 1.392
+    },
+    {
+      "case": "queue",
+      "status": "PASS",
+      "invariant": "recovered queue entry preserves memory identity and state",
+      "recovery_s": 1.166,
+      "details": {
+        "snapshot_replay_s": [
+          1.15,
+          1.166
+        ],
+        "ledger_pruned": true,
+        "fixture_decay_disabled": true
+      },
+      "elapsed_s": 8.487
+    },
+    {
+      "case": "hook",
+      "status": "PASS",
+      "invariant": "in-flight hook fails open within 8s; next hook reaches recall",
+      "recovery_s": 0.503,
+      "elapsed_s": 3.348
+    },
+    {
+      "case": "mcp",
+      "status": "PASS",
+      "invariant": "old HTTP session recovers or returns clear 404 within 5s; new session succeeds",
+      "recovery_s": 0.002,
+      "elapsed_s": 4.753
+    }
+  ],
+  "native_format_probe_s": [
+    0.0238238,
+    0.0169657,
+    0.0160253
+  ],
+  "final_full_copy_source": "/projects/caeg/scratch/kbd606/tmp/chitta-eval-mind",
+  "final_full_copy_cases": [
+    {
+      "case": "snapshot",
+      "status": "PASS",
+      "invariant": "acknowledged prefix survives SIGKILL inside snapshot write",
+      "recovery_s": 19.957,
+      "elapsed_s": 24.031
+    },
+    {
+      "case": "second",
+      "status": "PASS",
+      "invariant": "second store instance refused with recorded holder PID",
+      "recovery_s": 1.221,
+      "elapsed_s": 1.221
+    },
+    {
+      "case": "wal",
+      "status": "PASS",
+      "invariant": "WAL-only prefix and post-unlink appends survive restart",
+      "recovery_s": 11.868,
+      "details": {
+        "recovered_segment_bytes": [
+          19622
+        ]
+      },
+      "elapsed_s": 103.404
+    },
+    {
+      "case": "lock",
+      "status": "PASS",
+      "invariant": "NFS stale local holder replaced and logged; foreign holder refused",
+      "recovery_s": 11.752,
+      "elapsed_s": 13.733
+    },
+    {
+      "case": "disk",
+      "status": "PASS",
+      "invariant": "ENOSPC leaves manifest unchanged; prefix recovers and later save succeeds",
+      "recovery_s": 60.998,
+      "elapsed_s": 77.039
+    },
+    {
+      "case": "queue",
+      "status": "PASS",
+      "invariant": "recovered queue entry preserves memory identity and state",
+      "recovery_s": 12.354,
+      "details": {
+        "snapshot_replay_s": [
+          11.472,
+          12.354
+        ],
+        "ledger_pruned": true,
+        "fixture_decay_disabled": true
+      },
+      "elapsed_s": 111.563
+    },
+    {
+      "case": "hook",
+      "status": "PASS",
+      "invariant": "in-flight hook fails open within 8s; next hook reaches recall",
+      "recovery_s": 0.894,
+      "elapsed_s": 18.084
+    },
+    {
+      "case": "mcp",
+      "status": "PASS",
+      "invariant": "old HTTP session recovers or returns clear 404 within 5s; new session succeeds",
+      "recovery_s": 0.002,
+      "elapsed_s": 3.452
+    },
+    {
+      "case": "format",
+      "status": "PASS",
+      "invariant": "production format probe completes below 1s under embedding/matrix load",
+      "recovery_s": 0.021,
+      "elapsed_s": 1.209
+    }
+  ],
+  "measurement_note": "Single shared-node observations; final CTest and full-copy runs used independent scratch stores concurrently. No latency-distribution claim.",
+  "ancillary": {
+    "mcp_passed": 149,
+    "smriti_passed": 46,
+    "hook_scripts_passed": 21,
+    "ruff": "PASS",
+    "eval_immutable": "PASS"
+  }
+}

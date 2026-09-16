@@ -20,7 +20,7 @@ jobs:
 
       - name: Install build tools
         run: |
-          dnf install -y wget perl-IPC-Cmd cmake ninja-build python3.11 python3.11-devel openblas-devel
+          dnf install -y wget perl-IPC-Cmd cmake ninja-build python3.11 python3.11-devel python3.11-pip openblas-devel jq util-linux
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -37,6 +37,13 @@ jobs:
         run: |
           cd chitta-field
           ./build.sh build --release
+
+      - name: Rust recovery tests
+        timeout-minutes: 15
+        env:
+          PYO3_PYTHON: /usr/bin/python3.11
+          RUSTFLAGS: "-C target-cpu=x86-64-v2"
+        run: cd chitta-field && ./build.sh test --release
 
       - name: Install nlohmann_json
         run: |
@@ -55,8 +62,18 @@ jobs:
             -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON \
             -DPython3_EXECUTABLE=/usr/bin/python3.11 \
             -DCHITTA_WITH_LLAMA_CPP=ON \
+            -DCHITTA_BUILD_TESTS=ON \
             -DJSON_INCLUDE_DIR=/opt/nlohmann_json/include
           ninja
+
+      - name: HTTP MCP test dependencies
+        run: python3.11 -m pip install ./chitta-mcp uvicorn
+
+      - name: Native recovery tests
+        timeout-minutes: 15
+        run: |
+          echo "NFS lock recovery: explicitly skipped on non-NFS CI scratch storage"
+          ctest --test-dir chitta/build --output-on-failure --timeout 240
 
       - name: Verify binaries
         run: |

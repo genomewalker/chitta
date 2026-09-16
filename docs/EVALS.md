@@ -42,6 +42,21 @@ evaluate against a frozen-snapshot replica → verdict → human merge. Evaluati
 changes need a separate, explicit approval. Nothing here starts a daemon, merges,
 or publishes a candidate.
 
+2026-09-16 — The
+`scripts/chaos-replica.py`/CTest cases caught NFS post-unlink WAL data loss and
+non-idempotent queue replay, leading to the authorized production fixes. The
+final gate passes all nine full-copy cases and 25/25 CTests. See
+[the measured per-case table](FIELD_PERF.md#2026-09-16-phase-7-recovery-gates) and
+[recovery implementation](../Documentation.md).
+Run a real-copy case with the configured worktree binaries and the required
+CPython, for example `python3 scripts/chaos-replica.py --source
+/projects/caeg/scratch/kbd606/tmp/chitta-eval-mind --cases snapshot,second
+--report /tmp/chaos.json`. Omit `--cases` to run all nine cases, including the
+production binary format probe under embedding/matrix load. `--cases` permits independent investigations;
+a multi-case run stops at its first failed invariant to avoid using contaminated
+state. CTest registers each case independently. Raw logs and scratch results
+remain untracked; the dated evidence summary is committed.
+
 ## Evaluation stack
 
 | Layer | Evidence | Limitation |
