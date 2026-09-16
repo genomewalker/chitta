@@ -169,3 +169,16 @@ report. Earlier missed gates and helper-leak runs are retained, not presented as
 final qualification. Current evidence: step3-stdlib-parity and
 step3-qualified-final under /tmp/chitta-p5b-retire/evidence. Docs are a separate
 fourth commit. Plan.md and all raw evidence remain untracked.
+
+Step 4 (2026-09-17): the superseding Phase 5b report records per-family boundaries,
+2,696 shell lines, qualified full-wall medians, retained tail outliers, process
+lifecycle and startup-cost findings, and validation. HOOKS.md removes retired
+selectors; the original Phase 5 report has a dated supersession notice; CHANGELOG
+points at the new evidence. The implementation remains exactly 31236c0e. Final
+documentation controls compare all ten fixtures before/after, with no golden
+fixture changes. No push or deployment; Plan.md and raw evidence stay untracked.
+
+The final shell suite had one 3-second saddle subprocess timeout during concurrent
+fixture compilation; all other 31 passed. The saddle test passed unchanged in
+isolation, including its timeout/latency assertions. Both logs remain in scratch
+evidence and the report records the rerun.

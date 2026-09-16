@@ -1,5 +1,7 @@
 # Phase 5 policy migration report — 2026-09-16
 
+> Superseded 2026-09-17 by [Phase 5b shell-policy retirement](PHASE5B-POLICY-RETIRE-REPORT.md): 8,988 → 2,696 shell lines, with all requested median latency gates met. The new report has current parity and timing evidence; the Phase 5 measurements below remain historical.
+
 The admission, lane fusion and ledger moves are verified, but **Phase 5's exit
 gate is not met**. `hooks/*.sh` grew from 8,743 to 8,988 lines. Final prompt and
 Bash latency miss their targets; SessionStart meets its target. The default
