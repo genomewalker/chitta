@@ -86,9 +86,13 @@ for claude_root in "${claude_roots[@]}"; do
         sync_one "$HOOKS_SRC/$script" "$claude_root/hooks/$script"
     done < "$HOOK_MANIFEST"
     sync_one "$HOOKS_SRC/hooks.json" "$claude_root/hooks/hooks.json" 0644
+    # hook_*.py: the thin shell hooks exec these (Phase 5b); a cache without
+    # them fails every hook with 'can't open file hook_client.py'.
     for module in session_registry.py resume_selector.py task_ledger.py \
                   thread_inference.py resume_capsule.py \
-                  outcome_ledger.py daemon_client.py; do
+                  outcome_ledger.py daemon_client.py \
+                  hook_client.py hook_ancillary.py hook_maintenance.py \
+                  hook_prompt.py hook_session.py; do
         [[ -f "$ROOT_DIR/chitta-mcp/$module" ]] && sync_one "$ROOT_DIR/chitta-mcp/$module" "$claude_root/chitta-mcp/$module" 0755
     done
 done
