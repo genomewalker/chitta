@@ -2,6 +2,31 @@
 
 Status as of 2026-09-16
 
+2026-09-16 — Phase 7 replica canary: `scripts/nightly-replica-canary.sh`
+copies the selected evaluation family into a fresh private mind, pins its socket,
+and runs three read-only golden panels using the noise calibration's
+hybrid/depth-20/no-reranker configuration. It compares their mean with the
+lower `golden.ndcg.band_95` bound and exits nonzero on regression, invalid scores,
+uncalibrated configurations, or snapshot mismatch. Reports go to
+`/projects/caeg/scratch/kbd606/tmp/canary/<UTC-date>.<unique>/report.json`;
+`CHITTA_CANARY_SOURCE` and `CHITTA_CANARY_REPORT_ROOT` support isolated runs.
+The optional current-truth runner must accept `--socket`/`--output` and emit
+scalar `current_truth.*` metrics matching `noise.json`; an available but
+uncalibrated/incompatible runner fails closed. This revision has no such panel,
+so its absence is explicitly recorded, not counted as a pass.
+
+2026-09-16 — Canary evidence: family `bbcaed33`, golden mean **0.492311**,
+calibrated band **[0.490965, 0.494474]**, PASS. Dated report:
+`/projects/caeg/scratch/kbd606/tmp/canary/2026-09-16T093217Z.XnrfeW/report.json`.
+Individual samples were 0.446157, 0.525503, 0.505273: variability exceeded the
+historical band, so this is a mean-score regression check, not evidence of
+stability or equivalence. Controlled fixtures verified PASS/exit 0,
+REGRESSION/exit 1, nonfinite-score rejection, snapshot-mismatch rejection, and
+scratch cleanup. `scripts/install-evolve-timers.sh` writes a separate
+`chitta-replica-canary.timer`, enabled only with `--enable-canary`; it has no
+live-daemon dependency. No unit was installed or enabled during validation.
+The phase's one-week canary soak remains outstanding.
+
 Automatic-learning harness built; the prospective 20-task panel remains pending — [protocol](../benchmarks/learning/protocol.md).
 2026-09-15 23:15 CEST: **official cohort cut recorded** in `benchmarks/learning/cohort.json`
 (`cut_timestamp_ms` 1789506106539, family `da86decb`, realm `project:cc-soul`).

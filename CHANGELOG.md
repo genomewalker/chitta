@@ -11,6 +11,10 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 ## [Unreleased]
 
 ### Added
+- Opt-in nightly replica canary with dated reports, calibrated golden-score
+  regression exits, explicit current-truth availability/calibration checks,
+  and a disabled-by-default user timer (`--enable-canary`). On 2026-09-16,
+  golden mean 0.492311 passed the 0.490965 lower band; week-long soak pending.
 - Replication-weighted recall factor (`replication_max`, `CHITTA_REPLICATION_MAX`),
   landed default-off: distinct-session replications per memory are cached on
   load; the live store has 0 memories with ≥2 independent replications and the
