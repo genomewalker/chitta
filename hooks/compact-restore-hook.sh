@@ -25,37 +25,13 @@ daemon_available || exit 0
 
 # Detect realm (fast, needed for ledger_load)
 # Derive project directory from transcript path (must match pre-compact logic)
-decode_project_path() {
-    local encoded="${1:1}"  # Skip leading dash
-    local path_so_far=""
-    IFS='-' read -ra PARTS <<< "$encoded"
-    for part in "${PARTS[@]}"; do
-        local test_path="$path_so_far/$part"
-        if [[ -d "$test_path" ]]; then
-            path_so_far="$test_path"
-        else
-            local alt_path="$path_so_far-$part"
-            if [[ -d "$alt_path" ]]; then
-                path_so_far="$alt_path"
-            else
-                path_so_far="$test_path"
-            fi
-        fi
-    done
-    echo "$path_so_far"
-}
-
 PROJECT_DIR=""
 if [[ -n "$TRANSCRIPT_PATH" ]]; then
     PROJECT_ENCODED=$(dirname "$TRANSCRIPT_PATH" | xargs basename)
     PROJECT_DIR=$(decode_project_path "$PROJECT_ENCODED")
 fi
 
-if [[ -n "$PROJECT_DIR" && -d "$PROJECT_DIR" ]]; then
-    REALM=$(cd "$PROJECT_DIR" && timeout "$MAX_WAIT" "$CHITTA_BIN" realm_detect 2>/dev/null || echo "brahman")
-else
-    REALM=$(timeout "$MAX_WAIT" "$CHITTA_BIN" realm_detect 2>/dev/null || echo "brahman")
-fi
+REALM=$(detect_project_realm "$PROJECT_DIR")
 
 # Re-register session (PID survives compaction but session state needs refresh)
 if [[ -n "$SESSION_ID" ]]; then

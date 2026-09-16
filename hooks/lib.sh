@@ -326,14 +326,6 @@ get_socket_dir() {
     fi
 }
 
-# Check if the chitta daemon is reachable via its Unix socket.
-# Used as a gate in hooks: daemon_available || exit 0
-daemon_available() {
-    local socket
-    socket=$(get_socket_path 2>/dev/null)
-    [[ -n "$socket" && -S "$socket" ]]
-}
-
 # Compute socket path from mind path — matches C++ socket_path_for_mind()
 get_socket_path() {
     # Explicit override first (the CLI honours the same variable), so hooks
@@ -349,6 +341,44 @@ get_socket_path() {
 # Use this before any blocking chitta CLI calls to skip them instantly when daemon is down.
 daemon_available() {
     [[ -S "$(get_socket_path)" ]]
+}
+
+# Shared Pre/PostToolUse JSON string escaping and lifecycle path decoding.
+json_escape() {
+    echo -n "$1" | jq -Rs '.' | sed 's/^"//;s/"$//'
+}
+
+decode_project_path() {
+    local encoded="${1:1}"  # Skip leading dash
+    local path_so_far=""
+    local part
+    local -a PARTS
+    IFS='-' read -ra PARTS <<< "$encoded"
+    for part in "${PARTS[@]}"; do
+        local test_path="$path_so_far/$part"
+        if [[ -d "$test_path" ]]; then
+            path_so_far="$test_path"
+        else
+            local alt_path="$path_so_far-$part"
+            if [[ -d "$alt_path" ]]; then
+                path_so_far="$alt_path"
+            else
+                path_so_far="$test_path"
+            fi
+        fi
+    done
+    echo "$path_so_far"
+}
+
+# Lifecycle lookup; prompt-core's cached local realm detection is distinct.
+# Uses caller CHITTA_BIN/MAX_WAIT and preserves output on CLI failure.
+detect_project_realm() {
+    local project_dir="$1"
+    if [[ -n "$project_dir" && -d "$project_dir" ]]; then
+        (cd "$project_dir" && timeout "$MAX_WAIT" "$CHITTA_BIN" realm_detect 2>/dev/null || echo "brahman")
+    else
+        timeout "$MAX_WAIT" "$CHITTA_BIN" realm_detect 2>/dev/null || echo "brahman"
+    fi
 }
 
 # Get current session ID from environment or registry

@@ -623,19 +623,6 @@ fi
 # ===========================================
 SESSION_ID="${SESSION_ID:-unknown}"
 
-# djb2 hash - must match C++ implementation
-djb2_hash() {
-    local str="$1"
-    local hash=5381
-    local i c
-    for ((i=0; i<${#str}; i++)); do
-        c=$(printf '%d' "'${str:$i:1}")
-        hash=$(( ((hash << 5) + hash) + c ))
-        hash=$((hash & 0xFFFFFFFF))
-    done
-    echo "$hash"
-}
-
 MIND_HASH=$(djb2_hash "$MIND_PATH")
 SOCKET_PATH="${CHITTA_SOCKET:-/tmp/chitta-${MIND_HASH}.sock}"
 

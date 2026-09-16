@@ -167,12 +167,6 @@ import sys,json; d=json.load(sys.stdin)
 [print(p) for p in (d.get('outputs') or [])+(d.get('new_files') or [])]" 2>/dev/null)
             rm -f "$MIND_PATH/.fs_snapshot_${_task_id}"
         fi
-        if [[ "$exit_code" != "0" && -n "$_task_id" ]]; then
-            timeout 2 python3 "$_MCP_DIR/task_ledger.py" inbox_push \
-                --task-id "$_task_id" --event-type "failure" \
-                --digest "${command:0:60} — exit $exit_code" \
-                --target-realm "${realm:-}" --thread-id "$_thread_id" 2>/dev/null || true
-        fi
     fi
     # ── End task ledger ──────────────────────────────────────────────────────
 
@@ -255,10 +249,6 @@ import sys,json; d=json.load(sys.stdin)
 fi
 
 [[ -z "$command" ]] && exit 0
-
-json_escape() {
-    echo -n "$1" | jq -Rs '.' | sed 's/^"//;s/"$//'
-}
 
 detect_output_type() {
     local out="$1"
