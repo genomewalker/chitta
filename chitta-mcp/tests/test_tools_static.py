@@ -58,6 +58,10 @@ class StaticToolsTests(unittest.TestCase):
             (root / "scripts/gen-tools-docs.py").write_text(
                 (ROOT / "scripts/gen-tools-docs.py").read_text()
             )
+            (root / "scripts/site_common.py").write_text(
+                (ROOT / "scripts/site_common.py").read_text()
+            )
+            (root / "CHANGELOG.md").write_text("## [0.0.0]\n")
             with (
                 mock.patch.object(generator, "ROOT", root),
                 mock.patch.object(subprocess, "run", side_effect=AssertionError("unexpected RPC")),

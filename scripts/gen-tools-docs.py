@@ -20,6 +20,9 @@ import re
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from site_common import footer, navigation  # noqa: E402
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOCS = os.path.join(ROOT, "docs")
 MCP = os.path.join(ROOT, "chitta-mcp")
@@ -247,7 +250,7 @@ def cli_appendix(extras):
                       " (required)" if param["required"] else ""))
         md.append("")
         rows.append('<details class="tool-item"><summary><code>{}</code> — {}</summary>{}</details>'.format(
-            html.escape(tool["name"]), html.escape(tool["description"]), render_params_html(tool["params"])))
+            html.escape(tool["name"]), html.escape(tool["description"]), render_params_html(tool["params"], tool["name"])))
     page = ('<section class="tools-section" id="native-cli"><div class="container">'
             '<h2>Additional native CLI tools</h2><p>{}</p>{}</div></section>\n'.format(
                 html.escape(intro), "\n".join(rows)))
@@ -291,43 +294,6 @@ CAT_ICON = ('<svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" 
             'stroke="#9DB2D9" stroke-width="1" opacity="0.4"/><circle cx="10" cy="10" '
             'r="3" stroke="#CBAF86" stroke-width="1" opacity="0.5"/></svg>')
 
-NAV_ITEMS = [
-    ("getting-started.html", "Get Started"),
-    ("philosophy.html", "Philosophy"),
-    ("architecture.html", "Architecture"),
-    ("recall.html", "Recall"),
-    ("benchmarks.html", "Benchmarks"),
-    ("chitta-field.html", "chitta-field"),
-    ("sadhana.html", "Sadhana"),
-    ("context.html", "Context"),
-    ("tools.html", "Tools"),
-    ("cli.html", "CLI"),
-    ("hooks.html", "Hooks"),
-    ("skills.html", "Skills"),
-    ("changelog.html", "Changelog"),
-    ("constellation.html", "Constellation"),
-    ("dreams/index.html", "Dreams"),
-]
-
-
-def nav_html(active):
-    li = []
-    for href, label in NAV_ITEMS:
-        cls = ' class="active"' if href == active else ""
-        li.append(f'      <li><a href="{href}"{cls}>{label}</a></li>')
-    li.append('      <li><a href="https://github.com/genomewalker/chitta" '
-              'target="_blank" rel="noopener">GitHub</a></li>')
-    return """<nav class="nav">
-  <div class="nav-inner">
-    <a href="index.html" class="nav-brand">chitta</a>
-    <button class="nav-hamburger" onclick="document.querySelector('.nav').classList.toggle('nav-open')" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
-    <ul class="nav-links">
-{}
-    </ul>
-  </div>
-</nav>""".format("\n".join(li))
 
 
 PAGE_STYLE = """<style>
@@ -453,10 +419,12 @@ def esc(s):
     return html.escape(s or "", quote=True)
 
 
-def render_params_html(rows):
+def render_params_html(rows, name=""):
     if not rows:
         return ""
-    out = ['<div class="tool-params"><table class="tool-params-table"><thead><tr>'
+    out = ['<div class="tool-params"><div class="table-scroll" role="region" '
+           f'aria-label="Parameters of {esc(name)}" tabindex="0">'
+           '<table class="tool-params-table"><thead><tr>'
            '<th>Parameter</th><th>Type</th><th>Required</th><th>Default</th>'
            '<th>Description</th></tr></thead><tbody>']
     for p in rows:
@@ -471,7 +439,7 @@ def render_params_html(rows):
                 "param-required" if p["required"] else "param-optional",
                 "Yes" if p["required"] else "No",
                 default, esc(p["desc"])))
-    out.append("</tbody></table></div>")
+    out.append("</tbody></table></div></div>")
     return "".join(out)
 
 
@@ -488,7 +456,7 @@ def build_html(groups, meta):
                 '        <div class="tool-row"><span class="tool-name">{}</span>'
                 '<span class="tool-desc">{}{}</span>{}</div>'.format(
                     esc(t["name"]), esc(t["description"]), flag,
-                    render_params_html(t["params"])))
+                    render_params_html(t["params"], t["name"])))
         blocks.append(
             '    <div class="tools-category" id="cat-{}">\n'
             '      <div class="tools-category-header" onclick="this.parentElement.classList.toggle(\'collapsed\')">\n'
@@ -523,16 +491,20 @@ def build_html(groups, meta):
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 {style}
+<link rel="stylesheet" href="/content-styles.css">
+<link rel="stylesheet" href="/site-shell.css">
 </head>
-<body>
+<body class="page-tools">
+<a class="skip-link" href="#main-content">Skip to content</a>
 
 {nav}
+<main id="main-content" tabindex="-1">
 
 <header class="page-header">
   <div class="container">
     <div class="page-header-badge reveal">MCP tool reference</div>
     <h1 class="reveal reveal-delay-1">{total} tools. One daemon.</h1>
-    <p class="page-header-sub reveal reveal-delay-2">Every tool is served by <code style="color: var(--aura-300);">chittad</code>, a C++ daemon reached over a Unix socket. {visible} are listed to the model by default; the remaining {hidden} stay callable through the <code style="color: var(--aura-300);">advanced</code> gateway, which keeps the default tool list small. Click a row for its parameters.</p>
+    <p class="page-header-sub reveal reveal-delay-2">Every tool is served by <code class="style-18fae4fbe7">chittad</code>, a C++ daemon reached over a Unix socket. {visible} are listed to the model by default; the remaining {hidden} stay callable through the <code class="style-18fae4fbe7">advanced</code> gateway, which keeps the default tool list small. Click a row for its parameters.</p>
     <p class="gen-note">Generated from a live daemon on {date}, {total} tools &mdash; regenerate with <code>python3 scripts/gen-tools-docs.py</code></p>
   </div>
 </header>
@@ -546,7 +518,7 @@ def build_html(groups, meta):
   </div>
 </section>
 
-<nav class="submenu-toc">
+<nav class="submenu-toc" aria-label="On this page">
   <div class="submenu-toc-inner">
 {toc}
   </div>
@@ -565,23 +537,15 @@ def build_html(groups, meta):
     <a href="index.html" class="back-link">&larr; Back to chitta</a>
   </div>
 </section>
-
-<footer class="footer">
-  <div class="container">
-    <p class="footer-text">
-      Built with conviction. Grounded in philosophy.
-      <span class="footer-sep"></span>
-      <a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a>
-    </p>
-  </div>
-</footer>
+</main>
+{footer}
 
 {script}
 </body>
 </html>
 """.format_map({
         "title": esc(title), "desc": esc(desc), "style": PAGE_STYLE,
-        "nav": nav_html("tools.html"), "toc": toc, "blocks": "\n\n".join(blocks),
+        "nav": navigation("/tools.html"), "footer": footer("/tools.html"), "toc": toc, "blocks": "\n\n".join(blocks),
         "script": PAGE_SCRIPT, "date": meta["date"], "total": meta["total"],
         "visible": meta["visible"], "hidden": meta["hidden"],
     })
