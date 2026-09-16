@@ -178,6 +178,9 @@ ToolResult FieldRpcHandler::tool_learn_codebase(const json& params) {
         cloned = true;
         path = clone_tmpdir;
     } else {
+        // Index paths are stored canonical (symlinked mounts resolved); a delete
+        // reported through the symlink must invalidate the same entries.
+        path = std::filesystem::weakly_canonical(path).string();
         if (!std::filesystem::exists(path)) {
             auto project = params.value("project", "");
             // Watchers report unlink after the file is gone. Invalidation must
