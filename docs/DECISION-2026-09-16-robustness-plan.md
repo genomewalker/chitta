@@ -100,6 +100,7 @@
 
 ## Backlog (owner-listed, not yet scheduled)
 
+- Production recall silently degrades under load: the 50 ms query-embedding deadline (`CHITTA_RECALL_EMBED_WAIT_MS`) drops the semantic lanes and falls back to keyword-only without any marker in the result. Found by the restart-identity stream on 2026-09-16 (13/20 identical restarts were exactly the ones with missing embeddings). Decide a budget that fits the prompt-hook p95 and mark degraded results (`status`) so the hook and the canary can count them.
 - **Independent qualification stage for evolve verdicts** (card
   `rekursiv-qualification-stage`, from rekursiv.ai's auto-autoresearch run):
   a second agent re-measures a candidate on a fresh replica before a verdict
