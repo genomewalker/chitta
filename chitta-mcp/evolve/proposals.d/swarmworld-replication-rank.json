@@ -26,5 +26,5 @@
   "source": "hypothesis",
   "already_have": false,
   "verifiability": "metric_only",
-  "prior_effort": "none"
+  "prior_effort": "some"
 }

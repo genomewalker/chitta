@@ -296,3 +296,114 @@ one HTTP SDK/session-manager error (`BoundedSessionManager._session_owners`);
 no MCP implementation was changed. A redundant Rust invocation overlapped the
 surviving earlier job and failed linking; it was stopped after the original job
 completed successfully. The owned scratch daemon was stopped after evaluation.
+
+## 2026-09-16: replication-weighted recall (default off)
+
+`swarmworld-replication-rank` now counts **distinct identifiable source sessions**,
+not confirming memories, recall events, or writer labels. For a memory, take the
+union of sessions in its own provenance, its direct confirmers' provenance, and
+observations preserved by dedup. Provenance follows numeric `source`,
+`derived_from`, and `merged_from` memory references with cycle detection;
+`source_session`, `replication_session`, nonnumeric `derived_from` session targets,
+and explicit `source=session:<id>` provide session identities. Bare `source`
+labels (`distillation`, `mcp_tool`, etc.) do not. Repeated evidence from one session
+counts once; unknown evidence contributes no invented session, and the final
+neutral count is at least one. Confirmation chains do not recursively amplify
+support. Deleted evidence and invalidated/superseded triplets are excluded.
+
+The count is cached on `MemoryState`, skipped in serialization and reconstructed
+after snapshot/WAL replay. Mutation paths refresh affected provenance dependents;
+foreign WAL batches rebuild the derived counts. Recall reads only the cached
+integer. Existing WAL-backed triplets preserve incoming dedup sessions, including
+sessions attached after the daemon's remember call has returned a merged ID.
+No snapshot version, migration, or FFI layout change is needed. Historical dedup
+sessions already discarded by old binaries cannot be recovered.
+
+`replication_max` in `scoring.json` is overridden by `CHITTA_REPLICATION_MAX`.
+Zero disables the factor. With the proposed enabled value **1.15**, session counts
+1, 2, and >=3 yield multipliers **1.00, 1.10, and 1.15** respectively, using the
+concave saturation curve `1 + (max-1)*n*(5-n)/6`, `n=min(max(count,1),3)-1`.
+It multiplies the secondary term inside `relevance * (0.7 + 0.3 * secondary)`;
+it is not a 15% multiplier on the final score. The shipped default remains **0**:
+the frozen evaluation family initially showed no memories with two identifiable
+sessions, so it cannot establish ranking benefit or independent-writer diversity.
+Session independence is a provenance proxy, not proof that authors reasoned
+independently; distillation across separate sessions still needs a writer audit.
+
+The experiment
+uses an isolated copy selected by `scripts/eval-replica.sh`, never the live mind.
+The before/after arms are the same compiled binary with max 0 / 1.15; golden
+scoring imports `hooks/grade-recall.py` through `benchmarks/noise.py::golden_runs`,
+with `CHITTA_EVAL_SOCKET`, hybrid strategy, depth 20, no reranker, three runs each.
+This also avoids the grader CLI's optional gap-memory writes. The fixed
+`python3 benchmarks/noise.py band golden.ndcg` threshold is **0.0017901251267712533**
+(2 SD; reference mean 0.4927195290508894, SD 0.0008950625633856266).
+
+Snapshot `bbcaed33`, manifest generation 38047, sequence 206208172. Offline audit
+of a separate copy: **133,712 live memories; 1,236 with an identifiable session;
+0 with >=2 replications**. There is no replicated cohort on which to test writer
+dominance. Historical unknowns remain neutral; no writer label is converted into
+a synthetic session. The top 20 are tied at the neutral floor (ascending numeric
+ID breaks ties), not twenty demonstrated independent observations.
+
+| Memory ID | Replications | Kind |
+| --- | ---: | --- |
+| 7890705326276612 | 1 | wisdom |
+| 7890705326276613 | 1 | insight |
+| 7890705326276629 | 1 | wisdom |
+| 7890705326276649 | 1 | goal |
+| 7890705326276651 | 1 | goal |
+| 7890705326276674 | 1 | wisdom |
+| 7890705326276677 | 1 | wisdom |
+| 7890705326276680 | 1 | wisdom |
+| 7890705326276693 | 1 | episode |
+| 7890705326276695 | 1 | episode |
+| 7890705326276696 | 1 | episode |
+| 7890705326276698 | 1 | result |
+| 7890705326276700 | 1 | task |
+| 7890705326276712 | 1 | wisdom |
+| 7890705326276726 | 1 | wisdom |
+| 7890705326276729 | 1 | wisdom |
+| 7890705326276730 | 1 | episode |
+| 7890705326276749 | 1 | belief |
+| 7890705326276757 | 1 | wisdom |
+| 7890705326276759 | 1 | belief |
+
+| Arm | Run 1 nDCG@20 | Run 2 | Run 3 | Mean | Sample SD |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Before (`replication_max=0`) | 0.5000783626 | 0.4999525031 | 0.4999525031 | 0.4999944563 | 0.0000726650 |
+| After (`replication_max=1.15`) | 0.5000783626 | 0.4999525031 | 0.4999525031 | 0.4999944563 | 0.0000726650 |
+
+Mean delta **0.0000000000**, within the fixed **0.0017901251** noise threshold.
+The paired samples are identical. The current before mean differs from the older
+noise calibration mean; acceptance uses the contemporaneous arm delta, not that
+absolute difference. This is a compatibility result, not evidence of a recall
+gain: the enabled arm has no eligible replicated memories. Keep default **off**
+and set the proposal's `prior_effort` to `some`. No writer-dominance claim is
+possible until a nonempty replicated cohort exists.
+
+Restart identity: **20/20 nonempty queries** retained identical ordered result IDs
+(depth 20, first 20 frozen golden queries). Each capture followed the same three
+complete golden passes and a 30-second startup wait. The first capture used max 0;
+the final binary's restart had `CHITTA_REPLICATION_MAX` **unset**, exercising the
+shipped zero default. Its three verification warmup scores also matched the table.
+The launcher recopied the same selected family for each arm/start; the Rust
+regression tests separately exercise WAL-only and saved-snapshot recovery of new
+replication evidence. All private daemons were stopped after measurement.
+
+| Gate | Result |
+| --- | --- |
+| Rust `build.sh build --release` | Passed; final source |
+| Rust `build.sh test --release` | Passed on final source: 282 passed, 2 ignored |
+| Embedding identity | Compiled constants match unchanged reference `768:nomic-embed-text-v1.5` |
+| CMake release build + ctest | 16/16 passed, matching GGUF supplied for embed-pool integration |
+| Recall identity across restarts | 20/20 ordered ID lists identical |
+| Hook suites | 18/18 passed; three rerun after clearing inherited overlong socket path |
+| MCP Python suite | 126 passed, 1 existing SDK error: mcp 1.27.2 lacks `_session_owners` in `create_http_session_manager`; involved sources unchanged from HEAD |
+| SMRITI Python suite | 46 passed |
+| Immutable evaluation inputs / diff whitespace | Unchanged / passed |
+
+An initial overlapping Cargo archive/audit build failed with a missing object;
+subsequent build/test commands were serialized. The first metric invocation
+refused to run without an exported private socket; only the corrected socket-bound
+runs appear in the table. Neither failure is counted as a measurement.
