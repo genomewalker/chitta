@@ -146,3 +146,5 @@ These are sequential implementation measurements on a shared node, not an additi
 - <a id="ref-10"></a>**[10]** Pentti Kanerva. Hyperdimensional Computing: An Introduction to Computing in Distributed Representation with High-Dimensional Random Vectors. Cognitive Computation 1, 139–159 (2009). [source](<https://doi.org/10.1007/s12559-009-9009-8>)
 - <a id="ref-24"></a>**[24]** Stephen Robertson and Hugo Zaragoza. The Probabilistic Relevance Framework: BM25 and Beyond. Foundations and Trends in Information Retrieval 3(4), 333–389 (2009). [source](<https://doi.org/10.1561/1500000019>)
 <!-- END CITATIONS -->
+
+2026-09-16 (live, after the split-store deploy): ready 13.0 s with all three sidecars hitting; the first recall after `ready` still took 10.5 s, then 0.27 s and 0.04 s. On the replica the first recall during the turbo rebuild returned in 395 ms, so the live cost is not the rebuild alone; Phase 6 of `DECISION-2026-09-16-robustness-plan.md` measures it with `scripts/stress-embed-recall.py` (suspects: query-embedding kernel warm-up contending with the rebuild for BLAS threads).
