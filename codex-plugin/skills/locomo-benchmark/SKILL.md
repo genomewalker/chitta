@@ -8,7 +8,7 @@ aliases: [locomo, benchmark-memory]
 
 # LoCoMo Benchmark
 
-Evaluate cc-soul's memory against the [LoCoMo benchmark](https://github.com/snap-research/locomo) (ACL 2024) for long-term conversational memory.
+Evaluate chitta's memory against the [LoCoMo benchmark](https://github.com/snap-research/locomo) (ACL 2024) for long-term conversational memory.
 
 ## Quick Start
 
@@ -28,12 +28,12 @@ python3 $PLUGIN_DIR/scripts/locomo-benchmark.py --full
 python3 $PLUGIN_DIR/scripts/locomo-benchmark.py --max-qa 20
 ```
 
-Where `$PLUGIN_DIR` is `/maps/projects/fernandezguerra/apps/repos/cc-soul` (or installed plugin path).
+Set `PLUGIN_DIR` to the chitta repository or installed plugin root (for Claude Code, `${CLAUDE_PLUGIN_ROOT}`).
 
 ## What the Script Does
 
 1. **Downloads** LoCoMo data from GitHub to `/tmp/locomo/` (if not present)
-2. **Ingests** conversations into cc-soul memory:
+2. **Ingests** conversations into chitta memory:
    - Extracts session summaries as observations
    - Creates triplets for speaker facts
    - Tags with sample_id for retrieval
@@ -84,7 +84,7 @@ If you prefer to run manually:
 git clone https://github.com/snap-research/locomo /tmp/locomo
 
 # Run benchmark
-python3 /maps/projects/fernandezguerra/apps/repos/cc-soul/scripts/locomo-benchmark.py conv-26
+python3 "$PLUGIN_DIR/scripts/locomo-benchmark.py" conv-26
 ```
 
 ## Expected Output

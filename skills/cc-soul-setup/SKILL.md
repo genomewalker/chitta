@@ -1,34 +1,38 @@
 ---
 name: cc-soul-setup
-description: Build chitta from source (requires cmake, make, a C++20 compiler)
+description: Set up chitta with a source build when a compiler is available, or pre-built binaries
 execution: inline
 ---
 
-# cc-soul-setup
+# Set up chitta
 
-Build chitta binaries from source code.
+The `cc-soul-setup` command name is retained for compatibility.
+Repository work follows the canonical `CLAUDE.md` (Codex: `codex-plugin/AGENTS.md`);
+implementation streams leave installation and service changes to the orchestrator.
 
-## Requirements
+Install chitta through the shared installer.
+
+## Source-build requirements
 - cmake
 - make
-- C++ compiler (g++ or clang++)
+- C++20 compiler (g++ or clang++)
+
+Without a compiler, the installer tries compatible pre-built binaries.
 
 ## Usage
 
 ```bash
-# Run smart-install from plugin directory (builds from source as fallback)
+# Run the shared installer from the plugin checkout
 ${CLAUDE_PLUGIN_ROOT}/scripts/smart-install.sh
 ```
 
-This will:
-1. Stop any running daemon
-2. Download pre-built binaries (or build from source if unavailable)
-3. Install to ~/.claude/bin/
-4. Download embedding model if needed
-5. Install hooks and configure permissions
-6. Set up systemd user service (Linux only) and start the daemon
-7. Run database migrations if needed
+The installer resolves the current release, builds from source with llama.cpp
+when a compiler is available, and falls back to compatible pre-built binaries
+if needed. It installs binaries, the embedding model, hooks, MCP dependencies
+and service configuration, then stops the daemon for migrations and restarts it.
+It preserves an existing embedding-model identity.
 
-If cmake is not available and pre-built binaries aren't found, suggest using `/cc-soul-update` to download pre-built binaries instead.
+If neither the source build nor a compatible binary is available, report the
+installer error; `/cc-soul-update` uses this same installer.
 
 After setup, the daemon is managed by systemd (`systemctl --user status chittad`). It starts automatically and restarts on crash.

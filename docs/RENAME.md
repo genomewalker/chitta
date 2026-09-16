@@ -143,3 +143,22 @@ memory realm, and any scripts that shell out to the old marketplace/cache
 paths keep working through the compatibility shims above. Update them to the
 `CHITTA_*`/`chitta` names at your convenience, not because anything breaks
 if you don't.
+
+## Instruction and skill consolidation (2026-09-16)
+
+- `CLAUDE.md` remains canonical. `CLAUDE.lean.md`, `.claude-plugin/CLAUDE.md`,
+  and `.claude-plugin/CLAUDE-full.md` now contain short pointers and the same
+  constraint summary, replacing the stale cc-soul policy and full duplicate.
+- `skills/` is the maintained source. `scripts/sync-skills.sh` updates the
+  committed `codex-plugin/skills/` mirror, excluding `_conventions`;
+  `scripts/check-skills-sync.sh` detects drift. The existing release copy stays
+  intact. No loader symlink behavior is assumed.
+- Public `cc-soul-*` directory/frontmatter names are unchanged. Setup now describes
+  the installer's source-first behavior; shutdown follows the service manager;
+  deployment guidance defers to the canonical worktree/orchestrator constraints.
+- Correction to the earlier installer list: `hooks/smart-install.sh` is absent
+  from this checkout and its tracked files. `scripts/smart-install.sh` is the
+  shared installer referenced by setup skills and `chitta-mcp/stack.py`.
+- The [scripts index](../scripts/README.md) records every retained tracked script
+  and the per-file evidence for 13 deletions. Ignored SSL build contents and all
+  15 tracked `scripts/ssl_model/` files are preserved.

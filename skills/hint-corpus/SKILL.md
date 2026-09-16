@@ -33,7 +33,7 @@ bash $PLUGIN_DIR/scripts/finetune_hint_qwen.sh \
 bash $PLUGIN_DIR/chitta-mcp/enrichers/setup_hint_model.sh
 ```
 
-Where `$PLUGIN_DIR` = `/maps/projects/fernandezguerra/apps/repos/cc-soul` (or installed plugin path).
+Set `PLUGIN_DIR` to the chitta repository or installed plugin root (for Claude Code, `${CLAUDE_PLUGIN_ROOT}`).
 
 ---
 

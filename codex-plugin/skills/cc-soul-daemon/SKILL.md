@@ -4,7 +4,11 @@ description: Start, stop, or check the chittad daemon
 execution: inline
 ---
 
-# cc-soul-daemon
+# Manage the chitta daemon
+
+The `cc-soul-daemon` command name is retained for compatibility.
+Repository work follows the canonical `CLAUDE.md` (Codex: `codex-plugin/AGENTS.md`);
+implementation streams leave installation and service changes to the orchestrator.
 
 Manage the chittad background daemon.
 
