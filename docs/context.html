@@ -4,15 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Context Management — chitta</title>
-<meta name="description" content="Memory-aware context management in chitta. How chitta scores conversation turns against what it already knows — dropping safely-learned content, preserving novel signal.">
+<meta name="description" content="Context compaction using recency, query similarity, and coverage in stored memories.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta property="og:title" content="Context Management — chitta">
-<meta property="og:description" content="Memory-aware context compaction: drop what the soul already knows, keep what's novel.">
+<meta property="og:description" content="Context compaction using recency, query similarity, and memory coverage.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="favicon.svg">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Context Management — chitta">
-<meta name="twitter:description" content="Memory-aware context compaction: drop what the soul already knows, keep what's novel.">
+<meta name="twitter:description" content="Context compaction using recency, query similarity, and memory coverage.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -208,8 +208,8 @@
 <header class="page-header">
   <div class="container">
     <div class="page-header-badge reveal">Context Management</div>
-    <h1 class="reveal reveal-delay-1">The soul knows what it already knows.</h1>
-    <p class="page-header-sub reveal reveal-delay-2">Generic compaction drops tokens. Chitta drops turns whose knowledge is already in memory — keeping what&rsquo;s novel, releasing what&rsquo;s learned.</p>
+    <h1 class="reveal reveal-delay-1">Context compaction</h1>
+    <p class="page-header-sub reveal reveal-delay-2">chitta scores conversation turns by recency, query similarity, and coverage in stored memories, then selects turns within a token budget.</p>
     <p class="reveal reveal-delay-2" style="font-family: var(--font-mono); font-size: var(--text-xs); color: #565f89; margin-top: var(--space-3);">Status as of 2026-09-16. <a href="HOOKS.md">Hook lifecycle</a> · <a href="API.md">Tool contract</a>.</p>
   </div>
 </header>
@@ -220,15 +220,15 @@
 
     <!-- THE PROBLEM -->
     <section class="content-section reveal">
-      <h2 class="heading-2">The problem with context limits</h2>
-      <p>Long-running agent sessions accumulate conversation history faster than the model can process it. When the context window fills, something has to go. The question is: <em>what?</em></p>
-      <p>Most systems answer with heuristics: truncate the oldest turns, summarize in chunks, or use a scoring model with no knowledge of what's actually been learned. They treat all turns as equally valuable — which they're not.</p>
-      <p>A turn where you debugged a crash and found the root cause is <em>irreplaceable</em> if that knowledge isn't anywhere else. A turn where you asked about something chitta has distilled into a memory is <em>safely droppable</em> — the knowledge lives on in the graph.</p>
+      <h2 class="heading-2">Context limits</h2>
+      <p>Long-running agent sessions accumulate conversation history. Compaction selects which turns to retain when that history exceeds the context budget.</p>
+      <p>Selection can use age, summaries, or relevance scores. chitta adds an estimate of coverage in the memory store to its scoring formula.</p>
+      <p>A debugging turn may contain a root cause recorded nowhere else. A turn with a similar stored memory receives a lower novelty contribution; embedding similarity does not establish that every detail is preserved.</p>
     </section>
 
     <!-- COMPARISON -->
     <section class="content-section reveal">
-      <h2 class="heading-2">Memory-aware vs. stateless compaction</h2>
+      <h2 class="heading-2">Compaction inputs</h2>
       <div class="compare-grid">
         <div class="compare-card">
           <div class="compare-label">Generic (e.g. Morph Compact)</div>
@@ -236,19 +236,19 @@
           <ul class="compare-list">
             <li>Scores each turn purely by text relevance to next task</li>
             <li>No knowledge of what the agent has already learned</li>
-            <li>Cannot distinguish novel signal from redundant noise</li>
+            <li>Does not query a persistent memory store</li>
             <li>50–70% reduction, verbatim survivors</li>
-            <li>Works well as a general-purpose filter</li>
+            <li>Filters conversation text</li>
           </ul>
         </div>
         <div class="compare-card chitta">
           <div class="compare-label">Chitta — Memory-aware</div>
-          <div class="compare-title">Soul-informed scoring</div>
+          <div class="compare-title">Memory coverage scoring</div>
           <ul class="compare-list">
             <li>Checks each turn against what&rsquo;s already in memory</li>
-            <li>High memory coverage → safely droppable</li>
-            <li>Novel content → preserved regardless of age</li>
-            <li>Graceful degradation when embedder unavailable</li>
+            <li>High memory coverage → lower novelty score</li>
+            <li>Low memory coverage → higher novelty score</li>
+            <li>Recency and structural scoring when embedder unavailable</li>
             <li>Integrated with PreCompact hook automatically</li>
           </ul>
         </div>
@@ -257,7 +257,7 @@
 
     <!-- HOW IT WORKS -->
     <section class="content-section reveal">
-      <h2 class="heading-2">How it works</h2>
+      <h2 class="heading-2">Scoring pipeline</h2>
 
       <div class="heading-sub">The scoring formula</div>
       <p>Every non-system message gets a score. System messages are always kept. The score balances three signals:</p>
@@ -291,7 +291,7 @@
           <div class="pipeline-num">1</div>
           <div class="pipeline-body">
             <div class="pipeline-title">Estimate tokens</div>
-            <div class="pipeline-desc">Word count × 1.3 per message. Fast, no tokenizer dependency.</div>
+            <div class="pipeline-desc">Word count × 1.3 per message; no tokenizer dependency.</div>
           </div>
         </div>
         <div class="pipeline-step">

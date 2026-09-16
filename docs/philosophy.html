@@ -4,15 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Philosophy — chitta</title>
-<meta name="description" content="Vedantic foundations and evidence-backed design principles behind chitta. Each term names a behavior. Each principle has trade-offs.">
+<meta name="description" content="Vedantic concepts and design principles used in chitta. Each term names a behavior. Each principle has trade-offs.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta property="og:title" content="Philosophy — chitta">
-<meta property="og:description" content="Vedantic foundations and evidence-backed design principles behind chitta.">
+<meta property="og:description" content="Vedantic concepts and design principles used in chitta.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="favicon.svg">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Philosophy — chitta">
-<meta name="twitter:description" content="Vedantic foundations and evidence-backed design principles behind chitta.">
+<meta name="twitter:description" content="Vedantic concepts and design principles used in chitta.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -289,9 +289,9 @@
 <header class="page-header">
   <div class="container">
     <div class="page-header-badge reveal">Philosophy</div>
-    <h1 class="reveal reveal-delay-1">Grounded in Vedanta. Validated by engineering.</h1>
+    <h1 class="reveal reveal-delay-1">Vedantic concepts and implementation</h1>
     <p class="status-line">Status as of 2026-09-16. <a href="PHILOSOPHY.md">Conceptual reference</a> · <a href="ARCHITECTURE.md">Current implementation</a>.</p>
-    <p class="page-header-sub reveal reveal-delay-2">Sanskrit terms name system behaviors. Design principles carry evidence and trade-offs. Philosophy isn't metaphor here&thinsp;&mdash;&thinsp;it's architecture.</p>
+    <p class="page-header-sub reveal reveal-delay-2">Sanskrit terms name system behaviors. The sections below map those terms to storage, retrieval, and background processing.</p>
   </div>
 </header>
 
@@ -326,7 +326,7 @@
         </div>
         <div class="mapping-system">
           <span class="mapping-arrow">&rarr;</span>
-          Shared memory field across all sessions. The default realm where memories live unless scoped to a project. Global visibility means wisdom persists everywhere.
+          Shared memory field across all sessions. The default realm where memories live unless scoped to a project. Global visibility makes records available across realms.
         </div>
       </div>
 
@@ -386,7 +386,7 @@
         </div>
         <div class="mapping-system">
           <span class="mapping-arrow">&rarr;</span>
-          Decay curves and time-weighted forgetting. Memories are not permanent. Confidence decays over time. Unused memories fade. Noise dies for signal to survive.
+          Decay curves and time-weighted forgetting. Memories are not permanent. Confidence decays over time. Unused memories fade. Decay reduces confidence in unused records.
         </div>
       </div>
 
@@ -410,7 +410,7 @@
         </div>
         <div class="mapping-system">
           <span class="mapping-arrow">&rarr;</span>
-          Resonance-based recall on context alignment. Not search&thinsp;&mdash;&thinsp;recognition. The system anticipates, surfaces what you need before you know you need it.
+          Resonance-based recall ranks stored memories against the current context.
         </div>
       </div>
 
@@ -422,7 +422,7 @@
         </div>
         <div class="mapping-system">
           <span class="mapping-arrow">&rarr;</span>
-          Background compression and wisdom extraction. Episodes burn down into compact seeds. Transcript distillation sacrifices verbosity to preserve essence.
+          Background compression and wisdom extraction. Transcript distillation extracts condensed records from episodes.
         </div>
       </div>
 
@@ -442,8 +442,8 @@
     <div class="principles-grid">
 
       <div class="principle-card reveal">
-        <h3 class="principle-title">Chitta as substrate, not container</h3>
-        <p class="principle-desc">The memory system doesn't just hold data&thinsp;&mdash;&thinsp;it shapes retrieval. Like a musical instrument colors every note, chitta's architecture affects what surfaces and when.</p>
+        <h3 class="principle-title">Memory storage and retrieval</h3>
+        <p class="principle-desc">The store holds records and the indexes used to retrieve them. Index structure and scoring determine which records are returned.</p>
         <div class="principle-meta">
           <span class="principle-tag principle-tag--evidence">Connectionism research</span>
           <span class="principle-tag principle-tag--tradeoff">Harder to debug</span>
@@ -451,7 +451,7 @@
       </div>
 
       <div class="principle-card reveal">
-        <h3 class="principle-title">Embeddings live separately from content</h3>
+        <h3 class="principle-title">Embedding and payload storage</h3>
         <p class="principle-desc">Dense embeddings and payloads use separate structures and sidecars within one Rust store. Search indexes are derived state; snapshot families and the WAL preserve authoritative memory.</p>
         <div class="principle-meta">
           <span class="principle-tag principle-tag--evidence">Database sharding</span>
@@ -462,7 +462,7 @@
       </div>
 
       <div class="principle-card reveal">
-        <h3 class="principle-title">Triplets capture what embeddings miss</h3>
+        <h3 class="principle-title">Directional relationships</h3>
         <p class="principle-desc">Semantic similarity finds related concepts. But "X caused Y" or "user prefers A over B" needs explicit relationships. Triplets encode directional knowledge.</p>
         <div class="principle-meta">
           <span class="principle-tag principle-tag--evidence">Knowledge graphs</span>
@@ -471,7 +471,7 @@
       </div>
 
       <div class="principle-card reveal">
-        <h3 class="principle-title">Themes emerge from clustering</h3>
+        <h3 class="principle-title">Theme clustering</h3>
         <p class="principle-desc">No predefined categories. Themes emerge from embedding clusters using HDBSCAN. The system discovers what concepts naturally group together based on your usage.</p>
         <div class="principle-meta">
           <span class="principle-tag principle-tag--evidence">xMemory paper</span>
@@ -480,7 +480,7 @@
       </div>
 
       <div class="principle-card reveal">
-        <h3 class="principle-title">Confidence decays but never reaches zero</h3>
+        <h3 class="principle-title">Confidence decay floor</h3>
         <p class="principle-desc">Memory confidence decreases through exponential decay, but asymptotically approaches a floor (0.1). Old memories fade but never fully disappear.</p>
         <div class="principle-meta">
           <span class="principle-tag principle-tag--evidence">Ebbinghaus forgetting curve</span>
@@ -491,8 +491,8 @@ Decay every 60s during idle. Floor = 0.1.</div>
       </div>
 
       <div class="principle-card reveal">
-        <h3 class="principle-title">SSL compresses without losing retrievability</h3>
-        <p class="principle-desc">Soul Shorthand Language achieves 40-60% token reduction while preserving semantic content. Embeddings still work because meaning is preserved.</p>
+        <h3 class="principle-title">SSL compression</h3>
+        <p class="principle-desc">Soul Shorthand Language condenses records before embedding. The documented token reduction is 40-60%; retrieval depends on the encoded content and embedding model.</p>
         <div class="principle-meta">
           <span class="principle-tag principle-tag--evidence">Compression benchmarks</span>
           <span class="principle-tag principle-tag--tradeoff">Learning curve</span>
@@ -518,8 +518,8 @@ Decay every 60s during idle. Floor = 0.1.</div>
     <div class="principles-grid">
 
       <div class="principle-card reveal">
-        <h3 class="principle-title">Hybrid search beats pure approaches</h3>
-        <p class="principle-desc">Neither semantic search nor keyword search alone is sufficient. We combine vector similarity, BM25 keyword matching, and graph traversal for comprehensive retrieval.</p>
+        <h3 class="principle-title">Hybrid retrieval</h3>
+        <p class="principle-desc">Retrieval combines vector similarity, BM25 keyword matching, and graph traversal.</p>
         <div class="principle-meta">
           <span class="principle-tag principle-tag--evidence">HyDE paper, RAG research</span>
           <span class="principle-tag principle-tag--tradeoff">Complexity, latency</span>
@@ -527,7 +527,7 @@ Decay every 60s during idle. Floor = 0.1.</div>
       </div>
 
       <div class="principle-card reveal">
-        <h3 class="principle-title">Context window is precious</h3>
+        <h3 class="principle-title">Context budget</h3>
         <p class="principle-desc">Claude's ~200K token context is finite. Every surfaced memory consumes space. Retrieval maximizes signal-to-noise, not total recall.</p>
         <div class="principle-meta">
           <span class="principle-tag principle-tag--evidence">LLM attention research</span>
@@ -554,8 +554,8 @@ Correction warnings: ~100 tokens</div>
     <div class="principles-grid">
 
       <div class="principle-card reveal">
-        <h3 class="principle-title">Corrections have highest learning value</h3>
-        <p class="principle-desc">When you correct Claude, that's signal gold. Corrections captured automatically, stored with boosted confidence, surfaced proactively to prevent repeat mistakes.</p>
+        <h3 class="principle-title">Correction records</h3>
+        <p class="principle-desc">Corrections are captured automatically, stored with boosted confidence, and retrieved as warnings about recorded mistakes.</p>
         <div class="principle-meta">
           <span class="principle-tag principle-tag--evidence">Error-driven learning</span>
           <span class="principle-tag principle-tag--tradeoff">False positive corrections</span>
@@ -563,8 +563,8 @@ Correction warnings: ~100 tokens</div>
       </div>
 
       <div class="principle-card reveal">
-        <h3 class="principle-title">Yantra transforms, not just encodes</h3>
-        <p class="principle-desc">VakYantra doesn't passively convert text to vectors. It actively shapes what becomes memorable by how it embeds. Different models produce different memory behaviors.</p>
+        <h3 class="principle-title">Embedding model</h3>
+        <p class="principle-desc">VakYantra converts text into embedding vectors. The model determines the vector space used in retrieval.</p>
         <div class="principle-meta">
           <span class="principle-tag principle-tag--evidence">Embedding model research</span>
           <span class="principle-tag principle-tag--tradeoff">Model-locked</span>
@@ -587,8 +587,8 @@ Correction warnings: ~100 tokens</div>
     <div class="principles-grid">
 
       <div class="principle-card reveal">
-        <h3 class="principle-title">Hooks capture what humans forget</h3>
-        <p class="principle-desc">Session boundaries, prompt submissions, tool calls&thinsp;&mdash;&thinsp;these carry learning value but users won't manually log them. Hooks automate capture at strategic points.</p>
+        <h3 class="principle-title">Hook capture</h3>
+        <p class="principle-desc">Hooks capture session boundaries, prompt submissions, and tool calls.</p>
         <div class="principle-meta">
           <span class="principle-tag principle-tag--evidence">Lifelogging research</span>
           <span class="principle-tag principle-tag--tradeoff">Privacy surface</span>
@@ -596,7 +596,7 @@ Correction warnings: ~100 tokens</div>
       </div>
 
       <div class="principle-card reveal">
-        <h3 class="principle-title">Subconscious processes what foreground cannot</h3>
+        <h3 class="principle-title">Background processing</h3>
         <p class="principle-desc">The daemon runs background tasks during idle: confidence decay, theme clustering, memory consolidation. These would interrupt conversation if done synchronously.</p>
         <div class="principle-meta">
           <span class="principle-tag principle-tag--evidence">OS scheduling, spaced repetition</span>
@@ -620,14 +620,14 @@ Correction warnings: ~100 tokens</div>
     <div class="principles-grid">
 
       <div class="principle-card reveal">
-        <h3 class="principle-title">Daemon architecture enables instant recall</h3>
-        <p class="principle-desc">A persistent daemon (chittad) keeps the chitta-field memory substrate and ONNX model warm in memory. Without this, every tool call pays ~750ms cold-start costs.</p>
+        <h3 class="principle-title">Resident daemon</h3>
+        <p class="principle-desc">A persistent daemon (chittad) keeps the chitta-field memory substrate and ONNX model warm in memory. The documented model cold-start cost is approximately 750 ms.</p>
         <div class="principle-meta">
           <span class="principle-tag principle-tag--evidence">Connection pooling, model serving</span>
           <span class="principle-tag principle-tag--tradeoff">Memory footprint (~1GB)</span>
         </div>
         <div class="principle-mechanism">Unix socket IPC. Thread pool (8-16 workers).
-First query as fast as hundredth.</div>
+Query latency depends on cache and index state.</div>
       </div>
 
     </div>
@@ -638,7 +638,7 @@ First query as fast as hundredth.</div>
 <section class="principle">
   <div class="container">
     <p class="principle-text reveal">
-      These aren't decorative labels or arbitrary choices. Each concept was chosen because its <em>operational semantics</em> match a system behavior. Each principle emerged from research and implementation. The philosophy constrains the engineering&thinsp;&mdash;&thinsp;and the engineering validates the philosophy.
+      These concepts supply names for memory storage, decay, reinforcement, and retrieval. The implementation and measurements describe their behavior.
     </p>
   </div>
 </section>
@@ -661,7 +661,7 @@ First query as fast as hundredth.</div>
 <footer class="footer">
   <div class="container">
     <p class="footer-text">
-      Built with conviction. Grounded in philosophy.
+      Persistent memory for Claude Code and Codex.
       <span class="footer-sep"></span>
       <a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a>
     </p>

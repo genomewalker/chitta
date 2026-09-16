@@ -1,6 +1,6 @@
 ---
 name: reawaken
-description: Restore context and momentum via Pratyabhijñā (recognition)
+description: Restore task context from a checkpoint using Pratyabhijñā (recognition)
 execution: direct
 ---
 

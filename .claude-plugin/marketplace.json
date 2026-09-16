@@ -1,6 +1,6 @@
 {
   "name": "genomewalker-chitta",
-  "description": "Persistent memory and code intelligence for Claude Code, Codex, and OpenCode. Learns your preferences, remembers your codebase, anticipates your needs, and gets smarter over time. 150+ tools. Local-first. Zero configuration.",
+  "description": "Persistent memory and code indexing for Claude Code and Codex through a local daemon, 344 documented tool entries, and session hooks. OpenCode is an optional review backend through chitta-bridge.",
   "owner": {
     "name": "Antonio Fernandez-Guerra"
   },
@@ -8,7 +8,7 @@
     {
       "name": "chitta",
       "source": "./",
-      "description": "Persistent memory and code intelligence for Claude Code, Codex, and OpenCode. Learns your preferences, remembers your codebase, anticipates your needs, and gets smarter over time. 150+ tools. Local-first. Zero configuration.",
+      "description": "Persistent memory and code indexing for Claude Code and Codex through a local daemon, 344 documented tool entries, and session hooks. OpenCode is an optional review backend through chitta-bridge.",
       "skills": [
         "./skills/antahkarana",
         "./skills/cc-soul-daemon",

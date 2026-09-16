@@ -187,7 +187,7 @@ function act(decision, pane_name, task_id, session) {
         task_id: task_id,
         outcome: "Pipeline completed successfully"
       });
-      notify("Pipeline complete!");
+      notify("Pipeline complete.");
       return "DONE";
 
     case "restart":
