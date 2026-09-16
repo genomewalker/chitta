@@ -1,0 +1,727 @@
+{
+  "schema_version": 1,
+  "source_commit": "1c82589b93bbe350319678db66a9d720385cdc4b",
+  "authored_at": "2026-09-16",
+  "authorship": "Manually authored from pinned repository sources before inspecting recall. No recall-derived answers or IDs.",
+  "holdout_policy": "Procedural holdout: authored independently of retrieval; do not tune against holdout outcomes.",
+  "fixture_status": "Reconstructed coverage, NOT the original F2 prompts: the pinned decision records only aggregate outcomes and themes. Original prompts requested from orchestrator.",
+  "questions": [
+    {
+      "id": "ct-01",
+      "question": "Which environment variable changes the prompt-cache TTL in minutes?",
+      "expected_answer": "CHITTA_CACHE_TTL_MIN",
+      "citation": "docs/HOOKS.md:629",
+      "matcher": {
+        "type": "exact",
+        "value": "CHITTA_CACHE_TTL_MIN"
+      },
+      "wrong_answer_traps": [],
+      "split": "visible"
+    },
+    {
+      "id": "ct-02",
+      "question": "What is the documented default prompt-cache TTL in minutes?",
+      "expected_answer": "60",
+      "citation": "docs/HOOKS.md:629",
+      "matcher": {
+        "type": "regex",
+        "value": "(?i)(?:CACHE_TTL_MIN.{0,80}\\b60\\b|(?:cache|TTL).{0,80}\\b60\\s*(?:min|m\\b))"
+      },
+      "wrong_answer_traps": [
+        {
+          "type": "regex",
+          "value": "(?i)(?:cache|TTL).{0,50}(?:fixed|default).{0,20}\\b5\\s*min"
+        }
+      ],
+      "split": "visible"
+    },
+    {
+      "id": "ct-03",
+      "question": "Which environment variable bypasses the MCP transport kill guard?",
+      "expected_answer": "CHITTA_ALLOW_MCP_KILL",
+      "citation": "docs/HOOKS.md:619",
+      "matcher": {
+        "type": "exact",
+        "value": "CHITTA_ALLOW_MCP_KILL"
+      },
+      "wrong_answer_traps": [],
+      "split": "visible"
+    },
+    {
+      "id": "ct-04",
+      "question": "Which environment variable disables forced Haiku routing for search agents?",
+      "expected_answer": "CHITTA_AGENT_NO_FORCE",
+      "citation": "docs/HOOKS.md:622",
+      "matcher": {
+        "type": "exact",
+        "value": "CHITTA_AGENT_NO_FORCE"
+      },
+      "wrong_answer_traps": [],
+      "split": "visible"
+    },
+    {
+      "id": "ct-05",
+      "question": "At what subagent count does the default warning fire?",
+      "expected_answer": "20",
+      "citation": "docs/HOOKS.md:623",
+      "matcher": {
+        "type": "regex",
+        "value": "(?i)(?:AGENT_WARN|subagent.{0,30}warn).{0,50}\\b20\\b"
+      },
+      "wrong_answer_traps": [],
+      "split": "visible"
+    },
+    {
+      "id": "ct-06",
+      "question": "At what ScheduleWakeup iteration count does the default loop block fire?",
+      "expected_answer": "20",
+      "citation": "docs/HOOKS.md:626",
+      "matcher": {
+        "type": "regex",
+        "value": "(?i)(?:LOOP_LIMIT|loop.{0,30}(?:limit|block)).{0,50}\\b20\\b"
+      },
+      "wrong_answer_traps": [],
+      "split": "visible"
+    },
+    {
+      "id": "ct-07",
+      "question": "Which environment variable sets the daemon response wait in seconds?",
+      "expected_answer": "CHITTA_MAX_WAIT",
+      "citation": "docs/HOOKS.md:628",
+      "matcher": {
+        "type": "exact",
+        "value": "CHITTA_MAX_WAIT"
+      },
+      "wrong_answer_traps": [],
+      "split": "visible"
+    },
+    {
+      "id": "ct-08",
+      "question": "What is the documented CHITTA_MAX_WAIT default in seconds?",
+      "expected_answer": "5",
+      "citation": "docs/HOOKS.md:628",
+      "matcher": {
+        "type": "regex",
+        "value": "(?i)(?:CHITTA_MAX_WAIT|daemon.{0,20}wait).{0,50}\\b5\\b"
+      },
+      "wrong_answer_traps": [],
+      "split": "visible"
+    },
+    {
+      "id": "ct-09",
+      "question": "Which environment variable enables Bash recall for subagent calls?",
+      "expected_answer": "CHITTA_SUBAGENT_BASH_RECALL",
+      "citation": "docs/HOOKS.md:627",
+      "matcher": {
+        "type": "exact",
+        "value": "CHITTA_SUBAGENT_BASH_RECALL"
+      },
+      "wrong_answer_traps": [],
+      "split": "visible"
+    },
+    {
+      "id": "ct-10",
+      "question": "Which environment variable samples MCP asyncio scheduling delay?",
+      "expected_answer": "CHITTA_MCP_LAG_INTERVAL_MS",
+      "citation": "docs/HOOKS.md:641",
+      "matcher": {
+        "type": "exact",
+        "value": "CHITTA_MCP_LAG_INTERVAL_MS"
+      },
+      "wrong_answer_traps": [],
+      "split": "visible"
+    },
+    {
+      "id": "ct-11",
+      "question": "Which hook saves a ledger checkpoint before compaction?",
+      "expected_answer": "pre-compact-hook.sh",
+      "citation": "docs/HOOKS.md:95",
+      "matcher": {
+        "type": "exact",
+        "value": "pre-compact-hook.sh"
+      },
+      "wrong_answer_traps": [],
+      "split": "visible"
+    },
+    {
+      "id": "ct-12",
+      "question": "Which hook extracts SOLUTION, GOTCHA, PREFERENCE and DECISION blocks at Stop?",
+      "expected_answer": "stop-hook.sh",
+      "citation": "docs/HOOKS.md:94",
+      "matcher": {
+        "type": "exact",
+        "value": "stop-hook.sh"
+      },
+      "wrong_answer_traps": [],
+      "split": "visible"
+    },
+    {
+      "id": "ct-13",
+      "question": "Which hook re-indexes a changed file asynchronously?",
+      "expected_answer": "file-changed-hook.sh",
+      "citation": "docs/HOOKS.md:103",
+      "matcher": {
+        "type": "exact",
+        "value": "file-changed-hook.sh"
+      },
+      "wrong_answer_traps": [],
+      "split": "visible"
+    },
+    {
+      "id": "ct-14",
+      "question": "Which hook appends a bash_outcome event after Bash commands?",
+      "expected_answer": "post-bash-hook.sh",
+      "citation": "docs/HOOKS.md:97",
+      "matcher": {
+        "type": "exact",
+        "value": "post-bash-hook.sh"
+      },
+      "wrong_answer_traps": [],
+      "split": "visible"
+    },
+    {
+      "id": "ct-15",
+      "question": "Which hook injects the recap capsule when a session resumes?",
+      "expected_answer": "resume-inject-hook.sh",
+      "citation": "docs/HOOKS.md:100",
+      "matcher": {
+        "type": "exact",
+        "value": "resume-inject-hook.sh"
+      },
+      "wrong_answer_traps": [],
+      "split": "visible"
+    },
+    {
+      "id": "ct-16",
+      "question": "Which hook registers newly written scripts with path, hash and purpose?",
+      "expected_answer": "artifact-trace.sh",
+      "citation": "docs/HOOKS.md:106",
+      "matcher": {
+        "type": "exact",
+        "value": "artifact-trace.sh"
+      },
+      "wrong_answer_traps": [],
+      "split": "visible"
+    },
+    {
+      "id": "ct-17",
+      "question": "What was the final RPC-on prompt median in the 2026-09-15 worktree measurements?",
+      "expected_answer": "608 ms",
+      "citation": "docs/HOOKS.md:142",
+      "matcher": {
+        "type": "regex",
+        "value": "(?i)(?:prompt|RPC|median).{0,140}\\b608\\b"
+      },
+      "wrong_answer_traps": [],
+      "split": "visible"
+    },
+    {
+      "id": "ct-18",
+      "question": "What was the final SessionStart median in the 2026-09-15 worktree measurements?",
+      "expected_answer": "599 ms",
+      "citation": "docs/HOOKS.md:156",
+      "matcher": {
+        "type": "regex",
+        "value": "(?i)(?:SessionStart|startup).{0,140}\\b599\\b"
+      },
+      "wrong_answer_traps": [],
+      "split": "visible"
+    },
+    {
+      "id": "ct-19",
+      "question": "What was cached live-store startup time documented on 2026-09-16?",
+      "expected_answer": "9.5 s",
+      "citation": "CLAUDE.md:73",
+      "matcher": {
+        "type": "regex",
+        "value": "(?i)(?:startup|start|cached).{0,100}\\b9\\.5\\s*s"
+      },
+      "wrong_answer_traps": [],
+      "split": "visible"
+    },
+    {
+      "id": "ct-20",
+      "question": "Where is the rule to use install rather than cp over a running binary?",
+      "expected_answer": "CLAUDE.md:55",
+      "citation": "CLAUDE.md:55",
+      "matcher": {
+        "type": "regex",
+        "value": "CLAUDE\\.md(?::55|.{0,20}Build & deploy)"
+      },
+      "wrong_answer_traps": [],
+      "split": "visible"
+    },
+    {
+      "id": "ct-21",
+      "question": "What error does cp over a running binary cause?",
+      "expected_answer": "ETXTBSY",
+      "citation": "CLAUDE.md:55",
+      "matcher": {
+        "type": "exact",
+        "value": "ETXTBSY"
+      },
+      "wrong_answer_traps": [],
+      "split": "visible"
+    },
+    {
+      "id": "ct-22",
+      "question": "Which tool searches triplets by subject or object?",
+      "expected_answer": "query_graph",
+      "citation": "contracts/cli-tool-help/query_graph.txt:1",
+      "matcher": {
+        "type": "exact",
+        "value": "query_graph"
+      },
+      "wrong_answer_traps": [],
+      "split": "visible"
+    },
+    {
+      "id": "ct-23",
+      "question": "Which recall parameter selects the retrieval lane?",
+      "expected_answer": "--strategy",
+      "citation": "contracts/cli-tool-help/recall.txt:24",
+      "matcher": {
+        "type": "exact",
+        "value": "--strategy"
+      },
+      "wrong_answer_traps": [],
+      "split": "visible"
+    },
+    {
+      "id": "ct-24",
+      "question": "Which CLI flag selects a Unix socket path?",
+      "expected_answer": "--socket-path",
+      "citation": "contracts/cli-help.txt:42",
+      "matcher": {
+        "type": "exact",
+        "value": "--socket-path"
+      },
+      "wrong_answer_traps": [],
+      "split": "visible"
+    },
+    {
+      "id": "ct-25",
+      "question": "What was the 99th percentile RPC-on prompt latency in the 2026-09-15 final worktree table?",
+      "expected_answer": "not recorded",
+      "citation": "docs/HOOKS.md# Native hook paths: final worktree measurements (2026-09-15)",
+      "matcher": {
+        "type": "exact",
+        "value": "not recorded"
+      },
+      "wrong_answer_traps": [
+        {
+          "type": "regex",
+          "value": "(?i)(?:prompt|RPC).{0,100}p99\\s*[:=]?\\s*\\d"
+        }
+      ],
+      "split": "visible"
+    },
+    {
+      "id": "ct-26",
+      "question": "What was the measured individual prompt-hook failure count in the 2026-09-15 final worktree benchmark?",
+      "expected_answer": "not recorded",
+      "citation": "docs/HOOKS.md:145",
+      "matcher": {
+        "type": "exact",
+        "value": "not recorded"
+      },
+      "wrong_answer_traps": [
+        {
+          "type": "regex",
+          "value": "(?i)(?:prompt|hook).{0,80}\\b(?:0|zero)\\s+failures"
+        }
+      ],
+      "split": "visible"
+    },
+    {
+      "id": "ct-27",
+      "question": "What was the final SessionStart CPU time in the 2026-09-15 worktree benchmark?",
+      "expected_answer": "not recorded",
+      "citation": "docs/HOOKS.md:149",
+      "matcher": {
+        "type": "exact",
+        "value": "not recorded"
+      },
+      "wrong_answer_traps": [
+        {
+          "type": "regex",
+          "value": "(?i)SessionStart.{0,80}CPU.{0,30}\\d+\\s*ms"
+        }
+      ],
+      "split": "visible"
+    },
+    {
+      "id": "ct-28",
+      "question": "What causal task-success gain did automatic distillation demonstrate by the 2026-09-16 robustness decision?",
+      "expected_answer": "not recorded",
+      "citation": "docs/DECISION-2026-09-16-robustness-plan.md# Findings this plan answers",
+      "matcher": {
+        "type": "exact",
+        "value": "not recorded"
+      },
+      "wrong_answer_traps": [
+        {
+          "type": "regex",
+          "value": "(?i)(?:automatic|distill).{0,80}(?:41/45|27/27|eight|8\\s+(?:extra|additional|net))"
+        }
+      ],
+      "split": "visible"
+    },
+    {
+      "id": "ct-29",
+      "question": "What is the completion date of the Phase 1 live-week soak in the 2026-09-16 robustness plan?",
+      "expected_answer": "not recorded",
+      "citation": "docs/DECISION-2026-09-16-robustness-plan.md# Phase 1 \u2014 One locking authority (highest risk)",
+      "matcher": {
+        "type": "exact",
+        "value": "not recorded"
+      },
+      "wrong_answer_traps": [
+        {
+          "type": "regex",
+          "value": "(?i)(?:Phase 1|live.week|soak).{0,100}(?:completed|finished)\\s+(?:on\\s+)?2026-\\d\\d-\\d\\d"
+        }
+      ],
+      "split": "visible"
+    },
+    {
+      "id": "ct-30",
+      "question": "Which five verbatim prompts formed the historical five-question F2 probe?",
+      "expected_answer": "not recorded",
+      "citation": "docs/DECISION-2026-09-16-robustness-plan.md:14",
+      "matcher": {
+        "type": "exact",
+        "value": "not recorded"
+      },
+      "wrong_answer_traps": [
+        {
+          "type": "regex",
+          "value": "(?i)(?:original|verbatim|historical).{0,35}(?:five|5).{0,30}(?:prompts|questions)\\s*(?:were|:)"
+        }
+      ],
+      "split": "visible"
+    },
+    {
+      "id": "ct-31",
+      "question": "Which environment variable overrides the daemon Unix socket in every hook?",
+      "expected_answer": "CHITTA_SOCKET_PATH",
+      "citation": "docs/HOOKS.md:638",
+      "matcher": {
+        "type": "exact",
+        "value": "CHITTA_SOCKET_PATH"
+      },
+      "wrong_answer_traps": [],
+      "split": "holdout"
+    },
+    {
+      "id": "ct-32",
+      "question": "What is the documented default CHITTA_MCP_LAG_WARN_MS threshold?",
+      "expected_answer": "200 ms",
+      "citation": "docs/HOOKS.md:642",
+      "matcher": {
+        "type": "regex",
+        "value": "CHITTA_MCP_LAG_WARN_MS.{0,60}\\b200\\b"
+      },
+      "wrong_answer_traps": [],
+      "split": "holdout"
+    },
+    {
+      "id": "ct-33",
+      "question": "Which environment variable disables consumption of the hook write queue?",
+      "expected_answer": "CHITTA_NO_QUEUE",
+      "citation": "docs/HOOKS.md:639",
+      "matcher": {
+        "type": "exact",
+        "value": "CHITTA_NO_QUEUE"
+      },
+      "wrong_answer_traps": [],
+      "split": "holdout"
+    },
+    {
+      "id": "ct-34",
+      "question": "Which hook implements recall fan-out and admission policy itself?",
+      "expected_answer": "prompt-core.sh",
+      "citation": "docs/HOOKS.md:93",
+      "matcher": {
+        "type": "exact",
+        "value": "prompt-core.sh"
+      },
+      "wrong_answer_traps": [],
+      "split": "holdout"
+    },
+    {
+      "id": "ct-35",
+      "question": "Which hook restores context after a compaction?",
+      "expected_answer": "compact-restore-hook.sh",
+      "citation": "docs/HOOKS.md:101",
+      "matcher": {
+        "type": "exact",
+        "value": "compact-restore-hook.sh"
+      },
+      "wrong_answer_traps": [],
+      "split": "holdout"
+    },
+    {
+      "id": "ct-36",
+      "question": "Which command shows why a memory exists and its source and evidence?",
+      "expected_answer": "memory_provenance",
+      "citation": "contracts/cli-tool-help/memory_provenance.txt:1",
+      "matcher": {
+        "type": "exact",
+        "value": "memory_provenance"
+      },
+      "wrong_answer_traps": [],
+      "split": "holdout"
+    },
+    {
+      "id": "ct-37",
+      "question": "Which parameter sets recall candidate-pool depth before pre-filtering?",
+      "expected_answer": "--pool",
+      "citation": "contracts/cli-tool-help/recall.txt:15",
+      "matcher": {
+        "type": "exact",
+        "value": "--pool"
+      },
+      "wrong_answer_traps": [],
+      "split": "holdout"
+    },
+    {
+      "id": "ct-38",
+      "question": "What does the recall contract name as the default retrieval strategy?",
+      "expected_answer": "fused",
+      "citation": "contracts/cli-tool-help/recall.txt:25",
+      "matcher": {
+        "type": "exact",
+        "value": "fused"
+      },
+      "wrong_answer_traps": [],
+      "split": "holdout"
+    },
+    {
+      "id": "ct-39",
+      "question": "Which exception must never be killed with pkill according to CLAUDE.md?",
+      "expected_answer": "--http",
+      "citation": "CLAUDE.md:58",
+      "matcher": {
+        "type": "exact",
+        "value": "--http"
+      },
+      "wrong_answer_traps": [],
+      "split": "holdout"
+    },
+    {
+      "id": "ct-40",
+      "question": "What is the snapshot rollback floor in CLAUDE.md?",
+      "expected_answer": "v2.1.0",
+      "citation": "CLAUDE.md:100",
+      "matcher": {
+        "type": "exact",
+        "value": "v2.1.0"
+      },
+      "wrong_answer_traps": [],
+      "split": "holdout"
+    },
+    {
+      "id": "ct-41",
+      "question": "On what date was cc-soul renamed to chitta?",
+      "expected_answer": "2026-09-02",
+      "citation": "CLAUDE.md:12",
+      "matcher": {
+        "type": "exact",
+        "value": "2026-09-02"
+      },
+      "wrong_answer_traps": [],
+      "split": "holdout"
+    },
+    {
+      "id": "ct-42",
+      "question": "On what date was the prospective automatic-learning protocol agreed?",
+      "expected_answer": "2026-09-15",
+      "citation": "docs/DECISION-2026-09-15-learning-experiment.md:1",
+      "matcher": {
+        "type": "exact",
+        "value": "2026-09-15"
+      },
+      "wrong_answer_traps": [],
+      "split": "holdout"
+    },
+    {
+      "id": "ct-43",
+      "question": "How many tasks are required by the agreed automatic-learning experiment?",
+      "expected_answer": "20",
+      "citation": "docs/DECISION-2026-09-15-learning-experiment.md:10",
+      "matcher": {
+        "type": "regex",
+        "value": "(?i)\\b20\\s+(?:self.contained\\s+)?(?:tasks|prompts)"
+      },
+      "wrong_answer_traps": [],
+      "split": "holdout"
+    },
+    {
+      "id": "ct-44",
+      "question": "How many paired task trials does the agreed learning protocol require from the start?",
+      "expected_answer": "three",
+      "citation": "docs/DECISION-2026-09-15-learning-experiment.md:33",
+      "matcher": {
+        "type": "regex",
+        "value": "(?i)(?:three|3)\\s+trials"
+      },
+      "wrong_answer_traps": [],
+      "split": "holdout"
+    },
+    {
+      "id": "ct-45",
+      "question": "What net task-success delta retains automatic admission in the agreed learning protocol?",
+      "expected_answer": "3",
+      "citation": "docs/DECISION-2026-09-15-learning-experiment.md:47",
+      "matcher": {
+        "type": "regex",
+        "value": "(?i)(?:\u0394|delta|net.{0,20}success).{0,60}(?:\u2265|>=|at least)\\s*3\\b"
+      },
+      "wrong_answer_traps": [],
+      "split": "holdout"
+    },
+    {
+      "id": "ct-46",
+      "question": "How many proportional analogy successes are recorded in robustness-plan F4 after narrowing the contract?",
+      "expected_answer": "14/14",
+      "citation": "docs/DECISION-2026-09-16-robustness-plan.md:16",
+      "matcher": {
+        "type": "exact",
+        "value": "14/14"
+      },
+      "wrong_answer_traps": [],
+      "split": "holdout"
+    },
+    {
+      "id": "ct-47",
+      "question": "What was the frozen learning experiment final A-minus-B verdict as of the pinned EVALS status?",
+      "expected_answer": "not recorded",
+      "citation": "docs/EVALS.md:5",
+      "matcher": {
+        "type": "exact",
+        "value": "not recorded"
+      },
+      "wrong_answer_traps": [
+        {
+          "type": "regex",
+          "value": "(?i)(?:learning experiment|automatic.learning).{0,100}(?:verdict|delta|\u0394)\\s*[:=]\\s*[+-]?\\d"
+        }
+      ],
+      "split": "holdout"
+    },
+    {
+      "id": "ct-48",
+      "question": "What was measured restart time after completing Phase 6 in the 2026-09-16 robustness plan?",
+      "expected_answer": "not recorded",
+      "citation": "docs/DECISION-2026-09-16-robustness-plan.md# Phase 6 \u2014 Placement and bounded workers",
+      "matcher": {
+        "type": "exact",
+        "value": "not recorded"
+      },
+      "wrong_answer_traps": [
+        {
+          "type": "regex",
+          "value": "(?i)(?:restart|startup).{0,80}(?:achieved|measured|now)\\s*(?:at\\s*)?5\\s*s"
+        }
+      ],
+      "split": "holdout"
+    },
+    {
+      "id": "ct-49",
+      "question": "What was the 95 percent confidence interval for the automatic-learning causal success gain as of the pinned EVALS status?",
+      "expected_answer": "not recorded",
+      "citation": "docs/EVALS.md:5",
+      "matcher": {
+        "type": "exact",
+        "value": "not recorded"
+      },
+      "wrong_answer_traps": [
+        {
+          "type": "regex",
+          "value": "(?i)(?:automatic|distill).{0,100}(?:95%|95 percent).{0,30}(?:CI|confidence).{0,30}\\d"
+        }
+      ],
+      "split": "holdout"
+    },
+    {
+      "id": "ct-50",
+      "question": "What is the measured acceptance-ready hook_total_ms noise threshold in the 2026-09-13 live hook smoke?",
+      "expected_answer": "not recorded",
+      "citation": "docs/HOOKS.md# Concurrent prompt work and hook noise metric (fix/hooks, 2026-09-13)",
+      "matcher": {
+        "type": "exact",
+        "value": "not recorded"
+      },
+      "wrong_answer_traps": [
+        {
+          "type": "regex",
+          "value": "(?i)(?:hook_total_ms|hook.{0,30}(?:band|threshold)).{0,100}1942\\.446"
+        }
+      ],
+      "split": "holdout"
+    }
+  ],
+  "regression_fixtures": [
+    {
+      "id": "f2-reconstructed-cache-ttl-variable",
+      "question": "Which environment variable changes the prompt-cache TTL in minutes?",
+      "expected_answer": "CHITTA_CACHE_TTL_MIN",
+      "citation": "docs/HOOKS.md:629",
+      "matcher": {
+        "type": "exact",
+        "value": "CHITTA_CACHE_TTL_MIN"
+      },
+      "wrong_answer_traps": [],
+      "split": "regression"
+    },
+    {
+      "id": "f2-reconstructed-prompt-median",
+      "question": "What was the final RPC-on prompt median in the 2026-09-15 worktree measurements?",
+      "expected_answer": "608 ms",
+      "citation": "docs/HOOKS.md:142",
+      "matcher": {
+        "type": "regex",
+        "value": "(?i)(?:prompt|RPC|median).{0,140}\\b608\\b"
+      },
+      "wrong_answer_traps": [],
+      "split": "regression"
+    },
+    {
+      "id": "f2-reconstructed-session-start-median",
+      "question": "What was the final SessionStart median in the 2026-09-15 worktree measurements?",
+      "expected_answer": "599 ms",
+      "citation": "docs/HOOKS.md:156",
+      "matcher": {
+        "type": "regex",
+        "value": "(?i)(?:SessionStart|startup).{0,140}\\b599\\b"
+      },
+      "wrong_answer_traps": [],
+      "split": "regression"
+    },
+    {
+      "id": "f2-reconstructed-cached-startup",
+      "question": "What was cached live-store startup time documented on 2026-09-16?",
+      "expected_answer": "9.5 s",
+      "citation": "CLAUDE.md:73",
+      "matcher": {
+        "type": "regex",
+        "value": "(?i)(?:startup|start|cached).{0,100}\\b9\\.5\\s*s"
+      },
+      "wrong_answer_traps": [],
+      "split": "regression"
+    },
+    {
+      "id": "f2-reconstructed-running-binary-install",
+      "question": "Which command must replace cp when replacing a running chitta binary?",
+      "expected_answer": "install",
+      "citation": "CLAUDE.md:55",
+      "matcher": {
+        "type": "regex",
+        "value": "(?i)(?:install.{0,80}(?:never|not|rather than).{0,20}cp|install\\s+-m\\s+0?755|install.{0,80}ETXTBSY)"
+      },
+      "wrong_answer_traps": [],
+      "split": "regression"
+    }
+  ]
+}
