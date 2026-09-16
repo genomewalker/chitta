@@ -157,3 +157,40 @@ ambiguity, path scope, shortest connections, reload identity, stale reads and
 deletion. Contracts regenerated and checked against the private scratch daemon:
 new RPCs `code_query`, `code_path`; existing code tool extensions above. Core
 MCP surface is 55 tools / approximately 6,555 tokens, within its gate.
+
+
+## Phase 9, step 3 — bounded hook context
+
+Fetched and merged origin/main immediately before hook edits (merge 221b8353).
+Added one small code-nav.sh helper, a one-line Read call, and a one-line
+replacement for the obsolete capped session auto-index block. The install
+manifest includes the helper. Indexed reads receive symbols, signatures,
+caller/callee evidence and read_symbol arguments; file age and stale hashes
+are explicit. Unknown repositories stay silent; known-index transport failures
+are visible. Query processes have a 300 ms default deadline with 50 ms kill
+grace, and UTF-8-safe whole-line output is bounded to 12,000 bytes. Session
+maps appear once per session; uncapped refreshes run behind a per-repo flock.
+
+Complete code-file restoration exposed an existing eager startup scan of all
+historical repository roots, including a large shared dataset. Startup now
+loads the root registry without those walks; search already refreshes the
+requested realm before returning sources. Code-context compatibility counters
+are preserved, and clear_codebase now clears the derived navigation sidecar.
+
+Validation: real Read injection was 7,277 bytes; the real map was 17 lines and
+appeared exactly once. The focused regression covers stale context, timeout
+children, unindexed/non-code silence, session markers and uncapped refresh.
+All hook suites, MCP 159, SMRITI 46, Rust 296 (2 ignored), CI ruff, changed-shell
+syntax/shellcheck and the quick gate passed. Final CTest passed all 36 tests
+(the embedding-model test skipped), including real RPC counter/clear tests.
+An earlier cold subprocess-load timeout passed on the ordered rebuild/retest;
+the separate frozen-copy format probe also passed under embedding load.
+
+bench-hook-parity.py compared all 10 non-code fixtures for three measured
+repetitions (30 paired results), with identical stdout, stderr and status.
+The first cold warmup had unchanged prompt-lane deadline variance; the final
+run explicitly warmed those lanes before the unchanged paired comparison.
+Frozen-copy chaos passed 9/9. Restart-identity passed 20/20 ordered queries
+across three restarts, with no numeric score deltas. No recall scoring change.
+Contracts regenerated for the added install-manifest entry; RPC contracts
+unchanged in this step. All experiments used owned scratch processes.

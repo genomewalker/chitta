@@ -307,14 +307,7 @@ _render_tasks() {
 }
 _launch_lane tasks _render_tasks
 
-# Auto-index codebase (10-minute rate limit built into script)
-if [[ -n "$PROJECT_DIR" && -d "$PROJECT_DIR" ]]; then
-    AUTO_INDEX_SCRIPT="$PLUGIN_DIR/scripts/auto-index.sh"
-    if [[ -x "$AUTO_INDEX_SCRIPT" ]]; then
-        (cd "$PROJECT_DIR" && "$AUTO_INDEX_SCRIPT") </dev/null >/dev/null 2>&1 &
-        disown
-    fi
-fi
+HOOK_STATE_DIR="$HOOK_STATE_DIR" bash "$SCRIPT_DIR/code-nav.sh" session "$PROJECT_DIR" "$SESSION_ID" || true
 
 # Realm retag (daily rate limit built into script)
 REALM_RETAG_SCRIPT="$PLUGIN_DIR/scripts/realm-retag.sh"

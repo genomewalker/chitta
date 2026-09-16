@@ -394,6 +394,14 @@ void CodeNavigation::remove(const std::string& path) {
     impl_->files.erase(fs::weakly_canonical(path).string());
     impl_->rebuild(); impl_->save();
 }
+void CodeNavigation::clear_project(const std::string& project) {
+    std::lock_guard<std::mutex> guard(impl_->mutex);
+    for (auto it = impl_->files.begin(); it != impl_->files.end();) {
+        if (it.value().value("project", "") == canonical(project)) it = impl_->files.erase(it);
+        else ++it;
+    }
+    impl_->rebuild(); impl_->save();
+}
 json CodeNavigation::query(const json& p) {
     std::lock_guard<std::mutex> guard(impl_->mutex);
     auto eligible = impl_->scope(p);

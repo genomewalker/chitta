@@ -259,8 +259,9 @@ void RepositoryIndex::open(const std::string& sidecar, const std::string& known_
             if (!root.empty()) roots_[realm] = root;
         }
     }
-    // No trusted cached chunks: restart validates every discovered source.
-    for (const auto& [realm, root] : roots_) refresh(realm);
+    // search() refreshes the requested realm before returning any source.
+    // Do not eagerly walk every historical root at daemon startup: restored
+    // stores can name abandoned checkouts or entire shared data directories.
 }
 
 void RepositoryIndex::index(const std::string& path, const std::string& realm) {

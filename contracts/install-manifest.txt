@@ -17,6 +17,7 @@ pre-compact-hook.sh
 subagent-stop-hook.sh
 file-changed-hook.sh
 pre-tool-hook.sh
+code-nav.sh
 post-bash-hook.sh
 log-bash-history.sh
 memory-intercept.sh

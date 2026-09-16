@@ -749,7 +749,15 @@ ToolResult FieldRpcHandler::tool_search_symbols(const json& params) {
 ToolResult FieldRpcHandler::tool_code_context(const json& params) {
     if (!params.value("path", "").empty()) {
         auto navigation = code_navigation_.query(params);
-        if (navigation.value("indexed", false)) return ToolResult::ok(navigation.value("text", ""), navigation);
+        if (navigation.value("indexed", false)) {
+            navigation["total_symbols"] = field_store_->symbol_count();
+            navigation["code_files"] = field_store_->code_file_count();
+            auto scope = std::filesystem::weakly_canonical(params.value("path", "")).string();
+            if (std::filesystem::is_regular_file(scope))
+                navigation["file_symbols"] = field_store_->symbols_in_file(scope).size();
+            else navigation["dir_symbols"] = code_navigation_.overview(params).value("symbols", size_t(0));
+            return ToolResult::ok(navigation.value("text", ""), navigation);
+        }
     }
     if (subconscious_) subconscious_->notify_query();
 
@@ -1021,6 +1029,7 @@ ToolResult FieldRpcHandler::tool_clear_codebase(const json& params) {
     } catch (...) {}
 
     int rc = field_store_->clear_project(project);
+    if (rc == 0) code_navigation_.clear_project(project);
     std::ostringstream ss;
     ss << "Cleared codebase: " << project << " (rc=" << rc
        << ", callsite triplets invalidated for " << triplets_invalidated << " files)";

@@ -18,6 +18,7 @@ public:
                 const std::unordered_set<std::string>& changed,
                 const ExtractionResult& extraction, bool full);
     void remove(const std::string& path);
+    void clear_project(const std::string& project);
     bool has_file(const std::string& path);
     nlohmann::json query(const nlohmann::json& params);
     nlohmann::json overview(const nlohmann::json& params);

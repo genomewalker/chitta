@@ -124,6 +124,8 @@ def main():
             assert call("codebase_overview", project="project:fixture")["symbols"] == 3
             call("learn_codebase", path=str(repo))
             assert call("codebase_overview", project="fixture")["project"] == "fixture"
+            context = call("code_context", path=str(source))
+            assert context["file_symbols"] == 2 and context["total_symbols"] == 3, context
             source.write_text("def renamed():\n    return 3\n")
             call("learn_codebase", path=str(source), project="fixture", incremental=True)
             assert not call("find_symbol", name="alpha")["symbols"]
@@ -131,6 +133,8 @@ def main():
             source.unlink()
             call("learn_codebase", path=str(source), project="fixture", incremental=True)
             assert not call("find_symbol", name="renamed")["symbols"]
+            assert call("clear_codebase", project="fixture")["rc"] == 0
+            assert not call("code_query", path=str(repo))["indexed"]
             if len(sys.argv) > 3:
                 root = Path(sys.argv[3]).resolve()
                 started = time.perf_counter()
