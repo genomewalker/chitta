@@ -98,6 +98,10 @@
 - `scripts/bench-hook-parity.py` pins clock and session inputs, records per-process exit statuses (the current runner swallows them) and compares whole hook outputs before and after each move.
 - Exit gate: byte-identical outputs on the parity fixtures; `hooks/*.sh` under 3k lines; targets with measured attribution from today's baselines (prompt 608 ms, SessionStart 599 ms, Bash added 24 ms): prompt ≤ 400 ms, SessionStart ≤ 400 ms, Bash added ≤ 15 ms.
 
+### Phase 8 — Memory and latency budget (after Phase 2)
+- Agreed with Astra on 2026-09-16; steps, gates and the 1M target envelope are in `DECISION-2026-09-16-memory-scale.md`. Order: census → lane budgets with visible degradation → triplet compaction → snapshot capture without clones and shutdown that finishes an in-flight save → keyword/HDC layout → tiered startup (Phase 6's 5 s gate) → 1M qualification.
+- Exit gate: cached start ≤ 5 s, prompt-hook p95 ≤ 400 ms under the 200-writer stress with zero silent lane loss, save peak < 1.2 × steady RSS, 8–12 GB steady residency on the 1M frozen corpus.
+
 ## Backlog (owner-listed, not yet scheduled)
 
 - Shutdown must finish an in-flight snapshot before exiting (the unit already allows 300 s): a SIGTERM mid-save abandons the family and the next start replays hours of WAL (105 s to ready on 2026-09-16 versus 10–18 s). Until then the operator checks the log before restarting (CLAUDE.md).
