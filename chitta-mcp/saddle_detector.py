@@ -174,7 +174,7 @@ def report(by_session: dict[str, list[dict]], args) -> dict:
 
 
 def load_tail(ledger: str | os.PathLike, session: str, minutes: float) -> list[dict]:
-    """Bound hook IO to 1 MiB; discard a partial first/last JSONL record."""
+    """Bound hook IO to 1 MiB / 4096 complete lines; discard partial records."""
     now = time.time() * 1000
     with open(ledger, "rb") as handle:
         size = handle.seek(0, 2)
@@ -186,7 +186,7 @@ def load_tail(ledger: str | os.PathLike, session: str, minutes: float) -> list[d
         lines = lines[1:]
     events = []
     session_bytes = session.encode()
-    for line in lines[:-1]:
+    for line in lines[:-1][-4096:]:
         if b"bash_outcome" not in line or session_bytes not in line:
             continue
         try:

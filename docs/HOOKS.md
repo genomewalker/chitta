@@ -1062,3 +1062,29 @@ added-overhead gate passes, as does the full-hook median gate; full-hook p95 is
 179.68 ms and is not a sub-150 ms tail-latency guarantee. Regression coverage is
 `hooks/tests/test_saddle_hook.sh` (shape/session/time, Codex unknowns, dedupe,
 combined advisories, Stop telemetry, malformed/bounded ledger and timeout).
+
+
+2026-09-16 — Bash PreToolUse now calls `saddle_check` in `hooks/lib.sh`, using
+Bash and one jq process instead of starting Python. It reads a 1 MiB tail (plus
+one boundary byte), then `tail -n 4097` limits parsing to 4096 complete records.
+The Python offline/Stop check shares the record limit. Session/shape/time gates,
+Unicode normalization, SequenceMatcher matching blocks and thresholds, Codex
+unknown exits, and nonblocking flock dedupe are preserved. Tail parsing and
+comparison use `timeout -s KILL 0.3s jq`; failures/timeouts emit nothing and do
+not consume the notice marker. Stop retains its once-per-turn Python summary.
+`hooks/tests/test_saddle_parity.sh` compares notice bytes and marker contents on
+81 ledgers; `test_saddle_hook.sh` also checks that PreToolUse never starts Python.
+
+Isolated 25 interleaved runs/arm, both headless aliases unset, benign
+non-trackable Bash command, temporary HOME/mind, stub CLI and no live RPC:
+
+| Timing (ms) | Python before median / p95 | Bash+jq after median / p95 |
+|---|---:|---:|
+| No-ledger baseline | 42.83 / 58.06 | 43.92 / 61.94 |
+| Populated no-saddle PreToolUse | 139.49 / 164.79 | 67.97 / 85.87 |
+| Added overhead | 96.66 / 109.36 | 24.05 / 30.66 |
+
+Added median is the difference of arm medians; added p95 is the p95 of paired
+on-minus-off samples. Both targets (<25 ms median, <40 ms p95) pass; the existing
+relative regression bounds remain unchanged. Evidence: `/tmp/saddle-before.log`
+and `/tmp/saddle-sixth.log` on the measurement node.

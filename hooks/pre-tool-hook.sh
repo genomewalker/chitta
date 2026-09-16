@@ -300,27 +300,20 @@ case "$MATCHER" in
         fi
         # ── End task ledger pre-stage ─────────────────────────────────────────
 
-        # Advisory only: include interpreter startup in the 300 ms budget.
+        # Advisory only: bound the shell/jq check to 300 ms.
         # The helper emits JSON only after a successful, deduplicated check.
         _saddle_mind="${CHITTA_DB_PATH:-${HOME}/.claude/mind}"
-        _saddle_root="${CHITTA_PLUGIN_DIR:-${CC_SOUL_PLUGIN_DIR:-$SCRIPT_DIR/..}}"
-        [[ -f "$_saddle_root/chitta-mcp/saddle_detector.py" ]] || _saddle_root=$(resolve_cc_soul_root 2>/dev/null)
         if [[ -s "$_saddle_mind/outcome_ledger.jsonl" ]]; then
-            _saddle_sid=$(printf '%s' "$STDIN_DATA" | jq -r '.session_id // empty' 2>/dev/null)
-            if [[ "$_saddle_sid" =~ ^[a-zA-Z0-9_-]+$ ]]; then
-                _saddle_notice=$(timeout -s KILL 0.3s python3 -S "$_saddle_root/chitta-mcp/saddle_detector.py" \
-                    check --session "$_saddle_sid" --cmd "$command" \
-                    --ledger "$_saddle_mind/outcome_ledger.jsonl" \
-                    --notice-file "$_saddle_mind/.saddle_${_saddle_sid}" 2>/dev/null) && {
-                    if [[ -n "$_bash_advisory" ]]; then
-                        printf '%s' "$_saddle_notice" | jq --arg advisory "$_bash_advisory" '
-                            .hookSpecificOutput.additionalContext += ("\n" + $advisory)'
-                    else
-                        printf '%s\n' "$_saddle_notice"
-                    fi
-                    exit 0
-                }
-            fi
+            _saddle_notice=$(saddle_check \
+                "$STDIN_DATA" "$_saddle_mind/outcome_ledger.jsonl" "$_saddle_mind" 2>/dev/null) && {
+                if [[ -n "$_bash_advisory" ]]; then
+                    printf '%s' "$_saddle_notice" | jq --arg advisory "$_bash_advisory" '
+                        .hookSpecificOutput.additionalContext += ("\n" + $advisory)'
+                else
+                    printf '%s\n' "$_saddle_notice"
+                fi
+                exit 0
+            }
         fi
 
         if [[ -n "$_bash_advisory" ]]; then

@@ -5,6 +5,8 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import shlex
+import shutil
 import statistics
 import subprocess
 import tempfile
@@ -136,13 +138,31 @@ def main():
         assert sum(e["event"] == "saddle" for e in events) == 1
         assert events[-1]["n_fails"] == 3
 
-        # Include interpreter startup; a hanging helper must be killed at 300 ms.
-        plugin = base / "slow-plugin/chitta-mcp"
-        plugin.mkdir(parents=True)
-        (plugin / "saddle_detector.py").write_text("import time; time.sleep(10)\n")
+        # PreToolUse must not start Python, even for a new open saddle.
+        stubs = base / "stubs"
+        stubs.mkdir()
+        calls = base / "python-calls"
+        (stubs / "python3").write_text(
+            "#!/bin/sh\nprintf called >> " + shlex.quote(str(calls)) + "\nexit 91\n"
+        )
+        (stubs / "python3").chmod(0o755)
+        (mind / ".saddle_test-saddle").unlink()
+        stub_env = dict(env, PATH=str(stubs) + os.pathsep + env["PATH"])
+        assert "[saddle]" in pre(extra_env=stub_env)
+        assert not calls.exists(), "per-call saddle check started Python"
+
+        # The timed jq process includes tail parsing and similarity evaluation.
+        # A stalled detector must fail open without writing a dedupe marker.
+        (stubs / "jq").write_text(
+            '#!/bin/sh\nif [ "$1" = "-Rrs" ]; then exec sleep 10; fi\nexec '
+            + shlex.quote(shutil.which("jq")) + ' "$@"\n'
+        )
+        (stubs / "jq").chmod(0o755)
+        (mind / ".saddle_test-saddle").unlink()
         started = time.monotonic()
-        assert not pre(extra_env=dict(env, CHITTA_PLUGIN_DIR=str(plugin.parent))).strip()
-        assert time.monotonic() - started < 0.8
+        assert not pre(extra_env=stub_env).strip()
+        assert 0.28 < time.monotonic() - started < 0.8
+        assert not (mind / ".saddle_test-saddle").exists()
 
         # Interleave baseline (missing ledger) and a populated no-saddle ledger.
         # Neither headless alias is set; measure the complete PreToolUse process.
@@ -176,7 +196,7 @@ def main():
         print("PreToolUse 25 runs/arm: " + json.dumps(stats))
         print(
             "PASS: saddle notices, dedupe, time/session/shape gates, Codex unknowns, "
-            "Stop telemetry, malformed/bounded ledger, timeout, latency"
+            "Stop telemetry, malformed/bounded ledger, no Python startup, timeout, latency"
         )
 
 
