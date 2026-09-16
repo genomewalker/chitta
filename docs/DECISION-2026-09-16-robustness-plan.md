@@ -99,8 +99,8 @@
 - Exit gate: byte-identical outputs on the parity fixtures; `hooks/*.sh` under 3k lines; targets with measured attribution from today's baselines (prompt 608 ms, SessionStart 599 ms, Bash added 24 ms): prompt ≤ 400 ms, SessionStart ≤ 400 ms, Bash added ≤ 15 ms.
 
 ### Phase 8 — Memory and latency budget (after Phase 2)
-- Agreed with Astra on 2026-09-16; steps, gates and the 1M target envelope are in `DECISION-2026-09-16-memory-scale.md`. Order: census → lane budgets with visible degradation → triplet compaction → snapshot capture without clones and shutdown that finishes an in-flight save → keyword/HDC layout → tiered startup (Phase 6's 5 s gate) → 1M qualification.
-- Exit gate: cached start ≤ 5 s, prompt-hook p95 ≤ 400 ms under the 200-writer stress with zero silent lane loss, save peak < 1.2 × steady RSS, 8–12 GB steady residency on the 1M frozen corpus.
+- Agreed with Astra on 2026-09-16 in two rounds; the laptop constraint (round 2) governs: steps, verdicts, the `CHITTA_PROFILE=laptop` envelope and the three deciding prototypes are in `DECISION-2026-09-16-memory-scale.md`. Order: census and identity freeze → power-aware bounded execution (foreground competitive-weight refresh off, per-lane status) → mapped candidate/payload/BM25 path → 256-d candidates → compact canonical tables and incremental checkpoints → organ lazy modes, archive tier, disk qualification.
+- Exit gate (laptop profile): resident ≤ 1.5 GB at 135k and ≤ 3 GB at 1M, cold start ≤ 2 s, prompt-hook p95 ≤ 300 ms on 8 shared cores with zero silent lane loss, background ≤ 1 core and paused on battery, disk ≤ 3 × resident. Node profile keeps its formats and defaults.
 
 ## Backlog (owner-listed, not yet scheduled)
 
