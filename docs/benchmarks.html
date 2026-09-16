@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Benchmarks — chitta</title>
+<title>chitta — Benchmarks</title>
 <meta name="description" content="SMRITI-Bench measures whether injected memory changes an automated pass/fail check and its token cost, rather than QA-recall F1. Plus chitta's LongMemEval and LoCoMo status.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta property="og:title" content="Benchmarks — chitta">
@@ -40,36 +40,42 @@
   font-size: var(--text-sm); }
 .caveat strong { color: var(--sandal-300); font-weight: 500; }
 </style>
+<link rel="stylesheet" href="/content-styles.css">
+<link rel="stylesheet" href="/site-shell.css">
 </head>
-<body>
+<body class="page-benchmarks">
+<a class="skip-link" href="#main-content">Skip to content</a>
 
 <!-- NAV -->
-<nav class="nav">
+<nav class="nav site-nav" aria-label="Main navigation">
   <div class="nav-inner">
-    <a href="index.html" class="nav-brand">chitta</a>
-    <button class="nav-hamburger" onclick="document.querySelector('.nav').classList.toggle('nav-open')" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
+    <a href="/index.html" class="nav-brand">chitta</a>
     <ul class="nav-links">
-      <li><a href="getting-started.html">Get Started</a></li>
-      <li><a href="philosophy.html">Philosophy</a></li>
-      <li><a href="architecture.html">Architecture</a></li>
-      <li><a href="recall.html">Recall</a></li>
-      <li><a href="benchmarks.html" class="active">Benchmarks</a></li>
-      <li><a href="chitta-field.html">chitta-field</a></li>
-      <li><a href="sadhana.html">Sadhana</a></li>
-      <li><a href="context.html">Context</a></li>
-      <li><a href="tools.html">Tools</a></li>
-      <li><a href="cli.html">CLI</a></li>
-      <li><a href="hooks.html">Hooks</a></li>
-      <li><a href="skills.html">Skills</a></li>
-      <li><a href="changelog.html">Changelog</a></li>
-      <li><a href="constellation.html">Constellation</a></li>
-      <li><a href="dreams/index.html">Dreams</a></li>
-      <li><a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="/index.html">Home</a></li>
+      <li><a href="/getting-started.html">Get Started</a></li>
+      <li><a href="/philosophy.html">Philosophy</a></li>
+      <li><a href="/architecture.html">Architecture</a></li>
+      <li><a href="/recall.html">Recall</a></li>
+      <li><a href="/benchmarks.html" aria-current="page">Benchmarks</a></li>
+      <li><a href="/chitta-field.html">chitta-field</a></li>
+      <li><a href="/sadhana.html">Sadhana</a></li>
+      <li><a href="/context.html">Context</a></li>
+      <li><a href="/tools.html">Tools</a></li>
+      <li><a href="/cli.html">CLI</a></li>
+      <li><a href="/hooks.html">Hooks</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/changelog.html">Changelog</a></li>
+      <li><a href="/constellation.html">Constellation</a></li>
+      <li><a href="/dreams/index.html">Dreams</a></li>
+      <li><a href="/brain-viz/index.html">Brain Architecture</a></li>
+      <li><a href="/mind-viz/index.html">Mind Interface</a></li>
+      <li><a href="/vedanta/index.html">Vedanta</a></li>
+      <li><a href="/evolve-bridge-live/index.html">Evolve Evidence</a></li>
+      <li><a href="https://github.com/genomewalker/chitta">GitHub</a></li>
     </ul>
   </div>
 </nav>
+<main id="main-content" tabindex="-1">
 
 <!-- PAGE HEADER -->
 <header class="page-header">
@@ -77,12 +83,12 @@
     <div class="page-header-badge reveal">Measurement</div>
     <h1 class="reveal reveal-delay-1">Memory evaluation</h1>
     <p class="page-header-sub reveal reveal-delay-2">SMRITI-Bench measures <em>task success</em> and token use with memory enabled and disabled. Each run is graded by an objective check command.</p>
-    <p class="status-line">Status as of 2026-09-16. <a href="EVALS.md">Evaluation status and evidence</a>.</p>
+    <p class="status-line">Status as of 2026-09-16 <a href="EVALS.md">Evaluation status and evidence</a>.</p>
   </div>
 </header>
 
 <!-- TOC -->
-<nav class="submenu-toc">
+<nav class="submenu-toc" aria-label="On this page">
   <div class="submenu-toc-inner">
     <a href="#sec-why" class="submenu-toc-link" data-section="sec-why">Why</a>
     <a href="#sec-protocol" class="submenu-toc-link" data-section="sec-protocol">Protocol</a>
@@ -103,12 +109,12 @@
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="#9DB2D9" stroke-width="1" opacity="0.4"/><path d="M10 6 V11 M10 13.5 V14.5" stroke="#CBAF86" stroke-width="1.2"/></svg>
         </div>
-        <span class="tools-category-name">The proxy-target gap</span>
+        <h2 class="tools-category-name">The proxy-target gap</h2>
         <span class="tools-category-count">motivation</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
       <div class="tools-content">
-        <p class="section-intro">LoCoMo and LongMemEval score conversational question answering: given a long dialogue history, can the system answer a question about it, measured against a reference answer. For a coding agent that is the wrong target. Question-answering recall is a proxy that can rise while the thing that matters &mdash; does the agent ship a working change faster and cheaper because it remembered something &mdash; stays flat or gets worse. A memory system that retrieves plausible but stale context can raise a recall score while actively misleading the agent on a real task.</p>
+        <p class="section-intro">LoCoMo<sup><a href="#ref-17">17</a></sup> and LongMemEval<sup><a href="#ref-16">16</a></sup> score conversational question answering: given a long dialogue history, can the system answer a question about it, measured against a reference answer. For a coding agent that is the wrong target. Question-answering recall is a proxy that can rise while the thing that matters &mdash; does the agent ship a working change faster and cheaper because it remembered something &mdash; stays flat or gets worse. A memory system that retrieves plausible but stale context can raise a recall score while actively misleading the agent on a real task.</p>
         <p class="section-intro">SMRITI-Bench, named for <em>smṛti</em> (स्मृति), closes that gap by scoring the axis chitta is built for. There is no model-as-judge and no reference-answer overlap score. A task either passes its check command or it does not.</p>
       </div>
     </div>
@@ -119,13 +125,13 @@
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><rect x="4" y="3" width="12" height="14" rx="2" stroke="#9DB2D9" stroke-width="1" opacity="0.5"/><path d="M7 7 H13 M7 10 H13 M7 13 H11" stroke="#CBAF86" stroke-width="1"/></svg>
         </div>
-        <span class="tools-category-name">Protocol</span>
+        <h2 class="tools-category-name">Protocol</h2>
         <span class="tools-category-count">6 steps</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
       <div class="tools-content">
         <p class="section-intro">A task is a repository fixture, an instruction, a check command, and a set of memories to plant. Each task runs under several memory conditions, several trials each. For every task, condition and trial:</p>
-        <ol class="section-intro" style="line-height: 1.9;">
+        <ol class="section-intro style-4ad1729b52">
           <li>Materialize the fixture into a fresh scratch working directory.</li>
           <li>Plant the task&rsquo;s memories through a memory adapter, keeping the ids returned. Under the off condition this is a no-op.</li>
           <li>Run the agent. Memory is <em>not</em> hand-injected into the prompt.</li>
@@ -145,20 +151,22 @@
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><path d="M4 16 L8 10 L12 12 L16 5" stroke="#CBAF86" stroke-width="1.2" fill="none"/></svg>
         </div>
-        <span class="tools-category-name">Metrics</span>
+        <h2 class="tools-category-name">Metrics</h2>
         <span class="tools-category-count">4 metrics</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
       <div class="tools-content">
-        <table class="comp-table">
+        <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0">
+<table class="comp-table">
           <thead><tr><th>Metric</th><th>Definition</th></tr></thead>
           <tbody>
-            <tr><td>SR</td><td>Success rate per condition, reported with a Wilson 95% interval because the trial counts are small enough that a naive proportion misleads.</td></tr>
+            <tr><td>SR</td><td>Success rate per condition, reported with a Wilson<sup><a href="#ref-2">2</a></sup> 95% interval because the trial counts are small enough that a naive proportion misleads.</td></tr>
             <tr><td>&Delta;SR</td><td>Success rate with memory on, minus with memory off. The headline number.</td></tr>
             <tr><td>&Delta;T</td><td>Mean tokens on, minus mean tokens off. A system that adds success but doubles cost is not free.</td></tr>
             <tr><td>MUI</td><td>Memory utility index: the fraction of memory-on runs where memory demonstrably changed something.</td></tr>
           </tbody>
         </table>
+</div>
         <p class="section-intro">MUI was rewritten because its first version did not work. Version one asked whether the first 40 characters of a planted memory appeared in the transcript. On real runs that reads exactly zero: agents apply a convention without quoting its wording. The surface-echo check survives as a reference number only.</p>
         <p class="section-intro">Version two grounds the metric in the outcome ledger instead. A memory-on run earns credit only if the planted memory was confirmed to have reached the agent&rsquo;s session, <em>and</em> the run passed, <em>and</em> a paired memory-off trial for the same task either failed or used at least 1.5&times; the tokens. The first case is credited as a success lift, the second as a cost saving, and the two are mutually exclusive, so they sum to MUI.</p>
       </div>
@@ -170,13 +178,14 @@
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><rect x="3" y="8" width="3" height="9" stroke="#9DB2D9" stroke-width="1"/><rect x="8.5" y="5" width="3" height="12" stroke="#CBAF86" stroke-width="1"/><rect x="14" y="11" width="3" height="6" stroke="#9DB2D9" stroke-width="1"/></svg>
         </div>
-        <span class="tools-category-name">First full matrix</span>
+        <h2 class="tools-category-name">First full matrix</h2>
         <span class="tools-category-count">n=27</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
       <div class="tools-content">
         <p class="section-intro">One full matrix has been run: 9 tasks, memory off and on, 3 trials each, 27 runs per condition, with injection confirmed on all 27 memory-on runs.</p>
-        <table class="comp-table">
+        <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0">
+<table class="comp-table">
           <thead><tr><th>Measure</th><th>Value</th></tr></thead>
           <tbody>
             <tr><td>Success rate, memory off</td><td>23 / 27</td></tr>
@@ -190,6 +199,7 @@
             <tr><td>Surface-echo rate (version one proxy)</td><td>0.0</td></tr>
           </tbody>
         </table>
+</div>
         <p class="section-intro">The shape of the result is more interesting than the headline. Every one of the four memory-off failures was a non-deducible institutional convention &mdash; an exit-code contract and a command-line default, neither of which can be derived from the fixture. On the tasks exploration alone can already solve, memory&rsquo;s measurable effect was not success but cost: the agent got there on roughly half the tokens.</p>
         <div class="caveat">
           <p><strong>What this is not.</strong> 27 runs per condition is indicative, not conclusive. The protocol&rsquo;s own guidance is at least five trials per task and condition before trusting a per-task &Delta;SR.</p>
@@ -204,13 +214,14 @@
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><path d="M3 6 H17 M3 10 H12 M3 14 H8" stroke="#CBAF86" stroke-width="1.2"/></svg>
         </div>
-        <span class="tools-category-name">Ablation matrix</span>
+        <h2 class="tools-category-name">Ablation matrix</h2>
         <span class="tools-category-count">6 lanes</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
       <div class="tools-content">
         <p class="section-intro">Per-lane ablation isolates each retrieval lane&rsquo;s marginal contribution: success rate with everything on, minus success rate with one lane disabled. It is wired through the environment rather than a daemon flag &mdash; the runner sets <code>CHITTA_ABLATE_LANES</code> on the agent process, and the prompt hook skips any lane named there before issuing its recall call. The ablation happens in the hook that would have made the call. See <a href="recall.html#sec-lanes">the lane table</a> for what each one does.</p>
-        <table class="comp-table">
+        <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0">
+<table class="comp-table">
           <thead><tr><th>Condition</th><th>Value set</th><th>Isolates</th></tr></thead>
           <tbody>
             <tr><td><code>off</code></td><td>kill switch instead</td><td>Baseline: can the agent solve it cold.</td></tr>
@@ -224,6 +235,7 @@
             <tr><td><code>ablate:all</code></td><td>every lane</td><td>Sanity check on the wiring: it should behave like <code>off</code>.</td></tr>
           </tbody>
         </table>
+</div>
         <p class="section-intro">The gap between <code>ablate:all</code> and <code>off</code> is reported as a check on the harness, not as a memory effect. A gap far from zero means the environment variable is not reaching every injection path. Lanes overlap, so single-lane deltas are marginal contributions and must not be summed to explain the on-versus-off gap.</p>
       </div>
     </div>
@@ -234,7 +246,7 @@
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><path d="M10 3 L17 16 H3 Z" stroke="#CBAF86" stroke-width="1.2" fill="none"/><path d="M10 8 V11.5 M10 13.5 V14.2" stroke="#9DB2D9" stroke-width="1.2"/></svg>
         </div>
-        <span class="tools-category-name">Threats to validity</span>
+        <h2 class="tools-category-name">Threats to validity</h2>
         <span class="tools-category-count">2 caught live</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
@@ -252,19 +264,21 @@
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><circle cx="7" cy="10" r="4" stroke="#9DB2D9" stroke-width="1" opacity="0.5"/><circle cx="13" cy="10" r="4" stroke="#CBAF86" stroke-width="1" opacity="0.5"/></svg>
         </div>
-        <span class="tools-category-name">LoCoMo &amp; LongMemEval</span>
+        <h2 class="tools-category-name">LoCoMo &amp; LongMemEval</h2>
         <span class="tools-category-count">2 harnesses</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
       <div class="tools-content">
         <p class="section-intro">Both conversational-recall harnesses live in the repository and both still run. They answer a narrower question than SMRITI-Bench, and are kept for comparability with published work.</p>
-        <table class="comp-table">
+        <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0">
+<table class="comp-table">
           <thead><tr><th>Harness</th><th>Status</th></tr></thead>
           <tbody>
             <tr><td>LongMemEval</td><td>0.780 overall on <code>longmemeval_s</code>, 50 questions, recorded 2026-05-21. Every question in that run is the single-session-user type, and the answers were graded by a model judge using the benchmark&rsquo;s own prompts. It is not a full-suite result.</td></tr>
             <tr><td>LoCoMo</td><td>Harness present and runnable against the published dataset. No result is recorded in this repository; treat any figure you have seen elsewhere as unverified here.</td></tr>
           </tbody>
         </table>
+</div>
         <p class="section-intro">Earlier LongMemEval runs on the oracle split, at 5 and 3 questions, are kept in the results directory for history. They are far too small to compare against and are not a status claim.</p>
       </div>
     </div>
@@ -276,7 +290,8 @@
 <section class="tools-section" id="current-evidence">
   <div class="container">
     <h2>Retrieval and automatic-learning evidence</h2>
-    <table class="comp-table">
+    <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0">
+<table class="comp-table">
       <thead><tr><th>Measurement</th><th>Result</th><th>Boundary</th></tr></thead>
       <tbody>
         <tr><td>Golden recall, 30 queries</td><td>Historical prefilter comparison: mean nDCG@20 0.435 → 0.487</td><td>Match snapshot, strategy, depth and reranker; this is retrieval quality, not task success.</td></tr>
@@ -285,6 +300,7 @@
         <tr><td>Automatic-learning experiment</td><td>Official cut: 2026-09-15 23:15 CEST; prospective panel pending</td><td>20 real tasks × 3 trials × 2 arms = 120 runs. No causal result yet.</td></tr>
       </tbody>
     </table>
+</div>
     <p>The automatic-learning panel compares including versus excluding eligible automatic records created after the cut and before each task. Earlier records remain in both arms. Prompt, grader, initial files and cohort membership must be frozen before trials. Invalid isolation, provenance or telemetry yields no verdict. The screening threshold is at least three net successes over 20 tasks, equivalent to nine over 60 trials; it is not statistical proof.</p>
     <p>Use a private <a href="EVAL_REPLICA.md">frozen replica</a> and record the full snapshot/WAL identity. The planted-memory SMRITI matrix above tests a different question. See <a href="https://github.com/genomewalker/chitta/blob/main/benchmarks/learning/protocol.md">the frozen protocol</a> and <a href="EVALS.md">current collection status</a>.</p>
   </div>
@@ -296,13 +312,26 @@
 </section>
 
 <!-- FOOTER -->
-<footer class="footer">
+<!-- BEGIN CITATIONS -->
+<section id="references" class="references">
+  <div class="container">
+  <h2 class="heading-section">References</h2>
+  <ol>
+    <li id="ref-2" value="2">Edwin B. Wilson. Probable Inference, the Law of Succession, and Statistical Inference. Journal of the American Statistical Association 22(158), 209–212 (1927). <a href="https://doi.org/10.1080/01621459.1927.10502953">https://doi.org/10.1080/01621459.1927.10502953</a></li>
+    <li id="ref-16" value="16">Di Wu, Hongwei Wang, Wenhao Yu, Yuwei Zhang, Kai-Wei Chang, and Dong Yu. LongMemEval: Benchmarking Chat Assistants on Long-Term Interactive Memory. ICLR (2025); arXiv:2410.10813 (2024). <a href="https://arxiv.org/abs/2410.10813">https://arxiv.org/abs/2410.10813</a></li>
+    <li id="ref-17" value="17">Adyasha Maharana, Dong-Ho Lee, Sergey Tulyakov, Mohit Bansal, Francesco Barbieri, and Yuwei Fang. Evaluating Very Long-Term Conversational Memory of LLM Agents. ACL (2024); arXiv:2402.17753. <a href="https://arxiv.org/abs/2402.17753">https://arxiv.org/abs/2402.17753</a> <a href="https://aclanthology.org/2024.acl-long.747/">https://aclanthology.org/2024.acl-long.747/</a></li>
+  </ol>
+  </div>
+</section>
+<!-- END CITATIONS -->
+
+</main>
+<footer class="footer site-footer">
   <div class="container">
     <p class="footer-text">
-      Persistent memory for Claude Code and Codex.
-      <span class="footer-sep"></span>
-      <a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/genomewalker/chitta">GitHub repository</a> · <a href="https://opensource.org/licenses/MIT">MIT license</a> · <a href="/benchmarks.html">This page</a>
     </p>
+    <p class="site-status">Status as of 2026-09-16 · <a href="/changelog.html">Unreleased + v5.72.0</a></p>
   </div>
 </footer>
 
@@ -317,15 +346,7 @@
   }, { threshold: 0.01, rootMargin: '0px 0px -20px 0px' });
   reveals.forEach(function(el) { observer.observe(el); });
 })();
-document.querySelectorAll('a[href^="#"]').forEach(function(a) {
-  a.addEventListener('click', function(e) {
-    var t = document.querySelector(this.getAttribute('href'));
-    if (!t) return;
-    e.preventDefault();
-    window.scrollTo({ top: t.getBoundingClientRect().top + window.pageYOffset - 140, behavior: 'smooth' });
-    t.classList.remove('collapsed');
-  });
-});
+/* Native anchors preserve URL history, focus and reduced-motion behavior. */
 (function() {
   var links = document.querySelectorAll('.submenu-toc-link');
   var secs = [];

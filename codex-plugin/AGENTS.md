@@ -4,7 +4,7 @@
 
 These are first on the page deliberately. Codex truncates silently once the
 combined `AGENTS.md` bytes pass `project_doc_max_bytes`, and what gets dropped is
-the end of the file (#13386, #37956). Anything that must survive lives up here.
+the end of the file (#13386 [42](#ref-42), #37956 [43](#ref-43)). Anything that must survive lives up here.
 
 1. **Never `pkill` the `--http` MCP process.** It is your own transport on port
    9481. SIGTERM reads as a clean exit, so `Restart=on-failure` won't revive it —
@@ -13,11 +13,11 @@ the end of the file (#13386, #37956). Anything that must survive lives up here.
 3. **`install`, never `cp`, over a running binary** — `cp` gives ETXTBSY.
 4. **The worktree files are the state, not your context.** Do not rely on Astra's
    history-notes or context management to carry state across a headless run
-   (#43194, #43335, #42449). The spec plus `Plan.md` and `Documentation.md` in the
+   (#43194 [48](#ref-48), #43335 [49](#ref-49), #42449 [50](#ref-50)). The spec plus `Plan.md` and `Documentation.md` in the
    worktree are the source of truth; record decisions and progress there before ending the run.
 5. **Keep tool output short.** `head`/`tail`/`--quiet`, never `cat` a large log.
    Astra tool loops can re-inject accumulated output — one run reached 3.5M tokens
-   in 11 minutes (#44305).
+   in 11 minutes (#44305 [51](#ref-51)).
 6. **Redirect stdin.** `codex exec` blocks on an open stdin ("Reading additional
    input from stdin…"), so `</dev/null` or detach.
 7. **Paste the contents of `~/.claude/agent_safety_preamble.md`** (you cannot
@@ -53,7 +53,7 @@ codex exec -C /projects/caeg/scratch/kbd606/tmp/codex-wt-<name> \
   It implies the workspace-write sandbox and cannot be combined with `-s/--sandbox`
   — the parser rejects the pair. `approval_policy = "untrusted"` hangs without a
   TTY, so never use it headless. If you pass `-a/--ask-for-approval` it must come
-  **before** `exec` (#26602). Sandbox modes: `workspace-write`, `read-only`,
+  **before** `exec` (#26602 [45](#ref-45)). Sandbox modes: `workspace-write`, `read-only`,
   `danger-full-access`.
 - **Getting the result out:** `-o/--output-last-message FILE` is the robust way to
   capture the final message; `--json` emits events as JSONL for tracking. Parsing
@@ -68,12 +68,12 @@ Tools are namespaced `mcp__chitta__*`; `grow` and `connect` sit behind the
 Codex plugin cache, owned by `scripts/sync-installed-hooks.sh`.
 
 Two known MCP defects worth checking before blaming chitta: `bearer_token_env_var`
-does not always propagate (#41378) — verify the token actually reached the server —
-and streamable-HTTP sessions leak (#41600); an idle-session timeout on
+does not always propagate (#41378 [46](#ref-46)) — verify the token actually reached the server —
+and streamable-HTTP sessions leak (#41600 [47](#ref-47)); an idle-session timeout on
 `chitta-mcp-http` is a proposed mitigation.
 
 **Your Bash exit codes log as unknown, not success.** Your `PostToolUse` carries no
-exit code and `PostToolUseFailure` never fires (#34289), so
+exit code and `PostToolUseFailure` never fires (#34289 [44](#ref-44)), so
 `hooks/post-bash-hook.sh:44` detects your shape (`tool_response` is a string, not
 an object) and records `"exit_code": null` plus `"likely_fail": true` when the
 output reads like a failure. Consumers never treat null as success. That flag is
@@ -152,7 +152,7 @@ stream's, stop and say so.
   returns TOON (a dictionary-compressed table, ~40% fewer tokens): one row per
   hit with `id`, `type`, `relevance` and `text`; `[done]`/`[correction]`
   prefixes inside `text` are content, not extra fields.
-- If the sandbox reports "bubblewrap is unavailable", the command ran in the
+- If the sandbox reports "bubblewrap is unavailable" [13](#ref-13), the command ran in the
   bwrap sandbox this cluster lacks; re-run it and let it escalate (streams run
   with `--approve-for-me`, and escalated commands worked in every probe so far).
 - On this cluster the Codex sandbox can panic with "bubblewrap is unavailable"
@@ -177,11 +177,33 @@ changes in this worktree become live only through that reviewed deployment.
 table, bypass flags, and the `CC_SOUL_*` aliases are in `docs/HOOKS.md` and
 `docs/RENAME.md`. Its Haiku routing applies to Claude Code, not to you.
 
-**Sources.** Codex [AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md)
-and the approvals reference; `gpt-6-astra` (openai.com/index/gpt-6-astra,
-2026-09-04); OpenAI long-horizon guide (the `Prompt.md` / `Plan.md` /
+**Sources.** Codex [AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md) [38](#ref-38)
+and the [approvals reference](https://developers.openai.com/codex/security/) [39](#ref-39);
+`gpt-6-astra` ([announcement](https://openai.com/index/gpt-6-astra/) [41](#ref-41), 2026;
+the previously cited 2026-09-04 publication day is unverified);
+OpenAI [long-horizon guide](https://developers.openai.com/blog/run-long-horizon-tasks-with-codex/) [40](#ref-40) (the `Prompt.md` / `Plan.md` /
 `Implement.md` / `Documentation.md` pattern). Community-verified defects, GitHub
 issues Sept 2026: #13386 and #37956 silent doc truncation; #34289 no PostToolUse
 exit code; #26602 flag ordering; #41378 bearer-token propagation; #41600
 streamable-HTTP session leak; #43194, #43335, #42449 context-management state loss;
 #44305 tool-output amplification. Claude-side sources are in `docs/HOOKS.md`.
+
+<!-- BEGIN CITATIONS -->
+## References
+
+- <a id="ref-13"></a>**[13]** bubblewrap contributors. bubblewrap: Low-level unprivileged sandboxing tool used by Flatpak and similar projects. Project README (accessed 2026-09-16). [source](<https://github.com/containers/bubblewrap>)
+- <a id="ref-38"></a>**[38]** OpenAI. Custom instructions with AGENTS.md. Codex documentation, ChatGPT Learn (accessed 2026-09-16). [source](<https://learn.chatgpt.com/docs/agent-configuration/agents-md>)
+- <a id="ref-39"></a>**[39]** OpenAI. Codex Security. Codex documentation, ChatGPT Learn (accessed 2026-09-16). [source](<https://developers.openai.com/codex/security/>)
+- <a id="ref-40"></a>**[40]** OpenAI. Run long horizon tasks with Codex. OpenAI Developers blog (2026). [source](<https://developers.openai.com/blog/run-long-horizon-tasks-with-codex/>)
+- <a id="ref-41"></a>**[41]** OpenAI. GPT-6 Astra: A new generation of intelligence. OpenAI (2026; exact publication day unverified). [source](<https://openai.com/index/gpt-6-astra/>)
+- <a id="ref-42"></a>**[42]** openai/codex issue contributors. AGENTS.md is silently truncated and instructions near the end ignored. GitHub issue #13386 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/13386>)
+- <a id="ref-43"></a>**[43]** openai/codex issue contributors. Docs: project_doc_max_bytes semantics are undocumented — the 22.5KB root AGENTS.md leaves ~9.7KB before nested files are truncated. GitHub issue #37956 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/37956>)
+- <a id="ref-44"></a>**[44]** openai/codex issue contributors. Hooks: PostToolUse payload carries no failure signal, and PostToolUseFailure never fires. GitHub issue #34289 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/34289>)
+- <a id="ref-45"></a>**[45]** openai/codex issue contributors. Docs list --ask-for-approval as global, but codex exec rejects the post-subcommand form. GitHub issue #26602 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/26602>)
+- <a id="ref-46"></a>**[46]** openai/codex issue contributors. Streamable HTTP MCP bearer_token_env_var reported as unset although present in parent shell. GitHub issue #41378 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/41378>)
+- <a id="ref-47"></a>**[47]** openai/codex issue contributors. MCP Streamable HTTP: sessions are opened but never terminated (1.8% DELETE ratio), exhausting remote server worker pools. GitHub issue #41600 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/41600>)
+- <a id="ref-48"></a>**[48]** openai/codex issue contributors. Experimental context management: native notes/history return 404 on Pro + Astra, while new_context can discard task state. GitHub issue #43194 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/43194>)
+- <a id="ref-49"></a>**[49]** openai/codex issue contributors. Token-budget new windows omit notes content, so the first LLM request has no task state. GitHub issue #43335 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/43335>)
+- <a id="ref-50"></a>**[50]** openai/codex issue contributors. Codex Desktop compaction requires unavailable notes tool, loses checkpoint, and repeats token-heavy work. GitHub issue #42449 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/42449>)
+- <a id="ref-51"></a>**[51]** openai/codex issue contributors. Codex tool loop causes context snowballing and multi-million-token input amplification. GitHub issue #44305 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/44305>)
+<!-- END CITATIONS -->

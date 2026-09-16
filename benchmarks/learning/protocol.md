@@ -127,7 +127,7 @@ Graders and known-good objects are outside the model filesystem and graders are
 materialized only after agent execution. Grader exit zero alone defines success;
 Bash command credit in the outcome ledger never grades a task.
 
-Default `--isolation=strict` requires bubblewrap filesystem/PID isolation and Landlock network
+Default `--isolation=strict` requires bubblewrap [13](#ref-13) filesystem/PID isolation and Landlock [12](#ref-12) network
 ABI ≥4. Only task files, fresh HOME/state, pinned runtime dependencies, system
 runtime files and the restricted scratch RPC socket are visible. TCP connects
 are limited to HTTPS port 443, preventing access to live daemon/MCP ports.
@@ -182,7 +182,7 @@ Home-audit is permission enforcement plus evidence checking, without kernel
 filesystem/network isolation or protection from every client/runtime side effect.
 Every verdict carries that screening caveat. A dry-run tests the trusted stub,
 not Claude permission enforcement. See the upstream
-[permission semantics](https://code.claude.com/docs/en/permissions).
+[permission semantics](https://code.claude.com/docs/en/permissions) [68](#ref-68).
 
 ## Telemetry, scoring and verdict
 
@@ -287,3 +287,11 @@ Runner output defaults to `$CHITTA_LEARNING_OUT/run-TIMESTAMP`, with the base
 is supported. `benchmarks/learning/results/**` is ignored and untracked; retain
 only the compact `evidence/fixture-2026-09-15.md` in git. Fixture `--void-trial`
 injects one denied out-of-root Read attempt (saffron trial 2 A).
+
+<!-- BEGIN CITATIONS -->
+## References
+
+- <a id="ref-12"></a>**[12]** Linux kernel contributors. Landlock: unprivileged access control. Linux userspace API documentation (accessed 2026-09-16). [source](<https://www.kernel.org/doc/html/latest/userspace-api/landlock.html>)
+- <a id="ref-13"></a>**[13]** bubblewrap contributors. bubblewrap: Low-level unprivileged sandboxing tool used by Flatpak and similar projects. Project README (accessed 2026-09-16). [source](<https://github.com/containers/bubblewrap>)
+- <a id="ref-68"></a>**[68]** Anthropic. Configure permissions. Claude Code documentation (accessed 2026-09-16). [source](<https://code.claude.com/docs/en/permissions>)
+<!-- END CITATIONS -->

@@ -13,7 +13,7 @@ Design from a multi-model room (`gpt-5.5:xhigh` + `opus-4.8:xhigh`, room `room-f
 
 ## Problem
 
-`consolidation_pass()` (Sequitur grammar induction + FEP rebuild + Phase-12
+`consolidation_pass()` (Sequitur [25](#ref-25) grammar induction + FEP rebuild + Phase-12
 `compress_low_surprisal` + cortical encode + snapshot) ran a ~30 s pass that held
 locks the recall path also needs. parking_lot is **writer-fair**: once a writer
 queues (Phase 12's `event_tape.write()`, or a queued `log_event` tape writer), every
@@ -79,3 +79,9 @@ off) — unacceptable long-term.
 - Cortical index shape (sparse map → `left-right`, or graph → ANN treatment).
 - Overlay→base fold trigger (time / size / coupled to pass).
 - Manifest format + cross-version compatibility for partial-manifest replay.
+
+<!-- BEGIN CITATIONS -->
+## References
+
+- <a id="ref-25"></a>**[25]** Craig G. Nevill-Manning and Ian H. Witten. Identifying Hierarchical Structure in Sequences: A linear-time algorithm. Journal of Artificial Intelligence Research 7, 67–82 (1997); arXiv:cs/9709102. [source](<https://arxiv.org/abs/cs/9709102>)
+<!-- END CITATIONS -->

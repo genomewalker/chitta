@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CLI Reference — chitta</title>
+<title>chitta — CLI Reference</title>
 <meta name="description" content="CLI reference for chitta's two binaries: chittad (daemon) and chitta (client). Unix socket communication, TOON output, environment variables, and daemon internals.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta property="og:title" content="CLI Reference — chitta">
@@ -81,50 +81,56 @@
 }
 .submenu-toc-link:hover, .submenu-toc-link.active { color: var(--sandal-300); }
 </style>
+<link rel="stylesheet" href="/content-styles.css">
+<link rel="stylesheet" href="/site-shell.css">
 </head>
-<body>
+<body class="page-cli">
+<a class="skip-link" href="#main-content">Skip to content</a>
 
 <!-- NAV -->
-<nav class="nav">
+<nav class="nav site-nav" aria-label="Main navigation">
   <div class="nav-inner">
-    <a href="index.html" class="nav-brand">chitta</a>
-    <button class="nav-hamburger" onclick="document.querySelector('.nav').classList.toggle('nav-open')" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
+    <a href="/index.html" class="nav-brand">chitta</a>
     <ul class="nav-links">
-      <li><a href="getting-started.html">Get Started</a></li>
-      <li><a href="philosophy.html">Philosophy</a></li>
-      <li><a href="architecture.html">Architecture</a></li>
-      <li><a href="recall.html">Recall</a></li>
-      <li><a href="benchmarks.html">Benchmarks</a></li>
-      <li><a href="chitta-field.html">chitta-field</a></li>
-      <li><a href="sadhana.html">Sadhana</a></li>
-      <li><a href="context.html">Context</a></li>
-      <li><a href="tools.html">Tools</a></li>
-      <li><a href="cli.html" class="active">CLI</a></li>
-      <li><a href="hooks.html">Hooks</a></li>
-      <li><a href="skills.html">Skills</a></li>
-      <li><a href="changelog.html">Changelog</a></li>
-      <li><a href="constellation.html">Constellation</a></li>
-      <li><a href="dreams/index.html">Dreams</a></li>
-      <li><a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="/index.html">Home</a></li>
+      <li><a href="/getting-started.html">Get Started</a></li>
+      <li><a href="/philosophy.html">Philosophy</a></li>
+      <li><a href="/architecture.html">Architecture</a></li>
+      <li><a href="/recall.html">Recall</a></li>
+      <li><a href="/benchmarks.html">Benchmarks</a></li>
+      <li><a href="/chitta-field.html">chitta-field</a></li>
+      <li><a href="/sadhana.html">Sadhana</a></li>
+      <li><a href="/context.html">Context</a></li>
+      <li><a href="/tools.html">Tools</a></li>
+      <li><a href="/cli.html" aria-current="page">CLI</a></li>
+      <li><a href="/hooks.html">Hooks</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/changelog.html">Changelog</a></li>
+      <li><a href="/constellation.html">Constellation</a></li>
+      <li><a href="/dreams/index.html">Dreams</a></li>
+      <li><a href="/brain-viz/index.html">Brain Architecture</a></li>
+      <li><a href="/mind-viz/index.html">Mind Interface</a></li>
+      <li><a href="/vedanta/index.html">Vedanta</a></li>
+      <li><a href="/evolve-bridge-live/index.html">Evolve Evidence</a></li>
+      <li><a href="https://github.com/genomewalker/chitta">GitHub</a></li>
     </ul>
   </div>
 </nav>
+<main id="main-content" tabindex="-1">
 
 <!-- PAGE HEADER -->
 <header class="page-header">
   <div class="container">
     <div class="page-header-badge reveal">CLI Reference</div>
     <h1 class="reveal reveal-delay-1">Daemon and client</h1>
-    <p class="page-header-sub reveal reveal-delay-2" style="margin-top:var(--space-3);">A third, <code style="color: var(--aura-300);">chitta_hintd</code>, is built only when the build enables llama.cpp and is optional at runtime.</p>
-    <p class="reveal reveal-delay-2" style="font-family: var(--font-mono); font-size: var(--text-xs); color: #565f89; margin-top: var(--space-3);">Status as of 2026-09-16. <a href="CLI.md">Canonical command reference</a>.</p>
-    <p class="page-header-sub reveal reveal-delay-2"><code style="color: var(--aura-300);">chittad</code> runs the daemon. <code style="color: var(--aura-300);">chitta</code> talks to it. Both compiled from C++, communicating over Unix domain socket.</p>
+    <p class="page-header-sub reveal reveal-delay-2 style-856c742b60">A third, <code class="style-18fae4fbe7">chitta_hintd</code>, is built only when the build enables llama.cpp and is optional at runtime.</p>
+    <p class="reveal reveal-delay-2 style-2dee830ea7">Status as of 2026-09-16 <a href="CLI.md">Canonical command reference</a>.</p>
+    <p class="page-header-sub reveal reveal-delay-2"><code class="style-18fae4fbe7">chittad</code> runs the daemon. <code class="style-18fae4fbe7">chitta</code> talks to it. Both compiled from C++, communicating over Unix domain socket.</p>
   </div>
 </header>
 
 <!-- TABLE OF CONTENTS -->
-<nav class="submenu-toc">
+<nav class="submenu-toc" aria-label="On this page">
   <div class="submenu-toc-inner">
     <a href="#cat-daemon" class="submenu-toc-link" data-section="cat-daemon">chittad &mdash; Daemon</a>
     <a href="#cat-client" class="submenu-toc-link" data-section="cat-client">chitta &mdash; CLI Mode</a>
@@ -146,7 +152,7 @@
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="#CBAF86" stroke-width="1" opacity="0.4" stroke-dasharray="3 3"/><circle cx="10" cy="10" r="3" fill="#CBAF86" opacity="0.2"/><circle cx="10" cy="10" r="1.5" fill="#CBAF86" opacity="0.5"/></svg>
         </div>
-        <span class="tools-category-name">chittad &mdash; Daemon</span>
+        <h2 class="tools-category-name">chittad &mdash; Daemon</h2>
         <span class="tools-category-count">6 commands</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
@@ -195,7 +201,7 @@
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><path d="M7 5 L3 10 L7 15" stroke="#9DB2D9" stroke-width="1.2"/><path d="M13 5 L17 10 L13 15" stroke="#9DB2D9" stroke-width="1.2"/><line x1="11" y1="4" x2="9" y2="16" stroke="#9DB2D9" stroke-width="0.75" opacity="0.5"/></svg>
         </div>
-        <span class="tools-category-name">chitta &mdash; Client (CLI Mode)</span>
+        <h2 class="tools-category-name">chitta &mdash; Client (CLI Mode)</h2>
         <span class="tools-category-count">8 examples</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
@@ -204,7 +210,7 @@
         <div class="code-block">
           <span class="cmd">chitta</span> <span class="flag">&lt;tool-name&gt;</span> [<span class="flag">--param</span> <span class="string">value</span> ...]
         </div>
-        <p class="section-intro" style="margin-top: var(--space-4);">Global options: <code>--socket-path</code>, <code>--json</code>, <code>--toon</code>, <code>--text-only</code>, <code>--help</code></p>
+        <p class="section-intro style-09342f6dd1">Global options: <code>--socket-path</code>, <code>--json</code>, <code>--toon</code>, <code>--text-only</code>, <code>--help</code></p>
         <div class="tools-list">
           <div class="tool-row">
             <span class="tool-name">chitta soul_context</span>
@@ -216,7 +222,7 @@
           </div>
           <div class="tool-row">
             <span class="tool-name">chitta full_resonate --query "caching" --k 5</span>
-            <span class="tool-desc">8-phase resonance &mdash; spreading activation, attractor dynamics, Hebbian recall.</span>
+            <span class="tool-desc">8-phase resonance &mdash; spreading activation, attractor dynamics, Hebbian<sup><a href="#ref-26">26</a></sup> recall.</span>
           </div>
           <div class="tool-row">
             <span class="tool-name">chitta learn_codebase --path . --project "my-app"</span>
@@ -248,7 +254,7 @@
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><path d="M4 4 L10 4 L10 8 L16 8 L16 16 L4 16 Z" stroke="#D46A4C" stroke-width="1.2"/><line x1="7" y1="11" x2="13" y2="11" stroke="#D46A4C" stroke-width="0.75" opacity="0.5"/><line x1="7" y1="13" x2="11" y2="13" stroke="#D46A4C" stroke-width="0.75" opacity="0.5"/></svg>
         </div>
-        <span class="tools-category-name">chitta &mdash; Thin Client Mode</span>
+        <h2 class="tools-category-name">chitta &mdash; Thin Client Mode</h2>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
       <div class="category-body">
@@ -275,7 +281,7 @@
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="14" height="14" rx="2" stroke="#CBAF86" stroke-width="1.2"/><line x1="7" y1="7" x2="13" y2="7" stroke="#CBAF86" stroke-width="0.75" opacity="0.6"/><line x1="7" y1="10" x2="13" y2="10" stroke="#CBAF86" stroke-width="0.75" opacity="0.6"/><line x1="7" y1="13" x2="10" y2="13" stroke="#CBAF86" stroke-width="0.75" opacity="0.6"/></svg>
         </div>
-        <span class="tools-category-name">TOON Output Format</span>
+        <h2 class="tools-category-name">TOON Output Format</h2>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
       <div class="category-body">
@@ -317,12 +323,13 @@
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><rect x="4" y="3" width="12" height="14" rx="1.5" stroke="#9DB2D9" stroke-width="1.2"/><line x1="7" y1="6" x2="13" y2="6" stroke="#9DB2D9" stroke-width="0.75" opacity="0.5"/><line x1="7" y1="9" x2="13" y2="9" stroke="#9DB2D9" stroke-width="0.75" opacity="0.5"/><line x1="7" y1="12" x2="11" y2="12" stroke="#9DB2D9" stroke-width="0.75" opacity="0.5"/></svg>
         </div>
-        <span class="tools-category-name">Environment Variables</span>
+        <h2 class="tools-category-name">Environment Variables</h2>
         <span class="tools-category-count">5 variables</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
       <div class="category-body">
-        <table class="env-table">
+        <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0">
+<table class="env-table">
           <thead>
             <tr>
               <th>Variable</th>
@@ -358,6 +365,7 @@
             </tr>
           </tbody>
         </table>
+</div>
       </div>
     </div>
 
@@ -367,7 +375,7 @@
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><path d="M5 10 L10 5 L15 10" stroke="#D46A4C" stroke-width="1.2"/><line x1="10" y1="5" x2="10" y2="15" stroke="#D46A4C" stroke-width="1.2"/><line x1="4" y1="17" x2="16" y2="17" stroke="#D46A4C" stroke-width="0.75" opacity="0.4"/></svg>
         </div>
-        <span class="tools-category-name">Model Path Resolution</span>
+        <h2 class="tools-category-name">Model Path Resolution</h2>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
       <div class="category-body">
@@ -381,7 +389,7 @@
           <span class="path-arrow">&rarr;</span>
           <span class="path-step">&lt;mind&gt;/../../models/</span>
         </div>
-        <p class="section-intro" style="margin-top: var(--space-4);">The <code>~/.claude/bin/</code> probe exists because the systemd unit keeps the model beside the binaries. Without it, a daemon started with no <code>--embed-model</code> would silently fall back to an HTTP embedding backend &mdash; a different vector space, which means wrong-dimension vectors and corrupt recall rather than a clean failure.</p>
+        <p class="section-intro style-09342f6dd1">The <code>~/.claude/bin/</code> probe exists because the systemd unit keeps the model beside the binaries. Without it, a daemon started with no <code>--embed-model</code> would silently fall back to an HTTP embedding backend &mdash; a different vector space, which means wrong-dimension vectors and corrupt recall rather than a clean failure.</p>
         <p class="section-intro">Embedding dimension is a <em>compile-time</em> constant, 1024 on a public build, set with <code>-DCHITTA_EMBED_DIM</code> or <code>$CHITTA_EMBED_DIM</code> at configure time. Changing it requires a fresh build directory and re-embedding the store.</p>
       </div>
     </div>
@@ -392,7 +400,7 @@
         <div class="tools-category-icon">
           <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="#CBAF86" stroke-width="1" stroke-dasharray="2 2"/><path d="M10 6 L10 10 L13 13" stroke="#CBAF86" stroke-width="1.2"/></svg>
         </div>
-        <span class="tools-category-name">Daemon Internals</span>
+        <h2 class="tools-category-name">Daemon Internals</h2>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
       <div class="category-body">
@@ -405,7 +413,7 @@
           <li>Begins subconscious processing loop</li>
         </ul>
 
-        <p class="section-intro" style="margin-top: var(--space-6);">Subconscious schedule:</p>
+        <p class="section-intro style-c02f865c46">Subconscious schedule:</p>
         <div class="schedule-grid">
           <span class="schedule-interval">Every 1s</span>
           <span class="schedule-task">Check for work</span>
@@ -439,13 +447,24 @@
 </section>
 
 <!-- FOOTER -->
-<footer class="footer">
+<!-- BEGIN CITATIONS -->
+<section id="references" class="references">
+  <div class="container">
+  <h2 class="heading-section">References</h2>
+  <ol>
+    <li id="ref-26" value="26">Donald O. Hebb. The Organization of Behavior: A Neuropsychological Theory. Wiley (1949); Psychology Press reissue (2002). <a href="https://www.routledge.com/The-Organization-of-Behavior-A-Neuropsychological-Theory/Hebb/p/book/9780415654531">https://www.routledge.com/The-Organization-of-Behavior-A-Neuropsychological-Theory/Hebb/p/book/9780415654531</a></li>
+  </ol>
+  </div>
+</section>
+<!-- END CITATIONS -->
+
+</main>
+<footer class="footer site-footer">
   <div class="container">
     <p class="footer-text">
-      Persistent memory for Claude Code and Codex.
-      <span class="footer-sep"></span>
-      <a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/genomewalker/chitta">GitHub repository</a> · <a href="https://opensource.org/licenses/MIT">MIT license</a> · <a href="/cli.html">This page</a>
     </p>
+    <p class="site-status">Status as of 2026-09-16 · <a href="/changelog.html">Unreleased + v5.72.0</a></p>
   </div>
 </footer>
 
@@ -466,21 +485,7 @@
 })();
 
 /* Smooth scroll for TOC chips */
-document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
-  anchor.addEventListener('click', function(e) {
-    var target = document.querySelector(this.getAttribute('href'));
-    if (target) {
-      e.preventDefault();
-      var offset = 140;
-      var top = target.getBoundingClientRect().top + window.pageYOffset - offset;
-      window.scrollTo({ top: top, behavior: 'smooth' });
-      /* Expand the category if collapsed */
-      if (target.classList.contains('collapsed')) {
-        target.classList.remove('collapsed');
-      }
-    }
-  });
-});
+/* Native anchors preserve URL history, focus and reduced-motion behavior. */
 
 /* ═══════════════════════════════════════════
    SCROLL SPY - Highlight active TOC section

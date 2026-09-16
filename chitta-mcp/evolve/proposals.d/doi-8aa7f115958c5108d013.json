@@ -16,7 +16,7 @@
   "evidence": [
     {
       "source": "https://doi.org/10.5281/zenodo.22699102",
-      "claim": "Paper argues CLS-style consolidation in LLM agents is licensed only as replay/reindexing over stored traces, not as a weight-consolidation guarantee (abstract unavailable, title/claim only — not independently verified from full text)."
+      "claim": "Citation check 2026-09-16: the fetched Zenodo description distinguishes textual store rewriting from parametric systems using isolation or expandable blocks; neither by itself inherits CLS shared-representation generalization and interference guarantees. Verification is of the description, not the full paper."
     }
   ],
   "source": "hypothesis",

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Philosophy — chitta</title>
+<title>chitta — Philosophy</title>
 <meta name="description" content="Vedantic concepts and design principles used in chitta. Each term names a behavior. Each principle has trade-offs.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta property="og:title" content="Philosophy — chitta">
@@ -254,43 +254,49 @@
   margin-top: 0.5rem;
 }
 </style>
+<link rel="stylesheet" href="/content-styles.css">
+<link rel="stylesheet" href="/site-shell.css">
 </head>
-<body>
+<body class="page-philosophy">
+<a class="skip-link" href="#main-content">Skip to content</a>
 
 <!-- NAV -->
-<nav class="nav">
+<nav class="nav site-nav" aria-label="Main navigation">
   <div class="nav-inner">
-    <a href="index.html" class="nav-brand">chitta</a>
-    <button class="nav-hamburger" onclick="document.querySelector('.nav').classList.toggle('nav-open')" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
+    <a href="/index.html" class="nav-brand">chitta</a>
     <ul class="nav-links">
-      <li><a href="getting-started.html">Get Started</a></li>
-      <li><a href="philosophy.html" class="active">Philosophy</a></li>
-      <li><a href="architecture.html">Architecture</a></li>
-      <li><a href="recall.html">Recall</a></li>
-      <li><a href="benchmarks.html">Benchmarks</a></li>
-      <li><a href="chitta-field.html">chitta-field</a></li>
-      <li><a href="sadhana.html">Sadhana</a></li>
-      <li><a href="context.html">Context</a></li>
-      <li><a href="tools.html">Tools</a></li>
-      <li><a href="cli.html">CLI</a></li>
-      <li><a href="hooks.html">Hooks</a></li>
-      <li><a href="skills.html">Skills</a></li>
-      <li><a href="changelog.html">Changelog</a></li>
-      <li><a href="constellation.html">Constellation</a></li>
-      <li><a href="dreams/index.html">Dreams</a></li>
-      <li><a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="/index.html">Home</a></li>
+      <li><a href="/getting-started.html">Get Started</a></li>
+      <li><a href="/philosophy.html" aria-current="page">Philosophy</a></li>
+      <li><a href="/architecture.html">Architecture</a></li>
+      <li><a href="/recall.html">Recall</a></li>
+      <li><a href="/benchmarks.html">Benchmarks</a></li>
+      <li><a href="/chitta-field.html">chitta-field</a></li>
+      <li><a href="/sadhana.html">Sadhana</a></li>
+      <li><a href="/context.html">Context</a></li>
+      <li><a href="/tools.html">Tools</a></li>
+      <li><a href="/cli.html">CLI</a></li>
+      <li><a href="/hooks.html">Hooks</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/changelog.html">Changelog</a></li>
+      <li><a href="/constellation.html">Constellation</a></li>
+      <li><a href="/dreams/index.html">Dreams</a></li>
+      <li><a href="/brain-viz/index.html">Brain Architecture</a></li>
+      <li><a href="/mind-viz/index.html">Mind Interface</a></li>
+      <li><a href="/vedanta/index.html">Vedanta</a></li>
+      <li><a href="/evolve-bridge-live/index.html">Evolve Evidence</a></li>
+      <li><a href="https://github.com/genomewalker/chitta">GitHub</a></li>
     </ul>
   </div>
 </nav>
+<main id="main-content" tabindex="-1">
 
 <!-- PAGE HEADER -->
 <header class="page-header">
   <div class="container">
     <div class="page-header-badge reveal">Philosophy</div>
     <h1 class="reveal reveal-delay-1">Vedantic concepts and implementation</h1>
-    <p class="status-line">Status as of 2026-09-16. <a href="PHILOSOPHY.md">Conceptual reference</a> · <a href="ARCHITECTURE.md">Current implementation</a>.</p>
+    <p class="status-line">Status as of 2026-09-16 <a href="PHILOSOPHY.md">Conceptual reference</a> · <a href="ARCHITECTURE.md">Current implementation</a>.</p>
     <p class="page-header-sub reveal reveal-delay-2">Sanskrit terms name system behaviors. The sections below map those terms to storage, retrieval, and background processing.</p>
   </div>
 </header>
@@ -398,7 +404,7 @@
         </div>
         <div class="mapping-system">
           <span class="mapping-arrow">&rarr;</span>
-          Hebbian learning and usage-weighted strengthening. When a memory is recalled and used, it grows stronger. Frequent patterns crystallize into wisdom.
+          Hebbian<sup><a href="#ref-26">26</a></sup> learning and usage-weighted strengthening. When a memory is recalled and used, it grows stronger. Frequent patterns crystallize into wisdom.
         </div>
       </div>
 
@@ -519,7 +525,7 @@ Decay every 60s during idle. Floor = 0.1.</div>
 
       <div class="principle-card reveal">
         <h3 class="principle-title">Hybrid retrieval</h3>
-        <p class="principle-desc">Retrieval combines vector similarity, BM25 keyword matching, and graph traversal.</p>
+        <p class="principle-desc">Retrieval combines vector similarity, BM25<sup><a href="#ref-24">24</a></sup> keyword matching, and graph traversal.</p>
         <div class="principle-meta">
           <span class="principle-tag principle-tag--evidence">HyDE paper, RAG research</span>
           <span class="principle-tag principle-tag--tradeoff">Complexity, latency</span>
@@ -646,25 +652,37 @@ Query latency depends on cache and index state.</div>
 <!-- LINK TO FULL DOCS -->
 <section class="back-section">
   <div class="container">
-    <p class="reveal" style="text-align: center; color: var(--lotus-300);">
+    <p class="reveal style-74d098c999">
       Full claim files with cross-references available in the <a href="https://github.com/genomewalker/chitta/tree/main/philosophy" class="link-sandal">philosophy/</a> directory.
     </p>
-    <div style="text-align: center; margin-top: 1.5rem;">
+    <div class="style-2b4660b157">
       <a href="index.html" class="back-link">&larr; Back to chitta</a>
-      <span style="margin: 0 1rem; color: var(--lotus-600);">|</span>
+      <span class="style-593d751a0f">|</span>
       <a href="architecture.html" class="back-link">Architecture &rarr;</a>
     </div>
   </div>
 </section>
 
 <!-- FOOTER -->
-<footer class="footer">
+<!-- BEGIN CITATIONS -->
+<section id="references" class="references">
+  <div class="container">
+  <h2 class="heading-section">References</h2>
+  <ol>
+    <li id="ref-24" value="24">Stephen Robertson and Hugo Zaragoza. The Probabilistic Relevance Framework: BM25 and Beyond. Foundations and Trends in Information Retrieval 3(4), 333–389 (2009). <a href="https://doi.org/10.1561/1500000019">https://doi.org/10.1561/1500000019</a></li>
+    <li id="ref-26" value="26">Donald O. Hebb. The Organization of Behavior: A Neuropsychological Theory. Wiley (1949); Psychology Press reissue (2002). <a href="https://www.routledge.com/The-Organization-of-Behavior-A-Neuropsychological-Theory/Hebb/p/book/9780415654531">https://www.routledge.com/The-Organization-of-Behavior-A-Neuropsychological-Theory/Hebb/p/book/9780415654531</a></li>
+  </ol>
+  </div>
+</section>
+<!-- END CITATIONS -->
+
+</main>
+<footer class="footer site-footer">
   <div class="container">
     <p class="footer-text">
-      Persistent memory for Claude Code and Codex.
-      <span class="footer-sep"></span>
-      <a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/genomewalker/chitta">GitHub repository</a> · <a href="https://opensource.org/licenses/MIT">MIT license</a> · <a href="/philosophy.html">This page</a>
     </p>
+    <p class="site-status">Status as of 2026-09-16 · <a href="/changelog.html">Unreleased + v5.72.0</a></p>
   </div>
 </footer>
 

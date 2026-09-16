@@ -37,15 +37,15 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 - Daemon startup caches derived search state across restarts (normalized
   embeddings, event-tape organs, quantized index): clean start 27 s → 13 s,
   optional sidecars, rollback-safe.
-- Stigmergic artifact traces, after SwarmWorld (arXiv:2608.26081) measured
+- Stigmergic artifact traces, after SwarmWorld [14](#ref-14) (arXiv:2608.26081) measured
   ~95% of first reuse through observing an artifact rather than being told:
   `pre-tool-hook` adds `[traces]` on the first Read of a file per session
   (memories whose text names that file; `CHITTA_FILE_TRACES=0` disables) and
   `artifact-trace.sh` (PostToolUse Write) registers newly written scripts as
   `[artifact] <path> sha:<8> purpose:…` signals so later sessions fork them.
 - Two hypothesis cards for the evolve loop from the same reading: isolated
-  best-of-2 implementation streams (SwarmWorld: isolated search kept the best
-  single artifact) and replication-weighted recall (Buehler's repeated runs
+  best-of-2 implementation streams (SwarmWorld [14](#ref-14): isolated search kept the best
+  single artifact) and replication-weighted recall (Buehler's [15](#ref-15) repeated runs
   reached model-dependent conclusions). The learning-experiment protocol gains
   two pre-registered secondary metrics: best-of-three per arm and artifact
   reuse rate.
@@ -54,7 +54,7 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 - `recall_analogy` is explicit relation transfer only (a:b :: c:?): the
   predicate(s) linking a→b come from indexed triplet lookups and the answers are
   c's actual neighbours over those predicates, with supporting edges and a
-  `reason` on abstention. Structural mode and VSA ranking are gone from the
+  `reason` on abstention. Structural mode and VSA [10](#ref-10) ranking are gone from the
   endpoint. Frozen-replica benchmark: hit@1 14/14, hit@3 14/14, 14/14 negative
   abstentions, 0 unsupported answers (docs/EVALS.md).
 - Prompt, SessionStart and Stop hooks no longer start Python on the hot path:
@@ -78,7 +78,7 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 ### Removed
 
-- Retired MDL admission compression on 2026-09-15: native and Bash shadow taps,
+- Retired MDL [11](#ref-11) admission compression on 2026-09-15: native and Bash shadow taps,
   same-chunk pooling, corpus dictionaries/bootstrap, Python mirror, test targets,
   environment knobs and evolve coverage telemetry. Distilled learning storage,
   deduplication and recall ranking remain unchanged; no utility-posterior hard
@@ -88,7 +88,7 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 ## [5.72.0] - 2026-09-14
 
 ### Daemon / store
-- Recall read path no longer writes: access touches accumulate and drain every 5 s; WAL fsync is timer-based (200 ms) with durable ops explicit; TurboQuant index rebuilds on the maintenance thread. Twelve concurrent `recall_lanes`: 1.7–3.6 s → 0.23–0.54 s.
+- Recall read path no longer writes: access touches accumulate and drain every 5 s; WAL fsync is timer-based (200 ms) with durable ops explicit; TurboQuant [5](#ref-5) index rebuilds on the maintenance thread. Twelve concurrent `recall_lanes`: 1.7–3.6 s → 0.23–0.54 s.
 - Embedding context pool (`CHITTA_EMBED_CONTEXTS`, default 4) and query-embedding LRU cache.
 - Task ledger (threads, inbox, artifacts, session bindings, leases) moved from `~/.claude/task-ledger.db` (NFS sqlite) into the daemon (`ledger_op` RPC) with an idempotent `task_ledger.py migrate`.
 - Queue lives at `<mind>/queue.jsonl`; tag recall is a hard filter with realm applied after; correction lane realm-scoped; MDL small-evidence pooling (shadow).
@@ -96,7 +96,7 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 ### Hooks
 - SessionStart lanes run concurrently (5.7–7.2 s → ~0.7–1.5 s) with a fallback line when every lane times out; SessionEnd fits its 5 s budget.
-- Prompt hook: in-process realm detection; zero-distinctive-token turns skip topic lanes; UNKNOWN-band candidates need a distinctive turn token; keyword rows need two distinctive tokens or BM25 ≥ 60; pre-tool "BEFORE RUNNING" needs 0.6 similarity; hard guard against killing the `--http` MCP process.
+- Prompt hook: in-process realm detection; zero-distinctive-token turns skip topic lanes; UNKNOWN-band candidates need a distinctive turn token; keyword rows need two distinctive tokens or BM25 [24](#ref-24) ≥ 60; pre-tool "BEFORE RUNNING" needs 0.6 similarity; hard guard against killing the `--http` MCP process.
 - Hooks honour `CHITTA_SOCKET_PATH`; failed commands recorded via `PostToolUseFailure`; Codex exit-less shape recorded as unknown.
 
 ### MCP
@@ -157,7 +157,7 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 - `chitta-mcp/outcome_ledger.py` and `hooks/outcome-ledger.sh`: fail-open JSONL
   append of `injected`, `bash_outcome` and `session_end` events, with an offline
-  joiner computing Wilson-lower-bound credit per memory.
+  joiner computing Wilson-lower-bound [2](#ref-2) credit per memory.
 - `chitta-mcp/mdl_gate.py` runs in **shadow mode only**. It writes to
   `mdl_gate_shadow.jsonl` and does not block distillation.
 
@@ -179,7 +179,7 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
   `scripts/gen-tools-docs.py` instead of hand-maintained. The hand-written page
   claimed "150+ tools" and listed 241; the real surface is 343.
 - New pages: `docs/recall.html` (the retrieval pipeline) and
-  `docs/benchmarks.html` (SMRITI-Bench, LongMemEval, LoCoMo).
+  `docs/benchmarks.html` (SMRITI-Bench, LongMemEval [16](#ref-16), LoCoMo [17](#ref-17)).
 
 ## [5.70.x] - 2026-07-06 to 2026-07-14
 
@@ -187,7 +187,7 @@ Patch releases: 5.70.0 (07-06), 5.70.1 (07-07), 5.70.2 (07-07), 5.70.3 (07-07), 
 
 - **soul**: C2 self-monitoring (feeling-of-knowing) confidence signal, recalibrated
   to a 2-band scale with timeout-degrade handling; workspace-admission inspector.
-- **daemon**: dormant PPR injection lane, delta-HNSW persist, `ops_log`,
+- **daemon**: dormant PPR injection lane, delta-HNSW [4](#ref-4) persist, `ops_log`,
   `semantic_backfill` RPC, task-state and durable-correction keyed lanes,
   `provenance_check` exposed on CLI/MCP; single-writer lock made actually
   exclusive; recall latency bounded under embed/queue load via a priority gate.
@@ -242,7 +242,7 @@ Patch releases: 5.66.0 (07-05), 5.66.1 (07-05), 5.66.2 (07-06), 5.66.3 (07-06).
 Patch releases: 5.65.0 (06-30), 5.65.1 (07-01).
 
 - **eval**: graph-only multihop, GOLDEN_SET v6 (30 queries); G-entropy/S-entropy
-  logging; grader abstain signal + multi-strategy RRF re-ranking.
+  logging; grader abstain signal + multi-strategy RRF [3](#ref-3) re-ranking.
 - **dream**: BridgeBrain routes dreams through bridge rooms (local/gemma) with
   fallback to LocalBrain; gap-memory seeds; prune time guard.
 - **subconscious**: removed the automatic `prune_episodes` call and guarded
@@ -257,7 +257,7 @@ Patch releases: 5.64.0, 5.64.1, 5.64.2, all 2026-06-29.
   background embedding on by default; batch size 40→256.
 - **embed_loop**: removed the `prune_episodes` call, respects
   `config_.embedding_interval`.
-- **field**: multi-hop DAM + scoring.json; turbovec DAM submatrix; TurboState
+- **field**: multi-hop DAM [8](#ref-8) + scoring.json; turbovec DAM submatrix; TurboState
   lazy index.
 
 ## [5.63.0] - 2026-06-29
@@ -297,7 +297,7 @@ Patch releases: 5.61.0–5.61.16, spanning 2026-06-23 to 2026-06-28.
 
 ## [5.60.0] - 2026-06-23
 
-- **field-rag**: Phase 1 — Modern Hopfield recall via `strategy=field`.
+- **field-rag**: Phase 1 — Modern Hopfield [7](#ref-7) [33](#ref-33) recall via `strategy=field`.
 
 ## [5.59.0] - 2026-06-23
 
@@ -400,7 +400,7 @@ Patch releases: 5.48.0 (05-26), 5.48.1 (05-27), 5.48.2 (05-28).
 - **build**: replace ONNX with llama.cpp+nomic GGUF in CI; embed-model
   download added to smart-install; llama.cpp pin bumped b4990→b9294.
 - **daemon**: `consolidation_pass` moved to a subprocess path so it no longer
-  holds the exclusive `rpc_mutex` during the Sequitur+FEP rebuild.
+  holds the exclusive `rpc_mutex` during the Sequitur [25](#ref-25)+FEP rebuild.
 - **install**: smart-install preserves `--embed-model` across updates.
 
 ## [5.47.x] - 2026-05-26
@@ -492,7 +492,7 @@ Patch releases: 5.44.0–5.44.4, all 2026-05-25.
 
 ### Added — CEC Phase 8: Cross-Session Motif Q-Values
 
-- `CdawgState.q_value`: per-state expected-success scalar, persisted in CDAWG.
+- `CdawgState.q_value`: per-state expected-success scalar, persisted in CDAWG [6](#ref-6).
 - `CdawgOrgan::update_q(terminal_sym, reward, α, γ)`: TD(0) propagation up the
   suffix-link tree, weighted by `1/|endpos|` so generic states don't absorb all
   signal. Called on every non-legacy outcome event with reward ±1.
@@ -560,7 +560,7 @@ existing HNSW/BM25/HDC recall lanes, which are untouched.
 - New CLI/MCP tools: `log_event`, `recall_last_action`, `recall_failure_pattern`,
   `recall_causal`.
 
-**Phase 2 — TD(λ) + PMI Causal Antecedents + Roaring (v5.26.0)**
+**Phase 2 — TD(λ) [31](#ref-31) + PMI Causal Antecedents + Roaring (v5.26.0)**
 - `CdawgState.endpos` upgraded from `Vec<u32>` to `RoaringBitmap` (O(1) cardinality
   for PMI denominator).
 - `push_td_credit()`: backward eligibility traces over last 16 events, δ=+0.1 success /
@@ -569,7 +569,7 @@ existing HNSW/BM25/HDC recall lanes, which are untouched.
   `log(count(X,Y) × N / count(X) / count(Y))`.
 
 **Phase 3 — Surprisal-Gated Writes + Involuntary Injection (v5.27.0)**
-- `put_memory` computes PPM surprisal before logging the event. If
+- `put_memory` computes PPM [30](#ref-30) surprisal before logging the event. If
   `surprisal > 2.0 nats`, the memory's `decay_rate` is halved (surprising
   memories burn in harder).
 - `hooks/prompt-core.sh`: if `recall_failure_pattern` finds a pattern with
@@ -663,13 +663,13 @@ Root cause was runaway triplet accumulation: the distillation pipeline re-extrac
 > **Note (2026-04-16):** The FEP / Hopfield / adaptive-vigilance items below are **partially shipped**. The chitta-field sibling checkout now exports the six `cf_*` symbols with the ABI declared in `chitta/include/chitta/field_store.hpp` (`cf_reconstruction_error`, `cf_memory_surprise` are real; `cf_search_attractor`, `cf_hopfield_co_retrieval`, `cf_hopfield_stats`, `cf_adapt_vigilance` are stubs returning `CF_NOT_IMPLEMENTED` / empty `"{}"`). The pinned submodule at `cc-soul/chitta-field@762463a` does NOT yet carry these exports; `hopfield.rs`, `attractor_settle`, asymmetric prototype transitions, surprise-modulated plasticity, and the self-orthogonalising sparse encoder are still unimplemented on both sides. Bump the submodule once the full set lands.
 
 ### Added
-- **FEP attractor network** — self-orthogonalizing memory representations derived from the Free Energy Principle (Spisak & Friston, Neurocomputing 2026). Three-phase integration across chitta-field and the C++ daemon.
+- **FEP attractor network** — self-orthogonalizing memory representations derived from the Free Energy Principle (Spisak [19](#ref-19) & Friston, Neurocomputing 2026). Three-phase integration across chitta-field and the C++ daemon.
 - **Asymmetric prototype transitions** — `strengthen_transition` gives full delta to forward direction (a→b), 0.3× to reverse (b→a). Sequential recall order encodes temporal asymmetry.
 - **Asymmetric triplet weights** — new `reverse_weight` field on `TripletEntry` with `#[serde(default)]` backward compatibility. New triplets default to `reverse_weight = weight × 0.3`.
 - **Surprise-modulated plasticity** — `MemoryState.surprise` stores reconstruction error from sparse encoder. `PlasticityLearner` uses it: high surprise → slow decay, low surprise → fast decay.
 - **Attractor-based pattern completion** — `CorticalIndex::attractor_settle()` iteratively blends query with prototype centroids and follows asymmetric transitions (3-5 steps). New `Route::Attractor` in route learner.
 - **Hopfield network module** (`hopfield.rs`) — asymmetric energy-based attractor network over memory co-activations. `settle()` propagates activation through multi-hop directed couplings with dynamic neighbor discovery.
-- **Self-orthogonalizing sparse encoder** — Hebbian update replaced with FEP-derived rule: prediction error + complexity penalty (λ=1e-4) + Gram-Schmidt partial decorrelation (1% per step) between active atoms.
+- **Self-orthogonalizing sparse encoder** — Hebbian [26](#ref-26) update replaced with FEP-derived rule: prediction error + complexity penalty (λ=1e-4) + Gram-Schmidt partial decorrelation (1% per step) between active atoms.
 - **Adaptive vigilance** — `CorticalIndex::adapt_vigilance()` lowers vigilance when prediction error is high (more prototypes needed), raises it when model is accurate.
 - **Free-energy merge criterion** — `find_dup_pairs` uses `cf_reconstruction_error` to check whether merging reduces total free energy (accuracy loss vs complexity gain), with cosine threshold fallback.
 - **New FFI exports** — `cf_reconstruction_error`, `cf_memory_surprise`, `cf_search_attractor`, `cf_hopfield_co_retrieval`, `cf_hopfield_stats`, `cf_adapt_vigilance`.
@@ -806,3 +806,28 @@ Root cause was runaway triplet accumulation: the distillation pipeline re-extrac
 ## [1.x]
 
 - Initial Python implementation
+
+<!-- BEGIN CITATIONS -->
+## References
+
+- <a id="ref-2"></a>**[2]** Edwin B. Wilson. Probable Inference, the Law of Succession, and Statistical Inference. Journal of the American Statistical Association 22(158), 209–212 (1927). [source](<https://doi.org/10.1080/01621459.1927.10502953>)
+- <a id="ref-3"></a>**[3]** Gordon V. Cormack, Charles L. A. Clarke, and Stefan Buettcher. Reciprocal rank fusion outperforms condorcet and individual rank learning methods. SIGIR, 758–759 (2009). [source](<https://doi.org/10.1145/1571941.1572114>)
+- <a id="ref-4"></a>**[4]** Yu. A. Malkov and D. A. Yashunin. Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs. IEEE TPAMI 42(4), 824–836 (2020); arXiv:1603.09320 (2016). [source](<https://arxiv.org/abs/1603.09320>) [source](<https://doi.org/10.1109/TPAMI.2018.2889473>)
+- <a id="ref-5"></a>**[5]** Amir Zandieh, Majid Daliri, Majid Hadian, and Vahab Mirrokni. TurboQuant: Online Vector Quantization with Near-optimal Distortion Rate. arXiv:2504.19874 (2025). [source](<https://arxiv.org/abs/2504.19874>)
+- <a id="ref-6"></a>**[6]** A. Blumer, J. Blumer, D. Haussler, R. McConnell, and A. Ehrenfeucht. Complete inverted files for efficient text retrieval and analysis. Journal of the ACM 34(3), 578–595 (1987). [source](<https://doi.org/10.1145/28869.28873>)
+- <a id="ref-7"></a>**[7]** Hubert Ramsauer et al. Hopfield Networks is All You Need. arXiv:2008.02217 (2020). [source](<https://arxiv.org/abs/2008.02217>)
+- <a id="ref-8"></a>**[8]** Dmitry Krotov and John J. Hopfield. Dense Associative Memory for Pattern Recognition. NeurIPS 29 (2016); arXiv:1606.01164. [source](<https://arxiv.org/abs/1606.01164>)
+- <a id="ref-10"></a>**[10]** Pentti Kanerva. Hyperdimensional Computing: An Introduction to Computing in Distributed Representation with High-Dimensional Random Vectors. Cognitive Computation 1, 139–159 (2009). [source](<https://doi.org/10.1007/s12559-009-9009-8>)
+- <a id="ref-11"></a>**[11]** Jorma Rissanen. Modeling by shortest data description. Automatica 14(5), 465–471 (1978). [source](<https://doi.org/10.1016/0005-1098(78)90005-5>)
+- <a id="ref-14"></a>**[14]** Subhadeep Pal, Fiona Y. Wang, and Markus J. Buehler. SwarmWorld: Stigmergic technological evolution in societies of language-model agents. arXiv:2608.26081 (2026). [source](<https://arxiv.org/abs/2608.26081>) [source](<https://arxiv.org/html/2608.26081>)
+- <a id="ref-15"></a>**[15]** LAMM, MIT. MetaMaterialsDiscovery: Autonomous computational studies of hierarchical metamaterial fracture. Research archive, Hugging Face (accessed 2026-09-16). [source](<https://huggingface.co/lamm-mit/MetaMaterialsDiscovery>)
+- <a id="ref-16"></a>**[16]** Di Wu, Hongwei Wang, Wenhao Yu, Yuwei Zhang, Kai-Wei Chang, and Dong Yu. LongMemEval: Benchmarking Chat Assistants on Long-Term Interactive Memory. ICLR (2025); arXiv:2410.10813 (2024). [source](<https://arxiv.org/abs/2410.10813>)
+- <a id="ref-17"></a>**[17]** Adyasha Maharana, Dong-Ho Lee, Sergey Tulyakov, Mohit Bansal, Francesco Barbieri, and Yuwei Fang. Evaluating Very Long-Term Conversational Memory of LLM Agents. ACL (2024); arXiv:2402.17753. [source](<https://arxiv.org/abs/2402.17753>) [source](<https://aclanthology.org/2024.acl-long.747/>)
+- <a id="ref-19"></a>**[19]** Tamas Spisak and Karl Friston. Self-orthogonalizing attractor neural networks emerging from the free energy principle. Neurocomputing, article 133472 (2026); arXiv:2505.22749 (2025). [source](<https://arxiv.org/abs/2505.22749>) [source](<https://doi.org/10.1016/j.neucom.2026.133472>)
+- <a id="ref-24"></a>**[24]** Stephen Robertson and Hugo Zaragoza. The Probabilistic Relevance Framework: BM25 and Beyond. Foundations and Trends in Information Retrieval 3(4), 333–389 (2009). [source](<https://doi.org/10.1561/1500000019>)
+- <a id="ref-25"></a>**[25]** Craig G. Nevill-Manning and Ian H. Witten. Identifying Hierarchical Structure in Sequences: A linear-time algorithm. Journal of Artificial Intelligence Research 7, 67–82 (1997); arXiv:cs/9709102. [source](<https://arxiv.org/abs/cs/9709102>)
+- <a id="ref-26"></a>**[26]** Donald O. Hebb. The Organization of Behavior: A Neuropsychological Theory. Wiley (1949); Psychology Press reissue (2002). [source](<https://www.routledge.com/The-Organization-of-Behavior-A-Neuropsychological-Theory/Hebb/p/book/9780415654531>)
+- <a id="ref-30"></a>**[30]** John G. Cleary and Ian H. Witten. Data Compression Using Adaptive Coding and Partial String Matching. IEEE Transactions on Communications 32(4), 396–402 (1984). [source](<https://doi.org/10.1109/TCOM.1984.1096090>)
+- <a id="ref-31"></a>**[31]** Richard S. Sutton. Learning to Predict by the Methods of Temporal Differences. Machine Learning 3, 9–44 (1988). [source](<https://doi.org/10.1023/A:1022633531479>)
+- <a id="ref-33"></a>**[33]** John J. Hopfield. Neural networks and physical systems with emergent collective computational abilities. PNAS 79(8), 2554–2558 (1982). [source](<https://doi.org/10.1073/pnas.79.8.2554>)
+<!-- END CITATIONS -->

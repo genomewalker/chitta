@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Architecture — chitta</title>
+<title>chitta — Architecture</title>
 <meta name="description" content="Technical architecture of chitta: chitta-field Rust memory substrate, 8-phase resonance engine, Bayesian self-tuning, tree-sitter code intelligence, and the Vak embedding pipeline.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta property="og:title" content="Architecture — chitta">
@@ -81,36 +81,42 @@
 }
 .submenu-toc-link:hover, .submenu-toc-link.active { color: var(--sandal-300); }
 </style>
+<link rel="stylesheet" href="/content-styles.css">
+<link rel="stylesheet" href="/site-shell.css">
 </head>
-<body>
+<body class="page-architecture">
+<a class="skip-link" href="#main-content">Skip to content</a>
 
 <!-- NAV -->
-<nav class="nav">
+<nav class="nav site-nav" aria-label="Main navigation">
   <div class="nav-inner">
-    <a href="index.html" class="nav-brand">chitta</a>
-    <button class="nav-hamburger" onclick="document.querySelector('.nav').classList.toggle('nav-open')" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
+    <a href="/index.html" class="nav-brand">chitta</a>
     <ul class="nav-links">
-      <li><a href="getting-started.html">Get Started</a></li>
-      <li><a href="philosophy.html">Philosophy</a></li>
-      <li><a href="architecture.html" class="active">Architecture</a></li>
-      <li><a href="recall.html">Recall</a></li>
-      <li><a href="benchmarks.html">Benchmarks</a></li>
-      <li><a href="chitta-field.html">chitta-field</a></li>
-      <li><a href="sadhana.html">Sadhana</a></li>
-      <li><a href="context.html">Context</a></li>
-      <li><a href="tools.html">Tools</a></li>
-      <li><a href="cli.html">CLI</a></li>
-      <li><a href="hooks.html">Hooks</a></li>
-      <li><a href="skills.html">Skills</a></li>
-      <li><a href="changelog.html">Changelog</a></li>
-      <li><a href="constellation.html">Constellation</a></li>
-      <li><a href="dreams/index.html">Dreams</a></li>
-      <li><a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="/index.html">Home</a></li>
+      <li><a href="/getting-started.html">Get Started</a></li>
+      <li><a href="/philosophy.html">Philosophy</a></li>
+      <li><a href="/architecture.html" aria-current="page">Architecture</a></li>
+      <li><a href="/recall.html">Recall</a></li>
+      <li><a href="/benchmarks.html">Benchmarks</a></li>
+      <li><a href="/chitta-field.html">chitta-field</a></li>
+      <li><a href="/sadhana.html">Sadhana</a></li>
+      <li><a href="/context.html">Context</a></li>
+      <li><a href="/tools.html">Tools</a></li>
+      <li><a href="/cli.html">CLI</a></li>
+      <li><a href="/hooks.html">Hooks</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/changelog.html">Changelog</a></li>
+      <li><a href="/constellation.html">Constellation</a></li>
+      <li><a href="/dreams/index.html">Dreams</a></li>
+      <li><a href="/brain-viz/index.html">Brain Architecture</a></li>
+      <li><a href="/mind-viz/index.html">Mind Interface</a></li>
+      <li><a href="/vedanta/index.html">Vedanta</a></li>
+      <li><a href="/evolve-bridge-live/index.html">Evolve Evidence</a></li>
+      <li><a href="https://github.com/genomewalker/chitta">GitHub</a></li>
     </ul>
   </div>
 </nav>
+<main id="main-content" tabindex="-1">
 
 <!-- PAGE HEADER -->
 <header class="page-header">
@@ -118,12 +124,12 @@
     <div class="page-header-badge reveal">Technical Architecture</div>
     <h1 class="reveal reveal-delay-1">System architecture</h1>
     <p class="page-header-sub reveal reveal-delay-2">chitta-field Rust memory substrate, 8-phase resonance, Bayesian self-tuning, and tree-sitter code intelligence&thinsp;&mdash;&thinsp;in a single C++ daemon.</p>
-    <p class="reveal reveal-delay-2" style="font-family: var(--font-mono); font-size: var(--text-xs); color: #565f89; margin-top: var(--space-3);">Status as of 2026-09-16. <a href="ARCHITECTURE.md">Canonical architecture</a>.</p>
+    <p class="reveal reveal-delay-2 style-2dee830ea7">Status as of 2026-09-16 <a href="ARCHITECTURE.md">Canonical architecture</a>.</p>
   </div>
 </header>
 
 <!-- STICKY TOP SUBMENU TOC -->
-<nav class="submenu-toc">
+<nav class="submenu-toc" aria-label="On this page">
   <div class="submenu-toc-inner">
     <a href="#overview" class="submenu-toc-link" data-section="overview">Overview</a>
     <a href="#components" class="submenu-toc-link" data-section="components">Components</a>
@@ -163,8 +169,8 @@
 
       <!-- Connector -->
       <div class="diagram-connector">
-        <div style="text-align: center;">
-          <div class="diagram-connector-line" style="margin: 0 auto;"></div>
+        <div class="style-fb5ec070f2">
+          <div class="diagram-connector-line style-6002529ccd"></div>
           <div class="diagram-connector-label">Unix Domain Socket</div>
         </div>
       </div>
@@ -181,8 +187,8 @@
 
       <!-- Connector -->
       <div class="diagram-connector">
-        <div style="text-align: center;">
-          <div class="diagram-connector-line" style="margin: 0 auto;"></div>
+        <div class="style-fb5ec070f2">
+          <div class="diagram-connector-line style-6002529ccd"></div>
         </div>
       </div>
 
@@ -226,7 +232,8 @@
     </div>
     <p class="section-intro reveal reveal-delay-1">Core components. Each handles one concern; <code>chitta-field</code> (Rust) is the storage substrate that the C++ daemon links against.</p>
 
-    <table class="comp-table reveal reveal-delay-2">
+    <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0">
+<table class="comp-table reveal reveal-delay-2">
       <thead>
         <tr>
           <th>Class</th>
@@ -248,6 +255,7 @@
         <tr><td class="class-name">ProvenanceSpine</td><td class="file-name">provenance.hpp</td><td class="role-desc">Knowledge source tracking and trust scoring</td></tr>
       </tbody>
     </table>
+</div>
   </div>
 </section>
 
@@ -280,7 +288,7 @@
         <div class="phase-number">1</div>
         <div class="phase-content">
           <h3 class="phase-title">Semantic Seeds</h3>
-          <p class="phase-desc">Vector similarity search using HNSW index. Returns top-k memories by cosine distance to the query embedding&thinsp;&mdash;&thinsp;the initial gravity wells of meaning.</p>
+          <p class="phase-desc">Vector similarity search using HNSW<sup><a href="#ref-4">4</a></sup> index. Returns top-k memories by cosine distance to the query embedding&thinsp;&mdash;&thinsp;the initial gravity wells of meaning.</p>
           <div class="phase-params">
             <span class="phase-param">semantic_weight = 0.6</span>
             <span class="phase-param">HNSW cosine</span>
@@ -292,7 +300,7 @@
         <div class="phase-number">2</div>
         <div class="phase-content">
           <h3 class="phase-title">BM25 Hybrid</h3>
-          <p class="phase-desc">Keyword-based search using BM25 scoring complements semantic search for exact term matches. Results merge using weighted combination with confidence factor.</p>
+          <p class="phase-desc">Keyword-based search using BM25<sup><a href="#ref-24">24</a></sup> scoring complements semantic search for exact term matches. Results merge using weighted combination with confidence factor.</p>
           <div class="phase-params">
             <span class="phase-param">bm25_weight = 0.4</span>
             <span class="phase-param">tag_boost = 0.05</span>
@@ -365,7 +373,7 @@
         <div class="phase-number">8</div>
         <div class="phase-content">
           <h3 class="phase-title">Post-Processing</h3>
-          <p class="phase-desc">Attractor boost, lateral inhibition (similar memories compete), Hebbian learning (co-accessed memories strengthen connections), and credit assignment for the Bayesian bandit.</p>
+          <p class="phase-desc">Attractor boost, lateral inhibition (similar memories compete), Hebbian<sup><a href="#ref-26">26</a></sup> learning (co-accessed memories strengthen connections), and credit assignment for the Bayesian bandit.</p>
           <div class="phase-params">
             <span class="phase-param">inhibition = 0.7</span>
             <span class="phase-param">similarity_threshold = 0.85</span>
@@ -396,21 +404,22 @@
     </div>
 
     <!-- ScoringPipeline -->
-    <h3 style="font-family: var(--font-display); font-size: var(--text-xl); color: var(--lotus-200); font-weight: 500; margin-top: var(--space-7); margin-bottom: var(--space-3);" class="reveal">ScoringPipeline <span style="font-size: var(--text-xs); color: var(--ash-400); font-weight: 400;">v5.11+</span></h3>
-    <p style="font-size: var(--text-sm); color: var(--ash-300); line-height: 1.7; max-width: 720px; margin-bottom: var(--space-4);" class="reveal reveal-delay-1">Rust scoring combines similarity with bounded factors configured in <code>scoring.json</code>. The <code>kind_operational</code> prior is 0.8 for verbatim distiller fragments. Independent-session replication weighting defaults to 0 (off); <code>CHITTA_REPLICATION_MAX</code> overrides its cap. See <a href="recall.html">current knobs and admission rules</a>.</p>
+    <h3 class="reveal style-821c960a1a">ScoringPipeline <span class="style-dbfef246b1">v5.11+</span></h3>
+    <p class="reveal reveal-delay-1 style-79dd94a014">Rust scoring combines similarity with bounded factors configured in <code>scoring.json</code>. The <code>kind_operational</code> prior is 0.8 for verbatim distiller fragments. Independent-session replication weighting defaults to 0 (off); <code>CHITTA_REPLICATION_MAX</code> overrides its cap. See <a href="recall.html">current knobs and admission rules</a>.</p>
 
-    <table class="comp-table reveal reveal-delay-2">
+    <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0">
+<table class="comp-table reveal reveal-delay-2">
       <thead>
         <tr><th>Factor</th><th>Source</th><th>Description</th></tr>
       </thead>
       <tbody>
         <tr><td class="class-name">Relevance</td><td class="file-name">Cosine similarity</td><td class="role-desc">Base semantic match score</td></tr>
-        <tr><td class="class-name">ACT-R</td><td class="file-name">Access history</td><td class="role-desc">Anderson &amp; Schooler (1991) power-law decay over access timestamps</td></tr>
+        <tr><td class="class-name">ACT-R<sup><a href="#ref-1">1</a></sup></td><td class="file-name">Access history</td><td class="role-desc">Anderson &amp; Schooler (1991) power-law decay over access timestamps</td></tr>
         <tr><td class="class-name">Strength</td><td class="file-name">Memory strength</td><td class="role-desc">Reinforcement from repeated access</td></tr>
         <tr><td class="class-name">Confidence</td><td class="file-name">Bayesian posterior</td><td class="role-desc">Beta posterior mean over observation history</td></tr>
         <tr><td class="class-name">Surprise</td><td class="file-name">FEP &sect;2.3</td><td class="role-desc">Reconstruction error as surprise signal</td></tr>
         <tr><td class="class-name">Arousal</td><td class="file-name">Affect dimensions</td><td class="role-desc">Flashbulb memory effect: high-arousal memories boosted</td></tr>
-        <tr><td class="class-name">MoodCongruence</td><td class="file-name">Query affect</td><td class="role-desc">Bower (1981): valence/arousal alignment between query and memory</td></tr>
+        <tr><td class="class-name">MoodCongruence</td><td class="file-name">Query affect</td><td class="role-desc">Bower<sup><a href="#ref-20">20</a></sup> (1981): valence/arousal alignment between query and memory</td></tr>
         <tr><td class="class-name">FrustrationEscalation</td><td class="file-name">Query affect</td><td class="role-desc">Negative valence + high arousal boosts corrections/preferences</td></tr>
         <tr><td class="class-name">Status</td><td class="file-name">Demotion tier</td><td class="role-desc">Tier-based weight (hot &gt; warm &gt; cool &gt; cold)</td></tr>
         <tr><td class="class-name">Epistemic</td><td class="file-name">Node type</td><td class="role-desc">Type-based multiplier (corrections, preferences weighted higher)</td></tr>
@@ -424,6 +433,7 @@
         <tr><td class="class-name">IntegrationWeight</td><td class="file-name">Integration Kernel</td><td class="role-desc">Layer 6: learned recall source weight as multiplier [0&ndash;2]</td></tr>
       </tbody>
     </table>
+</div>
 
     <div class="config-block reveal">
       <div class="config-block-title">ScoringPipeline formula</div>
@@ -452,9 +462,10 @@
     </div>
 
     <!-- Key Structures -->
-    <h3 style="font-family: var(--font-display); font-size: var(--text-xl); color: var(--lotus-200); font-weight: 500; margin-bottom: var(--space-4);" class="reveal">In-Memory Structures</h3>
+    <h3 class="reveal style-27825e55d7">In-Memory Structures</h3>
 
-    <table class="comp-table reveal">
+    <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0">
+<table class="comp-table reveal">
       <thead>
         <tr><th>Structure</th><th>Fields</th><th>Purpose</th></tr>
       </thead>
@@ -486,6 +497,7 @@
         </tr>
       </tbody>
     </table>
+</div>
 
     <!-- WAL Details -->
     <div class="config-block reveal">
@@ -528,7 +540,8 @@
     </div>
 
     <!-- Sanskrit mapping table -->
-    <table class="sanskrit-table reveal">
+    <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0">
+<table class="sanskrit-table reveal">
       <thead>
         <tr><th>Class</th><th>Sanskrit Meaning</th><th>Role</th></tr>
       </thead>
@@ -541,6 +554,7 @@
         <tr><td class="skt-name">ShantaYantra</td><td class="skt-meaning">Silent machine</td><td class="skt-role">Zero-vector fallback</td></tr>
       </tbody>
     </table>
+</div>
 
     <!-- Model specs -->
     <div class="config-block reveal">
@@ -553,12 +567,12 @@
 <span class="kw">Fallback</span>:     <span class="val">HTTP endpoint via OllamaYantra when no GGUF is found</span>
 <span class="kw">Batch size</span>:  <span class="val">Up to 32 texts per inference call</span>
 <span class="kw">LRU cache</span>:   <span class="val">1000 entries, tracks hit/miss rate</span></pre>
-      <p style="font-size: var(--text-sm); color: var(--ash-300); margin-top: var(--space-3); line-height: 1.8;">The model filename is derived from the compiled embedding identity, so the binary can never load a model from a different vector space than the store was built with. Changing the dimension means a fresh build directory and a re-embed.</p>
+      <p class="style-2c14cabd6a">The model filename is derived from the compiled embedding identity, so the binary can never load a model from a different vector space than the store was built with. Changing the dimension means a fresh build directory and a re-embed.</p>
     </div>
 
     <!-- Circuit Breaker -->
-    <h3 style="font-family: var(--font-display); font-size: var(--text-xl); color: var(--lotus-200); font-weight: 500; margin-top: var(--space-6); margin-bottom: var(--space-2);" class="reveal">Circuit Breaker</h3>
-    <p style="font-size: var(--text-sm); color: var(--ash-300); margin-bottom: var(--space-3);" class="reveal">Opens after 3 consecutive failures, enters 60-second cooldown, then half-open state for testing recovery.</p>
+    <h3 class="reveal style-48a5c3e191">Circuit Breaker</h3>
+    <p class="reveal style-d2d64174ff">Opens after 3 consecutive failures, enters 60-second cooldown, then half-open state for testing recovery.</p>
 
     <div class="cb-diagram reveal">
       <div class="cb-state cb-closed">CLOSED</div>
@@ -590,16 +604,16 @@
       <div class="formula-note">Where sparsity = 1 / (1 + exp(2 &times; (theme_size / ideal_size - 1)))</div>
     </div>
 
-    <h3 style="font-family: var(--font-display); font-size: var(--text-xl); color: var(--lotus-200); font-weight: 500; margin-top: var(--space-6); margin-bottom: var(--space-3);" class="reveal">Two-Stage Retrieval</h3>
+    <h3 class="reveal style-ee1da29a63">Two-Stage Retrieval</h3>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-top: var(--space-4);" class="reveal reveal-delay-1">
-      <div style="background: var(--indigo-700); border-radius: var(--radius-md); padding: var(--space-5); border-top: 2px solid var(--sandal-300);">
-        <h4 style="font-family: var(--font-display); font-size: var(--text-lg); color: var(--sandal-300); margin-bottom: var(--space-2);">Stage 1: Theme Matching</h4>
-        <p style="font-size: var(--text-sm); color: var(--ash-300); line-height: 1.7;">Find diverse theme representatives matching the query. Ensures breadth across conceptual areas.</p>
+    <div class="reveal reveal-delay-1 style-1b18e67aa2">
+      <div class="style-419ffe78d3">
+        <h4 class="style-4633269286">Stage 1: Theme Matching</h4>
+        <p class="style-0c76f71c0f">Find diverse theme representatives matching the query. Ensures breadth across conceptual areas.</p>
       </div>
-      <div style="background: var(--indigo-700); border-radius: var(--radius-md); padding: var(--space-5); border-top: 2px solid var(--aura-300);">
-        <h4 style="font-family: var(--font-display); font-size: var(--text-lg); color: var(--aura-300); margin-bottom: var(--space-2);">Stage 2: Adaptive Expansion</h4>
-        <p style="font-size: var(--text-sm); color: var(--ash-300); line-height: 1.7;">Expand within matching themes for depth. Background maintenance splits, merges, and reassigns as needed.</p>
+      <div class="style-1bfa919d06">
+        <h4 class="style-f0cc7da76d">Stage 2: Adaptive Expansion</h4>
+        <p class="style-0c76f71c0f">Expand within matching themes for depth. Background maintenance splits, merges, and reassigns as needed.</p>
       </div>
     </div>
   </div>
@@ -618,34 +632,36 @@
     <p class="section-intro reveal reveal-delay-1">Tree-sitter parsing extracts structural information from source code: symbols, callsites, imports, and type hierarchy. Callsites are resolved against known symbols to build the call graph.</p>
 
     <!-- Language grid -->
-    <h3 style="font-family: var(--font-display); font-size: var(--text-xl); color: var(--lotus-200); font-weight: 500; margin-bottom: var(--space-3);" class="reveal">Supported Languages</h3>
+    <h3 class="reveal style-7480b36b8b">Supported Languages</h3>
 
     <div class="lang-grid reveal reveal-delay-1">
-      <div class="lang-chip"><span class="lang-dot" style="background: #f34b7d;"></span>C++</div>
-      <div class="lang-chip"><span class="lang-dot" style="background: #3572A5;"></span>Python</div>
-      <div class="lang-chip"><span class="lang-dot" style="background: #f1e05a;"></span>JavaScript</div>
-      <div class="lang-chip"><span class="lang-dot" style="background: #3178c6;"></span>TypeScript</div>
-      <div class="lang-chip"><span class="lang-dot" style="background: #00ADD8;"></span>Go</div>
-      <div class="lang-chip"><span class="lang-dot" style="background: #dea584;"></span>Rust</div>
-      <div class="lang-chip"><span class="lang-dot" style="background: #b07219;"></span>Java</div>
-      <div class="lang-chip"><span class="lang-dot" style="background: #701516;"></span>Ruby</div>
-      <div class="lang-chip"><span class="lang-dot" style="background: #178600;"></span>C#</div>
+      <div class="lang-chip"><span class="lang-dot style-a379d74947"></span>C++</div>
+      <div class="lang-chip"><span class="lang-dot style-7ed318d3ab"></span>Python</div>
+      <div class="lang-chip"><span class="lang-dot style-6afa24e36f"></span>JavaScript</div>
+      <div class="lang-chip"><span class="lang-dot style-96890ead09"></span>TypeScript</div>
+      <div class="lang-chip"><span class="lang-dot style-64dbdf59da"></span>Go</div>
+      <div class="lang-chip"><span class="lang-dot style-e997fa3020"></span>Rust</div>
+      <div class="lang-chip"><span class="lang-dot style-545b090db3"></span>Java</div>
+      <div class="lang-chip"><span class="lang-dot style-8093e29d31"></span>Ruby</div>
+      <div class="lang-chip"><span class="lang-dot style-85d374d0ec"></span>C#</div>
     </div>
 
     <!-- Search modes -->
-    <h3 style="font-family: var(--font-display); font-size: var(--text-xl); color: var(--lotus-200); font-weight: 500; margin-top: var(--space-6); margin-bottom: var(--space-3);" class="reveal">Search Modes</h3>
+    <h3 class="reveal style-ee1da29a63">Search Modes</h3>
 
-    <table class="search-table reveal">
+    <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0">
+<table class="search-table reveal">
       <thead>
         <tr><th>Mode</th><th>Tool</th><th>Method</th></tr>
       </thead>
       <tbody>
-        <tr><td style="color: var(--sandal-300); font-weight: 500;">Name search</td><td><code>find_symbol</code></td><td>Exact/prefix match on symbol name</td></tr>
-        <tr><td style="color: var(--sandal-300); font-weight: 500;">Semantic search</td><td><code>search_symbols</code></td><td>Embedding similarity on symbol metadata</td></tr>
-        <tr><td style="color: var(--sandal-300); font-weight: 500;">BM25 search</td><td style="color: rgba(185,189,199,0.5);">(internal)</td><td>Full-text keyword match on name + signature</td></tr>
-        <tr><td style="color: var(--sandal-300); font-weight: 500;">Call graph</td><td><code>symbol_callers</code> / <code>symbol_callees</code></td><td>Traversal of call_edge table</td></tr>
+        <tr><td class="style-8564946be9">Name search</td><td><code>find_symbol</code></td><td>Exact/prefix match on symbol name</td></tr>
+        <tr><td class="style-8564946be9">Semantic search</td><td><code>search_symbols</code></td><td>Embedding similarity on symbol metadata</td></tr>
+        <tr><td class="style-8564946be9">BM25 search</td><td class="style-72d2417252">(internal)</td><td>Full-text keyword match on name + signature</td></tr>
+        <tr><td class="style-8564946be9">Call graph</td><td><code>symbol_callers</code> / <code>symbol_callees</code></td><td>Traversal of call_edge table</td></tr>
       </tbody>
     </table>
+</div>
 
     <!-- Extracted info -->
     <div class="config-block reveal">
@@ -672,7 +688,7 @@
     <p class="section-intro reveal reveal-delay-1">26 node types, each with distinct decay characteristics and quality gates. Confidence is Bayesian, not a simple scalar&thinsp;&mdash;&thinsp;it tracks mean, variance, observation count, and decay.</p>
 
     <!-- Node Types Grid -->
-    <h3 style="font-family: var(--font-display); font-size: var(--text-xl); color: var(--lotus-200); font-weight: 500; margin-bottom: var(--space-3);" class="reveal">Node Types</h3>
+    <h3 class="reveal style-7480b36b8b">Node Types</h3>
 
     <div class="node-types-grid reveal reveal-delay-1">
       <div class="node-type-chip"><span class="node-type-id">0</span>Wisdom</div>
@@ -704,54 +720,56 @@
     </div>
 
     <!-- Decay Rates Table -->
-    <h3 style="font-family: var(--font-display); font-size: var(--text-xl); color: var(--lotus-200); font-weight: 500; margin-top: var(--space-7); margin-bottom: var(--space-3);" class="reveal">Decay Rates</h3>
+    <h3 class="reveal style-821c960a1a">Decay Rates</h3>
 
-    <table class="decay-table reveal">
+    <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0">
+<table class="decay-table reveal">
       <thead>
         <tr><th>Type</th><th>Rate</th><th>Visual</th><th>Rationale</th></tr>
       </thead>
       <tbody>
         <tr>
-          <td style="color: var(--sandal-300); font-weight: 500;">Belief</td>
+          <td class="style-8564946be9">Belief</td>
           <td><code>0.0</code></td>
-          <td><div class="decay-bar-wrap"><div class="decay-bar" style="width: 0%; background: var(--sandal-300);"></div></div></td>
+          <td><div class="decay-bar-wrap"><div class="decay-bar style-565c8b4407"></div></div></td>
           <td>Never decays (core identity)</td>
         </tr>
         <tr>
-          <td style="color: var(--sandal-300); font-weight: 500;">Symbol</td>
+          <td class="style-8564946be9">Symbol</td>
           <td><code>0.0</code></td>
-          <td><div class="decay-bar-wrap"><div class="decay-bar" style="width: 0%; background: var(--aura-300);"></div></div></td>
+          <td><div class="decay-bar-wrap"><div class="decay-bar style-ff5a28b832"></div></div></td>
           <td>Code structure doesn't decay</td>
         </tr>
         <tr>
-          <td style="color: var(--sandal-300); font-weight: 500;">Wisdom</td>
+          <td class="style-8564946be9">Wisdom</td>
           <td><code>0.005</code></td>
-          <td><div class="decay-bar-wrap"><div class="decay-bar" style="width: 17%; background: var(--sandal-300);"></div></div></td>
+          <td><div class="decay-bar-wrap"><div class="decay-bar style-1d46a4d8ca"></div></div></td>
           <td>Proven patterns should persist</td>
         </tr>
         <tr>
-          <td style="color: var(--sandal-300); font-weight: 500;">Correction</td>
+          <td class="style-8564946be9">Correction</td>
           <td><code>0.005</code></td>
-          <td><div class="decay-bar-wrap"><div class="decay-bar" style="width: 17%; background: var(--ember-400);"></div></div></td>
+          <td><div class="decay-bar-wrap"><div class="decay-bar style-dd48b8545c"></div></div></td>
           <td>Important lessons persist</td>
         </tr>
         <tr>
-          <td style="color: var(--sandal-300); font-weight: 500;">Preference</td>
+          <td class="style-8564946be9">Preference</td>
           <td><code>0.01</code></td>
-          <td><div class="decay-bar-wrap"><div class="decay-bar" style="width: 33%; background: var(--aura-300);"></div></div></td>
+          <td><div class="decay-bar-wrap"><div class="decay-bar style-ea9493b959"></div></div></td>
           <td>Slowly fades if not reinforced</td>
         </tr>
         <tr>
-          <td style="color: var(--sandal-300); font-weight: 500;">Episode</td>
+          <td class="style-8564946be9">Episode</td>
           <td><code>0.03</code></td>
-          <td><div class="decay-bar-wrap"><div class="decay-bar" style="width: 100%; background: var(--ember-400);"></div></div></td>
+          <td><div class="decay-bar-wrap"><div class="decay-bar style-53f611e985"></div></div></td>
           <td>Fades unless reinforced</td>
         </tr>
       </tbody>
     </table>
+</div>
 
     <!-- Confidence Model -->
-    <h3 style="font-family: var(--font-display); font-size: var(--text-xl); color: var(--lotus-200); font-weight: 500; margin-top: var(--space-7); margin-bottom: var(--space-3);" class="reveal">Bayesian Confidence Model</h3>
+    <h3 class="reveal style-821c960a1a">Bayesian Confidence Model</h3>
 
     <div class="config-block reveal">
       <div class="config-block-title">Confidence struct</div>
@@ -771,7 +789,7 @@
     </div>
 
     <!-- Quality Gate -->
-    <h3 style="font-family: var(--font-display); font-size: var(--text-xl); color: var(--lotus-200); font-weight: 500; margin-top: var(--space-7); margin-bottom: var(--space-3);" class="reveal">Quality Gate</h3>
+    <h3 class="reveal style-821c960a1a">Quality Gate</h3>
 
     <div class="config-block reveal">
       <div class="config-block-title">Before storing, remember() applies</div>
@@ -792,7 +810,7 @@
       <div class="section-divider"></div>
       <h2 class="heading-section">Self-Tuning (Bayesian Bandits)</h2>
     </div>
-    <p class="section-intro reveal reveal-delay-1">The <code>ResonanceLearner</code> uses Thompson sampling to automatically optimize resonance parameters. Feedback updates the parameter posteriors used by later retrieval calls.</p>
+    <p class="section-intro reveal reveal-delay-1">The <code>ResonanceLearner</code> uses Thompson sampling<sup><a href="#ref-69">69</a></sup> to automatically optimize resonance parameters. Feedback updates the parameter posteriors used by later retrieval calls.</p>
 
     <div class="tuning-grid reveal reveal-delay-2">
       <div class="tuning-card">
@@ -832,13 +850,29 @@
 </section>
 
 <!-- FOOTER -->
-<footer class="footer">
+<!-- BEGIN CITATIONS -->
+<section id="references" class="references">
+  <div class="container">
+  <h2 class="heading-section">References</h2>
+  <ol>
+    <li id="ref-1" value="1">John R. Anderson and Lael J. Schooler. Reflections of the Environment in Memory. Psychological Science 2(6), 396–408 (1991). <a href="https://doi.org/10.1111/j.1467-9280.1991.tb00174.x">https://doi.org/10.1111/j.1467-9280.1991.tb00174.x</a></li>
+    <li id="ref-4" value="4">Yu. A. Malkov and D. A. Yashunin. Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs. IEEE TPAMI 42(4), 824–836 (2020); arXiv:1603.09320 (2016). <a href="https://arxiv.org/abs/1603.09320">https://arxiv.org/abs/1603.09320</a> <a href="https://doi.org/10.1109/TPAMI.2018.2889473">https://doi.org/10.1109/TPAMI.2018.2889473</a></li>
+    <li id="ref-20" value="20">Gordon H. Bower. Mood and memory. American Psychologist 36(2), 129–148 (1981). <a href="https://doi.org/10.1037/0003-066X.36.2.129">https://doi.org/10.1037/0003-066X.36.2.129</a></li>
+    <li id="ref-24" value="24">Stephen Robertson and Hugo Zaragoza. The Probabilistic Relevance Framework: BM25 and Beyond. Foundations and Trends in Information Retrieval 3(4), 333–389 (2009). <a href="https://doi.org/10.1561/1500000019">https://doi.org/10.1561/1500000019</a></li>
+    <li id="ref-26" value="26">Donald O. Hebb. The Organization of Behavior: A Neuropsychological Theory. Wiley (1949); Psychology Press reissue (2002). <a href="https://www.routledge.com/The-Organization-of-Behavior-A-Neuropsychological-Theory/Hebb/p/book/9780415654531">https://www.routledge.com/The-Organization-of-Behavior-A-Neuropsychological-Theory/Hebb/p/book/9780415654531</a></li>
+    <li id="ref-69" value="69">William R. Thompson. On the likelihood that one unknown probability exceeds another in view of the evidence of two samples. Biometrika 25(3–4), 285–294 (1933). <a href="https://doi.org/10.1093/biomet/25.3-4.285">https://doi.org/10.1093/biomet/25.3-4.285</a></li>
+  </ol>
+  </div>
+</section>
+<!-- END CITATIONS -->
+
+</main>
+<footer class="footer site-footer">
   <div class="container">
     <p class="footer-text">
-      Persistent memory for Claude Code and Codex.
-      <span class="footer-sep"></span>
-      <a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/genomewalker/chitta">GitHub repository</a> · <a href="https://opensource.org/licenses/MIT">MIT license</a> · <a href="/architecture.html">This page</a>
     </p>
+    <p class="site-status">Status as of 2026-09-16 · <a href="/changelog.html">Unreleased + v5.72.0</a></p>
   </div>
 </footer>
 
@@ -863,17 +897,7 @@
 /* ═══════════════════════════════════════════
    SMOOTH SCROLL FOR TOC
    ═══════════════════════════════════════════ */
-document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
-  anchor.addEventListener('click', function(e) {
-    var target = document.querySelector(this.getAttribute('href'));
-    if (target) {
-      e.preventDefault();
-      var offset = 140;
-      var top = target.getBoundingClientRect().top + window.pageYOffset - offset;
-      window.scrollTo({ top: top, behavior: 'smooth' });
-    }
-  });
-});
+/* Native anchors preserve URL history, focus and reduced-motion behavior. */
 
 /* ═══════════════════════════════════════════
    SCROLL SPY - Highlight active TOC section

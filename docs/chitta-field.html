@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>chitta-field — Organic Memory Substrate</title>
+<title>chitta — chitta-field — Organic Memory Substrate</title>
 <meta name="description" content="chitta-field: a Rust memory store for chitta. Sparse associative codes, write-ahead log, multi-writer design, and sub-millisecond recall via cortical posting index.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta property="og:title" content="chitta-field — Organic Memory Substrate">
@@ -338,49 +338,55 @@
 .tier-name { color: var(--lotus-200); min-width: 90px; }
 .tier-desc { color: rgba(185,189,199,0.5); }
 </style>
+<link rel="stylesheet" href="/content-styles.css">
+<link rel="stylesheet" href="/site-shell.css">
 </head>
-<body>
+<body class="page-chitta-field">
+<a class="skip-link" href="#main-content">Skip to content</a>
 
 <!-- NAV -->
-<nav class="nav">
+<nav class="nav site-nav" aria-label="Main navigation">
   <div class="nav-inner">
-    <a href="index.html" class="nav-brand">chitta</a>
-    <button class="nav-hamburger" onclick="document.querySelector('.nav').classList.toggle('nav-open')" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
+    <a href="/index.html" class="nav-brand">chitta</a>
     <ul class="nav-links">
-      <li><a href="getting-started.html">Get Started</a></li>
-      <li><a href="philosophy.html">Philosophy</a></li>
-      <li><a href="architecture.html">Architecture</a></li>
-      <li><a href="recall.html">Recall</a></li>
-      <li><a href="benchmarks.html">Benchmarks</a></li>
-      <li><a href="chitta-field.html" class="active">chitta-field</a></li>
-      <li><a href="sadhana.html">Sadhana</a></li>
-      <li><a href="context.html">Context</a></li>
-      <li><a href="tools.html">Tools</a></li>
-      <li><a href="cli.html">CLI</a></li>
-      <li><a href="hooks.html">Hooks</a></li>
-      <li><a href="skills.html">Skills</a></li>
-      <li><a href="changelog.html">Changelog</a></li>
-      <li><a href="constellation.html">Constellation</a></li>
-      <li><a href="dreams/index.html">Dreams</a></li>
-      <li><a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="/index.html">Home</a></li>
+      <li><a href="/getting-started.html">Get Started</a></li>
+      <li><a href="/philosophy.html">Philosophy</a></li>
+      <li><a href="/architecture.html">Architecture</a></li>
+      <li><a href="/recall.html">Recall</a></li>
+      <li><a href="/benchmarks.html">Benchmarks</a></li>
+      <li><a href="/chitta-field.html" aria-current="page">chitta-field</a></li>
+      <li><a href="/sadhana.html">Sadhana</a></li>
+      <li><a href="/context.html">Context</a></li>
+      <li><a href="/tools.html">Tools</a></li>
+      <li><a href="/cli.html">CLI</a></li>
+      <li><a href="/hooks.html">Hooks</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/changelog.html">Changelog</a></li>
+      <li><a href="/constellation.html">Constellation</a></li>
+      <li><a href="/dreams/index.html">Dreams</a></li>
+      <li><a href="/brain-viz/index.html">Brain Architecture</a></li>
+      <li><a href="/mind-viz/index.html">Mind Interface</a></li>
+      <li><a href="/vedanta/index.html">Vedanta</a></li>
+      <li><a href="/evolve-bridge-live/index.html">Evolve Evidence</a></li>
+      <li><a href="https://github.com/genomewalker/chitta">GitHub</a></li>
     </ul>
   </div>
 </nav>
+<main id="main-content" tabindex="-1">
 
 <!-- PAGE HEADER -->
 <header class="page-header">
   <div class="container">
     <div class="page-header-badge reveal">Memory Substrate</div>
-    <h1 class="reveal reveal-delay-1"><span style="font-style:italic">chitta-field</span></h1>
+    <h1 class="reveal reveal-delay-1"><span class="style-afccd1dd2e">chitta-field</span></h1>
     <p class="page-header-sub reveal reveal-delay-2">A Rust memory substrate with sparse and dense indexes, a write-ahead log and snapshot families. One daemon owns each store; many agent sessions share it.</p>
-    <p class="reveal reveal-delay-2" style="font-family: var(--font-mono); font-size: var(--text-xs); color: #565f89; margin-top: var(--space-3);">Status as of 2026-09-16. <a href="FIELD_PERF.md">Performance evidence</a> · <a href="CLI.md#startup-sidecars-and-instance-lock">Startup and lock recovery</a>.</p>
+    <p class="reveal reveal-delay-2 style-2dee830ea7">Status as of 2026-09-16 <a href="FIELD_PERF.md">Performance evidence</a> · <a href="CLI.md#startup-sidecars-and-instance-lock">Startup and lock recovery</a>.</p>
   </div>
 </header>
 
 <!-- STICKY TOC -->
-<nav class="submenu-toc">
+<nav class="submenu-toc" aria-label="On this page">
   <div class="submenu-toc-inner">
     <a href="#overview"   class="submenu-toc-link" data-section="overview">Overview</a>
     <a href="#sparse"     class="submenu-toc-link" data-section="sparse">Sparse Codes</a>
@@ -410,9 +416,9 @@
       <canvas id="cf-main-canvas"></canvas>
     </div>
     <div class="cf-legend reveal reveal-delay-3">
-      <div class="cf-legend-item"><span class="cf-legend-dot" style="background:rgba(203,175,134,0.8)"></span>Active feature (sparse code)</div>
-      <div class="cf-legend-item"><span class="cf-legend-dot" style="background:rgba(157,178,217,0.15)"></span>Inactive dimension</div>
-      <div class="cf-legend-item"><span class="cf-legend-dot" style="background:rgba(212,106,76,0.85)"></span>Overlap &mdash; associative recall signal</div>
+      <div class="cf-legend-item"><span class="cf-legend-dot style-65b153098c"></span>Active feature (sparse code)</div>
+      <div class="cf-legend-item"><span class="cf-legend-dot style-0bde53dbba"></span>Inactive dimension</div>
+      <div class="cf-legend-item"><span class="cf-legend-dot style-aaeaec805c"></span>Overlap &mdash; associative recall signal</div>
     </div>
 
     <!-- Stats -->
@@ -444,9 +450,9 @@
     <div class="reveal"><div class="section-divider"></div><h2 class="heading-section">Sparse associative codes</h2></div>
     <div class="two-col">
       <div class="cf-prose reveal reveal-delay-1">
-        <p>Each memory is encoded as a <strong>sparse code</strong>: exactly 64 of 16,384 feature dimensions activate. The rest are zero. Sparse distributed representations associate memories through overlapping active features.</p>
+        <p>Each memory is encoded as a <strong>sparse code</strong>: exactly 64 of 16,384 feature dimensions activate. The rest are zero. Sparse distributed representations<sup><a href="#ref-9">9</a></sup> associate memories through overlapping active features.</p>
         <p>Sparse codes are derived from the dense 768-dim BGE embedding by projecting through a learned sparse encoder. The result: two memories about the same concept share many active features. Two unrelated memories share almost none.</p>
-        <p>This makes retrieval geometric: <em>find memories whose active features overlap most with the query's active features</em>. No distance function. No HNSW graph traversal. Just intersection and counting.</p>
+        <p>This makes retrieval geometric: <em>find memories whose active features overlap most with the query's active features</em>. No distance function. No HNSW<sup><a href="#ref-4">4</a></sup> graph traversal. Just intersection and counting.</p>
         <p><strong>SSL NL gloss</strong>: SSL-encoded memories (compact triplet form) are passed through <code>gloss_ssl_content()</code> &mdash; a translation layer in <code>chitta/include/chitta/ssl_gloss.hpp</code> that converts triplets into readable English sentences <em>before</em> embedding. This closes the representation gap between compact SSL storage and natural-language BGE queries, so structured memories surface from prose questions.</p>
         <p><strong>Alias memories</strong>: every new SSL memory auto-creates a linked <code>kind=alias</code> NL counterpart, connected by an <code>alias-of</code> triplet. NL and SSL representations stay synchronised without content duplication: the alias carries the glossed sentence, the SSL row carries the canonical triplet.</p>
       </div>
@@ -467,7 +473,7 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
 <span class="cm">// Recall: intersect top-k posting lists</span>
 <span class="cm">// from the query's 64 active features</span>
 </div>
-        <p style="font-size:var(--text-xs);color:rgba(185,189,199,0.45);margin-top:var(--space-3);">The posting index enables sub-millisecond recall without HNSW or any graph traversal. Each feature maintains a sorted list; recall intersects k lists and scores by hit count.</p>
+        <p class="style-cdc229237c">The posting index enables sub-millisecond recall without HNSW or any graph traversal. Each feature maintains a sorted list; recall intersects k lists and scores by hit count.</p>
       </div>
     </div>
   </div>
@@ -539,7 +545,8 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
     <p class="section-intro reveal reveal-delay-1">Snapshot families separate payloads and embeddings from derived search caches. Matching sidecars avoid rebuilding normalized search state and event organs. A missing or incompatible derived cache is rebuilt; it is not authoritative memory data.</p>
 
     <div class="cf-table-wrap reveal reveal-delay-2">
-      <table class="cf-table">
+      <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0">
+<table class="cf-table">
         <thead><tr><th>Sidecar</th><th>Contents</th><th>Identity</th><th>Purpose</th></tr></thead>
         <tbody>
           <tr><td><code>.emb</code></td><td>Dense embeddings</td><td>Compiled model dimension</td><td>Vectors for search and rescoring</td></tr>
@@ -548,6 +555,7 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
           <tr><td><code>.organs</code></td><td>Derived event organs</td><td>Snapshot family</td><td>Reuse reconstructed event-tape structures</td></tr>
         </tbody>
       </table>
+</div>
     </div>
 
     <div class="cf-subsections reveal reveal-delay-3">
@@ -571,22 +579,22 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
     <p class="section-intro reveal reveal-delay-1">The recall path uses an inverted index over sparse feature activations — the same structure as a text search engine's posting list, applied to neural feature dimensions instead of words. This is why recall is sub-millisecond with no HNSW graph.</p>
 
     <div class="cortical-diagram reveal reveal-delay-2">
-      <div class="cortical-box highlight">Query embedding<br><span style="font-size:0.65rem;opacity:0.6">768-dim dense</span></div>
+      <div class="cortical-box highlight">Query embedding<br><span class="style-e297a2e8fe">768-dim dense</span></div>
       <span class="cortical-arrow">&rarr;</span>
-      <div class="cortical-box highlight">Sparse encode<br><span style="font-size:0.65rem;opacity:0.6">64 active features</span></div>
+      <div class="cortical-box highlight">Sparse encode<br><span class="style-e297a2e8fe">64 active features</span></div>
       <span class="cortical-arrow">&rarr;</span>
-      <div class="cortical-box">Lookup each feature<br><span style="font-size:0.65rem;opacity:0.6">in posting index</span></div>
+      <div class="cortical-box">Lookup each feature<br><span class="style-e297a2e8fe">in posting index</span></div>
       <span class="cortical-arrow">&rarr;</span>
-      <div class="cortical-box">Intersect lists<br><span style="font-size:0.65rem;opacity:0.6">count overlap hits</span></div>
+      <div class="cortical-box">Intersect lists<br><span class="style-e297a2e8fe">count overlap hits</span></div>
       <span class="cortical-arrow">&rarr;</span>
-      <div class="cortical-box highlight">Top-K memories<br><span style="font-size:0.65rem;opacity:0.6">by overlap score</span></div>
+      <div class="cortical-box highlight">Top-K memories<br><span class="style-e297a2e8fe">by overlap score</span></div>
     </div>
 
     <div class="two-col">
       <div class="cf-prose reveal reveal-delay-3">
         <p><strong>Why it's fast</strong>: each of the 64 query features maps to a pre-sorted posting list. Intersecting 64 small lists is O(k·log n) in the worst case, but in practice the lists are small because each feature is shared by only a fraction of all memories (sparsity guarantees this).</p>
         <p><strong>Associativity</strong>: two memories about the same topic will share many active features. When you recall one, the other lights up because it appears repeatedly in the posting lists being scanned. This is associative retrieval — not a similarity metric, but emergent from the index structure.</p>
-        <p><strong>Hybrid recall</strong>: the posting index handles semantic overlap. A BM25 keyword index handles exact term matches. Both scores are fused in the resonance pipeline's early phases.</p>
+        <p><strong>Hybrid recall</strong>: the posting index handles semantic overlap. A BM25<sup><a href="#ref-24">24</a></sup> keyword index handles exact term matches. Both scores are fused in the resonance pipeline's early phases.</p>
       </div>
       <div class="cf-code reveal reveal-delay-4">
 <span class="cm">// Posting index: feature → memories</span>
@@ -665,7 +673,7 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
       <li class="tier-item tier-item--3"><span class="tier-num">3</span><span class="tier-name">Cold</span><span class="tier-desc">Long-dormant. Excluded from default recall unless explicitly requested. Candidates for eviction.</span></li>
     </ul>
 
-    <div class="cf-prose reveal reveal-delay-3" style="margin-top:var(--space-5);max-width:640px">
+    <div class="cf-prose reveal reveal-delay-3 style-db6da295de">
       <p>Demotion is logged as a <code>DemoteMemory</code> Op, so it survives restarts. A memory that was cold before a restart is still cold after replay. The tier is part of the persisted state, not recomputed on load.</p>
       <p>The <code>StateDelta</code> Op handles strength and confidence adjustments separately — the ResonanceLearner applies Bayesian updates via <code>UpdateState</code> ops, which are also WAL-logged before application.</p>
     </div>
@@ -679,23 +687,23 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
     <div class="reveal"><div class="section-divider"></div><h2 class="heading-section">Memory quality layer</h2></div>
     <p class="section-intro reveal reveal-delay-1">Four mechanisms shipped in v5.21.55&ndash;59 that turn chitta-field from a write-once store into a self-correcting one: write-gate admission, symbol-event correlation, introspection, and cross-harness disagreement detection.</p>
 
-    <h3 class="reveal reveal-delay-2" style="margin-top:var(--space-6)">Write-gate (staged admission)</h3>
-    <div class="cf-prose reveal reveal-delay-3" style="max-width:640px">
+    <h3 class="reveal reveal-delay-2 style-84a8551ed1">Write-gate (staged admission)</h3>
+    <div class="cf-prose reveal reveal-delay-3 style-296d727a0b">
       <p>All new memories start <code>staged=true</code> and are promoted to <code>staged=false</code> on first recall (<code>access_count &ge; 1</code>). Staged memories score 0.80&times; in the retrieval pipeline — they still surface when no promoted memory wins, but are ranked lower. Stale staged memories (age &gt; 7&nbsp;days, never recalled) are auto-pruned. A background pass runs every 50 embed cycles via <code>promote_staged_memories()</code>. The <code>write_gate_stats</code> MCP tool reports <code>staged_count</code> and <code>oldest_staged_age_days</code>.</p>
     </div>
 
-    <h3 class="reveal reveal-delay-2" style="margin-top:var(--space-5)">Symbol-keyed event log</h3>
-    <div class="cf-prose reveal reveal-delay-3" style="max-width:640px">
+    <h3 class="reveal reveal-delay-2 style-be5411e749">Symbol-keyed event log</h3>
+    <div class="cf-prose reveal reveal-delay-3 style-296d727a0b">
       <p>A WAL-backed <code>SymbolEventLog</code> organ records typed events keyed on symbol identity: <code>Edited</code>, <code>Created</code>, <code>Deleted</code>, <code>TestFailed</code>, <code>TestPassed</code>, <code>Committed</code>. Each event carries <code>symbol_name</code>, <code>file_path</code>, <code>session_id</code>, <code>harness</code>, and an optional <code>memory_id</code> link. Indexed by symbol name and file path for O(1) lookup; fully rebuilt from WAL on restart (not stored in the full snapshot). <code>upsert_symbol()</code> auto-logs an <code>Edited</code> event on every symbol write. <code>invalidated_by: Option&lt;String&gt;</code> on <code>MemoryState</code> records the commit hash or symbol-change ID that made a memory stale — set via <code>mark_memory_invalidated</code>.</p>
     </div>
 
-    <h3 class="reveal reveal-delay-2" style="margin-top:var(--space-5)">Introspection &mdash; <code>what_do_i_know_about</code></h3>
-    <div class="cf-prose reveal reveal-delay-3" style="max-width:640px">
+    <h3 class="reveal reveal-delay-2 style-be5411e749">Introspection &mdash; <code>what_do_i_know_about</code></h3>
+    <div class="cf-prose reveal reveal-delay-3 style-296d727a0b">
       <p>A single MCP call that answers <em>"what does this session believe about X, and how trustworthy is each claim?"</em> For each recalled hit: <code>staged</code> flag, <code>invalidated_by</code>, <code>source_session</code>, <code>source_tool</code>, <code>age_days</code> (from <code>memory_claim_info</code>); a staleness verdict that checks <code>invalidated_by</code> then walks artifact refs against the live symbol index; contradiction peers from <code>get_conflicts</code>. Returns <code>claims[]</code>, <code>cross_harness_conflicts[]</code>, <code>topic</code>, <code>total</code>.</p>
     </div>
 
-    <h3 class="reveal reveal-delay-2" style="margin-top:var(--space-5)">Cross-harness disagreement</h3>
-    <div class="cf-prose reveal reveal-delay-3" style="max-width:640px">
+    <h3 class="reveal reveal-delay-2 style-be5411e749">Cross-harness disagreement</h3>
+    <div class="cf-prose reveal reveal-delay-3 style-296d727a0b">
       <p><code>harness: Option&lt;String&gt;</code> is inferred from <code>source_tool</code> on every <code>put_memory()</code> call (<code>"codex"</code> if the tool name starts with <code>codex</code>, <code>"claude-code"</code> otherwise). The <code>cross_harness_conflicts</code> tool scans all live non-staged memories, groups by HNSW proximity, and returns pairs where harnesses differ — ranked by <code>1 &minus; cosine_similarity</code> as the disagreement score. Wired into <code>what_do_i_know_about</code> as a per-cluster filter. Snapshot V13 (<code>0xF011_5741_7E00_000D</code>) adds <code>LegacyMemoryPayloadV12</code> migration covering all V1&ndash;V12 snapshots on disk.</p>
     </div>
   </div>
@@ -706,13 +714,13 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
 <section class="cf-page-section" id="fep">
   <div class="container">
     <div class="reveal"><div class="section-divider"></div><h2 class="heading-section">FEP attractor network</h2></div>
-    <p class="section-intro reveal reveal-delay-1">Memory representations self-organize according to the Free Energy Principle (Spisak &amp; Friston, Neurocomputing 2026). The encoder, prototype index, and association graph jointly minimize prediction error while controlling model complexity.</p>
+    <p class="section-intro reveal reveal-delay-1">Memory representations self-organize according to the Free Energy Principle (Spisak<sup><a href="#ref-19">19</a></sup> &amp; Friston, Neurocomputing 2026). The encoder, prototype index, and association graph jointly minimize prediction error while controlling model complexity.</p>
 
     <div class="cf-feature-grid reveal reveal-delay-2">
       <div class="cf-feature-card">
         <div class="cf-feature-icon">&#x2662;</div>
         <h3>Self-orthogonalizing encoder</h3>
-        <p>The FEP-derived learning rule replaces pure Hebbian updates. Each atom update includes a complexity penalty (&lambda;=10<sup>-4</sup>) that pushes unused weights toward zero, plus Gram-Schmidt decorrelation (1% per step) between co-active atoms. Over time, memory representations naturally become orthogonal &mdash; maximizing mutual information and resisting catastrophic forgetting.</p>
+        <p>The FEP-derived learning rule replaces pure Hebbian<sup><a href="#ref-26">26</a></sup> updates. Each atom update includes a complexity penalty (&lambda;=10<sup>-4</sup>) that pushes unused weights toward zero, plus Gram-Schmidt decorrelation (1% per step) between co-active atoms. Over time, memory representations naturally become orthogonal &mdash; maximizing mutual information and resisting catastrophic forgetting.</p>
       </div>
       <div class="cf-feature-card">
         <div class="cf-feature-icon">&#x21C4;</div>
@@ -731,7 +739,7 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
       </div>
       <div class="cf-feature-card">
         <div class="cf-feature-icon">&#x2B21;</div>
-        <h3>Hopfield network</h3>
+        <h3>Hopfield network<sup><a href="#ref-33">33</a></sup></h3>
         <p>An asymmetric energy-based network over memory co-activations. <code>settle()</code> propagates activation through multi-hop directed couplings with dynamic neighbor discovery. Seeds are clamped; connected memories activate via sigmoid gating. The result: given a few seed memories, the network completes the pattern.</p>
       </div>
       <div class="cf-feature-card">
@@ -752,27 +760,27 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
 
     <div class="cf-cards reveal reveal-delay-2">
       <div class="cf-card">
-        <h4 class="cf-card-title">Indexed retrieval</h4>
+        <h3 class="cf-card-title">Indexed retrieval</h3>
         <p class="cf-card-desc">The documented retrieval example selects 5&ndash;15 memories from 24,000+ in under a millisecond using hybrid recall: semantic ANN + BM25 + cortical SDR bitset intersection + graph spreading activation. At 10,000+ memories, selection bounds the records injected into the context window.</p>
       </div>
       <div class="cf-card">
-        <h4 class="cf-card-title">Per-memory scoring</h4>
-        <p class="cf-card-desc">chitta-field scores each candidate on 18 composable factors &mdash; semantic similarity, ACT-R base-level activation, memory strength, confidence, epistemic status, affect valence, surprise boost, mood congruence, frustration escalation, prediction boost, integration kernel weight, and more. A two-month-old memory can rank above a five-minute-old memory when its combined score is higher.</p>
+        <h3 class="cf-card-title">Per-memory scoring</h3>
+        <p class="cf-card-desc">chitta-field scores each candidate on 18 composable factors &mdash; semantic similarity, ACT-R<sup><a href="#ref-1">1</a></sup> base-level activation, memory strength, confidence, epistemic status, affect valence, surprise boost, mood congruence, frustration escalation, prediction boost, integration kernel weight, and more. A two-month-old memory can rank above a five-minute-old memory when its combined score is higher.</p>
       </div>
       <div class="cf-card">
-        <h4 class="cf-card-title">Memory lifecycle</h4>
+        <h3 class="cf-card-title">Memory lifecycle</h3>
         <p class="cf-card-desc">chitta-field implements per-memory decay, tiered demotion, auto-deduplication by embedding similarity, contradiction tracking, and distillation from episodic memories into durable wisdom nodes. Access and feedback affect memory strength and demotion.</p>
       </div>
       <div class="cf-card">
-        <h4 class="cf-card-title">Contradiction edges</h4>
+        <h3 class="cf-card-title">Contradiction edges</h3>
         <p class="cf-card-desc">Conflicting beliefs need operational representation &mdash; <code>contradicts</code>, <code>supersedes</code>, and <code>confirms</code> edges that are queryable and that suppress contradicted memories during scoring. The scorer can use these typed edges during retrieval.</p>
       </div>
       <div class="cf-card">
-        <h4 class="cf-card-title">Shared daemon access</h4>
+        <h3 class="cf-card-title">Shared daemon access</h3>
         <p class="cf-card-desc">Claude Code and Codex sessions share the daemon over RPC. Its instance lock excludes a second owner of the same store; frozen evaluation runs use separate copied stores. Storage can reside on NFS, so filesystem stalls remain possible.</p>
       </div>
       <div class="cf-card">
-        <h4 class="cf-card-title">Markdown integration</h4>
+        <h3 class="cf-card-title">Markdown integration</h3>
         <p class="cf-card-desc">chitta syncs bidirectionally with Claude Code&rsquo;s built-in <code>MEMORY.md</code>. What the user writes there is absorbed into chitta; what chitta knows is injected back. Markdown files provide a readable interface and import surface; the Rust store holds the indexed records.</p>
       </div>
     </div>
@@ -839,8 +847,8 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
     </div>
 
     <!-- CEC Organs sub-section -->
-    <div class="reveal" style="margin-top:var(--space-7)"><div class="section-divider"></div><h3 class="heading-section" style="font-size:var(--text-xl)">Causal Episode Compiler organs <span style="font-size:var(--text-xs);color:var(--ash-400);font-weight:400;">v5.25&ndash;v5.38 &middot; Phases 1&ndash;14</span></h3></div>
-    <p class="section-intro reveal reveal-delay-1">A second, parallel memory substrate that indexes <strong>state transitions</strong> <code>(tool, entity, outcome)</code> instead of content. Runs alongside HNSW/BM25/HDC recall lanes, which are untouched. The atom of memory is a causal edge, not a document.</p>
+    <div class="reveal style-cfc6221463"><div class="section-divider"></div><h3 class="heading-section style-a080790f98">Causal Episode Compiler organs <span class="style-b4a3100d87">v5.25&ndash;v5.38 &middot; Phases 1&ndash;14</span></h3></div>
+    <p class="section-intro reveal reveal-delay-1">A second, parallel memory substrate that indexes <strong>state transitions</strong> <code>(tool, entity, outcome)</code> instead of content. Runs alongside HNSW/BM25/HDC<sup><a href="#ref-10">10</a></sup> recall lanes, which are untouched. The atom of memory is a causal edge, not a document.</p>
 
     <div class="cf-feature-grid reveal reveal-delay-2">
 
@@ -853,19 +861,19 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
       <div class="cf-feature-card">
         <div class="cf-feature-icon">&#x25C6;</div>
         <h3>CdawgOrgan</h3>
-        <p>Online Blumer CDAWG over packed <code>u64</code> symbols. O(1) amortized per <code>extend()</code>. Each state holds <code>RoaringBitmap</code> endpos, <code>fail_count</code>/<code>succ_count</code>, TD(&lambda;) credit, and Q-value. Rebuilt from EventTape at load (ephemeral, not in snapshot). Supports PPM prediction, counterfactual sibling-edge comparison, top-k Q-value motif retrieval, and TD credit propagation up suffix links weighted by <code>1/|endpos|</code>.</p>
+        <p>Online Blumer CDAWG<sup><a href="#ref-6">6</a></sup><sup><a href="#ref-67">67</a></sup> over packed <code>u64</code> symbols. O(1) amortized per <code>extend()</code>. Each state holds <code>RoaringBitmap</code> endpos, <code>fail_count</code>/<code>succ_count</code>, TD(&lambda;)<sup><a href="#ref-31">31</a></sup> credit, and Q-value. Rebuilt from EventTape at load (ephemeral, not in snapshot). Supports PPM<sup><a href="#ref-30">30</a></sup> prediction, counterfactual sibling-edge comparison, top-k Q-value motif retrieval, and TD credit propagation up suffix links weighted by <code>1/|endpos|</code>.</p>
       </div>
 
       <div class="cf-feature-card">
         <div class="cf-feature-icon">&nbsp;</div>
         <h3>RefutationLedger</h3>
-        <p>Tracks <code>support</code> (sym_a &rarr; expected sym_b) and <code>contradict</code> (sym_a &rarr; anything else) counts per Sequitur rule. Hysteresis: flip to <em>Refuted</em> at ratio &gt; 0.4, reinstate below 0.2. Antecedent index (<code>HashMap&lt;u64, Vec&lt;RefutEntry&gt;&gt;</code>) enables O(1) per-event checks. On refutation, writes a <code>refuted_by</code> triplet to the KG. Ephemeral; rebuilt from EventTape after each Sequitur pass.</p>
+        <p>Tracks <code>support</code> (sym_a &rarr; expected sym_b) and <code>contradict</code> (sym_a &rarr; anything else) counts per Sequitur<sup><a href="#ref-25">25</a></sup> rule. Hysteresis: flip to <em>Refuted</em> at ratio &gt; 0.4, reinstate below 0.2. Antecedent index (<code>HashMap&lt;u64, Vec&lt;RefutEntry&gt;&gt;</code>) enables O(1) per-event checks. On refutation, writes a <code>refuted_by</code> triplet to the KG. Ephemeral; rebuilt from EventTape after each Sequitur pass.</p>
       </div>
 
       <div class="cf-feature-card">
         <div class="cf-feature-icon">&nbsp;</div>
         <h3>HypothesisMarket</h3>
-        <p>Wilson score CI (95%, z=1.96) + binary entropy per Sequitur rule. <code>probe_value = H(p&#x0302;) &times; (1 &minus; |p&#x0302; &minus; 0.5| &times; 2)</code> — maximized at p&#x0302;=0.5 (maximum uncertainty), zero at certainty. <code>top_probes(k)</code> returns rules the system is most uncertain about, ranked by expected information gain. Drives Phase 14 self-directed experimentation. Ephemeral; rebuilt after each <code>consolidation_pass()</code>.</p>
+        <p>Wilson<sup><a href="#ref-2">2</a></sup> score CI (95%, z=1.96) + binary entropy per Sequitur rule. <code>probe_value = H(p&#x0302;) &times; (1 &minus; |p&#x0302; &minus; 0.5| &times; 2)</code> — maximized at p&#x0302;=0.5 (maximum uncertainty), zero at certainty. <code>top_probes(k)</code> returns rules the system is most uncertain about, ranked by expected information gain. Drives Phase 14 self-directed experimentation. Ephemeral; rebuilt after each <code>consolidation_pass()</code>.</p>
       </div>
 
       <div class="cf-feature-card">
@@ -882,31 +890,31 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
 
       <div class="cf-feature-card">
         <div class="cf-feature-icon">&nbsp;</div>
-        <h3>FepPriorOrgan <span style="font-size:0.75em;opacity:0.6">(Phase 15)</span></h3>
+        <h3>FepPriorOrgan <span class="style-0aba7a7bc4">(Phase 15)</span></h3>
         <p>Non-actuating generative model <code>P(sym | context)</code> over the EventTape symbol stream. Factored Dirichlet-multinomial emission: <code>P(tool | state) &middot; P(outcome | state, tool)</code> — entity marginalized. Latent context = CDAWG active state plus its k=4 suffix-link chain (soft posterior, not point-mass). Online Bayesian count update with exponential forgetting (<code>STATE_DECAY = 0.9995</code>). Free energy per step: <code>F = E<sub>q</sub>[&minus;log P(sym|z)] + KL(q<sub>t</sub> || prior<sub>z</sub>)</code> — variational bound, tractable. Two EWMA diagnostic signals fed to TuriyaMonitor: <code>ewma_drift</code> (rising KL → world-model going stale) and <code>ewma_shock</code> (high NLL + low KL → known context, novel outcome). Fully ephemeral — rebuilt from EventTape on each <code>consolidation_pass()</code>, not persisted in snapshot.</p>
       </div>
 
       <div class="cf-feature-card">
         <div class="cf-feature-icon">&nbsp;</div>
-        <h3>MemoryKind lattice <span style="font-size:0.75em;opacity:0.6">(Phase 16)</span></h3>
+        <h3>MemoryKind lattice <span class="style-0aba7a7bc4">(Phase 16)</span></h3>
         <p>Four typed memory kinds inferred at write time from <code>kind</code> tag, <code>realm</code>, and content prefix: <code>Thought</code> (speculation, synthesis), <code>Observation</code> (recorded external fact), <code>Decision</code> (chosen action with rationale), <code>CodeFact</code> (symbol, callgraph, file, type). Static edge-legality matrix enforced in <code>add_assoc_edge()</code> before materialization — <code>(Observation, Thought)</code> and <code>(Decision, Thought)</code> are illegal (rationalization: speculation laundered into fact). Existing memories default to <code>Observation</code> via <code>#[serde(default)]</code> on upgrade. The edge-legality check rejects these invalid provenance chains before insertion.</p>
       </div>
 
       <div class="cf-feature-card">
         <div class="cf-feature-icon">&nbsp;</div>
-        <h3>QueryRouter <span style="font-size:0.75em;opacity:0.6">(Phase 16)</span></h3>
+        <h3>QueryRouter <span class="style-0aba7a7bc4">(Phase 16)</span></h3>
         <p>Typed query grammar over <code>RecallRequest</code> IR: <code>kind_filter</code>, <code>realm</code>, <code>subject</code>, <code>predicate</code>, <code>freetext</code>, <code>time_from_ms</code>/<code>time_to_ms</code>, <code>causal_tool</code>/<code>causal_entity</code>. <code>route()</code> returns a <code>DispatchKind</code> — <code>Exact</code> | <code>Fuzzy</code> | <code>Temporal</code> | <code>Causal</code> | <code>Hybrid</code> | <code>NeedsDisambiguation(Vec&lt;UnboundSlot&gt;)</code>. LLM called only when the grammar leaves a named unbound slot — every token spend corresponds to a specific, auditable hole. Fully bound requests execute zero-token deterministic relational algebra. Four falsifiability metrics written per <code>consolidation_pass()</code>: token-displacement ratio, deterministic replay rate, router error rate, contradiction yield.</p>
       </div>
 
       <div class="cf-feature-card">
         <div class="cf-feature-icon">&nbsp;</div>
-        <h3>MemProvenance lattice <span style="font-size:0.75em;opacity:0.6">(Phase 17)</span></h3>
+        <h3>MemProvenance lattice <span class="style-0aba7a7bc4">(Phase 17)</span></h3>
         <p>First-class provenance axis on every <code>MemoryPayload</code>: <code>Human</code>, <code>Claude</code>, <code>Codex</code>, <code>OpenWeightDistilled</code>, <code>OpenWeightGenerated</code>. <code>can_write_kind(kind)</code> gate: open-weight-generated writes always enter the <code>candidate</code> band — forbidden from direct <code>Decision</code> or <code>CodeFact</code> writes. <code>candidate: bool</code> on payload; promoted only by <code>witness_memory()</code> on a closed-loop signal (user <code>[correction]</code>, tool-result outcome, or router hit-rate delta). Candidate-laundering guard in <code>add_assoc_edge()</code>: if <code>src.candidate &amp;&amp; !dst.candidate</code>, the edge is rejected — a quarantined memory cannot cite established knowledge as evidence. Stored with <code>#[serde(default)]</code>; no snapshot migration required.</p>
       </div>
 
       <div class="cf-feature-card">
         <div class="cf-feature-icon">&nbsp;</div>
-        <h3>Reconciler (R0) <span style="font-size:0.75em;opacity:0.6">(Phase 17)</span></h3>
+        <h3>Reconciler (R0) <span class="style-0aba7a7bc4">(Phase 17)</span></h3>
         <p>CPU-native deliberation operator — no model call, deterministically replayable. <code>reconcile_all()</code> scans all assoc_edges for MemoryKind legality violations and candidate&rarr;established laundering; results returned as <code>illegal_edges</code>, <code>unresolved</code>. <code>detect_contradictions()</code> groups payloads by <code>(realm, first-6-word content prefix)</code> — kind mismatches within the same prefix group produce a <code>conflict_score=0.6</code> pair; same-kind body divergence produces <code>0.4</code>. Capped at 50 pairs to avoid O(n²) on large stores. R0/R1 split is inviolable: R0 ops are structural graph traversal; R1 (model proposal) produces only proposals that R0 validates before commit. Results logged to triplet KG as <code>(contradiction:A-B, &ldquo;conflict_score&rdquo;, &ldquo;0.6&rdquo;)</code> entries.</p>
       </div>
 
@@ -921,7 +929,8 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
     <div class="reveal"><div class="section-divider"></div><h2 class="heading-section">Op catalog</h2></div>
     <p class="section-intro reveal reveal-delay-1">Every state change is one of these typed operations. The op_type byte is written to the WAL alongside the msgpack payload, and validated on replay to detect corruption.</p>
 
-    <table class="op-table reveal reveal-delay-2">
+    <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0">
+<table class="op-table reveal reveal-delay-2">
       <thead>
         <tr><th>Op</th><th>Byte</th><th>Description</th></tr>
       </thead>
@@ -968,6 +977,7 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
         <tr><td class="op-name">AttachDebtEvidence</td><td class="op-byte">48</td><td class="op-desc">Attach supporting evidence (memory IDs + confidence) to an epistemic debt.</td></tr>
       </tbody>
     </table>
+</div>
   </div>
 </section>
 
@@ -980,20 +990,20 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
 
     <div class="cf-cards reveal reveal-delay-2">
       <div class="cf-card">
-        <h4 class="cf-card-title">Build</h4>
+        <h3 class="cf-card-title">Build</h3>
         <p class="cf-card-desc">chitta-field builds to <code>libchitta_field.a</code> via <code>./build.sh build --release</code>. The CMake build picks it up from <code>../chitta-field/</code> (relative to <code>chitta/CMakeLists.txt</code>) or from a <code>-DCHITTA_FIELD_ROOT</code> override. The smart-installer runs the Rust build automatically before cmake.</p>
       </div>
       <div class="cf-card">
-        <h4 class="cf-card-title">FFI layer</h4>
+        <h3 class="cf-card-title">FFI layer</h3>
         <p class="cf-card-desc">All calls go through <code>cf_*</code> C functions defined in <code>chitta_field.h</code>. The C++ side calls <code>cf_open()</code>, gets back an opaque <code>FieldHandle*</code>, and uses it for all subsequent ops. No C++ knows about Rust internals.</p>
       </div>
       <div class="cf-card">
-        <h4 class="cf-card-title">FieldRpcHandler</h4>
+        <h3 class="cf-card-title">FieldRpcHandler</h3>
         <p class="cf-card-desc"><code>FieldRpcHandler</code> in <code>rpc/field_handler.hpp</code> wraps the Rust store through FFI. See the generated <a href="tools.html">tool reference</a> for MCP and native CLI discovery.</p>
       </div>
     </div>
 
-    <div class="cf-code reveal reveal-delay-3" style="margin-top:var(--space-6)">
+    <div class="cf-code reveal reveal-delay-3 style-84a8551ed1">
 <span class="cm">// Build from source (git clone with submodule)</span>
 git clone --recurse-submodules https://github.com/genomewalker/chitta.git
 cd chitta
@@ -1006,7 +1016,7 @@ cmake --build chitta/build --parallel
 ./scripts/smart-install.sh
     </div>
 
-    <p class="bridge-link reveal reveal-delay-4" style="margin-top:var(--space-6)">
+    <p class="bridge-link reveal reveal-delay-4 style-84a8551ed1">
       <a href="https://github.com/genomewalker/chitta-field" target="_blank" rel="noopener">chitta-field source on GitHub &rarr;</a>
       &ensp;&ensp;
       <a href="architecture.html">Full system architecture &rarr;</a>
@@ -1014,20 +1024,6 @@ cmake --build chitta/build --parallel
   </div>
 </section>
 
-
-<!-- REFERENCES -->
-<section class="cf-page-section" id="references">
-  <div class="container">
-    <div class="reveal"><div class="section-divider"></div><h2 class="heading-section">References</h2></div>
-    <p class="section-intro reveal reveal-delay-1">The chitta-field memory substrate draws on the following published work.</p>
-    <ul class="reveal reveal-delay-2" style="list-style:none;padding:0;line-height:2">
-      <li>
-        Spisak, T., &amp; Friston, K. J. (2026). <strong>Free-energy principle for memory: self-orthogonalizing sparse codes, asymmetric Hopfield attractors, and surprise-modulated plasticity.</strong> <em>Neurocomputing</em>.
-        <a href="https://doi.org/10.1016/j.neucom.2026.08696" target="_blank" rel="noopener">https://doi.org/10.1016/j.neucom.2026.08696</a>
-      </li>
-    </ul>
-  </div>
-</section>
 
 <!-- CLOSING -->
 <section class="closing">
@@ -1041,13 +1037,37 @@ cmake --build chitta/build --parallel
 </section>
 
 <!-- FOOTER -->
-<footer class="footer">
+<!-- BEGIN CITATIONS -->
+<section id="references" class="references">
+  <div class="container">
+  <h2 class="heading-section">References</h2>
+  <ol>
+    <li id="ref-1" value="1">John R. Anderson and Lael J. Schooler. Reflections of the Environment in Memory. Psychological Science 2(6), 396–408 (1991). <a href="https://doi.org/10.1111/j.1467-9280.1991.tb00174.x">https://doi.org/10.1111/j.1467-9280.1991.tb00174.x</a></li>
+    <li id="ref-2" value="2">Edwin B. Wilson. Probable Inference, the Law of Succession, and Statistical Inference. Journal of the American Statistical Association 22(158), 209–212 (1927). <a href="https://doi.org/10.1080/01621459.1927.10502953">https://doi.org/10.1080/01621459.1927.10502953</a></li>
+    <li id="ref-4" value="4">Yu. A. Malkov and D. A. Yashunin. Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs. IEEE TPAMI 42(4), 824–836 (2020); arXiv:1603.09320 (2016). <a href="https://arxiv.org/abs/1603.09320">https://arxiv.org/abs/1603.09320</a> <a href="https://doi.org/10.1109/TPAMI.2018.2889473">https://doi.org/10.1109/TPAMI.2018.2889473</a></li>
+    <li id="ref-6" value="6">A. Blumer, J. Blumer, D. Haussler, R. McConnell, and A. Ehrenfeucht. Complete inverted files for efficient text retrieval and analysis. Journal of the ACM 34(3), 578–595 (1987). <a href="https://doi.org/10.1145/28869.28873">https://doi.org/10.1145/28869.28873</a></li>
+    <li id="ref-9" value="9">Subutai Ahmad and Jeff Hawkins. Properties of Sparse Distributed Representations and their Application to Hierarchical Temporal Memory. arXiv:1503.07469 (2015). <a href="https://arxiv.org/abs/1503.07469">https://arxiv.org/abs/1503.07469</a></li>
+    <li id="ref-10" value="10">Pentti Kanerva. Hyperdimensional Computing: An Introduction to Computing in Distributed Representation with High-Dimensional Random Vectors. Cognitive Computation 1, 139–159 (2009). <a href="https://doi.org/10.1007/s12559-009-9009-8">https://doi.org/10.1007/s12559-009-9009-8</a></li>
+    <li id="ref-19" value="19">Tamas Spisak and Karl Friston. Self-orthogonalizing attractor neural networks emerging from the free energy principle. Neurocomputing, article 133472 (2026); arXiv:2505.22749 (2025). <a href="https://arxiv.org/abs/2505.22749">https://arxiv.org/abs/2505.22749</a> <a href="https://doi.org/10.1016/j.neucom.2026.133472">https://doi.org/10.1016/j.neucom.2026.133472</a></li>
+    <li id="ref-24" value="24">Stephen Robertson and Hugo Zaragoza. The Probabilistic Relevance Framework: BM25 and Beyond. Foundations and Trends in Information Retrieval 3(4), 333–389 (2009). <a href="https://doi.org/10.1561/1500000019">https://doi.org/10.1561/1500000019</a></li>
+    <li id="ref-25" value="25">Craig G. Nevill-Manning and Ian H. Witten. Identifying Hierarchical Structure in Sequences: A linear-time algorithm. Journal of Artificial Intelligence Research 7, 67–82 (1997); arXiv:cs/9709102. <a href="https://arxiv.org/abs/cs/9709102">https://arxiv.org/abs/cs/9709102</a></li>
+    <li id="ref-26" value="26">Donald O. Hebb. The Organization of Behavior: A Neuropsychological Theory. Wiley (1949); Psychology Press reissue (2002). <a href="https://www.routledge.com/The-Organization-of-Behavior-A-Neuropsychological-Theory/Hebb/p/book/9780415654531">https://www.routledge.com/The-Organization-of-Behavior-A-Neuropsychological-Theory/Hebb/p/book/9780415654531</a></li>
+    <li id="ref-30" value="30">John G. Cleary and Ian H. Witten. Data Compression Using Adaptive Coding and Partial String Matching. IEEE Transactions on Communications 32(4), 396–402 (1984). <a href="https://doi.org/10.1109/TCOM.1984.1096090">https://doi.org/10.1109/TCOM.1984.1096090</a></li>
+    <li id="ref-31" value="31">Richard S. Sutton. Learning to Predict by the Methods of Temporal Differences. Machine Learning 3, 9–44 (1988). <a href="https://doi.org/10.1023/A:1022633531479">https://doi.org/10.1023/A:1022633531479</a></li>
+    <li id="ref-33" value="33">John J. Hopfield. Neural networks and physical systems with emergent collective computational abilities. PNAS 79(8), 2554–2558 (1982). <a href="https://doi.org/10.1073/pnas.79.8.2554">https://doi.org/10.1073/pnas.79.8.2554</a></li>
+    <li id="ref-67" value="67">A. Blumer, J. Blumer, D. Haussler, A. Ehrenfeucht, M. T. Chen, and J. Seiferas. The smallest automaton recognizing the subwords of a text. Theoretical Computer Science 40, 31–55 (1985). <a href="https://doi.org/10.1016/0304-3975(85)90157-4">https://doi.org/10.1016/0304-3975(85)90157-4</a></li>
+  </ol>
+  </div>
+</section>
+<!-- END CITATIONS -->
+
+</main>
+<footer class="footer site-footer">
   <div class="container">
     <p class="footer-text">
-      Persistent memory for Claude Code and Codex.
-      <span class="footer-sep"></span>
-      <a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/genomewalker/chitta">GitHub repository</a> · <a href="https://opensource.org/licenses/MIT">MIT license</a> · <a href="/chitta-field.html">This page</a>
     </p>
+    <p class="site-status">Status as of 2026-09-16 · <a href="/changelog.html">Unreleased + v5.72.0</a></p>
   </div>
 </footer>
 
@@ -1211,16 +1231,7 @@ cmake --build chitta/build --parallel
 /* ═══════════════════════════════════════════
    SMOOTH SCROLL
    ═══════════════════════════════════════════ */
-document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
-  anchor.addEventListener('click', function(e) {
-    const target = document.querySelector(this.getAttribute('href'));
-    if (target) {
-      e.preventDefault();
-      const top = target.getBoundingClientRect().top + window.pageYOffset - 80;
-      window.scrollTo({ top: top, behavior: 'smooth' });
-    }
-  });
-});
+/* Native anchors preserve URL history, focus and reduced-motion behavior. */
 </script>
 </body>
 </html>

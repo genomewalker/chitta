@@ -57,6 +57,134 @@ a multi-case run stops at its first failed invariant to avoid using contaminated
 state. CTest registers each case independently. Raw logs and scratch results
 remain untracked; the dated evidence summary is committed.
 
+## 2026-09-16: current-truth panel and provenance coverage
+
+Status 2026-09-16: the 50-question current-truth panel and read-only provenance
+census are implemented. The full historical F2 fixture gate and exact
+session-or-source coverage remain unavailable for the reasons below. The
+prospective automatic-learning experiment remains pending its 20 frozen tasks;
+this retrieval panel supplies no causal learning verdict.
+
+The questions were authored directly from repository files at
+`1c82589b93bbe350319678db66a9d720385cdc4b` before consulting recall, with pinned
+citations, deterministic matchers, 30 visible / 20 procedural holdout questions,
+and 10 predeclared abstentions. [Protocol](../benchmarks/current_truth/README.md),
+[panel](../benchmarks/current_truth/questions.json),
+[runner](../benchmarks/current_truth/run.py).
+
+Three final repetitions used a private scratch copy of frozen learning family
+`da86decb` (sequence 206502617, manifest generation 39285), created by
+`scripts/eval-replica.sh` from `learning-cut-20260915-frozen`, port 17436.
+The daemon was stopped after evaluation. Configuration: realm `project:cc-soul`,
+fused strategy, limit 3, `--no-learn`, no external reranker or LLM. The dated
+[baseline](../benchmarks/current_truth/baseline-2026-09-16.json) binds panel and
+binary hashes, family identity, configuration and every result ID. This family
+is different from the historical `noise.json` family; do not compare their bands.
+
+| Panel | Run 1 | Run 2 | Run 3 | Denominator |
+|---|---:|---:|---:|---|
+| Visible answerable p@3 | 5/24 | 5/24 | 5/24 | 24 answerable questions |
+| Holdout answerable p@3 | 5/16 | 5/16 | 5/16 | 16 answerable questions |
+| All answerable p@3 | 10/40 | 10/40 | 10/40 | 40 answerable questions |
+| Visible abstention | 6/6 | 6/6 | 6/6 | Trap avoidance |
+| Holdout abstention | 4/4 | 4/4 | 4/4 | Trap avoidance |
+| All abstention | 10/10 | 10/10 | 10/10 | Trap avoidance |
+| Total correct | 20/50 | 20/50 | 20/50 | Visible 11/30; holdout 9/20 |
+| Wrong-confident | 0 | 0 | 0 | Predeclared traps only |
+
+Here p@3 follows the requested any-top-three question-success rule (usually
+called hit@3), not document precision. Abstention means no trap matched, not
+proof that a missing fact was recognized. Misses cost 0 and wrong-confident
+answers cost 2 in the supplementary utility score. Numeric matchers are
+contextual; regex/literal scoring still cannot reliably judge negation.
+
+The decision's F2 line records aggregate scores and themes, **not the five
+original prompts**. Their location was requested; five explicitly reconstructed
+fixtures are provided so the missing evidence is not silently fabricated:
+
+| Reconstructed fixture | Run 1 | Run 2 | Run 3 |
+|---|---|---|---|
+| cache-ttl-variable | correct | correct | correct |
+| prompt-median | miss | miss | miss |
+| session-start-median | miss | miss | miss |
+| cached-startup | miss | miss | miss |
+| running-binary-install | miss | miss | miss |
+
+These 1/5 results cannot certify the historical five-probe exit gate. Replacing
+the reconstructions with original prompts is a separately reviewed frozen-panel
+change, followed by recalibration.
+
+`current_truth.p3`: mean **0.25**, sample SD **0**, descriptive band **[0.25, 0.25]**,
+2-SD threshold **0**. `current_truth.abstain`: mean **1**, SD **0**, band **[1, 1]**,
+threshold **0**. These are three warm repetitions, not evidence of equivalence.
+An initial smoke before citation-only line corrections scored 9/40, 10/40, 10/40;
+query text, matchers and splits were unchanged. The final panel hash was then
+calibrated again. Recall-side runtime state can change even with `--no-learn`.
+Existing protected `benchmarks/noise.json` is unchanged; the task explicitly
+allowed the dated baseline fallback. Select it explicitly:
+
+```bash
+python3 benchmarks/current_truth/run.py --dry-run
+# Export the private replica.env; this command never starts a daemon.
+bash scripts/eval-noise.sh --current-truth-only --current-truth-runs 3 \
+  --output /tmp/current-truth-noise.json
+python3 benchmarks/noise.py band current_truth.p3 \
+  --file benchmarks/current_truth/baseline-2026-09-16.json
+```
+
+### Read-only live provenance census
+
+The [audit script](../scripts/provenance-coverage.py) and its
+[frozen aggregate report](../benchmarks/current_truth/provenance-2026-09-16.json) used only
+`list_memories_brief`, `memory_provenance`, and `query_graph` through the CLI.
+It never opened the live store or used recall. It enumerated all visible realms,
+continued through the server's 100-row cap until an empty page, deduplicated IDs,
+and evaluated creation timestamps for the preceding seven days.
+
+Audit interval: **2026-09-16T09:26:53.089184+00:00–2026-09-16T09:29:02.823897+00:00**. Unknown creation times: **0**; future creation times: **0**.
+
+| Writer | Overall covered / total | Last 7 days covered / total |
+|---|---:|---:|
+| hook_compliance | 360/360 | 0/0 |
+| hook_regex | 6,848/6,848 | 476/476 |
+| hook_regex+native_distiller | 2/2 | 0/0 |
+| hook_turn_ingest | 2,911/2,911 | 0/0 |
+| mcp_tool | 314/314 | 0/0 |
+| native_distiller | 37,729/38,274 | 2,332/2,332 |
+| unknown | 0/86,679 | 0/146 |
+| **All writers** | **48,164/135,388 (35.575%)** | **2,808/2,954 (95.058%)** |
+
+**These are observable-provenance lower bounds.** A nonempty `source` label
+identifies its writer and qualifies as source evidence; it never becomes a
+synthetic session. Numeric `source`/`derived_from` references count only when
+the target memory exists in the enumerated population. No text heuristics or
+inferred sessions are used. Unknown writers remain unknown; combined labels
+occupy one bucket rather than double-counting a memory.
+
+The public metadata API does not expose the stored `source_session` field:
+0 audited memories exposed it. Observable session triplets were also 0, but
+**the actual stored-session count is unavailable, not zero**. The historical
+offline 1,236-session statistic is therefore not directly comparable. Exact
+session-or-source union coverage requires a read API exposing that field;
+changing daemon APIs is outside this phase's write scope and frozen contracts.
+The script explicitly reports `coverage_is_lower_bound=true` and
+`session_coverage_complete=false`. This live interval census is not atomic;
+concurrent inserts/deletes may affect pagination.
+
+```bash
+python3 scripts/provenance-coverage.py --socket /explicit/live/socket \
+  --output /tmp/provenance-coverage.json
+```
+
+Validation: **149 MCP tests, 46 SMRITI tests, 10 new panel/audit tests**, all
+`hooks/tests/*.sh`, CI-scope Ruff check/format, `bash -n` and ShellCheck on the
+touched shell script, daemon-free panel dry-run, and **contracts unchanged**.
+MCP subprocess fixtures required `CHITTA_CODEX_BIN=codex` to avoid selecting the
+host executable; the card hook test required removing an inherited shared
+socket override. Initial failures and the successful isolated retries are
+recorded rather than treated as production fixes. New benchmark files and the
+audit script are listed in `EVAL_IMMUTABLE.txt`; CI changes only extend Ruff paths.
+
 ## Evaluation stack
 
 | Layer | Evidence | Limitation |
@@ -278,7 +406,7 @@ as misses; the diagnostic excludes CLI startup. **hit@3=0.00 < 0.30: the analogy
 lane is not ready for a hook.** No lane tuning or immutable eval edits were made.
 These correlated forward/reverse smoke tasks do not establish broad accuracy.
 
-2026-09-15 — **KEEP `recall_analogy` as explicit directed relation transfer**, per decision memo §2: on a private, freshly copied bbcaed33 family (generation 38047), the independent exact relation-join baseline and proportional RPC both achieve hit@1=14/14, hit@3=14/14, negative abstentions=14/14, unsupported answers=0, missing grounding=0. RPC errors=0; median latency=0.333 ms over 28 calls (baseline 1.627 ms over 14 positive two-graph-RPC joins; these timings have different workloads). All 14 negative argument triples are distinct and target existing subjects with other outgoing edges. Complete answer sets, citations, inputs and hashes: `benchmarks/analogy/baseline.json`, `results.json`, `replica-selection.txt`. Structural relevance tasks and endpoint VSA ranking are retired; indexed exact-subject joins bypass the 10,000-fact bound and reject legacy ID-collision neighbours, with supporting edges and explicit `reason` abstentions. HDC and `query_graph` are unchanged; no graph cleanup or deployment. This is the memo's small screening test, not broad analogy accuracy.
+2026-09-15 — **KEEP `recall_analogy` as explicit directed relation transfer**, per decision memo §2: on a private, freshly copied bbcaed33 family (generation 38047), the independent exact relation-join baseline and proportional RPC both achieve hit@1=14/14, hit@3=14/14, negative abstentions=14/14, unsupported answers=0, missing grounding=0. RPC errors=0; median latency=0.333 ms over 28 calls (baseline 1.627 ms over 14 positive two-graph-RPC joins; these timings have different workloads). All 14 negative argument triples are distinct and target existing subjects with other outgoing edges. Complete answer sets, citations, inputs and hashes: `benchmarks/analogy/baseline.json`, `results.json`, `replica-selection.txt`. Structural relevance tasks and endpoint VSA [10](#ref-10) ranking are retired; indexed exact-subject joins bypass the 10,000-fact bound and reject legacy ID-collision neighbours, with supporting edges and explicit `reason` abstentions. HDC and `query_graph` are unchanged; no graph cleanup or deployment. This is the memo's small screening test, not broad analogy accuracy.
 
 
 ## Explicit relation transfer — 2026-09-15
@@ -447,3 +575,9 @@ An initial overlapping Cargo archive/audit build failed with a missing object;
 subsequent build/test commands were serialized. The first metric invocation
 refused to run without an exported private socket; only the corrected socket-bound
 runs appear in the table. Neither failure is counted as a measurement.
+
+<!-- BEGIN CITATIONS -->
+## References
+
+- <a id="ref-10"></a>**[10]** Pentti Kanerva. Hyperdimensional Computing: An Introduction to Computing in Distributed Representation with High-Dimensional Random Vectors. Cognitive Computation 1, 139–159 (2009). [source](<https://doi.org/10.1007/s12559-009-9009-8>)
+<!-- END CITATIONS -->

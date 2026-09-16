@@ -13,7 +13,7 @@ from urllib.parse import unquote, urlsplit
 
 ROOT = Path.cwd()
 FILES = [ROOT / 'README.md', *sorted((ROOT / 'docs').glob('*.md')),
-         *sorted((ROOT / 'docs').glob('*.html'))]
+         *sorted((ROOT / 'docs').rglob('*.html'))]
 arguments = [arg for arg in sys.argv[1:] if arg != '--verbose-history']
 if arguments:
     FILES = [Path(arg).resolve() for arg in arguments]

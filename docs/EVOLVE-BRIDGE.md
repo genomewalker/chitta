@@ -278,9 +278,9 @@ Claude extraction calls and no memory writes:
 
 | Paper | Proposed mechanism | Hypothesized incremental gain | Confidence |
 | --- | --- | --- | --- |
-| 2609.08599 | Evidence links on graph edges | nDCG@20 +0.01 | 0.20 |
-| 2609.03467 | Rewrite implicit queries into explicit subqueries | implicit/composed-query nDCG@20 +0.03 | 0.20 |
-| 2608.29622 | Stack scratchpad for multi-hop retrieval | LongMemEval accuracy +3 percentage points | 0.20 |
+| 2609.08599 [57](#ref-57) | Evidence links on graph edges | nDCG@20 +0.01 | 0.20 |
+| 2609.03467 [54](#ref-54) | Rewrite implicit queries into explicit subqueries | implicit/composed-query nDCG@20 +0.03 | 0.20 |
+| 2608.29622 [53](#ref-53) | Stack scratchpad for multi-hop retrieval | LongMemEval [16](#ref-16) accuracy +3 percentage points | 0.20 |
 
 All three model outputs set `already_have: false`; these are provisional
 inventory comparisons, not independent verification against current code.
@@ -301,3 +301,39 @@ either: the fetch/recall/review checks were run read-only for evidence, not as
 a full end-to-end `sota_watch` pass writing new cards. All three requested live
 gates now succeed (fetch, dedupe, and review), so this fix is committed under
 the task's commit-after-gates condition.
+
+Citation check (2026-09-16): CALFW dataset provenance is Zheng et al. [72](#ref-72);
+the biometric-memory scores are from Qian et al. [56](#ref-56).
+The real bridge fetch example is Zhou and Han's
+long-term conversational-memory baseline [52](#ref-52). Proposal evidence was
+checked against the context-driven retrieval abstract [54](#ref-54), EdgeMem
+[55](#ref-55), biometric memory [56](#ref-56), the graph-memory survey
+[57](#ref-57), MARCO [58](#ref-58), the six-level social-science framework
+[59](#ref-59), the consolidation preprint description [60](#ref-60), and the two
+fidelis software releases [61](#ref-61) [62](#ref-62). The slot-memory poster's
+title and authors are verified, but its abstract/body remain unavailable
+[63](#ref-63). SwarmWorld's numeric claims and the metamaterial archive's
+three-run description match their sources [14](#ref-14) [15](#ref-15).
+The source papers do not verify these cards' proposed gains for chitta; see
+[Citation check notes](CITATION-NOTES.md).
+
+<!-- BEGIN CITATIONS -->
+## References
+
+- <a id="ref-14"></a>**[14]** Subhadeep Pal, Fiona Y. Wang, and Markus J. Buehler. SwarmWorld: Stigmergic technological evolution in societies of language-model agents. arXiv:2608.26081 (2026). [source](<https://arxiv.org/abs/2608.26081>) [source](<https://arxiv.org/html/2608.26081>)
+- <a id="ref-15"></a>**[15]** LAMM, MIT. MetaMaterialsDiscovery: Autonomous computational studies of hierarchical metamaterial fracture. Research archive, Hugging Face (accessed 2026-09-16). [source](<https://huggingface.co/lamm-mit/MetaMaterialsDiscovery>)
+- <a id="ref-16"></a>**[16]** Di Wu, Hongwei Wang, Wenhao Yu, Yuwei Zhang, Kai-Wei Chang, and Dong Yu. LongMemEval: Benchmarking Chat Assistants on Long-Term Interactive Memory. ICLR (2025); arXiv:2410.10813 (2024). [source](<https://arxiv.org/abs/2410.10813>)
+- <a id="ref-52"></a>**[52]** Sizhe Zhou and Jiawei Han. A Simple Yet Strong Baseline for Long-Term Conversational Memory of LLM Agents. arXiv:2511.17208 (2025). [source](<https://arxiv.org/abs/2511.17208>)
+- <a id="ref-53"></a>**[53]** Xinke Jiang et al. AgenticRag-R1: Agentic Reinforcement Learning with Stack Memory for Multi-Step Reasoning, Retrieval and Memorizing. arXiv:2608.29622 (2026). [source](<https://arxiv.org/abs/2608.29622>)
+- <a id="ref-54"></a>**[54]** Wen-Yu Chang and Yun-Nung Chen. When Users Don't Ask: Benchmarking Context-Driven Memory Retrieval in Conversational Agents. arXiv:2609.03467 (2026). [source](<https://arxiv.org/abs/2609.03467>)
+- <a id="ref-55"></a>**[55]** Zeyang Cui, Jiannong Cao, Zhiyuan Wen, Bo Yuan, Junlan Feng, and Shengyuan Chen. EdgeMem: LLM-Free Agent Memory Construction and Retrieval via Evidence-Preserving Multi-Anchor Hypergraph. arXiv:2609.05553 (2026). [source](<https://arxiv.org/abs/2609.05553>)
+- <a id="ref-56"></a>**[56]** Yanhong Qian, Qingguo Meng, Shihao Ding, Xingbo Dong, Zhe Jin, Hanrui Wang, and Isao Echizen. Personalizing LLM Agent Memory Using Biometrics. arXiv:2609.08558 (2026). [source](<https://arxiv.org/abs/2609.08558>)
+- <a id="ref-57"></a>**[57]** Dac Duy Anh Nguyen, Zhangchi Qiu, Shigeng Chen, and Alan Wee-Chung Liew. Graph-Based Personalized Memory for LLM Agents: Representation, Evolution, Retrieval, and Evaluation. arXiv:2609.08599 (2026). [source](<https://arxiv.org/abs/2609.08599>)
+- <a id="ref-58"></a>**[58]** Babasaheb Satpute, Wasudeo P. Rahane, Poonam Pawar, Hrishikesh Vanjari, Rohan Kulkarni, Saurabh Vijay Parhad, and Priyanka V. Deshmukh. Multi agent retrieval validation and knowledge reasoning for enhanced retrieval augmented generation. Scientific Reports (2026). [source](<https://doi.org/10.1038/s41598-026-69002-7>)
+- <a id="ref-59"></a>**[59]** Jennifer Haase and Sebastian Pokutta. Beyond static responses: multi-agent LLM systems as a new paradigm for social science research. Humanities and Social Sciences Communications (2026). [source](<https://doi.org/10.1057/s41599-026-08832-2>)
+- <a id="ref-60"></a>**[60]** Pranay Mahendrakar. Consolidation Without Weights: What the Complementary Learning Systems Analogy Licenses in LLM Agent Memory, and Why the Systems That Borrow Its Name Do Not Inherit Its Guarantee. Zenodo preprint (2026). [source](<https://doi.org/10.5281/zenodo.22699102>)
+- <a id="ref-61"></a>**[61]** Rolando Bosch. fidelis: zero-LLM agent memory for Claude Code and AI agents. Zenodo software archive, v0.0.94 (2026). [source](<https://doi.org/10.5281/zenodo.22248259>)
+- <a id="ref-62"></a>**[62]** Rolando Bosch. fidelis: zero-LLM agent memory for Claude Code and AI agents. Zenodo software archive, v0.0.97 (2026). [source](<https://doi.org/10.5281/zenodo.22730449>)
+- <a id="ref-63"></a>**[63]** Erica Butts and Salam Daher. Consistent Conversational State for Virtual Agents: Slot-Based Memory for Accurate Fact Retrieval. IVA, accepted poster (2026). [source](<https://doi.org/10.1145/3806774.3832787>) [source](<https://iva.acm.org/2026/accepted-papers/>)
+- <a id="ref-72"></a>**[72]** Tianyue Zheng, Weihong Deng, and Jiani Hu. Cross-Age LFW: A Database for Studying Cross-Age Face Recognition in Unconstrained Environments. arXiv:1708.08197 (2017). [source](<https://arxiv.org/abs/1708.08197>)
+<!-- END CITATIONS -->

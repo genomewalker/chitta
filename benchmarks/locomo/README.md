@@ -1,6 +1,6 @@
 # LoCoMo Benchmark for cc-soul
 
-Evaluate cc-soul's long-term conversational memory against the [LoCoMo benchmark](https://github.com/snap-research/locomo) (ACL 2024).
+Evaluate cc-soul's long-term conversational memory against the [LoCoMo benchmark](https://github.com/snap-research/locomo) [17](#ref-17) [18](#ref-18) (ACL 2024).
 
 ## Setup
 
@@ -76,3 +76,10 @@ Results saved to `locomo_results.json`:
   "results": [...]
 }
 ```
+
+<!-- BEGIN CITATIONS -->
+## References
+
+- <a id="ref-17"></a>**[17]** Adyasha Maharana, Dong-Ho Lee, Sergey Tulyakov, Mohit Bansal, Francesco Barbieri, and Yuwei Fang. Evaluating Very Long-Term Conversational Memory of LLM Agents. ACL (2024); arXiv:2402.17753. [source](<https://arxiv.org/abs/2402.17753>) [source](<https://aclanthology.org/2024.acl-long.747/>)
+- <a id="ref-18"></a>**[18]** Snap Research. LoCoMo: Evaluating Very Long-Term Conversational Memory of LLM Agents. Dataset and benchmark repository (2024). [source](<https://github.com/snap-research/locomo>)
+<!-- END CITATIONS -->

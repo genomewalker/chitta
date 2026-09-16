@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Context Management — chitta</title>
+<title>chitta — Context Management</title>
 <meta name="description" content="Context compaction using recency, query similarity, and coverage in stored memories.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta property="og:title" content="Context Management — chitta">
@@ -173,36 +173,42 @@
 .demo-stats { display: flex; gap: var(--space-5); margin-top: var(--space-3); opacity: 0; transition: opacity .4s; font-size: var(--text-xs); }
 .demo-stats span { color: var(--ash-500); }
 </style>
+<link rel="stylesheet" href="/content-styles.css">
+<link rel="stylesheet" href="/site-shell.css">
 </head>
-<body>
+<body class="page-context">
+<a class="skip-link" href="#main-content">Skip to content</a>
 
 <!-- NAV -->
-<nav class="nav">
+<nav class="nav site-nav" aria-label="Main navigation">
   <div class="nav-inner">
-    <a href="index.html" class="nav-brand">chitta</a>
-    <button class="nav-hamburger" onclick="document.querySelector('.nav').classList.toggle('nav-open')" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
+    <a href="/index.html" class="nav-brand">chitta</a>
     <ul class="nav-links">
-      <li><a href="getting-started.html">Get Started</a></li>
-      <li><a href="philosophy.html">Philosophy</a></li>
-      <li><a href="architecture.html">Architecture</a></li>
-      <li><a href="recall.html">Recall</a></li>
-      <li><a href="benchmarks.html">Benchmarks</a></li>
-      <li><a href="chitta-field.html">chitta-field</a></li>
-      <li><a href="sadhana.html">Sadhana</a></li>
-      <li><a href="context.html" class="active">Context</a></li>
-      <li><a href="tools.html">Tools</a></li>
-      <li><a href="cli.html">CLI</a></li>
-      <li><a href="hooks.html">Hooks</a></li>
-      <li><a href="skills.html">Skills</a></li>
-      <li><a href="changelog.html">Changelog</a></li>
-      <li><a href="constellation.html">Constellation</a></li>
-      <li><a href="dreams/index.html">Dreams</a></li>
-      <li><a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="/index.html">Home</a></li>
+      <li><a href="/getting-started.html">Get Started</a></li>
+      <li><a href="/philosophy.html">Philosophy</a></li>
+      <li><a href="/architecture.html">Architecture</a></li>
+      <li><a href="/recall.html">Recall</a></li>
+      <li><a href="/benchmarks.html">Benchmarks</a></li>
+      <li><a href="/chitta-field.html">chitta-field</a></li>
+      <li><a href="/sadhana.html">Sadhana</a></li>
+      <li><a href="/context.html" aria-current="page">Context</a></li>
+      <li><a href="/tools.html">Tools</a></li>
+      <li><a href="/cli.html">CLI</a></li>
+      <li><a href="/hooks.html">Hooks</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/changelog.html">Changelog</a></li>
+      <li><a href="/constellation.html">Constellation</a></li>
+      <li><a href="/dreams/index.html">Dreams</a></li>
+      <li><a href="/brain-viz/index.html">Brain Architecture</a></li>
+      <li><a href="/mind-viz/index.html">Mind Interface</a></li>
+      <li><a href="/vedanta/index.html">Vedanta</a></li>
+      <li><a href="/evolve-bridge-live/index.html">Evolve Evidence</a></li>
+      <li><a href="https://github.com/genomewalker/chitta">GitHub</a></li>
     </ul>
   </div>
 </nav>
+<main id="main-content" tabindex="-1">
 
 <!-- PAGE HEADER -->
 <header class="page-header">
@@ -210,13 +216,13 @@
     <div class="page-header-badge reveal">Context Management</div>
     <h1 class="reveal reveal-delay-1">Context compaction</h1>
     <p class="page-header-sub reveal reveal-delay-2">chitta scores conversation turns by recency, query similarity, and coverage in stored memories, then selects turns within a token budget.</p>
-    <p class="reveal reveal-delay-2" style="font-family: var(--font-mono); font-size: var(--text-xs); color: #565f89; margin-top: var(--space-3);">Status as of 2026-09-16. <a href="HOOKS.md">Hook lifecycle</a> · <a href="API.md">Tool contract</a>.</p>
+    <p class="reveal reveal-delay-2 style-2dee830ea7">Status as of 2026-09-16 <a href="HOOKS.md">Hook lifecycle</a> · <a href="API.md">Tool contract</a>.</p>
   </div>
 </header>
 
 <!-- MAIN CONTENT -->
-<main>
-  <div class="container" style="max-width: 860px;">
+<div>
+  <div class="container style-2967545c78">
 
     <!-- THE PROBLEM -->
     <section class="content-section reveal">
@@ -274,7 +280,8 @@
       </div>
 
       <div class="table-wrap">
-        <table class="data-table">
+        <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0">
+<table class="data-table">
           <thead><tr><th>Component</th><th>What it measures</th><th>Weight</th></tr></thead>
           <tbody>
             <tr><td>structural_weight</td><td>Role importance: system=2.0, user=1.0, assistant=0.8, tool=0.5</td><td>multiplier</td></tr>
@@ -283,6 +290,7 @@
             <tr><td>memory_coverage</td><td>Max cosine sim vs. nearest 3 soul memories (higher = already learned)</td><td>0.3 (inverted)</td></tr>
           </tbody>
         </table>
+</div>
       </div>
 
       <div class="heading-sub">The algorithm</div>
@@ -331,15 +339,15 @@
       <p>Scroll to animate. Each bar shows the computed score. Green = kept, faded = memory-covered drop.</p>
 
       <div id="ctx-demo">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-          <span style="color:var(--ash-500);font-size:0.68rem;letter-spacing:.08em;text-transform:uppercase;">compact_context — scoring pass</span>
-          <button id="ctx-replay" style="background:none;border:1px solid rgba(203,175,134,0.2);color:var(--sandal-300);font-family:inherit;font-size:0.68rem;padding:3px 10px;cursor:pointer;border-radius:3px;">replay</button>
+        <div class="style-4b7c316065">
+          <span class="style-77206fff3f">compact_context — scoring pass</span>
+          <button class="style-aa26ac38c5" id="ctx-replay">replay</button>
         </div>
         <div id="ctx-msgs"></div>
         <div class="demo-stats" id="ctx-stats">
-          <span>before: <b id="cs2-before" style="color:var(--lotus-200)">—</b></span>
-          <span>after: <b id="cs2-after" style="color:var(--sandal-300)">—</b></span>
-          <span>dropped: <b id="cs2-pct" style="color:#D46A4C">—</b></span>
+          <span>before: <b class="style-a9e1d4d6f5" id="cs2-before">—</b></span>
+          <span>after: <b class="style-65cc588dae" id="cs2-after">—</b></span>
+          <span>dropped: <b class="style-cf1aa60fc8" id="cs2-pct">—</b></span>
         </div>
       </div>
     </section>
@@ -348,7 +356,8 @@
     <section class="content-section reveal">
       <h2 class="heading-2">compact_context tool</h2>
       <div class="table-wrap">
-        <table class="data-table">
+        <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0">
+<table class="data-table">
           <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
           <tbody>
             <tr><td>messages</td><td>array</td><td>yes</td><td>Conversation turns <code>[{role, content}]</code> — OpenAI/Claude format</td></tr>
@@ -357,6 +366,7 @@
             <tr><td>distill_novel</td><td>boolean</td><td>no</td><td>Optional daemon pass, default false; requires an embedder and store. Records a capped excerpt of qualifying dropped turns. The advertised schema still calls it reserved; the PreCompact hook does not enable it.</td></tr>
           </tbody>
         </table>
+</div>
       </div>
 
       <div class="heading-sub">Response</div>
@@ -421,7 +431,7 @@
         </div>
       </div>
 
-      <p style="margin-top: var(--space-4);">You can also trigger compaction manually from any hook or script:</p>
+      <p class="style-09342f6dd1">You can also trigger compaction manually from any hook or script:</p>
       <pre class="code-block"><code># In UserPromptSubmit hook — compact before long-session turns
 MESSAGES=$(jq -sc '[.[] | select(.type=="user" or .type=="assistant") | ...] | .[-60:]' "$TRANSCRIPT_PATH")
 echo "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"compact_context\",\"arguments\":{\"messages\":$MESSAGES,\"query\":\"$QUERY\",\"target_ratio\":0.4}}}" \
@@ -436,21 +446,16 @@ echo "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name
     </section>
 
   </div>
-</main>
+</div>
 
 <!-- FOOTER -->
-<footer class="footer">
+</main>
+<footer class="footer site-footer">
   <div class="container">
-    <div class="footer-inner">
-      <div class="footer-brand">chitta</div>
-      <p class="footer-tagline">persistent memory for Claude Code</p>
-      <div class="footer-links">
-        <a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a>
-        <a href="getting-started.html">Get Started</a>
-        <a href="tools.html">Tools</a>
-        <a href="hooks.html">Hooks</a>
-      </div>
-    </div>
+    <p class="footer-text">
+      <a href="https://github.com/genomewalker/chitta">GitHub repository</a> · <a href="https://opensource.org/licenses/MIT">MIT license</a> · <a href="/context.html">This page</a>
+    </p>
+    <p class="site-status">Status as of 2026-09-16 · <a href="/changelog.html">Unreleased + v5.72.0</a></p>
   </div>
 </footer>
 

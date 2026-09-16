@@ -187,10 +187,10 @@ jobs:
       # ships with the plugin; scripts/ and benchmarks/ fixtures are excluded
       # there. No `|| true` — this gate is green and must stay green.
       - name: Lint
-        run: ruff check chitta-mcp hooks benchmarks/smriti benchmarks/noise.py benchmarks/check_eval_immutable.py
+        run: ruff check chitta-mcp hooks benchmarks/smriti benchmarks/noise.py benchmarks/check_eval_immutable.py benchmarks/current_truth scripts/provenance-coverage.py
 
       - name: Check formatting
-        run: ruff format --check chitta-mcp hooks benchmarks/smriti benchmarks/noise.py benchmarks/check_eval_immutable.py
+        run: ruff format --check chitta-mcp hooks benchmarks/smriti benchmarks/noise.py benchmarks/check_eval_immutable.py benchmarks/current_truth scripts/provenance-coverage.py
 
       # Catches syntax errors in modules no test imports.
       - name: Byte-compile
@@ -264,3 +264,25 @@ jobs:
               sys.exit(1)
           print("all modules import on the 3.9 floor")
           SMOKE
+
+  # The published site and the docs are gated like code: every local link and
+  # anchor resolves, every citation is in the per-page References and the
+  # index, and the site structure checker (when present) passes. Stdlib only.
+  docs-gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Links and anchors
+        run: bash scripts/check-docs-links.sh
+
+      - name: Citations
+        run: bash scripts/check-citations.sh
+
+      - name: Site structure
+        run: |
+          if [ -f scripts/check-site.py ]; then python3 scripts/check-site.py; else echo "check-site.py not present yet"; fi

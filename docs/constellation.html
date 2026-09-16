@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Constellation — chitta</title>
+<title>chitta — Constellation</title>
 <meta name="description" content="Visualization of 512 cross-model semantic directions distilled from open-weight LLMs and used to initialize memory geometry.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -166,46 +166,52 @@
 .c-link { stroke-opacity: 0.15; pointer-events: none; }
 .c-node.center-node circle { filter: drop-shadow(0 0 8px var(--aura-300)); }
 </style>
+<link rel="stylesheet" href="/content-styles.css">
+<link rel="stylesheet" href="/site-shell.css">
 </head>
-<body>
+<body class="page-constellation">
+<a class="skip-link" href="#main-content">Skip to content</a>
 
-<nav class="nav">
+<nav class="nav site-nav" aria-label="Main navigation">
   <div class="nav-inner">
-    <a href="index.html" class="nav-brand">chitta</a>
-    <button class="nav-hamburger" onclick="document.querySelector('.nav').classList.toggle('nav-open')" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
+    <a href="/index.html" class="nav-brand">chitta</a>
     <ul class="nav-links">
-      <li><a href="getting-started.html">Get Started</a></li>
-      <li><a href="philosophy.html">Philosophy</a></li>
-      <li><a href="architecture.html">Architecture</a></li>
-      <li><a href="recall.html">Recall</a></li>
-      <li><a href="benchmarks.html">Benchmarks</a></li>
-      <li><a href="chitta-field.html">chitta-field</a></li>
-      <li><a href="sadhana.html">Sadhana</a></li>
-      <li><a href="context.html">Context</a></li>
-      <li><a href="tools.html">Tools</a></li>
-      <li><a href="cli.html">CLI</a></li>
-      <li><a href="hooks.html">Hooks</a></li>
-      <li><a href="skills.html">Skills</a></li>
-      <li><a href="changelog.html">Changelog</a></li>
-      <li><a href="constellation.html" class="active">Constellation</a></li>
-      <li><a href="dreams/index.html">Dreams</a></li>
-      <li><a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="/index.html">Home</a></li>
+      <li><a href="/getting-started.html">Get Started</a></li>
+      <li><a href="/philosophy.html">Philosophy</a></li>
+      <li><a href="/architecture.html">Architecture</a></li>
+      <li><a href="/recall.html">Recall</a></li>
+      <li><a href="/benchmarks.html">Benchmarks</a></li>
+      <li><a href="/chitta-field.html">chitta-field</a></li>
+      <li><a href="/sadhana.html">Sadhana</a></li>
+      <li><a href="/context.html">Context</a></li>
+      <li><a href="/tools.html">Tools</a></li>
+      <li><a href="/cli.html">CLI</a></li>
+      <li><a href="/hooks.html">Hooks</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/changelog.html">Changelog</a></li>
+      <li><a href="/constellation.html" aria-current="page">Constellation</a></li>
+      <li><a href="/dreams/index.html">Dreams</a></li>
+      <li><a href="/brain-viz/index.html">Brain Architecture</a></li>
+      <li><a href="/mind-viz/index.html">Mind Interface</a></li>
+      <li><a href="/vedanta/index.html">Vedanta</a></li>
+      <li><a href="/evolve-bridge-live/index.html">Evolve Evidence</a></li>
+      <li><a href="https://github.com/genomewalker/chitta">GitHub</a></li>
     </ul>
   </div>
 </nav>
+<main id="main-content" tabindex="-1">
 
 <header class="page-header">
   <div class="container">
     <div class="page-header-badge reveal">Semantic Geometry</div>
     <h1 class="reveal reveal-delay-1">Semantic constellation</h1>
     <p class="page-header-sub reveal reveal-delay-2">512 semantic directions distilled from open-weight LLMs&thinsp;&mdash;&thinsp;the prior knowledge structure seeded into every blank mind before the first memory.</p>
-    <p class="reveal reveal-delay-2" style="font-family: var(--font-mono); font-size: var(--text-xs); color: #565f89; margin-top: var(--space-3);">Status as of 2026-09-02.</p>
+    <p class="reveal reveal-delay-2 style-2dee830ea7">Status as of 2026-09-16</p>
   </div>
 </header>
 
-<main>
+<div>
 <section>
 <div class="container">
 
@@ -230,10 +236,10 @@
   <!-- Visualization -->
   <div id="viz-outer" class="reveal">
     <!-- Galaxy / Radial SVG -->
-    <svg id="viz-svg" style="height:68vh;min-height:460px"></svg>
+    <svg class="style-d3ec43172c" id="viz-svg"></svg>
 
     <!-- Bipartite SVG (hidden until mode switch) -->
-    <svg id="bipartite-svg" style="height:68vh;min-height:460px;display:none"></svg>
+    <svg class="style-071c3424f4" id="bipartite-svg"></svg>
 
     <!-- Detail panel -->
     <div id="detail-panel">
@@ -258,8 +264,8 @@
   </div>
 
   <div class="legend reveal" id="legend"></div>
-  <p class="reveal" style="max-width:660px;margin:var(--space-5) 0 0;padding-left:var(--space-4);border-left:2px solid rgba(203,175,134,0.35);font-size:13px;line-height:1.8;color:var(--ash-300)">
-    <strong style="color:var(--sandal-300)">Archive.</strong> This is a static snapshot, not a live view.
+  <p class="reveal style-6592600bca">
+    <strong class="style-65cc588dae">Archive.</strong> This is a static snapshot, not a live view.
     <code>constellation-data.json</code> was last generated on 2026-05-20 by
     <code>scripts/build_constellation.py</code> and <code>scripts/export_constellation_web.py</code>.
     Those generators still work and are wired into the harvest script, but they are run occasionally
@@ -267,38 +273,41 @@
   </p>
 
 
-  <div style="margin-top:var(--space-8)" class="reveal">
-    <h2 class="heading-section" style="margin-bottom:var(--space-5)">Visualization modes</h2>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-5);max-width:800px">
+  <div class="reveal style-ce9f2ef6c3">
+    <h2 class="heading-section style-1aa0a94c5d">Visualization modes</h2>
+    <div class="style-732bebd427">
       <div>
-        <div style="font-family:var(--font-mono);font-size:11px;color:var(--aura-300);margin-bottom:6px">GALAXY</div>
-        <p style="font-size:13px;line-height:1.75;color:var(--ash-300)">Force-directed map of all 512 semantic directions. Click any node to enter Radial mode and orbit its neighbors by similarity. Drag, zoom, filter.</p>
+        <div class="style-150dc8dcfd">GALAXY</div>
+        <p class="style-1801483095">Force-directed map of all 512 semantic directions. Click any node to enter Radial mode and orbit its neighbors by similarity. Drag, zoom, filter.</p>
       </div>
       <div>
-        <div style="font-family:var(--font-mono);font-size:11px;color:var(--aura-300);margin-bottom:6px">RADIAL</div>
-        <p style="font-size:13px;line-height:1.75;color:var(--ash-300)">A clicked direction moves to center. All others orbit at a distance proportional to <em>1 − Jaccard</em> — semantically identical directions appear closest. Click empty space or ← to return.</p>
+        <div class="style-150dc8dcfd">RADIAL</div>
+        <p class="style-1801483095">A clicked direction moves to center. All others orbit at a distance proportional to <em>1 − Jaccard</em> — semantically identical directions appear closest. Click empty space or ← to return.</p>
       </div>
       <div>
-        <div style="font-family:var(--font-mono);font-size:11px;color:var(--aura-300);margin-bottom:6px">TOKEN ↔ DIRECTION</div>
-        <p style="font-size:13px;line-height:1.75;color:var(--ash-300)">Bipartite graph: top tokens on the left, directions on the right. Hover a token to highlight every direction that carries it. Hover a direction to reveal its vocabulary.</p>
+        <div class="style-150dc8dcfd">TOKEN ↔ DIRECTION</div>
+        <p class="style-1801483095">Bipartite graph: top tokens on the left, directions on the right. Hover a token to highlight every direction that carries it. Hover a direction to reveal its vocabulary.</p>
       </div>
     </div>
-    <p style="max-width:660px;line-height:1.8;color:var(--ash-300);margin-top:var(--space-5)">
-      The <strong style="color:var(--lotus-200)">probe bar</strong> at the bottom is always active. Type a concept
+    <p class="style-3c7eb11627">
+      The <strong class="style-a9e1d4d6f5">probe bar</strong> at the bottom is always active. Type a concept
       and every matching direction lights up across all three modes. The 5×5-pixel strip is the actual
-      <strong style="color:var(--lotus-200)">binary hypervector fingerprint</strong> — each cell is one direction;
+      <strong class="style-a9e1d4d6f5">binary hypervector fingerprint</strong> — each cell is one direction;
       blue = activated, dim = silent. Hamming distance between two such strips is what chitta uses for recall.
     </p>
   </div>
 
 </div>
 </section>
-</main>
+</div>
 
-<footer style="border-top:1px solid rgba(157,178,217,0.06);padding:var(--space-7) 0;margin-top:var(--space-8)">
-  <div class="container" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-4);font-family:var(--font-mono);font-size:12px;color:var(--ash-300);opacity:0.5">
-    <span>chitta — snapshot, last generated 2026-05-20</span>
-    <a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener" style="opacity:0.7">GitHub</a>
+</main>
+<footer class="footer site-footer">
+  <div class="container">
+    <p class="footer-text">
+      <a href="https://github.com/genomewalker/chitta">GitHub repository</a> · <a href="https://opensource.org/licenses/MIT">MIT license</a> · <a href="/constellation.html">This page</a>
+    </p>
+    <p class="site-status">Status as of 2026-09-16 · <a href="/changelog.html">Unreleased + v5.72.0</a></p>
   </div>
 </footer>
 

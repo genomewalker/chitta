@@ -16,15 +16,15 @@
   "evidence": [
     {
       "source": "https://doi.org/10.5281/zenodo.22248259",
-      "claim": "Paper provided with no abstract/body — only title 'fidelis: zero-LLM agent memory for Claude Code and AI agents' is available"
+      "claim": "Citation check 2026-09-16: this DOI identifies Rolando Bosch's fidelis v0.0.94 software archive; its Zenodo description is available."
     },
     {
       "source": "https://doi.org/10.5281/zenodo.22248259",
-      "claim": "Inventory: live chittad ExecStart includes --no-enrich and --distill-interval 60, i.e. distillation already runs without LLM calls"
+      "claim": "The release description states that fidelis returns original passages verbatim instead of paraphrasing and runs locally. This external source does not document chitta's live daemon configuration."
     },
     {
       "source": "https://doi.org/10.5281/zenodo.22248259",
-      "claim": "Inventory: chitta-mcp/server.py recall_gateway default strategy 'hybrid' merges semantic+typed+spreading+session lanes without an LLM call in the retrieval path"
+      "claim": "The release description states that fidelis's default retrieval combines BM25, dense vectors and reciprocal rank fusion without an LLM call. This is evidence about fidelis, not chitta's recall implementation."
     }
   ],
   "source": "hypothesis",

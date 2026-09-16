@@ -3,369 +3,69 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>404 - Page Not Found | chitta</title>
+<title>chitta — Page not found</title>
 <meta name="description" content="The page you're looking for doesn't exist.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
-<style>
-:root {
-  --ink-950: #0B0B10;
-  --night-900: #0F1018;
-  --indigo-800: #1A1D2B;
-  --indigo-700: #24283A;
-  --indigo-600: #2E3348;
-  --ash-300: #B9BDC7;
-  --lotus-200: #E7E2D6;
-  --sandal-300: #CBAF86;
-  --ember-400: #D46A4C;
-  --ember-500: #C05A3E;
-  --aura-300: #9DB2D9;
-  --mist-100: #F3F1EC;
 
-  --bg-gradient: linear-gradient(160deg, #0F1018 0%, #1A1D2B 55%, #24283A 100%);
-  --halo-gradient: radial-gradient(60% 60% at 50% 35%, rgba(157,178,217,0.18) 0%, rgba(15,16,24,0) 70%);
-
-  --font-display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
-  --font-mono: 'IBM Plex Mono', 'Menlo', 'Consolas', monospace;
-
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.5rem;
-  --space-6: 2rem;
-  --space-7: 3rem;
-
-  --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-md: 1rem;
-  --text-lg: 1.125rem;
-  --text-xl: 1.5rem;
-  --text-2xl: 2rem;
-  --text-3xl: 2.75rem;
-  --text-4xl: 3.5rem;
-
-  --radius-sm: 6px;
-  --radius-md: 10px;
-}
-
-*, *::before, *::after {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-html {
-  -webkit-text-size-adjust: 100%;
-}
-
-body {
-  font-family: var(--font-mono);
-  font-size: var(--text-md);
-  line-height: 1.7;
-  color: var(--ash-300);
-  background: var(--night-900);
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-::selection {
-  background: rgba(203, 175, 134, 0.25);
-  color: var(--lotus-200);
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  pointer-events: none;
-  opacity: 0.025;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  background-repeat: repeat;
-  background-size: 256px 256px;
-}
-
-.page-wrapper {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  background: var(--bg-gradient);
-  overflow: hidden;
-}
-
-.page-wrapper::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--halo-gradient);
-}
-
-.content {
-  position: relative;
-  z-index: 2;
-  text-align: center;
-  max-width: 560px;
-  padding: var(--space-5);
-  animation: fade-up 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
-}
-
-@keyframes fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.error-code {
-  font-family: var(--font-display);
-  font-size: clamp(4rem, 15vw, 8rem);
-  font-weight: 500;
-  color: var(--lotus-200);
-  line-height: 1;
-  margin-bottom: var(--space-4);
-  opacity: 0.15;
-}
-
-.title {
-  font-family: var(--font-display);
-  font-size: clamp(1.5rem, 4vw, var(--text-3xl));
-  font-weight: 500;
-  color: var(--lotus-200);
-  line-height: 1.2;
-  margin-bottom: var(--space-4);
-}
-
-.sanskrit {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: var(--text-lg);
-  color: var(--sandal-300);
-  margin-bottom: var(--space-6);
-}
-
-.sanskrit .devanagari {
-  font-style: normal;
-  font-size: 1.1em;
-}
-
-.description {
-  font-size: var(--text-sm);
-  color: var(--ash-300);
-  line-height: 1.8;
-  margin-bottom: var(--space-6);
-}
-
-.links {
-  display: flex;
-  gap: var(--space-4);
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  padding: var(--space-3) var(--space-5);
-  border-radius: var(--radius-sm);
-  border: 1px solid transparent;
-  cursor: pointer;
-  transition: all 0.25s ease;
-  text-decoration: none;
-  letter-spacing: 0.02em;
-}
-
-.btn-primary {
-  background: var(--ember-400);
-  color: var(--mist-100);
-  border-color: var(--ember-400);
-}
-
-.btn-primary:hover {
-  background: var(--ember-500);
-  border-color: var(--ember-500);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(212, 106, 76, 0.25);
-}
-
-.btn-outline {
-  background: transparent;
-  color: var(--aura-300);
-  border-color: rgba(157, 178, 217, 0.3);
-}
-
-.btn-outline:hover {
-  border-color: var(--aura-300);
-  background: rgba(157, 178, 217, 0.06);
-  transform: translateY(-1px);
-}
-
-.nav {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
-  padding: var(--space-4) 0;
-  background: rgba(15, 16, 24, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(203, 175, 134, 0.06);
-}
-
-.nav-inner {
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 0 var(--space-5);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.nav-brand {
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--lotus-200);
-  letter-spacing: 0.05em;
-}
-
-.nav-brand span {
-  color: var(--sandal-300);
-}
-
-.nav-links {
-  display: flex;
-  gap: var(--space-5);
-  list-style: none;
-}
-
-.nav-links a {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--ash-300);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  transition: color 0.25s ease;
-}
-
-.nav-links a:hover {
-  color: var(--lotus-200);
-}
-
-.footer {
-  background: var(--night-900);
-  border-top: 1px solid rgba(203, 175, 134, 0.06);
-  padding: var(--space-7) 0;
-  text-align: center;
-}
-
-.footer-text {
-  font-size: var(--text-xs);
-  color: rgba(185, 189, 199, 0.4);
-  letter-spacing: 0.04em;
-}
-
-.footer-text a {
-  color: var(--sandal-300);
-  transition: color 0.2s ease;
-}
-
-.footer-text a:hover {
-  color: var(--lotus-200);
-}
-
-.footer-sep {
-  display: inline-block;
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: rgba(185, 189, 199, 0.25);
-  margin: 0 var(--space-3);
-  vertical-align: middle;
-}
-
-@media (max-width: 700px) {
-  .nav-links {
-    display: none;
-  }
-
-  .links {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .btn {
-    width: 100%;
-    max-width: 260px;
-    justify-content: center;
-  }
-}
-</style>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/site-shell.css">
 </head>
-<body>
+<body class="page-404">
+<a class="skip-link" href="#main-content">Skip to content</a>
 
-<nav class="nav">
+<nav class="nav site-nav" aria-label="Main navigation">
   <div class="nav-inner">
-    <a href="index.html" class="nav-brand">chitta</a>
+    <a href="/index.html" class="nav-brand">chitta</a>
     <ul class="nav-links">
-      <li><a href="getting-started.html">Get Started</a></li>
-      <li><a href="philosophy.html">Philosophy</a></li>
-      <li><a href="architecture.html">Architecture</a></li>
-      <li><a href="recall.html">Recall</a></li>
-      <li><a href="benchmarks.html">Benchmarks</a></li>
-      <li><a href="chitta-field.html">chitta-field</a></li>
-      <li><a href="sadhana.html">Sadhana</a></li>
-      <li><a href="context.html">Context</a></li>
-      <li><a href="tools.html">Tools</a></li>
-      <li><a href="cli.html">CLI</a></li>
-      <li><a href="hooks.html">Hooks</a></li>
-      <li><a href="skills.html">Skills</a></li>
-      <li><a href="changelog.html">Changelog</a></li>
-      <li><a href="constellation.html">Constellation</a></li>
-      <li><a href="dreams/index.html">Dreams</a></li>
-      <li><a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="/index.html">Home</a></li>
+      <li><a href="/getting-started.html">Get Started</a></li>
+      <li><a href="/philosophy.html">Philosophy</a></li>
+      <li><a href="/architecture.html">Architecture</a></li>
+      <li><a href="/recall.html">Recall</a></li>
+      <li><a href="/benchmarks.html">Benchmarks</a></li>
+      <li><a href="/chitta-field.html">chitta-field</a></li>
+      <li><a href="/sadhana.html">Sadhana</a></li>
+      <li><a href="/context.html">Context</a></li>
+      <li><a href="/tools.html">Tools</a></li>
+      <li><a href="/cli.html">CLI</a></li>
+      <li><a href="/hooks.html">Hooks</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/changelog.html">Changelog</a></li>
+      <li><a href="/constellation.html">Constellation</a></li>
+      <li><a href="/dreams/index.html">Dreams</a></li>
+      <li><a href="/brain-viz/index.html">Brain Architecture</a></li>
+      <li><a href="/mind-viz/index.html">Mind Interface</a></li>
+      <li><a href="/vedanta/index.html">Vedanta</a></li>
+      <li><a href="/evolve-bridge-live/index.html">Evolve Evidence</a></li>
+      <li><a href="https://github.com/genomewalker/chitta">GitHub</a></li>
     </ul>
   </div>
 </nav>
+<main id="main-content" tabindex="-1">
 
-<main class="page-wrapper">
+<div class="page-wrapper">
   <div class="content">
     <div class="error-code">404</div>
     <h1 class="title">Page not found</h1>
     <p class="sanskrit"><span class="devanagari">HTTP</span> — 404</p>
     <p class="description">This URL does not identify a published page. Use the navigation or return to the homepage.</p>
     <div class="links">
-      <a href="index.html" class="btn btn-primary">Return home</a>
-      <a href="tools.html" class="btn btn-outline">Explore tools</a>
+      <a href="/index.html" class="btn btn-primary">Return home</a>
+      <a href="/tools.html" class="btn btn-outline">Explore tools</a>
     </div>
   </div>
-</main>
+</div>
 
-<footer class="footer">
+</main>
+<footer class="footer site-footer">
   <div class="container">
     <p class="footer-text">
-      Persistent memory for Claude Code and Codex.
-      <span class="footer-sep"></span>
-      <a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/genomewalker/chitta">GitHub repository</a> · <a href="https://opensource.org/licenses/MIT">MIT license</a> · <a href="/404.html" aria-current="page">This page</a>
     </p>
+    <p class="site-status">Status as of 2026-09-16 · <a href="/changelog.html">Unreleased + v5.72.0</a></p>
   </div>
 </footer>
 

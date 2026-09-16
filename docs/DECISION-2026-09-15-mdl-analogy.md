@@ -39,3 +39,12 @@ Even surviving entities lose all but 64 lexicographically selected record terms.
 **Cheapest experiment:** on one frozen snapshot, independently enumerate complete valid answers for the existing 14 proportional queries. Compare an exact relation-join baseline with current RPC output; add 14 negative queries whose target lacks the required relation.
 
 **Decision:** require **hit@3 ≥12/14**, **14/14 negative abstentions**, and **zero unsupported returned answers**. Count missing grounding as failures, separately reported. If this fails, remove `recall_analogy` entirely; keep `query_graph`. No graph cleanup campaign or larger VSA model before that test.
+
+Citation check — 2026-09-16: Historical editor-style code citations target another worktree, retired code, and a private shadow log; those targets are not reproducible from this checkout and the private log was not accessed. Body preserved. Background sources for MDL [11](#ref-11) and HDC/VSA [10](#ref-10) do not validate the memo’s local measurements.
+
+<!-- BEGIN CITATIONS -->
+## References
+
+- <a id="ref-10"></a>**[10]** Pentti Kanerva. Hyperdimensional Computing: An Introduction to Computing in Distributed Representation with High-Dimensional Random Vectors. Cognitive Computation 1, 139–159 (2009). [source](<https://doi.org/10.1007/s12559-009-9009-8>)
+- <a id="ref-11"></a>**[11]** Jorma Rissanen. Modeling by shortest data description. Automatica 14(5), 465–471 (1978). [source](<https://doi.org/10.1016/0005-1098(78)90005-5>)
+<!-- END CITATIONS -->

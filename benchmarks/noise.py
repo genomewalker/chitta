@@ -259,6 +259,42 @@ def band(data: dict, metric: str) -> float:
     return 2 * item["sd"]
 
 
+def current_truth_calibration(n: int) -> dict:
+    """Read-only panel; no agent, planting, or SMRITI confirmation required."""
+    if n < 2:
+        raise ValueError("current-truth noise needs >=2 runs")
+    panel = load_module("noise_current_truth", ROOT / "benchmarks/current_truth/run.py")
+    socket = panel.endpoint()
+    snapshot = os.environ.get("CHITTA_EVAL_SNAPSHOT_ID")
+    if not snapshot:
+        raise ValueError("current-truth bands require CHITTA_EVAL_SNAPSHOT_ID")
+    questions = panel.load_panel()
+    reports = []
+    for trial in range(n):
+        report = panel.evaluate(questions, socket)
+        reports.append(report)
+        print(f"current-truth {trial + 1}/{n}: {report['overall']}", flush=True)
+    return {
+        "schema_version": 1,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "mode": "replica",
+        "snapshot_id": snapshot,
+        "socket": socket,
+        "config": panel.CONFIG,
+        "panel_sha256": reports[0]["panel_sha256"],
+        "source_commit": questions["source_commit"],
+        "acceptance_ready": True,
+        "errors": [],
+        "band_definition": "mean +/- 1.96 sample SD; descriptive, not CI of mean",
+        "accept_rule": "improvement strictly beyond 2 * sd; positive p3/abstain",
+        "metrics": {
+            f"current_truth.{key}": summary([r["overall"][key] for r in reports])
+            for key in ("p3", "abstain")
+        },
+        "current_truth_records": reports,
+    }
+
+
 def calibrate(args) -> dict:
     socket = os.environ.get("CHITTA_EVAL_SOCKET")
     if not socket and (args.agent != "echo" or args.golden_runs != 2):
@@ -337,7 +373,13 @@ def calibrate(args) -> dict:
         "golden.ndcg": summary(golden) if golden else unavailable,
         **smriti_metrics(rows),
         "hook_total_ms": unavailable,
+        "current_truth.p3": unavailable,
+        "current_truth.abstain": unavailable,
     }
+    current_truth = None
+    if socket and getattr(args, "current_truth_runs", 0):
+        current_truth = current_truth_calibration(args.current_truth_runs)
+        metrics.update(current_truth["metrics"])
     # Older programmatic smoke callers have no hook panel argument.
     if getattr(args, "hook_runs", 0):
         try:
@@ -368,6 +410,7 @@ def calibrate(args) -> dict:
         "accept_rule": "improvement strictly beyond 2 * sd; positive SR/nDCG, negative tokens/hook_total_ms",
         "metrics": metrics,
         "smriti_records": rows,
+        "current_truth": current_truth,
     }
 
 
@@ -376,6 +419,8 @@ def main():
     commands = parser.add_subparsers(dest="command", required=True)
     run = commands.add_parser("run")
     run.add_argument("--hook-only", action="store_true", help="skip golden and SMRITI calibration")
+    run.add_argument("--current-truth-only", action="store_true", help="read-only truth panel only")
+    run.add_argument("--current-truth-runs", type=int, default=3)
     run.add_argument("--hook-runs", type=int, default=5, help="repetitions of the fixed hook panel")
     run.add_argument("--golden-runs", "-k", type=int, default=5)
     run.add_argument("--tasks", type=int, default=3)
@@ -392,7 +437,15 @@ def main():
         if args.command == "band":
             print(band(json.loads(args.file.read_text()), args.metric))
         else:
-            result = hook_calibration(args) if args.hook_only else calibrate(args)
+            if args.current_truth_only and args.hook_only:
+                raise ValueError("choose one --*-only panel")
+            result = (
+                current_truth_calibration(args.current_truth_runs)
+                if args.current_truth_only
+                else hook_calibration(args)
+                if args.hook_only
+                else calibrate(args)
+            )
             temporary = args.output.with_suffix(".json.tmp")
             temporary.write_text(json.dumps(result, indent=2) + "\n")
             temporary.replace(args.output)

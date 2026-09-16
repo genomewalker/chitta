@@ -1,0 +1,2604 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-09-16T09:23:53.425582+00:00",
+  "mode": "replica",
+  "snapshot_id": "da86decb",
+  "socket": "/tmp/chitta-current-truth-20260916/run/chitta/chitta-858415756.sock",
+  "config": {
+    "realm": "project:cc-soul",
+    "limit": 3,
+    "strategy": "fused",
+    "no_learn": true
+  },
+  "panel_sha256": "50de30c724b33aae7118b177d011cfe7e4b40b342d4d5bb0048d0c5159de1cbc",
+  "source_commit": "1c82589b93bbe350319678db66a9d720385cdc4b",
+  "acceptance_ready": true,
+  "errors": [],
+  "band_definition": "mean +/- 1.96 sample SD; descriptive, not CI of mean",
+  "accept_rule": "improvement strictly beyond 2 * sd; positive p3/abstain",
+  "metrics": {
+    "current_truth.p3": {
+      "n": 3,
+      "mean": 0.25,
+      "sd": 0.0,
+      "band_95": [
+        0.25,
+        0.25
+      ],
+      "accept_delta": 0.0,
+      "samples": [
+        0.25,
+        0.25,
+        0.25
+      ]
+    },
+    "current_truth.abstain": {
+      "n": 3,
+      "mean": 1.0,
+      "sd": 0.0,
+      "band_95": [
+        1.0,
+        1.0
+      ],
+      "accept_delta": 0.0,
+      "samples": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    }
+  },
+  "current_truth_records": [
+    {
+      "schema_version": 1,
+      "source_commit": "1c82589b93bbe350319678db66a9d720385cdc4b",
+      "panel_sha256": "50de30c724b33aae7118b177d011cfe7e4b40b342d4d5bb0048d0c5159de1cbc",
+      "config": {
+        "realm": "project:cc-soul",
+        "limit": 3,
+        "strategy": "fused",
+        "no_learn": true
+      },
+      "snapshot_id": "da86decb",
+      "socket": "/tmp/chitta-current-truth-20260916/run/chitta/chitta-858415756.sock",
+      "fixture_status": "Reconstructed coverage, NOT the original F2 prompts: the pinned decision records only aggregate outcomes and themes. Original prompts requested from orchestrator.",
+      "overall": {
+        "n": 50,
+        "answerable": 40,
+        "hits": 10,
+        "p3": 0.25,
+        "abstention_questions": 10,
+        "abstain_correct": 10,
+        "abstain": 1.0,
+        "correct_total": 20,
+        "wrong_confident": 0,
+        "utility": 20
+      },
+      "splits": {
+        "visible": {
+          "n": 30,
+          "answerable": 24,
+          "hits": 5,
+          "p3": 0.20833333333333334,
+          "abstention_questions": 6,
+          "abstain_correct": 6,
+          "abstain": 1.0,
+          "correct_total": 11,
+          "wrong_confident": 0,
+          "utility": 11
+        },
+        "holdout": {
+          "n": 20,
+          "answerable": 16,
+          "hits": 5,
+          "p3": 0.3125,
+          "abstention_questions": 4,
+          "abstain_correct": 4,
+          "abstain": 1.0,
+          "correct_total": 9,
+          "wrong_confident": 0,
+          "utility": 9
+        }
+      },
+      "rows": [
+        {
+          "id": "ct-01",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "12549973440540442759",
+            "12549973440540442757"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "12549973440540442759",
+            "12549973440540442757",
+            "4351465911446667401"
+          ]
+        },
+        {
+          "id": "ct-02",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "12549973440540442823"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "12549973440540442757",
+            "12549973440540442759",
+            "12549973440540442823"
+          ]
+        },
+        {
+          "id": "ct-03",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "15674926232758124802",
+            "6971979712486703108",
+            "6321177362666881031"
+          ]
+        },
+        {
+          "id": "ct-04",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "9715313592324063242",
+            "11024999496269431490",
+            "11024999496269431482"
+          ]
+        },
+        {
+          "id": "ct-05",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "10085188131381837965"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "10085188131381837965",
+            "6068406863576170530",
+            "10085188131381837945"
+          ]
+        },
+        {
+          "id": "ct-06",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "769174908377759982",
+            "769174908377759984",
+            "3813529744478044377"
+          ]
+        },
+        {
+          "id": "ct-07",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "7418759137082736878",
+            "4220108464162079311",
+            "4351465911446667850"
+          ]
+        },
+        {
+          "id": "ct-08",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "6983173595555954696",
+            "15237157623779295261",
+            "15237157623779295259"
+          ]
+        },
+        {
+          "id": "ct-09",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "9735425240544051213",
+            "6599512752643899492",
+            "5750785635375906906"
+          ]
+        },
+        {
+          "id": "ct-10",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "709196750946041924",
+            "4842946011334705188",
+            "720349501113499654"
+          ]
+        },
+        {
+          "id": "ct-11",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "11024999496269431264",
+            "8534401833093825989",
+            "15746518110607245342"
+          ]
+        },
+        {
+          "id": "ct-12",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "6019566685919379467",
+            "6019566685919379490",
+            "10248830615902225652"
+          ]
+        },
+        {
+          "id": "ct-13",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "12901623174935871648",
+            "11218838512868524055",
+            "12901623174935871640"
+          ]
+        },
+        {
+          "id": "ct-14",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "12332057391330754649"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "12332057391330754649",
+            "11483800603046445203",
+            "11483800603046445174"
+          ]
+        },
+        {
+          "id": "ct-15",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "10248830615902225652",
+            "5782447601706074293",
+            "5782447601706074214"
+          ]
+        },
+        {
+          "id": "ct-16",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "12838293822026809509",
+            "8106344110811512892",
+            "12901623174935871778"
+          ]
+        },
+        {
+          "id": "ct-17",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "5983369234124636174",
+            "5983369234124636167",
+            "6019566685919379462"
+          ]
+        },
+        {
+          "id": "ct-18",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "13754488991409766590",
+            "16471129155581248278",
+            "12549973440540442693"
+          ]
+        },
+        {
+          "id": "ct-19",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": []
+        },
+        {
+          "id": "ct-20",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "8106344110811512897",
+            "8285715843606642742",
+            "7174250467147382790"
+          ]
+        },
+        {
+          "id": "ct-21",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "15746518110607245345"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "15746518110607245345",
+            "8106344110811512897",
+            "8306288328932589572"
+          ]
+        },
+        {
+          "id": "ct-22",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "11415137609425354762",
+            "10364209500650471497",
+            "5495172069798707312"
+          ]
+        },
+        {
+          "id": "ct-23",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "4220108464162078943",
+            "13754488991409766732",
+            "10738318185972367544"
+          ]
+        },
+        {
+          "id": "ct-24",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "8106344110811512892",
+            "5777113123475423242",
+            "7418759137082736680"
+          ]
+        },
+        {
+          "id": "ct-25",
+          "split": "visible",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "7004485150264262661",
+            "5983369234124636174",
+            "5983369234124636167"
+          ]
+        },
+        {
+          "id": "ct-26",
+          "split": "visible",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "5777113123475423240",
+            "12901623174935871626",
+            "4960818253447299073"
+          ]
+        },
+        {
+          "id": "ct-27",
+          "split": "visible",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "16471129155581248278",
+            "13754488991409766537",
+            "8534401833093825412"
+          ]
+        },
+        {
+          "id": "ct-28",
+          "split": "visible",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "15514283413526806545",
+            "10248830615902225652",
+            "15674926232758124567"
+          ]
+        },
+        {
+          "id": "ct-29",
+          "split": "visible",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "6019566685919379556",
+            "6019566685919379512",
+            "6019566685919379493"
+          ]
+        },
+        {
+          "id": "ct-30",
+          "split": "visible",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "8534401833093825240",
+            "5495172069798707312",
+            "4770829997151617051"
+          ]
+        },
+        {
+          "id": "ct-31",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "7418759137082736657",
+            "7418759137082736680",
+            "13540685802882727940"
+          ]
+        },
+        {
+          "id": "ct-32",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "5782447601706074184",
+            "12853302207285559299",
+            "11792162654850647264"
+          ]
+        },
+        {
+          "id": "ct-33",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "13056329417356214285",
+            "12901623174935871633",
+            "12901623174935871663"
+          ]
+        },
+        {
+          "id": "ct-34",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "12332057391330755412",
+            "10248830615902225652",
+            "10445584626805115110"
+          ]
+        },
+        {
+          "id": "ct-35",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "7731467412322649150",
+            "11024999496269431444",
+            "5777113123475423240"
+          ]
+        },
+        {
+          "id": "ct-36",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "7418759137082736707",
+            "709196750946041879",
+            "12901623174935871679"
+          ]
+        },
+        {
+          "id": "ct-37",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "13056329417356214299",
+            "5904846082218658803",
+            "12901623174935871834"
+          ]
+        },
+        {
+          "id": "ct-38",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "15837884413024141385",
+            "10364209500650471559",
+            "4220108464162078882"
+          ]
+        },
+        {
+          "id": "ct-39",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "720349501113499737",
+            "4758927169600618560",
+            "15674926232758124802"
+          ]
+        },
+        {
+          "id": "ct-40",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "4220108464162080479",
+            "4351465911446667371"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "4220108464162080479",
+            "4351465911446667371",
+            "720349501113499737"
+          ]
+        },
+        {
+          "id": "ct-41",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "6214339763416072205",
+            "13004820385676394537",
+            "11059871765969764356"
+          ]
+        },
+        {
+          "id": "ct-42",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "15674926232758124731",
+            "15514283413526806545"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "15674926232758124731",
+            "15514283413526806545",
+            "15674926232758124559"
+          ]
+        },
+        {
+          "id": "ct-43",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "15514283413526806545"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "15514283413526806545",
+            "15674926232758124559",
+            "15674926232758124731"
+          ]
+        },
+        {
+          "id": "ct-44",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "15514283413526806545"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "15514283413526806545",
+            "15674926232758124733",
+            "15746518110607245412"
+          ]
+        },
+        {
+          "id": "ct-45",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "15514283413526806545"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "15514283413526806545",
+            "15674926232758124733",
+            "15674926232758124731"
+          ]
+        },
+        {
+          "id": "ct-46",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "5904846082218658781",
+            "12332057391330754905",
+            "12332057391330754881"
+          ]
+        },
+        {
+          "id": "ct-47",
+          "split": "holdout",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "670971288608571407",
+            "10248830615902225652",
+            "15674926232758124643"
+          ]
+        },
+        {
+          "id": "ct-48",
+          "split": "holdout",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "5904846082218656175",
+            "4220108464162079311",
+            "8534401833093825907"
+          ]
+        },
+        {
+          "id": "ct-49",
+          "split": "holdout",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "15674926232758124731",
+            "10248830615902225652",
+            "15514283413526806545"
+          ]
+        },
+        {
+          "id": "ct-50",
+          "split": "holdout",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "13754488991409766636",
+            "12549973440540442693",
+            "12637835157017985034"
+          ]
+        }
+      ],
+      "regression_fixtures": [
+        {
+          "id": "f2-reconstructed-cache-ttl-variable",
+          "split": "regression",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "12549973440540442759",
+            "12549973440540442757"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "12549973440540442759",
+            "12549973440540442757",
+            "4351465911446667401"
+          ]
+        },
+        {
+          "id": "f2-reconstructed-prompt-median",
+          "split": "regression",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "5983369234124636174",
+            "5983369234124636167",
+            "6019566685919379462"
+          ]
+        },
+        {
+          "id": "f2-reconstructed-session-start-median",
+          "split": "regression",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "13754488991409766590",
+            "16471129155581248278",
+            "12549973440540442693"
+          ]
+        },
+        {
+          "id": "f2-reconstructed-cached-startup",
+          "split": "regression",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": []
+        },
+        {
+          "id": "f2-reconstructed-running-binary-install",
+          "split": "regression",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "8106344110811512897",
+            "8285715843606642730",
+            "15315026132475052066"
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "source_commit": "1c82589b93bbe350319678db66a9d720385cdc4b",
+      "panel_sha256": "50de30c724b33aae7118b177d011cfe7e4b40b342d4d5bb0048d0c5159de1cbc",
+      "config": {
+        "realm": "project:cc-soul",
+        "limit": 3,
+        "strategy": "fused",
+        "no_learn": true
+      },
+      "snapshot_id": "da86decb",
+      "socket": "/tmp/chitta-current-truth-20260916/run/chitta/chitta-858415756.sock",
+      "fixture_status": "Reconstructed coverage, NOT the original F2 prompts: the pinned decision records only aggregate outcomes and themes. Original prompts requested from orchestrator.",
+      "overall": {
+        "n": 50,
+        "answerable": 40,
+        "hits": 10,
+        "p3": 0.25,
+        "abstention_questions": 10,
+        "abstain_correct": 10,
+        "abstain": 1.0,
+        "correct_total": 20,
+        "wrong_confident": 0,
+        "utility": 20
+      },
+      "splits": {
+        "visible": {
+          "n": 30,
+          "answerable": 24,
+          "hits": 5,
+          "p3": 0.20833333333333334,
+          "abstention_questions": 6,
+          "abstain_correct": 6,
+          "abstain": 1.0,
+          "correct_total": 11,
+          "wrong_confident": 0,
+          "utility": 11
+        },
+        "holdout": {
+          "n": 20,
+          "answerable": 16,
+          "hits": 5,
+          "p3": 0.3125,
+          "abstention_questions": 4,
+          "abstain_correct": 4,
+          "abstain": 1.0,
+          "correct_total": 9,
+          "wrong_confident": 0,
+          "utility": 9
+        }
+      },
+      "rows": [
+        {
+          "id": "ct-01",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "12549973440540442759",
+            "12549973440540442757"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "12549973440540442759",
+            "12549973440540442757",
+            "4351465911446667401"
+          ]
+        },
+        {
+          "id": "ct-02",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "12549973440540442823"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "12549973440540442757",
+            "12549973440540442759",
+            "12549973440540442823"
+          ]
+        },
+        {
+          "id": "ct-03",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "15674926232758124802",
+            "6971979712486703108",
+            "6321177362666881031"
+          ]
+        },
+        {
+          "id": "ct-04",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "9715313592324063242",
+            "11024999496269431490",
+            "11024999496269431482"
+          ]
+        },
+        {
+          "id": "ct-05",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "10085188131381837965"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "10085188131381837965",
+            "6068406863576170530",
+            "10085188131381837945"
+          ]
+        },
+        {
+          "id": "ct-06",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "769174908377759982",
+            "769174908377759984",
+            "3813529744478044377"
+          ]
+        },
+        {
+          "id": "ct-07",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "7418759137082736878",
+            "4220108464162079311",
+            "4351465911446667850"
+          ]
+        },
+        {
+          "id": "ct-08",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "6983173595555954696",
+            "15237157623779295261",
+            "15237157623779295259"
+          ]
+        },
+        {
+          "id": "ct-09",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "9735425240544051213",
+            "6599512752643899492",
+            "5750785635375906906"
+          ]
+        },
+        {
+          "id": "ct-10",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "709196750946041924",
+            "4842946011334705188",
+            "720349501113499654"
+          ]
+        },
+        {
+          "id": "ct-11",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "11024999496269431264",
+            "8534401833093825989",
+            "15746518110607245342"
+          ]
+        },
+        {
+          "id": "ct-12",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "6019566685919379467",
+            "6019566685919379490",
+            "10248830615902225652"
+          ]
+        },
+        {
+          "id": "ct-13",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "12901623174935871648",
+            "11218838512868524055",
+            "12901623174935871640"
+          ]
+        },
+        {
+          "id": "ct-14",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "12332057391330754649"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "12332057391330754649",
+            "11483800603046445203",
+            "11483800603046445174"
+          ]
+        },
+        {
+          "id": "ct-15",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "10248830615902225652",
+            "5782447601706074293",
+            "5782447601706074214"
+          ]
+        },
+        {
+          "id": "ct-16",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "12838293822026809509",
+            "8106344110811512892",
+            "12901623174935871778"
+          ]
+        },
+        {
+          "id": "ct-17",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "5983369234124636174",
+            "5983369234124636167",
+            "6019566685919379462"
+          ]
+        },
+        {
+          "id": "ct-18",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "13754488991409766590",
+            "16471129155581248278",
+            "12549973440540442693"
+          ]
+        },
+        {
+          "id": "ct-19",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": []
+        },
+        {
+          "id": "ct-20",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "8106344110811512897",
+            "8285715843606642742",
+            "7174250467147382790"
+          ]
+        },
+        {
+          "id": "ct-21",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "15746518110607245345"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "15746518110607245345",
+            "8106344110811512897",
+            "8306288328932589572"
+          ]
+        },
+        {
+          "id": "ct-22",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "11415137609425354762",
+            "10364209500650471497",
+            "5495172069798707312"
+          ]
+        },
+        {
+          "id": "ct-23",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "4220108464162078943",
+            "13754488991409766732",
+            "10738318185972367544"
+          ]
+        },
+        {
+          "id": "ct-24",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "8106344110811512892",
+            "5777113123475423242",
+            "7418759137082736680"
+          ]
+        },
+        {
+          "id": "ct-25",
+          "split": "visible",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "7004485150264262661",
+            "5983369234124636174",
+            "5983369234124636167"
+          ]
+        },
+        {
+          "id": "ct-26",
+          "split": "visible",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "5777113123475423240",
+            "12901623174935871626",
+            "4960818253447299073"
+          ]
+        },
+        {
+          "id": "ct-27",
+          "split": "visible",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "16471129155581248278",
+            "13754488991409766537",
+            "8534401833093825412"
+          ]
+        },
+        {
+          "id": "ct-28",
+          "split": "visible",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "15514283413526806545",
+            "10248830615902225652",
+            "15674926232758124567"
+          ]
+        },
+        {
+          "id": "ct-29",
+          "split": "visible",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "6019566685919379556",
+            "6019566685919379512",
+            "6019566685919379493"
+          ]
+        },
+        {
+          "id": "ct-30",
+          "split": "visible",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "8534401833093825240",
+            "5495172069798707312",
+            "4770829997151617051"
+          ]
+        },
+        {
+          "id": "ct-31",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "7418759137082736657",
+            "7418759137082736680",
+            "13540685802882727940"
+          ]
+        },
+        {
+          "id": "ct-32",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "5782447601706074184",
+            "12853302207285559299",
+            "11792162654850647264"
+          ]
+        },
+        {
+          "id": "ct-33",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "13056329417356214285",
+            "12901623174935871633",
+            "12901623174935871663"
+          ]
+        },
+        {
+          "id": "ct-34",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "12332057391330755412",
+            "10248830615902225652",
+            "10445584626805115110"
+          ]
+        },
+        {
+          "id": "ct-35",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "7731467412322649150",
+            "11024999496269431444",
+            "5777113123475423240"
+          ]
+        },
+        {
+          "id": "ct-36",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "7418759137082736707",
+            "709196750946041879",
+            "12901623174935871679"
+          ]
+        },
+        {
+          "id": "ct-37",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "13056329417356214299",
+            "5904846082218658803",
+            "12901623174935871834"
+          ]
+        },
+        {
+          "id": "ct-38",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "15837884413024141385",
+            "10364209500650471559",
+            "4220108464162078882"
+          ]
+        },
+        {
+          "id": "ct-39",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "720349501113499737",
+            "4758927169600618560",
+            "15674926232758124802"
+          ]
+        },
+        {
+          "id": "ct-40",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "4220108464162080479",
+            "4351465911446667371"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "4220108464162080479",
+            "4351465911446667371",
+            "720349501113499737"
+          ]
+        },
+        {
+          "id": "ct-41",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "6214339763416072205",
+            "13004820385676394537",
+            "11059871765969764356"
+          ]
+        },
+        {
+          "id": "ct-42",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "15674926232758124731",
+            "15514283413526806545"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "15674926232758124731",
+            "15514283413526806545",
+            "15674926232758124559"
+          ]
+        },
+        {
+          "id": "ct-43",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "15514283413526806545"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "15514283413526806545",
+            "15674926232758124559",
+            "15674926232758124731"
+          ]
+        },
+        {
+          "id": "ct-44",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "15514283413526806545"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "15514283413526806545",
+            "15674926232758124733",
+            "15746518110607245412"
+          ]
+        },
+        {
+          "id": "ct-45",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "15514283413526806545"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "15514283413526806545",
+            "15674926232758124733",
+            "15674926232758124731"
+          ]
+        },
+        {
+          "id": "ct-46",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "5904846082218658781",
+            "12332057391330754905",
+            "12332057391330754881"
+          ]
+        },
+        {
+          "id": "ct-47",
+          "split": "holdout",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "670971288608571407",
+            "10248830615902225652",
+            "15674926232758124643"
+          ]
+        },
+        {
+          "id": "ct-48",
+          "split": "holdout",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "5904846082218656175",
+            "4220108464162079311",
+            "8534401833093825907"
+          ]
+        },
+        {
+          "id": "ct-49",
+          "split": "holdout",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "15674926232758124731",
+            "10248830615902225652",
+            "15514283413526806545"
+          ]
+        },
+        {
+          "id": "ct-50",
+          "split": "holdout",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "13754488991409766636",
+            "12549973440540442693",
+            "12637835157017985034"
+          ]
+        }
+      ],
+      "regression_fixtures": [
+        {
+          "id": "f2-reconstructed-cache-ttl-variable",
+          "split": "regression",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "12549973440540442759",
+            "12549973440540442757"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "12549973440540442759",
+            "12549973440540442757",
+            "4351465911446667401"
+          ]
+        },
+        {
+          "id": "f2-reconstructed-prompt-median",
+          "split": "regression",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "5983369234124636174",
+            "5983369234124636167",
+            "6019566685919379462"
+          ]
+        },
+        {
+          "id": "f2-reconstructed-session-start-median",
+          "split": "regression",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "13754488991409766590",
+            "16471129155581248278",
+            "12549973440540442693"
+          ]
+        },
+        {
+          "id": "f2-reconstructed-cached-startup",
+          "split": "regression",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": []
+        },
+        {
+          "id": "f2-reconstructed-running-binary-install",
+          "split": "regression",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "8106344110811512897",
+            "8285715843606642730",
+            "15315026132475052066"
+          ]
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "source_commit": "1c82589b93bbe350319678db66a9d720385cdc4b",
+      "panel_sha256": "50de30c724b33aae7118b177d011cfe7e4b40b342d4d5bb0048d0c5159de1cbc",
+      "config": {
+        "realm": "project:cc-soul",
+        "limit": 3,
+        "strategy": "fused",
+        "no_learn": true
+      },
+      "snapshot_id": "da86decb",
+      "socket": "/tmp/chitta-current-truth-20260916/run/chitta/chitta-858415756.sock",
+      "fixture_status": "Reconstructed coverage, NOT the original F2 prompts: the pinned decision records only aggregate outcomes and themes. Original prompts requested from orchestrator.",
+      "overall": {
+        "n": 50,
+        "answerable": 40,
+        "hits": 10,
+        "p3": 0.25,
+        "abstention_questions": 10,
+        "abstain_correct": 10,
+        "abstain": 1.0,
+        "correct_total": 20,
+        "wrong_confident": 0,
+        "utility": 20
+      },
+      "splits": {
+        "visible": {
+          "n": 30,
+          "answerable": 24,
+          "hits": 5,
+          "p3": 0.20833333333333334,
+          "abstention_questions": 6,
+          "abstain_correct": 6,
+          "abstain": 1.0,
+          "correct_total": 11,
+          "wrong_confident": 0,
+          "utility": 11
+        },
+        "holdout": {
+          "n": 20,
+          "answerable": 16,
+          "hits": 5,
+          "p3": 0.3125,
+          "abstention_questions": 4,
+          "abstain_correct": 4,
+          "abstain": 1.0,
+          "correct_total": 9,
+          "wrong_confident": 0,
+          "utility": 9
+        }
+      },
+      "rows": [
+        {
+          "id": "ct-01",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "12549973440540442759",
+            "12549973440540442757"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "12549973440540442759",
+            "12549973440540442757",
+            "4351465911446667401"
+          ]
+        },
+        {
+          "id": "ct-02",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "12549973440540442823"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "12549973440540442757",
+            "12549973440540442759",
+            "12549973440540442823"
+          ]
+        },
+        {
+          "id": "ct-03",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "15674926232758124802",
+            "6971979712486703108",
+            "6321177362666881031"
+          ]
+        },
+        {
+          "id": "ct-04",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "9715313592324063242",
+            "11024999496269431490",
+            "11024999496269431482"
+          ]
+        },
+        {
+          "id": "ct-05",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "10085188131381837965"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "10085188131381837965",
+            "6068406863576170530",
+            "10085188131381837945"
+          ]
+        },
+        {
+          "id": "ct-06",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "769174908377759982",
+            "769174908377759984",
+            "3813529744478044377"
+          ]
+        },
+        {
+          "id": "ct-07",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "7418759137082736878",
+            "4220108464162079311",
+            "4351465911446667850"
+          ]
+        },
+        {
+          "id": "ct-08",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "6983173595555954696",
+            "15237157623779295261",
+            "15237157623779295259"
+          ]
+        },
+        {
+          "id": "ct-09",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "9735425240544051213",
+            "6599512752643899492",
+            "5750785635375906906"
+          ]
+        },
+        {
+          "id": "ct-10",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "709196750946041924",
+            "4842946011334705188",
+            "720349501113499654"
+          ]
+        },
+        {
+          "id": "ct-11",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "11024999496269431264",
+            "8534401833093825989",
+            "15746518110607245342"
+          ]
+        },
+        {
+          "id": "ct-12",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "6019566685919379467",
+            "6019566685919379490",
+            "10248830615902225652"
+          ]
+        },
+        {
+          "id": "ct-13",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "12901623174935871648",
+            "11218838512868524055",
+            "12901623174935871640"
+          ]
+        },
+        {
+          "id": "ct-14",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "12332057391330754649"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "12332057391330754649",
+            "11483800603046445203",
+            "11483800603046445174"
+          ]
+        },
+        {
+          "id": "ct-15",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "10248830615902225652",
+            "5782447601706074293",
+            "5782447601706074214"
+          ]
+        },
+        {
+          "id": "ct-16",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "12838293822026809509",
+            "8106344110811512892",
+            "12901623174935871778"
+          ]
+        },
+        {
+          "id": "ct-17",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "5983369234124636174",
+            "5983369234124636167",
+            "6019566685919379462"
+          ]
+        },
+        {
+          "id": "ct-18",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "13754488991409766590",
+            "16471129155581248278",
+            "12549973440540442693"
+          ]
+        },
+        {
+          "id": "ct-19",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": []
+        },
+        {
+          "id": "ct-20",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "8106344110811512897",
+            "8285715843606642742",
+            "7174250467147382790"
+          ]
+        },
+        {
+          "id": "ct-21",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "15746518110607245345"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "15746518110607245345",
+            "8106344110811512897",
+            "8306288328932589572"
+          ]
+        },
+        {
+          "id": "ct-22",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "11415137609425354762",
+            "10364209500650471497",
+            "5495172069798707312"
+          ]
+        },
+        {
+          "id": "ct-23",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "4220108464162078943",
+            "13754488991409766732",
+            "10738318185972367544"
+          ]
+        },
+        {
+          "id": "ct-24",
+          "split": "visible",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "8106344110811512892",
+            "5777113123475423242",
+            "7418759137082736680"
+          ]
+        },
+        {
+          "id": "ct-25",
+          "split": "visible",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "7004485150264262661",
+            "5983369234124636174",
+            "5983369234124636167"
+          ]
+        },
+        {
+          "id": "ct-26",
+          "split": "visible",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "5777113123475423240",
+            "12901623174935871626",
+            "4960818253447299073"
+          ]
+        },
+        {
+          "id": "ct-27",
+          "split": "visible",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "16471129155581248278",
+            "13754488991409766537",
+            "8534401833093825412"
+          ]
+        },
+        {
+          "id": "ct-28",
+          "split": "visible",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "15514283413526806545",
+            "10248830615902225652",
+            "15674926232758124567"
+          ]
+        },
+        {
+          "id": "ct-29",
+          "split": "visible",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "6019566685919379556",
+            "6019566685919379512",
+            "6019566685919379493"
+          ]
+        },
+        {
+          "id": "ct-30",
+          "split": "visible",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "8534401833093825240",
+            "5495172069798707312",
+            "4770829997151617051"
+          ]
+        },
+        {
+          "id": "ct-31",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "7418759137082736657",
+            "7418759137082736680",
+            "13540685802882727940"
+          ]
+        },
+        {
+          "id": "ct-32",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "5782447601706074184",
+            "12853302207285559299",
+            "11792162654850647264"
+          ]
+        },
+        {
+          "id": "ct-33",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "13056329417356214285",
+            "12901623174935871633",
+            "12901623174935871663"
+          ]
+        },
+        {
+          "id": "ct-34",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "12332057391330755412",
+            "10248830615902225652",
+            "10445584626805115110"
+          ]
+        },
+        {
+          "id": "ct-35",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "7731467412322649150",
+            "11024999496269431444",
+            "5777113123475423240"
+          ]
+        },
+        {
+          "id": "ct-36",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "7418759137082736707",
+            "709196750946041879",
+            "12901623174935871679"
+          ]
+        },
+        {
+          "id": "ct-37",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "13056329417356214299",
+            "5904846082218658803",
+            "12901623174935871834"
+          ]
+        },
+        {
+          "id": "ct-38",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "15837884413024141385",
+            "10364209500650471559",
+            "4220108464162078882"
+          ]
+        },
+        {
+          "id": "ct-39",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "720349501113499737",
+            "4758927169600618560",
+            "15674926232758124802"
+          ]
+        },
+        {
+          "id": "ct-40",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "4220108464162080479",
+            "4351465911446667371"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "4220108464162080479",
+            "4351465911446667371",
+            "720349501113499737"
+          ]
+        },
+        {
+          "id": "ct-41",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "6214339763416072205",
+            "13004820385676394537",
+            "11059871765969764356"
+          ]
+        },
+        {
+          "id": "ct-42",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "15674926232758124731",
+            "15514283413526806545"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "15674926232758124731",
+            "15514283413526806545",
+            "15674926232758124559"
+          ]
+        },
+        {
+          "id": "ct-43",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "15514283413526806545"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "15514283413526806545",
+            "15674926232758124559",
+            "15674926232758124731"
+          ]
+        },
+        {
+          "id": "ct-44",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "15514283413526806545"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "15514283413526806545",
+            "15674926232758124733",
+            "15746518110607245412"
+          ]
+        },
+        {
+          "id": "ct-45",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "15514283413526806545"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "15514283413526806545",
+            "15674926232758124733",
+            "15674926232758124731"
+          ]
+        },
+        {
+          "id": "ct-46",
+          "split": "holdout",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "5904846082218658781",
+            "12332057391330754905",
+            "12332057391330754881"
+          ]
+        },
+        {
+          "id": "ct-47",
+          "split": "holdout",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "670971288608571407",
+            "10248830615902225652",
+            "15674926232758124643"
+          ]
+        },
+        {
+          "id": "ct-48",
+          "split": "holdout",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "5904846082218656175",
+            "4220108464162079311",
+            "8534401833093825907"
+          ]
+        },
+        {
+          "id": "ct-49",
+          "split": "holdout",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "15674926232758124731",
+            "10248830615902225652",
+            "15514283413526806545"
+          ]
+        },
+        {
+          "id": "ct-50",
+          "split": "holdout",
+          "expects_abstention": true,
+          "outcome": "abstain-correct",
+          "correct": true,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "13754488991409766636",
+            "12549973440540442693",
+            "12637835157017985034"
+          ]
+        }
+      ],
+      "regression_fixtures": [
+        {
+          "id": "f2-reconstructed-cache-ttl-variable",
+          "split": "regression",
+          "expects_abstention": false,
+          "outcome": "correct",
+          "correct": true,
+          "matched_ids": [
+            "12549973440540442759",
+            "12549973440540442757"
+          ],
+          "trap_ids": [],
+          "top3_ids": [
+            "12549973440540442759",
+            "12549973440540442757",
+            "4351465911446667401"
+          ]
+        },
+        {
+          "id": "f2-reconstructed-prompt-median",
+          "split": "regression",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "5983369234124636174",
+            "5983369234124636167",
+            "6019566685919379462"
+          ]
+        },
+        {
+          "id": "f2-reconstructed-session-start-median",
+          "split": "regression",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "13754488991409766590",
+            "16471129155581248278",
+            "12549973440540442693"
+          ]
+        },
+        {
+          "id": "f2-reconstructed-cached-startup",
+          "split": "regression",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": []
+        },
+        {
+          "id": "f2-reconstructed-running-binary-install",
+          "split": "regression",
+          "expects_abstention": false,
+          "outcome": "miss",
+          "correct": false,
+          "matched_ids": [],
+          "trap_ids": [],
+          "top3_ids": [
+            "8106344110811512897",
+            "8285715843606642730",
+            "15315026132475052066"
+          ]
+        }
+      ]
+    }
+  ],
+  "frozen_source": "/projects/caeg/scratch/kbd606/tmp/learning-cut-20260915-frozen",
+  "replica_selection": {
+    "snapshot_id": "da86decb",
+    "snapshot_seqno": 206502617,
+    "manifest_generation": 39285,
+    "port": 17436
+  },
+  "binaries_sha256": {
+    "chitta": "c2ab3bd6d63bd16838534ba5028e3d6d8a298d29c67d5e2ef6775055c5a29840",
+    "chittad": "a195d3cd1ebba532a2630b372e7dfb08d62247f92a2a1750f1260341a34d5e4e"
+  },
+  "calibration_notes": "Three sequential no-learn repetitions on a scratch copy; warmed by an earlier three-run smoke before citation-only corrections. Query text, matchers and splits unchanged. Runtime may mutate retrieval state even with no-learn. No LLM or ranking modifications. F2 fixtures are reconstructed; historical prompts unavailable.",
+  "retrieval_environment": {
+    "CHITTA_UTILITY_RECALL": null,
+    "CHITTA_REPLICATION_MAX": null,
+    "CHITTA_RECALL_POOL": null,
+    "CHITTA_RECALL_PREFILTER": null
+  },
+  "baseline_storage_reason": "benchmarks/noise.json is protected; new dated current-truth baseline is explicitly authorized."
+}

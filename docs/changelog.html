@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Changelog - chitta</title>
+<title>chitta — Changelog - chitta</title>
 <meta name="description" content="Release history and changelog for chitta. Track new features, improvements, and changes across versions.">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <meta property="og:title" content="Changelog - chitta">
@@ -414,43 +414,49 @@ body::before {
   .version-header { flex-direction: column; gap: var(--space-2); }
 }
 </style>
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/site-shell.css">
 </head>
-<body>
+<body class="page-changelog">
+<a class="skip-link" href="#main-content">Skip to content</a>
 
 <!-- NAV -->
-<nav class="nav">
+<nav class="nav site-nav" aria-label="Main navigation">
   <div class="nav-inner">
-    <a href="index.html" class="nav-brand">chitta</a>
-    <button class="nav-hamburger" onclick="document.querySelector('.nav').classList.toggle('nav-open')" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
+    <a href="/index.html" class="nav-brand">chitta</a>
     <ul class="nav-links">
-      <li><a href="getting-started.html">Get Started</a></li>
-      <li><a href="philosophy.html">Philosophy</a></li>
-      <li><a href="architecture.html">Architecture</a></li>
-      <li><a href="recall.html">Recall</a></li>
-      <li><a href="benchmarks.html">Benchmarks</a></li>
-      <li><a href="chitta-field.html">chitta-field</a></li>
-      <li><a href="sadhana.html">Sadhana</a></li>
-      <li><a href="context.html">Context</a></li>
-      <li><a href="tools.html">Tools</a></li>
-      <li><a href="cli.html">CLI</a></li>
-      <li><a href="hooks.html">Hooks</a></li>
-      <li><a href="skills.html">Skills</a></li>
-      <li><a href="changelog.html" class="active">Changelog</a></li>
-      <li><a href="constellation.html">Constellation</a></li>
-      <li><a href="dreams/index.html">Dreams</a></li>
-      <li><a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="/index.html">Home</a></li>
+      <li><a href="/getting-started.html">Get Started</a></li>
+      <li><a href="/philosophy.html">Philosophy</a></li>
+      <li><a href="/architecture.html">Architecture</a></li>
+      <li><a href="/recall.html">Recall</a></li>
+      <li><a href="/benchmarks.html">Benchmarks</a></li>
+      <li><a href="/chitta-field.html">chitta-field</a></li>
+      <li><a href="/sadhana.html">Sadhana</a></li>
+      <li><a href="/context.html">Context</a></li>
+      <li><a href="/tools.html">Tools</a></li>
+      <li><a href="/cli.html">CLI</a></li>
+      <li><a href="/hooks.html">Hooks</a></li>
+      <li><a href="/skills.html">Skills</a></li>
+      <li><a href="/changelog.html" aria-current="page">Changelog</a></li>
+      <li><a href="/constellation.html">Constellation</a></li>
+      <li><a href="/dreams/index.html">Dreams</a></li>
+      <li><a href="/brain-viz/index.html">Brain Architecture</a></li>
+      <li><a href="/mind-viz/index.html">Mind Interface</a></li>
+      <li><a href="/vedanta/index.html">Vedanta</a></li>
+      <li><a href="/evolve-bridge-live/index.html">Evolve Evidence</a></li>
+      <li><a href="https://github.com/genomewalker/chitta">GitHub</a></li>
     </ul>
   </div>
 </nav>
+<main id="main-content" tabindex="-1">
 
 <!-- PAGE HEADER -->
 <header class="page-header">
   <div class="container">
     <div class="page-header-badge reveal">Release History</div>
     <h1 class="reveal reveal-delay-1">Changelog</h1>
-    <p class="status-line">Status as of 2026-09-16. Unreleased and 5.72.0 below mirror <a href="https://github.com/genomewalker/chitta/blob/main/CHANGELOG.md">CHANGELOG.md</a>; dated entries describe behavior at release time.</p>
+    <p class="status-line">Status as of 2026-09-16 · Unreleased and 5.72.0 below mirror <a href="https://github.com/genomewalker/chitta/blob/main/CHANGELOG.md">CHANGELOG.md</a>; dated entries describe behavior at release time.</p>
     <p class="page-header-sub reveal reveal-delay-2">Track the evolution of chitta. New features, improvements, and breaking changes across versions.</p>
   </div>
 </header>
@@ -461,9 +467,9 @@ body::before {
 
     <!-- Current entries transcribed from CHANGELOG.md; preserve release history. -->
     <article class="changelog-version reveal" id="unreleased">
-      <div class="version-header"><span class="version-number">Unreleased</span><span class="version-date">Status September 16, 2026</span></div>
+      <div class="version-header"><h2 class="version-number">Unreleased</h2><span class="version-date">Status September 16, 2026</span></div>
       <div class="version-body">
-        <h4>Added</h4>
+        <h3>Added</h3>
         <ul>
           <li>Replication-weighted recall factor (<code>replication_max</code>, <code>CHITTA_REPLICATION_MAX</code>), landed default-off: distinct-session replications per memory are cached on load; the live store has 0 memories with ≥2 independent replications and the golden delta was 0, so the card carries <code>prior_effort: some</code> (<a href="EVALS.md">docs/EVALS.md</a>).</li>
           <li>Snapshot load decodes sections in parallel from an mmap and overlaps triplet reconstruction with the rest of startup: snapshot phase 7.8–9.2 s → 3.6–4.3 s on the replica; startup sidecars are keyed to the snapshot so LSH/turbo hit with a WAL delta (live restart 27–33 s → 12.6 s); fused recall is deterministic across restarts (total-order sorts, hydration without touches).</li>
@@ -471,46 +477,46 @@ body::before {
           <li>Opt-in isolated evolve implementation streams (<code>--candidates N</code>, default 1): concurrent worktrees with private agent state, shared deadline and budget fallback, gate-passing selection by measured bet delta then patch size, all candidate outcomes in verdict/bet memories, and <code>python3 -m evolve.report</code>.</li>
           <li>Automatic-learning experiment harness: provenance-based cohort classification, prospective task/grader freezes, isolated paired replica trials (strict bwrap mode or <code>home-audit</code> with post-hoc voiding), exposure checks, deterministic grading and fixture-only dry runs (<a href="https://github.com/genomewalker/chitta/blob/main/benchmarks/learning/protocol.md">benchmarks/learning/protocol.md</a>).</li>
           <li>Daemon startup caches derived search state across restarts (normalized embeddings, event-tape organs, quantized index): clean start 27 s → 13 s, optional sidecars, rollback-safe.</li>
-          <li>Stigmergic artifact traces, after SwarmWorld (arXiv:2608.26081) measured ~95% of first reuse through observing an artifact rather than being told: <code>pre-tool-hook</code> adds <code>[traces]</code> on the first Read of a file per session (memories whose text names that file; <code>CHITTA_FILE_TRACES=0</code> disables) and <code>artifact-trace.sh</code> (PostToolUse Write) registers newly written scripts as <code>[artifact] &lt;path&gt; sha:&lt;8&gt; purpose:…</code> signals so later sessions fork them.</li>
-          <li>Two hypothesis cards for the evolve loop from the same reading: isolated best-of-2 implementation streams (SwarmWorld: isolated search kept the best single artifact) and replication-weighted recall (Buehler's repeated runs reached model-dependent conclusions). The learning-experiment protocol gains two pre-registered secondary metrics: best-of-three per arm and artifact reuse rate.</li>
+          <li>Stigmergic artifact traces, after SwarmWorld<sup><a href="#ref-14">14</a></sup> (arXiv:2608.26081) measured ~95% of first reuse through observing an artifact rather than being told: <code>pre-tool-hook</code> adds <code>[traces]</code> on the first Read of a file per session (memories whose text names that file; <code>CHITTA_FILE_TRACES=0</code> disables) and <code>artifact-trace.sh</code> (PostToolUse Write) registers newly written scripts as <code>[artifact] &lt;path&gt; sha:&lt;8&gt; purpose:…</code> signals so later sessions fork them.</li>
+          <li>Two hypothesis cards for the evolve loop from the same reading: isolated best-of-2 implementation streams (SwarmWorld<sup><a href="#ref-14">14</a></sup>: isolated search kept the best single artifact) and replication-weighted recall (Buehler's<sup><a href="#ref-15">15</a></sup> repeated runs reached model-dependent conclusions). The learning-experiment protocol gains two pre-registered secondary metrics: best-of-three per arm and artifact reuse rate.</li>
         </ul>
-        <h4>Changed</h4>
+        <h3>Changed</h3>
         <ul>
-          <li><code>recall_analogy</code> is explicit relation transfer only (a:b :: c:?): the predicate(s) linking a→b come from indexed triplet lookups and the answers are c's actual neighbours over those predicates, with supporting edges and a <code>reason</code> on abstention. Structural mode and VSA ranking are gone from the endpoint. Frozen-replica benchmark: hit@1 14/14, hit@3 14/14, 14/14 negative abstentions, 0 unsupported answers (<a href="EVALS.md">docs/EVALS.md</a>).</li>
+          <li><code>recall_analogy</code> is explicit relation transfer only (a:b :: c:?): the predicate(s) linking a→b come from indexed triplet lookups and the answers are c's actual neighbours over those predicates, with supporting edges and a <code>reason</code> on abstention. Structural mode and VSA<sup><a href="#ref-10">10</a></sup> ranking are gone from the endpoint. Frozen-replica benchmark: hit@1 14/14, hit@3 14/14, 14/14 negative abstentions, 0 unsupported answers (<a href="EVALS.md">docs/EVALS.md</a>).</li>
           <li>Prompt, SessionStart and Stop hooks no longer start Python on the hot path: query cleaning, RPC-stats parsing, the heartbeat, session registration and the ledger render run in bash/jq against the daemon's CLI. Prompt hook median 822→635 ms, SessionStart 693→599 ms on a loaded node (<a href="HOOKS.md">docs/HOOKS.md</a>).</li>
           <li>Linked git worktrees resolve to the main checkout's realm in the hooks, the session registry and the CLI, so Codex and evolve streams recall project memory.</li>
           <li>Recall ranks <code>operational</code> distiller fragments below curated kinds (<code>kind_operational</code> 0.8) so a correction outranks verbatim transcript notes of equal similarity.</li>
           <li>The daemon's binary-update probe uses <code>posix_spawn</code> instead of <code>popen</code>; the <code>fork()</code> ran OpenBLAS's atfork barrier and stalled the main loop under embedding load.</li>
           <li>Chained <code>git add … &amp;&amp; git commit</code> commands are captured as milestones.</li>
         </ul>
-        <h4>Fixed</h4>
+        <h3>Fixed</h3>
         <ul><li>Nightly literature cards were rejected by the proposal loader (source URL instead of a kind, prose <code>blast_radius</code>, zero effort) and silently skipped by the selector; the watch now writes the loader's contract.</li></ul>
-        <h4>Removed</h4>
-        <ul><li>Retired MDL admission compression on 2026-09-15: native and Bash shadow taps, same-chunk pooling, corpus dictionaries/bootstrap, Python mirror, test targets, environment knobs and evolve coverage telemetry. Distilled learning storage, deduplication and recall ranking remain unchanged; no utility-posterior hard gate replaces it. Historical shadow logs remain untouched and inert. The paired 20-task automatic-learning experiment remains pending (see <a href="EVOLVE.md">docs/EVOLVE.md</a>).</li></ul>
+        <h3>Removed</h3>
+        <ul><li>Retired MDL<sup><a href="#ref-11">11</a></sup> admission compression on 2026-09-15: native and Bash shadow taps, same-chunk pooling, corpus dictionaries/bootstrap, Python mirror, test targets, environment knobs and evolve coverage telemetry. Distilled learning storage, deduplication and recall ranking remain unchanged; no utility-posterior hard gate replaces it. Historical shadow logs remain untouched and inert. The paired 20-task automatic-learning experiment remains pending (see <a href="EVOLVE.md">docs/EVOLVE.md</a>).</li></ul>
       </div>
     </article>
     <article class="changelog-version reveal" id="v5-72-0">
-      <div class="version-header"><span class="version-number">v5.72.0</span><span class="version-date">September 14, 2026</span><span class="version-latest">Latest release</span></div>
+      <div class="version-header"><h2 class="version-number">v5.72.0</h2><span class="version-date">September 14, 2026</span><span class="version-latest">Latest release</span></div>
       <div class="version-body">
-        <h4>Daemon / store</h4>
+        <h3>Daemon / store</h3>
         <ul>
-          <li>Recall read path no longer writes: access touches accumulate and drain every 5 s; WAL fsync is timer-based (200 ms) with durable ops explicit; TurboQuant index rebuilds on the maintenance thread. Twelve concurrent <code>recall_lanes</code>: 1.7–3.6 s → 0.23–0.54 s.</li>
+          <li>Recall read path no longer writes: access touches accumulate and drain every 5 s; WAL fsync is timer-based (200 ms) with durable ops explicit; TurboQuant<sup><a href="#ref-5">5</a></sup> index rebuilds on the maintenance thread. Twelve concurrent <code>recall_lanes</code>: 1.7–3.6 s → 0.23–0.54 s.</li>
           <li>Embedding context pool (<code>CHITTA_EMBED_CONTEXTS</code>, default 4) and query-embedding LRU cache.</li>
           <li>Task ledger (threads, inbox, artifacts, session bindings, leases) moved from <code>~/.claude/task-ledger.db</code> (NFS sqlite) into the daemon (<code>ledger_op</code> RPC) with an idempotent <code>task_ledger.py migrate</code>.</li>
           <li>Queue lives at <code>&lt;mind&gt;/queue.jsonl</code>; tag recall is a hard filter with realm applied after; correction lane realm-scoped; MDL small-evidence pooling (shadow).</li>
           <li>Daemon output kept in <code>~/.claude/mind/chittad.log</code> (user journal unreadable on the cluster).</li>
         </ul>
-        <h4>Hooks</h4>
+        <h3>Hooks</h3>
         <ul>
           <li>SessionStart lanes run concurrently (5.7–7.2 s → ~0.7–1.5 s) with a fallback line when every lane times out; SessionEnd fits its 5 s budget.</li>
-          <li>Prompt hook: in-process realm detection; zero-distinctive-token turns skip topic lanes; UNKNOWN-band candidates need a distinctive turn token; keyword rows need two distinctive tokens or BM25 ≥ 60; pre-tool "BEFORE RUNNING" needs 0.6 similarity; hard guard against killing the <code>--http</code> MCP process.</li>
+          <li>Prompt hook: in-process realm detection; zero-distinctive-token turns skip topic lanes; UNKNOWN-band candidates need a distinctive turn token; keyword rows need two distinctive tokens or BM25<sup><a href="#ref-24">24</a></sup> ≥ 60; pre-tool "BEFORE RUNNING" needs 0.6 similarity; hard guard against killing the <code>--http</code> MCP process.</li>
           <li>Hooks honour <code>CHITTA_SOCKET_PATH</code>; failed commands recorded via <code>PostToolUseFailure</code>; Codex exit-less shape recorded as unknown.</li>
         </ul>
-        <h4>MCP</h4>
+        <h3>MCP</h3>
         <ul><li>Cold recall 10.8 s → 1.1 s (no Transformers import); streamable-HTTP sessions expire idle (30 min) and are capped (64); evolve runner reaps Codex.</li></ul>
-        <h4>Evolve</h4>
+        <h3>Evolve</h3>
         <ul><li>Proposal cards carry <code>verifiability</code>, <code>prior_effort</code>, <code>internal_evidence</code>; selector weights them; every cycle requires a <code>SELF_CHECK</code> test and runs a bounded survey phase first; nightly/weekly timers; <code>select.py</code> renamed <code>selector.py</code>.</li></ul>
-        <h4>Eval</h4>
+        <h3>Eval</h3>
         <ul><li>Frozen replica copies loader markers, records its own pid, retries copies that race a save; real-agent noise calibration in <code>benchmarks/noise.json</code>; <code>hook_total_ms</code> metric.</li></ul>
       </div>
     </article>
@@ -519,14 +525,14 @@ body::before {
     <!-- 5.41.0 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v5.39.0&ndash;5.41.0</span>
+        <h2 class="version-number">v5.39.0&ndash;5.41.0</h2>
         <span class="version-date">May 19, 2026</span>
         <span class="version-latest">Archive</span>
       </div>
       <div class="version-body">
-        <h4>Added &mdash; Causal Episode Compiler: Phases 15&ndash;17</h4>
+        <h3>Added &mdash; Causal Episode Compiler: Phases 15&ndash;17</h3>
         <ul>
-          <li><strong>Phase 15 &mdash; FEP prior organ</strong> (v5.39.0) &mdash; <code>FepPriorOrgan</code> (new <code>organ/fep_prior.rs</code>): non-actuating generative model <code>P(sym | context)</code> over EventTape. Factored Dirichlet-multinomial emission: <code>P(tool | state) &middot; P(outcome | state, tool)</code>, entity marginalized. Online Bayesian count update with exponential forgetting (<code>STATE_DECAY = 0.9995</code>). Free energy per step replaces PPM surprisal in the Phase&nbsp;3 write gate. Two EWMA signals fed to TuriyaMonitor: <code>ewma_drift</code> (context_drift diagnosis) and <code>ewma_shock</code> (emission_shock diagnosis), extending the monitor to 7 typed diagnoses. Fully ephemeral; rebuilt from EventTape each <code>consolidation_pass()</code>. New tool: <code>fep_status</code>. FFI: <code>cf_fep_status</code>. Multi-model origin: GPT-5.5 + Opus 4.7 — FEP as tractable variational bound over the CEC symbol stream, not full FEP machinery.</li>
+          <li><strong>Phase 15 &mdash; FEP prior organ</strong> (v5.39.0) &mdash; <code>FepPriorOrgan</code> (new <code>organ/fep_prior.rs</code>): non-actuating generative model <code>P(sym | context)</code> over EventTape. Factored Dirichlet-multinomial emission: <code>P(tool | state) &middot; P(outcome | state, tool)</code>, entity marginalized. Online Bayesian count update with exponential forgetting (<code>STATE_DECAY = 0.9995</code>). Free energy per step replaces PPM<sup><a href="#ref-30">30</a></sup> surprisal in the Phase&nbsp;3 write gate. Two EWMA signals fed to TuriyaMonitor: <code>ewma_drift</code> (context_drift diagnosis) and <code>ewma_shock</code> (emission_shock diagnosis), extending the monitor to 7 typed diagnoses. Fully ephemeral; rebuilt from EventTape each <code>consolidation_pass()</code>. New tool: <code>fep_status</code>. FFI: <code>cf_fep_status</code>. Multi-model origin: GPT-5.5 + Opus 4.7 — FEP as tractable variational bound over the CEC symbol stream, not full FEP machinery.</li>
           <li><strong>Phase 16 &mdash; MemoryKind lattice + CPU-native QueryRouter</strong> (v5.40.0) &mdash; <code>MemoryKind</code> (new <code>organ/memory_kind.rs</code>): four typed kinds — <code>Thought</code>, <code>Observation</code>, <code>Decision</code>, <code>CodeFact</code> — inferred at write time from tags/realm/content prefix. Static <code>edge_legal(from, to)</code> matrix enforced in <code>add_assoc_edge()</code>: <code>(Observation, Thought)</code> and <code>(Decision, Thought)</code> illegal (rationalization chain). <code>QueryRouter</code> (new <code>organ/query_router.rs</code>): typed <code>RecallRequest</code> IR dispatches to <code>Exact</code> | <code>Fuzzy</code> | <code>Temporal</code> | <code>Causal</code> | <code>Hybrid</code> | <code>NeedsDisambiguation</code>. LLM called only when grammar leaves a named <code>UnboundSlot</code> — every token spend corresponds to a specific auditable hole. Four falsifiability metrics written per <code>consolidation_pass()</code>: token-displacement ratio, deterministic replay rate, router error rate, contradiction yield. New tool: <code>routed_recall</code>. FFI: <code>cf_routed_recall</code>. Design from GPT-5.5 + Opus 4.7: edge-legality as highest-ROI structural guarantee; escalation via parse failure, not model confidence.</li>
           <li><strong>Phase 17 &mdash; MemProvenance lattice + Reconciler + open-weight harvest</strong> (v5.41.0) &mdash; <code>MemProvenance</code> (new <code>organ/provenance.rs</code>): five provenance tags on every payload. Open-weight-generated writes enter <code>candidate</code> band; promoted only via <code>witness_memory()</code> on closed-loop signal (user correction, tool-result, router hit-rate delta). Candidate-laundering guard in <code>add_assoc_edge()</code>: <code>src.candidate &amp;&amp; !dst.candidate</code> &rarr; edge rejected. <code>Reconciler</code> R0 (new <code>organ/reconciler.rs</code>): <code>reconcile_all()</code> scans assoc_edges for kind-legality violations and laundering; <code>detect_contradictions()</code> groups by (realm, 6-word prefix). R0/R1 split inviolable — R0 is model-free, deterministically replayable; R1 proposals only validated by R0 before commit. <code>harvest_scope()</code>: demand-driven extraction targets from Turīya anomalies + router misses. <code>scripts/harvest_ow.py</code>: offline open-weight extraction — <code>vocab_geometry</code> (embedding matrix PCA &rarr; HDC seed vectors), <code>triplet_extract</code> (model over corpus &rarr; S,P,O JSONL), <code>feature_dict</code> (sparse autoencoder). New tools: <code>witness_memory</code>, <code>reconcile_pass</code>, <code>harvest_scope</code>. FFI: <code>cf_witness_memory</code>, <code>cf_reconcile_pass</code>, <code>cf_harvest_scope</code>. Design from GPT-5.5 + Opus 4.7: failure mode first (globally inconsistent retrieval under cross-session contradiction); harvest scope demand-driven, not bulk ingest.</li>
           <li>All new tools wired end-to-end: FFI (<code>cf_*</code>), C++ wrappers in <code>field_store.hpp</code>, handler implementations in <code>field_memory_recall.cpp</code>, registered in <code>register_memory_core_tools.cpp</code> and <code>TOOL_SPECS</code>, exposed in <code>chitta-mcp/server.py</code> <code>ADVANCED_TOOLS</code>.</li>
@@ -537,13 +543,13 @@ body::before {
     <!-- 5.38.0 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v5.35.0&ndash;5.38.0</span>
+        <h2 class="version-number">v5.35.0&ndash;5.38.0</h2>
         <span class="version-date">May 19, 2026</span>
       </div>
       <div class="version-body">
-        <h4>Added &mdash; Causal Episode Compiler: Phases 11&ndash;14</h4>
+        <h3>Added &mdash; Causal Episode Compiler: Phases 11&ndash;14</h3>
         <ul>
-          <li><strong>Phase 11 &mdash; Turīya meta-cognition</strong> (v5.35.0) &mdash; <code>TuriyaMonitor</code> (new <code>organ/turiya_monitor.rs</code>): a pure read-only witness organ with zero write surface. Samples CDAWG state count, EventTape length, tracked/refuted Sequitur rules, HypothesisMarket uncertainty, Q-value variance, and per-sample deltas after each <code>consolidation_pass()</code>. Stores a rolling 100-sample <code>VecDeque&lt;HealthSample&gt;</code>; persisted in <code>FullSnapshot</code> (V15&rarr;V16 migration). Five typed diagnoses in priority order: <code>refutation_flood</code> (refuted &ge; 50% of tracked), <code>stale</code> (no CDAWG growth despite &gt;20 new events), <code>q_collapse</code> (variance &lt; 0.005 with &gt;50 states), <code>high_uncertainty</code> (mean probe_value &gt; 0.65), <code>healthy</code>. Trend detection across last-5 samples. New tool: <code>turiya_status</code>. FFI: <code>cf_turiya_status</code>. Multi-model brainstorm origin (GPT-5.4 + Opus 4.7): both ranked pure witness as highest-ROI Phase 11.</li>
+          <li><strong>Phase 11 &mdash; Turīya meta-cognition</strong> (v5.35.0) &mdash; <code>TuriyaMonitor</code> (new <code>organ/turiya_monitor.rs</code>): a pure read-only witness organ with zero write surface. Samples CDAWG<sup><a href="#ref-6">6</a></sup> state count, EventTape length, tracked/refuted Sequitur<sup><a href="#ref-25">25</a></sup> rules, HypothesisMarket uncertainty, Q-value variance, and per-sample deltas after each <code>consolidation_pass()</code>. Stores a rolling 100-sample <code>VecDeque&lt;HealthSample&gt;</code>; persisted in <code>FullSnapshot</code> (V15&rarr;V16 migration). Five typed diagnoses in priority order: <code>refutation_flood</code> (refuted &ge; 50% of tracked), <code>stale</code> (no CDAWG growth despite &gt;20 new events), <code>q_collapse</code> (variance &lt; 0.005 with &gt;50 states), <code>high_uncertainty</code> (mean probe_value &gt; 0.65), <code>healthy</code>. Trend detection across last-5 samples. New tool: <code>turiya_status</code>. FFI: <code>cf_turiya_status</code>. Multi-model brainstorm origin (GPT-5.4 + Opus 4.7): both ranked pure witness as highest-ROI Phase 11.</li>
           <li><strong>Phase 12 &mdash; Temporal compression</strong> (v5.36.0) &mdash; <code>EventTape::compress_low_surprisal(cdawg, threshold=0.85)</code>: tombstones success events whose CDAWG PPM prediction confidence exceeds <em>threshold</em>. Failures (outcome class&thinsp;&ne;&thinsp;0), session boundaries (<code>session_id</code> change), and the very last event are always preserved verbatim. O(n) single-pass boolean mask; tombstoned entries are removed and counter incremented. Called from <code>consolidation_pass()</code> after CDAWG rebuild. Mirror of Phase 3 (surprisal-gated writes): Phase 3 burns in high-surprisal events; Phase 12 compresses low-surprisal segments. New tool: <code>tape_stats</code> (total length, tombstoned count, compression ratio). FFI: <code>cf_tape_stats</code>.</li>
           <li><strong>Phase 13 &mdash; Verbalization</strong> (v5.37.0) &mdash; <code>SequiturRule::verbalize(tape)</code>: deterministic template engine (no LLM). Template: <em>&ldquo;Whenever {tool_a}({entity_short}) {outcome_verb}, {tool_b} tends to follow (observed &times;N, avg outcome: label).&rdquo;</em> Same-entity shortcut: &ldquo;&hellip;{tool_b} on the same entity tends to follow&hellip;&rdquo; Verbalization promoted to the triplet knowledge graph as <code>(rule_key, &ldquo;verbalized_as&rdquo;, text)</code> during <code>consolidation_pass()</code>. Entity path shortening: strips prefix up to last <code>/</code>. Outcome labels: <code>succeeds</code> | <code>fails</code> | <code>errors</code> | <code>partially succeeds</code>. New tool: <code>verbalize_rules --k N</code>. FFI: <code>cf_verbalize_rules</code>.</li>
           <li><strong>Phase 14 &mdash; Self-directed experimentation</strong> (v5.38.0) &mdash; <code>store::queue_experiments(k)</code>: reads <code>HypothesisMarket::top_probes(k)</code> and for each probe with <code>probe_value &gt; 0.4 &amp;&amp; refute_ratio &lt; 0.3</code> calls <code>cec_policy_store.propose(rule_id, InterventionKind::OpenTask)</code>. The adversarial gate is the same as Phase 9: no experiment is queued for a rule whose source is under active refutation. Auto-triggered from <code>consolidation_pass()</code> when Turīya diagnosis is <code>HighUncertainty</code>. Closes the full observe&rarr;synthesize&rarr;<strong>hold</strong>&rarr;experiment loop (epistemic state machine from GPT-5.4 brainstorm). New tool: <code>queue_experiments --k N</code>. FFI: <code>cf_queue_experiments</code>.</li>
@@ -555,16 +561,16 @@ body::before {
     <!-- 5.34.5 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v5.34.1&ndash;5.34.5</span>
+        <h2 class="version-number">v5.34.1&ndash;5.34.5</h2>
         <span class="version-date">May 19, 2026</span>
       </div>
       <div class="version-body">
-        <h4>Added &mdash; CEC Real-Time Ingestion + Tooling</h4>
+        <h3>Added &mdash; CEC Real-Time Ingestion + Tooling</h3>
         <ul>
           <li><strong>Real-time event ingestion via PostToolUse hooks</strong> (v5.34.1) &mdash; every tool use now emits a CEC <code>log_event</code> automatically. <code>post-bash-hook.sh</code>: <code>log_event(bash, cmd_basename, exit_code&rarr;outcome)</code>. <code>post-edit-hook.sh</code>: <code>log_event(edit, file_path, 0)</code> for all file extensions. Both fire-and-forget background subshells; do not block the 5&thinsp;s hook budget.</li>
           <li><strong>Conversational event ingestion</strong> (v5.34.2) &mdash; <code>prompt-core.sh</code> emits <code>log_event(user_prompt, realm, 0)</code> on every UserPromptSubmit; <code>stop-core.sh</code> emits <code>log_event(assistant_response, realm, 0|2)</code> on every Stop (outcome 2 when <code>HAS_ERROR=true</code>). Combined with <code>remember</code>/<code>forget</code> (wired since Phase&nbsp;1), every category of agent activity is now captured in the EventTape automatically.</li>
           <li><strong><code>consolidation_pass</code> auto-fires at session boundaries</strong> (v5.34.2) &mdash; <code>stop-core.sh</code> and <code>pre-compact-hook.sh</code> both launch <code>nohup chitta consolidation_pass</code> detached from hook timeout. Sequitur rules and HypothesisMarket are always fresh before context is discarded. Log: <code>$MIND/.cec_consolidation.log</code>.</li>
-          <li><strong><code>cec-status</code> aggregator</strong> (v5.34.3) &mdash; <code>scripts/cec-status.sh</code> (symlinked to <code>~/.claude/bin/cec-status</code>). Runs four CEC queries in parallel and prints: failure pattern count, HypothesisMarket rule count + top uncertain probes (Wilson CI), RefutationLedger live/refuted counts, InterventionStore active/shadow policy counts. <code>--json</code> flag available.</li>
+          <li><strong><code>cec-status</code> aggregator</strong> (v5.34.3) &mdash; <code>scripts/cec-status.sh</code> (symlinked to <code>~/.claude/bin/cec-status</code>). Runs four CEC queries in parallel and prints: failure pattern count, HypothesisMarket rule count + top uncertain probes (Wilson<sup><a href="#ref-2">2</a></sup> CI), RefutationLedger live/refuted counts, InterventionStore active/shadow policy counts. <code>--json</code> flag available.</li>
           <li><strong>CEC tools added to <code>chitta --help</code></strong> (v5.34.4) &mdash; four new help categories: <em>CEC events</em>, <em>CEC recall</em>, <em>CEC market</em>, <em>CEC exec</em>. All 14 CEC tool names now visible in <code>chitta --help</code>.</li>
           <li><strong><code>log_event_ex</code> and <code>log_decision</code> fully wired into CLI</strong> (v5.34.5) &mdash; both tools were missing from four registration sites: <code>ToolResult</code> handler implementations, handler declarations, RPC registration, and the <code>TOOL_SPECS</code>/<code>KNOWN_TOOLS</code> dispatch array. All 14 CEC tools now respond to <code>chitta &lt;tool&gt; --help</code>.</li>
         </ul>
@@ -574,11 +580,11 @@ body::before {
     <!-- 5.34.0 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v5.33.0&ndash;5.34.0</span>
+        <h2 class="version-number">v5.33.0&ndash;5.34.0</h2>
         <span class="version-date">May 19, 2026</span>
       </div>
       <div class="version-body">
-        <h4>Added &mdash; Causal Episode Compiler: Phases 9&ndash;10</h4>
+        <h3>Added &mdash; Causal Episode Compiler: Phases 9&ndash;10</h3>
         <ul>
           <li><strong>Phase 9 &mdash; Active memory executor</strong> (v5.33.0) &mdash; <code>InterventionStore</code> (new <code>organ/intervention_store.rs</code>) converts CEC from a pure read path into a control system. On every Sequitur rule refutation (<code>contradict_ratio &gt; 0.4</code>), <code>log_event()</code> auto-files a task in the <code>TaskRegistry</code> and proposes a <code>TurnInjection</code> policy in shadow mode. Shadow eval gate: minimum 20 events + <code>expected_lift &gt; 0.15</code>. Adversarial invariant: <code>fire_active()</code> checks <code>refutation_ratio &lt; 0.3</code> before firing any policy &mdash; policies whose source rule is being refuted are auto-suspended. Fixed field-name collision (<code>organ::intervention</code> vs. <code>organ::intervention_store</code>) by renaming the CEC field to <code>cec_policy_store</code>. New tools: <code>executor_flush</code>, <code>list_policies</code>. FFI: <code>cf_executor_flush</code>, <code>cf_list_policies</code>.</li>
           <li><strong>Phase 10a &mdash; DecisionTape</strong> (v5.34.0) &mdash; <code>organ/decision_tape.rs</code>: explicit branch-point memory recording <code>(chosen_sym, rejected: Vec&lt;(sym, RejectionReason)&gt;, confidence_delta)</code> per turn. Six typed rejection reasons: <code>LowerQValue</code>, <code>HigherFailRate</code>, <code>RefutedRule</code>, <code>CostEstimate</code>, <code>OutOfScope</code>, <code>UserOverride</code>. Persisted in <code>FullSnapshot</code> (V14&rarr;V15 migration). Also fixes a latent bug where <code>snap.event_tape</code> was discarded on load and rebuilt from scratch; tape is now correctly restored from snapshot. <code>recall_true_counterfactual</code> queries the DecisionTape directly instead of inferring from CDAWG sibling edges. FFI: <code>cf_log_decision</code>, <code>cf_recall_true_counterfactual</code>.</li>
@@ -590,11 +596,11 @@ body::before {
 
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v5.30.0&ndash;5.32.0</span>
+        <h2 class="version-number">v5.30.0&ndash;5.32.0</h2>
         <span class="version-date">May 19, 2026</span>
       </div>
       <div class="version-body">
-        <h4>Added &mdash; Causal Episode Compiler: Phases 6&ndash;8</h4>
+        <h3>Added &mdash; Causal Episode Compiler: Phases 6&ndash;8</h3>
         <ul>
           <li><strong>Phase 6 &mdash; Counterfactual recall</strong> (v5.30.0) &mdash; <code>CdawgOrgan::counterfactual_alternatives(context, taken_sym, min_support, k)</code> enumerates sibling edges at the CDAWG state reached by prefix <em>P</em> and compares <code>fail_ratio(P&rarr;a)</code> vs <code>fail_ratio(P&rarr;b)</code>. Wilson lower bound (90% CI, z=1.645) ranks uncertain alternatives below well-supported ones. New tool: <code>recall_counterfactual --tool T --entity E --outcome N</code>. Gate: <code>min_support = 5</code>.</li>
           <li><strong>Phase 7 &mdash; Causal refutation ledger</strong> (v5.31.0) &mdash; <code>RefutationLedger</code> (new <code>organ/refutation_ledger.rs</code>) tracks <code>support</code> (sym_a &rarr; expected sym_b) and <code>contradict</code> (sym_a &rarr; anything else) counts per Sequitur rule. Hysteresis thresholds: flip to <em>Refuted</em> when <code>ratio &gt; 0.4</code>, reinstate when <code>&lt; 0.2</code>. On refutation a <code>(rule_N, &ldquo;refuted_by&rdquo;, &ldquo;contradict_at_ts=…&rdquo;)</code> triplet is written. <code>consolidation_pass()</code> seeds the ledger from each Sequitur run; <code>log_event()</code> calls <code>observe(prev, curr, ts)</code> on every append. New tool: <code>refutation_stats --k N</code>.</li>
@@ -608,12 +614,12 @@ body::before {
     <!-- 5.29.0 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v5.25.0&ndash;5.29.0</span>
+        <h2 class="version-number">v5.25.0&ndash;5.29.0</h2>
         <span class="version-date">May 19, 2026</span>
       </div>
       <div class="version-body">
-        <h4>Added &mdash; Causal Episode Compiler: Phases 1&ndash;5</h4>
-        <p>Embedding-free agentic memory substrate indexing state transitions <code>(tool, entity, outcome)</code> rather than content. Runs in parallel with HNSW/BM25/HDC recall lanes, which are untouched.</p>
+        <h3>Added &mdash; Causal Episode Compiler: Phases 1&ndash;5</h3>
+        <p>Embedding-free agentic memory substrate indexing state transitions <code>(tool, entity, outcome)</code> rather than content. Runs in parallel with HNSW<sup><a href="#ref-4">4</a></sup>/BM25/HDC recall lanes, which are untouched.</p>
         <ul>
           <li><strong>Phase 1 &mdash; Event Tape + CDAWG</strong> (v5.25.0) &mdash; <code>EventTape</code>: append-only log of <code>(tool_id, entity_key, outcome_class, session_id, ts_ms)</code> with deterministic entity canonicalization. <code>CdawgOrgan</code>: online CDAWG over packed u64 symbols; ephemeral, rebuilt from EventTape at load. <code>EventTape</code> serialized in <code>FullSnapshot</code> (V13&rarr;V14). Existing memories receive a synthetic <code>legacy</code> event for warm-start. Tools: <code>log_event</code>, <code>recall_last_action</code>, <code>recall_failure_pattern</code>, <code>recall_causal</code>.</li>
           <li><strong>Phase 2 &mdash; TD(&lambda;) + PMI antecedents + Roaring</strong> (v5.26.0) &mdash; <code>CdawgState.endpos</code> upgraded to <code>RoaringBitmap</code>. <code>push_td_credit()</code> backward eligibility traces (&delta;=+0.1/&minus;0.2, &gamma;=0.9). <code>recall_causal_antecedent</code> returns PMI-ranked predecessors.</li>
@@ -627,11 +633,11 @@ body::before {
     <!-- 5.21.68 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v5.21.68</span>
+        <h2 class="version-number">v5.21.68</h2>
         <span class="version-date">May 18, 2026</span>
       </div>
       <div class="version-body">
-        <h4>Fixed &mdash; Pre-embed All Medium-Frequency Write Handlers</h4>
+        <h3>Fixed &mdash; Pre-embed All Medium-Frequency Write Handlers</h3>
         <p>Completed the pre-embed pattern for remaining write tools: <code>update</code>, <code>consolidation_merge</code>, <code>curiosity_note_gap</code>, <code>propose_change</code>, <code>profile_update</code>, <code>profile_observe</code>, <code>goal_set</code>, <code>reconsolidate</code>. All 15 write handlers that call <code>embed_text()</code>/<code>embed_ssl_aware()</code> now compute embeddings outside <code>rpc_mutex_</code>.</p>
       </div>
     </article>
@@ -639,11 +645,11 @@ body::before {
     <!-- 5.21.67 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v5.21.67</span>
+        <h2 class="version-number">v5.21.67</h2>
         <span class="version-date">May 18, 2026</span>
       </div>
       <div class="version-body">
-        <h4>Fixed &mdash; More Pre-embed Before Lock</h4>
+        <h3>Fixed &mdash; More Pre-embed Before Lock</h3>
         <p>Extended the pre-embed pattern to three more high-frequency write tools called by hooks and the distillation pipeline:</p>
         <ul>
           <li><strong><code>suggestion_track</code></strong> &mdash; embeds <code>content</code> before <code>rpc_mutex_</code>.</li>
@@ -656,11 +662,11 @@ body::before {
     <!-- 5.21.66 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v5.21.66</span>
+        <h2 class="version-number">v5.21.66</h2>
         <span class="version-date">May 18, 2026</span>
       </div>
       <div class="version-body">
-        <h4>Fixed &mdash; Daemon Lock Starvation</h4>
+        <h3>Fixed &mdash; Daemon Lock Starvation</h3>
         <ul>
           <li><strong>Pre-embed write tools before exclusive lock</strong> &mdash; <code>remember</code>, <code>observe</code>, <code>grow</code>, <code>learn*</code> now compute embeddings (pure ML inference on <code>yantra_</code>, no <code>field_store_</code> access) before acquiring <code>rpc_mutex_</code> exclusively. Previously 30&ndash;60&thinsp;s ML inference held the write lock, causing <code>health_check</code> and all reads to queue for 20+ minutes.</li>
           <li><strong>Thread pool min workers 2 &rarr; 8</strong> &mdash; pool now starts with 8 workers instead of 2, providing spare capacity when individual workers are occupied by slow operations.</li>
@@ -671,11 +677,11 @@ body::before {
     <!-- 5.21.65 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v5.21.65</span>
+        <h2 class="version-number">v5.21.65</h2>
         <span class="version-date">May 18, 2026</span>
       </div>
       <div class="version-body">
-        <h4>Fixed &mdash; Memory &amp; Startup Overhaul</h4>
+        <h3>Fixed &mdash; Memory &amp; Startup Overhaul</h3>
         <p>Daemon RAM reduced from <strong>22&ndash;26&thinsp;GB &rarr; 2&ndash;4&thinsp;GB</strong>. Snapshot size reduced from <strong>4.2&thinsp;GB &rarr; 420&thinsp;MB</strong>. Root cause: runaway triplet accumulation — the distillation pipeline re-extracted the same subject-predicate-object facts on every run with no deduplication, producing ~14&thinsp;million duplicate and invalidated entries over time.</p>
         <ul>
           <li><strong><code>TripletStore</code> deduplication</strong> &mdash; <code>add()</code> checks for an existing live <code>(subject, predicate, object)</code> entry before inserting; duplicates update weight in place. Eliminates the primary source of unbounded growth.</li>
@@ -693,11 +699,11 @@ body::before {
     <!-- 5.21.x -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v5.21.0&ndash;5.21.64</span>
+        <h2 class="version-number">v5.21.0&ndash;5.21.64</h2>
         <span class="version-date">May 2026</span>
       </div>
       <div class="version-body">
-        <h4>Added</h4>
+        <h3>Added</h3>
         <ul>
           <li><strong>Cross-harness disagreement detection</strong> (v5.21.59) &mdash; <code>harness: Option&lt;String&gt;</code> field added to <code>MemoryPayload</code>, inferred from <code>source_tool</code> on every write (<code>"codex"</code> if tool name starts with <code>codex</code>, <code>"claude-code"</code> otherwise). New <code>cross_harness_conflicts</code> tool scans all live non-staged memories, groups by semantic proximity, and returns pairs where harnesses differ — ranked by <code>1 &minus; cosine_similarity</code> (disagreement score). <code>what_do_i_know_about</code> now includes a <code>cross_harness_conflicts</code> array scoped to the recalled cluster. Snapshot bumped to V13 (<code>0xF011_5741_7E00_000D</code>) with <code>LegacyMemoryPayloadV12</code> migration path covering V1&ndash;V12 snapshots on disk. FFI: <code>cf_query_cross_harness_conflicts(h, realm, limit, min_score) &rarr; *char</code>.</li>
 
@@ -714,13 +720,13 @@ body::before {
           <li><strong>Mmap embedding skeleton</strong> (v5.21.47) &mdash; <code>activate_mmap_embeddings()</code> on <code>SemanticIndex</code> opens the <code>.emb</code> sidecar as a memory-mapped file (<code>Arc&lt;Mmap&gt;</code> to preserve <code>Clone</code>), builds a byte-offset index, and clears the heap <code>HashMap</code>. <code>get_embedding()</code> checks the offset index first. Guarded at &gt;200&thinsp;K in this release; completed in v5.21.48.</li>
           <li><strong>Mmap embeddings — fully active</strong> (v5.21.48) &mdash; <code>EmbLookup&lt;&apos;a&gt;</code> struct introduced: holds shared references to <code>heap: &amp;HashMap</code>, <code>offsets: &amp;HashMap&lt;MemoryId, u64&gt;</code>, and <code>mmap: &amp;Option&lt;Arc&lt;Mmap&gt;&gt;</code>. Rust field-level split borrows allow <code>HnswGraph::insert</code>, <code>search</code>, <code>search_layer</code>, and <code>select_neighbors</code> to use mmap-backed neighbor lookups while mutating the graph. <code>total_embedding_count()</code> unifies heap + mmap counts; used by <code>use_hnsw()</code>, <code>use_tier2()</code>, the Hamming guard, <code>normalize_all()</code> consistency checks, <code>len()</code>, <code>is_empty()</code>, and <code>all_ids()</code>. <code>activate_mmap_embeddings()</code> now fires whenever the <code>.emb</code> sidecar exists — no size threshold. <code>backfill_hnsw_delta</code>, <code>merge_delta_into_base</code>, and <code>rebuild_hnsw</code> all iterate both embedding sources. Heap freed at any scale after first checkpoint.</li>
           <li><strong>v10 snapshot format</strong> &mdash; embeddings stored in a <code>.emb</code> sidecar (magic header + count + flat <code>{id, f32&times;256}</code> records); binary sparse codes stored in a <code>.bin</code> sidecar (<code>{id, u64&times;4}</code>). Reduces main bincode snapshot size and structures both sidecars for future <code>mmap</code>-based loading at 1M-memory scale.</li>
-          <li><strong>Two-tier HNSW</strong> &mdash; <code>delta_hnsw</code> activates above 100&thinsp;K memories (<code>HNSW_TIER2_THRESHOLD</code>). New inserts route to a small delta graph (O(log N<sub>delta</sub>)) instead of the large base. Delta is merged into the base at checkpoint when it exceeds 10% of base size (<code>HNSW_DELTA_MERGE_RATIO</code>). Persisted as a <code>.delta.hnsw</code> sidecar alongside the base <code>.hnsw</code>. Search queries both tiers and fuses results via reciprocal rank fusion.</li>
+          <li><strong>Two-tier HNSW</strong> &mdash; <code>delta_hnsw</code> activates above 100&thinsp;K memories (<code>HNSW_TIER2_THRESHOLD</code>). New inserts route to a small delta graph (O(log N<sub>delta</sub>)) instead of the large base. Delta is merged into the base at checkpoint when it exceeds 10% of base size (<code>HNSW_DELTA_MERGE_RATIO</code>). Persisted as a <code>.delta.hnsw</code> sidecar alongside the base <code>.hnsw</code>. Search queries both tiers and fuses results via reciprocal rank fusion<sup><a href="#ref-3">3</a></sup>.</li>
           <li><strong>SSL NL gloss</strong> &mdash; <code>gloss_ssl_content()</code> in <code>chitta/include/chitta/ssl_gloss.hpp</code> translates SSL triplets (subject/predicate/object) into readable English sentences before embedding. Closes the representation gap between compact SSL format and BGE queries; SSL memories re-embedded via a one-time migration.</li>
           <li><strong>Alias memories</strong> &mdash; when a new SSL memory is stored, a linked <code>kind=alias</code> NL counterpart is auto-created and connected via an <code>alias-of</code> triplet. Keeps NL and SSL representations synchronised without duplicating content.</li>
           <li><strong>Embed worker fix</strong> &mdash; idle gate removed; the background embed worker now runs every 30&thinsp;s during active sessions instead of waiting for an explicit activity signal. Pending queue clears even when the user is actively typing.</li>
           <li><strong><code>pending_embed_ids</code> MCP tool</strong> &mdash; new maintenance RPC to inspect or purge the stuck embed queue. Supports <code>purge_orphans</code> (drop entries whose memory no longer exists) and <code>force_clear</code> (forcibly clear a given set of IDs).</li>
         </ul>
-        <h4>Fixed</h4>
+        <h3>Fixed</h3>
         <ul>
           <li><strong>Compiler warnings</strong> (v5.21.54) &mdash; removed unreachable <code>default_lsh_buckets()</code> function (<code>lsh_buckets</code> is <code>#[serde(skip)]</code>); removed redundant top-level <code>SessionRecallHit</code> import in <code>store.rs</code> (re-imported locally inside the function); silenced <code>#[allow(dead_code)]</code> on <code>InterventionStore::config</code> field (reserved for future stale-threshold logic). Build is now warning-free.</li>
           <li><strong>HNSW sidecar staleness check</strong> (v5.21.53) &mdash; <code>load_hnsw()</code> validated the sidecar node count against <code>self.embeddings.len()</code> (heap only); with mmap active and heap cleared that would always be 0, causing any loaded sidecar to be rejected as &ldquo;larger than snapshot.&rdquo; Now uses <code>total_embedding_count()</code> (heap + mmap offsets).</li>
@@ -737,11 +743,11 @@ body::before {
     <!-- 5.20.6 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v5.20.6</span>
+        <h2 class="version-number">v5.20.6</h2>
         <span class="version-date">April 16, 2026</span>
       </div>
       <div class="version-body">
-        <h4>Fixed</h4>
+        <h3>Fixed</h3>
         <ul>
           <li><strong>Queue JSONL corruption</strong> &mdash; hooks now enqueue via native <code>chitta queue_write</code> (single-syscall atomic append, JSON compaction); removes the ~40K/day <code>[queue] FAILED: json parse error</code> burst caused by multi-line <code>jq</code> output.</li>
           <li><strong>Chain continuity warning spam</strong> &mdash; <code>OpLog::replay()</code> now resets <code>chain_head = ZERO_HASH</code> at instance-id prefix boundaries so independent per-instance segment chains no longer trigger header-level warnings (previously ~120K/day on startup).</li>
@@ -750,7 +756,7 @@ body::before {
           <li><strong><code>lib.sh</code> fallback</strong> &mdash; when the <code>chitta</code> binary is absent, the bash fallback now compacts the JSON via <code>python3</code> and fails loudly instead of silently injecting a malformed line.</li>
           <li><strong>Safer deploy</strong> &mdash; <code>CLAUDE.md</code> documents atomic <code>install</code> (temp+rename) before <code>systemctl restart</code>, preserving daemon uptime across the binary swap.</li>
         </ul>
-        <h4>Added</h4>
+        <h3>Added</h3>
         <ul>
           <li>Regression test <code>replay_across_independent_instance_chains</code> in <code>chitta-field/src/log.rs</code> covering the instance-boundary chain-reset invariant.</li>
         </ul>
@@ -760,11 +766,11 @@ body::before {
     <!-- 5.17.0 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v5.17.0</span>
+        <h2 class="version-number">v5.17.0</h2>
         <span class="version-date">April 12, 2026</span>
       </div>
       <div class="version-body">
-        <h4>Added</h4>
+        <h3>Added</h3>
         <ul>
           <li><strong>Agent Protocol Memory (Layer 8)</strong> &mdash; WAL-backed organ for tracking task ownership, delegation chains, evidence provenance, open probes, and completion criteria across multi-step agent loops.</li>
           <li><strong>Task Contracts</strong> &mdash; register tasks with goal, constraints, acceptance criteria, priority, deadline, and parent/subtask links. Status FSM: Active &rarr; Blocked &rarr; Completed / Failed / Abandoned.</li>
@@ -782,11 +788,11 @@ body::before {
     <!-- 5.16.0 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v5.16.0</span>
+        <h2 class="version-number">v5.16.0</h2>
         <span class="version-date">April 11, 2026</span>
       </div>
       <div class="version-body">
-        <h4>Added</h4>
+        <h3>Added</h3>
         <ul>
           <li><strong>Intervention/Outcome/Attribution Ledger (Layer 7)</strong> &mdash; WAL-backed organ tracking agent actions before execution, observations during execution, and causal attribution after outcome.</li>
           <li><strong>10-class AttributionClass taxonomy</strong> &mdash; <code>MemoryRecallError</code>, <code>SourceTrustError</code>, <code>ProcedureError</code>, <code>ToolExecutionError</code>, <code>EnvironmentShift</code>, <code>HiddenPrecondition</code>, <code>AmbiguousState</code>, <code>GoalSpecError</code>, <code>UserOverride</code>, <code>ExternalNondeterminism</code>. Each class routes to a different learning subsystem.</li>
@@ -801,11 +807,11 @@ body::before {
     <!-- 5.15.0 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v5.15.0</span>
+        <h2 class="version-number">v5.15.0</h2>
         <span class="version-date">April 11, 2026</span>
       </div>
       <div class="version-body">
-        <h4>Added</h4>
+        <h3>Added</h3>
         <ul>
           <li><strong>Autonomous Learning Pipeline</strong> &mdash; closes feedback loops from prediction errors to memory adaptation. Moves 1&ndash;6 push from &ldquo;remembering&rdquo; (~70%) to &ldquo;learning&rdquo; (~90%).</li>
           <li><strong>Surprise Credit (Move 1)</strong> &mdash; hysteresis-gated strength adjustments. Rolling per-memory credit with gate threshold (|credit| &ge; 0.75, streak &ge; 2). Strength deltas clamped to &plusmn;0.08.</li>
@@ -822,15 +828,15 @@ body::before {
 
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v5.14.0</span>
+        <h2 class="version-number">v5.14.0</h2>
         <span class="version-date">April 11, 2026</span>
       </div>
       <div class="version-body">
-        <h4>Added</h4>
+        <h3>Added</h3>
         <ul>
-          <li><strong>Surprise Memory (Layer 4)</strong> &mdash; Prediction error tuples that reveal blind spots. Record what was expected vs what actually happened; query recurring surprise patterns; identify domains where predictions consistently fail. <code>SurpriseDomainFactor</code> in scoring pipeline boosts &ldquo;actual&rdquo; outcomes and suppresses wrong &ldquo;expected&rdquo; predictions. <em>Friston (2010).</em></li>
-          <li><strong>Epistemic Debt (Layer 5)</strong> &mdash; Uncertainty boundaries and competing hypotheses. Register fragile beliefs with competing explanations and discriminating tests; resolve or defer debts as evidence accumulates. <code>EpistemicDebtFactor</code> boosts memories in uncertain domains. <em>Sperber et al. (2010).</em></li>
-          <li><strong>Integration Kernel (Layer 6)</strong> &mdash; Recall source arbitration with learned weights. Track which recall sources (semantic, keyword, temporal, artifact, association) are useful per domain; weights update via Bayesian feedback. <code>IntegrationWeightFactor</code> applies learned source weight as multiplier. <em>Shazeer et al. (2017).</em></li>
+          <li><strong>Surprise Memory (Layer 4)</strong> &mdash; Prediction error tuples that reveal blind spots. Record what was expected vs what actually happened; query recurring surprise patterns; identify domains where predictions consistently fail. <code>SurpriseDomainFactor</code> in scoring pipeline boosts &ldquo;actual&rdquo; outcomes and suppresses wrong &ldquo;expected&rdquo; predictions. <em>Friston (2010)<sup><a href="#ref-27">27</a></sup>.</em></li>
+          <li><strong>Epistemic Debt (Layer 5)</strong> &mdash; Uncertainty boundaries and competing hypotheses. Register fragile beliefs with competing explanations and discriminating tests; resolve or defer debts as evidence accumulates. <code>EpistemicDebtFactor</code> boosts memories in uncertain domains. <em>Sperber et al.<sup><a href="#ref-28">28</a></sup> (2010).</em></li>
+          <li><strong>Integration Kernel (Layer 6)</strong> &mdash; Recall source arbitration with learned weights. Track which recall sources (semantic, keyword, temporal, artifact, association) are useful per domain; weights update via Bayesian feedback. <code>IntegrationWeightFactor</code> applies learned source weight as multiplier. <em>Shazeer et al.<sup><a href="#ref-29">29</a></sup> (2017).</em></li>
           <li><strong>14 new MCP tools</strong> &mdash; <code>record_surprise</code>, <code>query_surprises</code>, <code>get_blind_spots</code>, <code>surprise_stats</code>, <code>register_debt</code>, <code>resolve_debt</code>, <code>defer_debt</code>, <code>query_debts</code>, <code>get_fragile_decisions</code>, <code>debt_stats</code>, <code>record_feedback</code>, <code>get_source_weights</code>, <code>update_source_weight</code>, <code>integration_stats</code>.</li>
           <li><strong>18-factor scoring pipeline</strong> &mdash; 3 new factors (SurpriseDomain, EpistemicDebt, IntegrationWeight) extend the pipeline from 15 to 18 composable factors. New config params in <code>scoring.json</code>.</li>
           <li><strong>5 new WAL op codes</strong> &mdash; <code>OP_RECORD_SURPRISE=39</code>, <code>OP_REGISTER_DEBT=40</code>, <code>OP_UPDATE_DEBT=41</code>, <code>OP_UPDATE_SOURCE_WEIGHT=42</code>, <code>OP_RECORD_FEEDBACK=43</code>. All replay from WAL &mdash; no snapshot version bump needed.</li>
@@ -841,11 +847,11 @@ body::before {
     <!-- 5.12.0–5.13.0 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v5.12.0&ndash;5.13.0</span>
+        <h2 class="version-number">v5.12.0&ndash;5.13.0</h2>
         <span class="version-date">April 11, 2026</span>
       </div>
       <div class="version-body">
-        <h4>Added</h4>
+        <h3>Added</h3>
         <ul>
           <li><strong>Executable Constraints (Layer 1)</strong> &mdash; Prolog-style logic engine. Assert/retract facts, unify variables, chain queries. Supports hypothetical branches for what-if reasoning.</li>
           <li><strong>Trigger Tissue (Layer 2)</strong> &mdash; Event-condition-action rules that fire automatically when patterns match. Define triggers on memory events; the daemon evaluates conditions and fires actions.</li>
@@ -854,7 +860,7 @@ body::before {
           <li><strong>InterferenceDensity factor</strong> &mdash; Price of Meaning: penalty for local competitor crowding in the scoring pipeline.</li>
           <li><strong>SpacingBoost factor</strong> &mdash; Geometry of Forgetting: well-spaced accesses boost recall.</li>
         </ul>
-        <h4>Fixed</h4>
+        <h3>Fixed</h3>
         <ul>
           <li>Filter empty-content ghosts from all Rust recall paths (semantic, keyword, temporal, artifact).</li>
           <li>Missing <code>trajectory_compact.hpp</code> header broke CI.</li>
@@ -865,17 +871,17 @@ body::before {
     <!-- 5.11.0–5.11.2 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v5.11.0&ndash;5.11.2</span>
+        <h2 class="version-number">v5.11.0&ndash;5.11.2</h2>
         <span class="version-date">April 10&ndash;11, 2026</span>
       </div>
       <div class="version-body">
-        <h4>Added</h4>
+        <h3>Added</h3>
         <ul>
-          <li><strong>ScoringPipeline</strong> &mdash; Neuroplastic trait-based scoring architecture. 12 composable scoring factors (Relevance, ACT-R, Strength, Confidence, Surprise, Arousal, MoodCongruence, FrustrationEscalation, Status, Epistemic, Kind, RealmReliability). Runtime-configurable via <code>scoring.json</code> with hot-reload.</li>
+          <li><strong>ScoringPipeline</strong> &mdash; Neuroplastic trait-based scoring architecture. 12 composable scoring factors (Relevance, ACT-R<sup><a href="#ref-1">1</a></sup>, Strength, Confidence, Surprise, Arousal, MoodCongruence, FrustrationEscalation, Status, Epistemic, Kind, RealmReliability). Runtime-configurable via <code>scoring.json</code> with hot-reload.</li>
           <li><strong>Externalized scoring constants</strong> &mdash; All 30+ hardcoded scoring constants moved to <code>scoring.json</code>. Every factor has independent weight, bias, and parameters.</li>
           <li><strong>StrengthFactor</strong> &mdash; Added to pipeline (was missing from initial release).</li>
         </ul>
-        <h4>Fixed</h4>
+        <h3>Fixed</h3>
         <ul>
           <li>V6&rarr;V7 snapshot migration for <code>access_timestamps</code> field.</li>
           <li>Safety guards: fallback snapshot loading (tries all snapshots if best fails), refuse-to-start-empty protection (prevents silent data loss when snapshots cannot deserialize).</li>
@@ -887,16 +893,16 @@ body::before {
     <!-- 5.10.0–5.10.1 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v5.10.0&ndash;5.10.1</span>
+        <h2 class="version-number">v5.10.0&ndash;5.10.1</h2>
         <span class="version-date">April 10, 2026</span>
       </div>
       <div class="version-body">
-        <h4>Added</h4>
+        <h3>Added</h3>
         <ul>
           <li><strong>ACT-R base-level activation</strong> &mdash; Anderson &amp; Schooler (1991) power-law decay over access history. Frequently and recently accessed memories get higher activation.</li>
           <li><strong>Surprise-weighted scoring</strong> &mdash; FEP &sect;2.3 surprise signal modulates retrieval score. High-surprise memories are boosted during recall.</li>
           <li><strong>Arousal-modulated retrieval</strong> &mdash; Flashbulb memory effect: high-arousal memories receive retrieval boost proportional to arousal intensity.</li>
-          <li><strong>Mood-congruent recall</strong> &mdash; Bower (1981): query affect is matched against memory affect for boosted retrieval when valence/arousal align.</li>
+          <li><strong>Mood-congruent recall</strong> &mdash; Bower<sup><a href="#ref-20">20</a></sup> (1981): query affect is matched against memory affect for boosted retrieval when valence/arousal align.</li>
           <li><strong>Frustration-escalation correction boost</strong> &mdash; Negative valence + high arousal boosts correction and preference memories, surfacing fixes when the user is frustrated.</li>
           <li><strong>New FFI</strong> &mdash; <code>cf_recall_semantic_ctx</code> with query affect context for affect-aware retrieval.</li>
         </ul>
@@ -906,11 +912,11 @@ body::before {
     <!-- 5.9.0 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v5.9.0</span>
+        <h2 class="version-number">v5.9.0</h2>
         <span class="version-date">April 10, 2026</span>
       </div>
       <div class="version-body">
-        <h4>Added</h4>
+        <h3>Added</h3>
         <ul>
           <li><strong>Spectral geometry stats</strong> &mdash; Graph-theoretic analysis of the memory triplet network: eigenvalue spectrum, clustering coefficients, and connectivity metrics.</li>
           <li><strong>Anomaly detection</strong> &mdash; Automatic detection of anomalous memory patterns using spectral methods.</li>
@@ -923,17 +929,17 @@ body::before {
     <!-- 5.8.0–5.8.3 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v5.8.0&ndash;5.8.3</span>
+        <h2 class="version-number">v5.8.0&ndash;5.8.3</h2>
         <span class="version-date">April 7&ndash;8, 2026</span>
       </div>
       <div class="version-body">
-        <h4>Added</h4>
+        <h3>Added</h3>
         <ul>
           <li><strong>Skill versioning</strong> &mdash; Skills track version history, enabling rollback and diffing across iterations.</li>
           <li><strong>Agent registry</strong> &mdash; Central registry of known agents with capabilities and routing metadata.</li>
           <li><strong>Dashboard expansion</strong> &mdash; New panels for skill versions, agent status, and memory health.</li>
         </ul>
-        <h4>Fixed</h4>
+        <h3>Fixed</h3>
         <ul>
           <li>Tag system &mdash; consistent creation, filtering, and surfacing across all layers.</li>
           <li>Chain replay tolerance + code-intel advisory hooks.</li>
@@ -945,16 +951,16 @@ body::before {
     <!-- 5.7.0–5.7.1 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v5.7.0&ndash;5.7.1</span>
+        <h2 class="version-number">v5.7.0&ndash;5.7.1</h2>
         <span class="version-date">April 7, 2026</span>
       </div>
       <div class="version-body">
-        <h4>Added</h4>
+        <h3>Added</h3>
         <ul>
           <li><strong>SSL v0.3</strong> &mdash; Soul Shorthand Language v0.3: affect encoding, semantic flags, cross-references, and two-tier compression for compact memory serialization.</li>
           <li><strong>Token budget tracking</strong> &mdash; Session size, subagent caps, and cost telemetry tracked per hook invocation.</li>
         </ul>
-        <h4>Fixed</h4>
+        <h3>Fixed</h3>
         <ul>
           <li><code>list_memories_brief</code> ID truncation and rewrite migration script.</li>
         </ul>
@@ -964,18 +970,18 @@ body::before {
     <!-- 5.6.0–5.6.5 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v5.6.0&ndash;5.6.5</span>
+        <h2 class="version-number">v5.6.0&ndash;5.6.5</h2>
         <span class="version-date">April 4&ndash;5, 2026</span>
       </div>
       <div class="version-body">
-        <h4>Added</h4>
+        <h3>Added</h3>
         <ul>
           <li><strong>Edit/Write interception</strong> &mdash; <code>fp</code> (file-patch) hooks intercept Edit and Write tool calls for diff-first editing. Snakemake/Nextflow RTK support.</li>
           <li><strong>Charge system</strong> &mdash; Hierarchical token budget for expensive casts. <code>/checkpoint</code> reclaims +20 charge.</li>
           <li><strong>Cache expiry warning</strong> &mdash; Hook warns on idle &gt;5 min when prompt cache is about to expire.</li>
           <li><strong>Realm-aware novelty gate</strong> &mdash; P1&ndash;P2 novelty gating with kind scoring per realm.</li>
         </ul>
-        <h4>Fixed</h4>
+        <h3>Fixed</h3>
         <ul>
           <li>Route <code>[thought]</code> memories to <code>soul:meta</code> realm; hybrid lane in prompt-hook.</li>
           <li>Keyword recall lane for exact token matching.</li>
@@ -987,11 +993,11 @@ body::before {
     <!-- 5.5.0–5.5.25 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v5.5.0&ndash;5.5.25</span>
+        <h2 class="version-number">v5.5.0&ndash;5.5.25</h2>
         <span class="version-date">April 3&ndash;4, 2026</span>
       </div>
       <div class="version-body">
-        <h4>Added</h4>
+        <h3>Added</h3>
         <ul>
           <li><strong>LocalBrain tool-calling</strong> &mdash; Real tool-calling for local LLM (gemma4:26b) via HTTP backend. Daemon-side dream publishing with JSON content assembly.</li>
           <li><strong>Unified Codex plugin</strong> &mdash; <code>chitta-mcp-install [claude-code|codex|all]</code> for cross-platform plugin deployment.</li>
@@ -1001,7 +1007,7 @@ body::before {
           <li><strong>Thinking distillation</strong> &mdash; Distill thinking-block snippets via gemma4:26b.</li>
           <li><strong>Messaging system</strong> &mdash; <code>msg_respond</code> tool for reply routing; <code>msg_inbox</code> filtering and ack.</li>
         </ul>
-        <h4>Fixed</h4>
+        <h3>Fixed</h3>
         <ul>
           <li>Per-turn soul recall dedup + remove unfiltered fallback recall.</li>
           <li>Tag param in recall was ignored &mdash; now hard-filters by triplet lookup.</li>
@@ -1016,17 +1022,17 @@ body::before {
     <!-- 5.4.0–5.4.3 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v5.4.0&ndash;5.4.3</span>
+        <h2 class="version-number">v5.4.0&ndash;5.4.3</h2>
         <span class="version-date">April 3, 2026</span>
       </div>
       <div class="version-body">
-        <h4>Added</h4>
+        <h3>Added</h3>
         <ul>
           <li><strong>Ingest/wiki/health-check/training-export pipelines</strong> &mdash; DuckDB naming cleanup and unified data pipeline tooling.</li>
           <li><strong>Affect dimensions</strong> &mdash; Full stack integration of valence and arousal affect dimensions across storage, retrieval, and display.</li>
           <li><strong>HTTP backend for ingester</strong> &mdash; Uses Ollama/vLLM directly (default: gemma4:26b). Removes all opencode dependencies.</li>
         </ul>
-        <h4>Fixed</h4>
+        <h3>Fixed</h3>
         <ul>
           <li>Prevent release with unpushed submodules.</li>
           <li>Copy <code>msg-notify</code> to <code>/tmp</code> before exec to avoid NFS lock on plugin dir.</li>
@@ -1037,24 +1043,24 @@ body::before {
     <!-- 5.3.0 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v5.3.0</span>
+        <h2 class="version-number">v5.3.0</h2>
         <span class="version-date">April 1, 2026</span>
       </div>
       <div class="version-body">
-        <h4>Added</h4>
+        <h3>Added</h3>
         <ul>
-          <li><strong>FEP attractor network</strong> &mdash; Self-orthogonalizing memory representations derived from the Free Energy Principle (Spisak &amp; Friston, Neurocomputing 2026). Three-phase integration across chitta-field and the C++ daemon.</li>
+          <li><strong>FEP attractor network</strong> &mdash; Self-orthogonalizing memory representations derived from the Free Energy Principle (Spisak<sup><a href="#ref-19">19</a></sup> &amp; Friston, Neurocomputing 2026). Three-phase integration across chitta-field and the C++ daemon.</li>
           <li><strong>Asymmetric prototype transitions</strong> &mdash; Forward direction gets full coupling strength; reverse is attenuated to 0.3&times;. Sequential data produces non-equilibrium dynamics.</li>
           <li><strong>Asymmetric triplet weights</strong> &mdash; New <code>reverse_weight</code> field with <code>#[serde(default)]</code> backward compatibility.</li>
           <li><strong>Surprise-modulated plasticity</strong> &mdash; Reconstruction error modulates decay rate. High-surprise memories resist forgetting; predictable ones fade faster.</li>
           <li><strong>Attractor-based pattern completion</strong> &mdash; <code>attractor_settle()</code> iteratively blends query with prototype centroids and follows asymmetric transitions. New <code>Route::Attractor</code> in route learner.</li>
-          <li><strong>Hopfield network</strong> &mdash; Asymmetric energy-based attractor network over memory co-activations with multi-hop directed settling.</li>
+          <li><strong>Hopfield<sup><a href="#ref-33">33</a></sup> network</strong> &mdash; Asymmetric energy-based attractor network over memory co-activations with multi-hop directed settling.</li>
           <li><strong>Self-orthogonalizing encoder</strong> &mdash; FEP-derived learning rule: prediction error + complexity penalty + Gram-Schmidt decorrelation between active atoms.</li>
           <li><strong>Free-energy merge criterion</strong> &mdash; Deduplication uses accuracy-vs-complexity tradeoff instead of fixed cosine threshold.</li>
           <li><strong>Adaptive vigilance</strong> &mdash; Prototype creation threshold adjusts based on aggregate reconstruction error.</li>
           <li><strong>New FFI exports</strong> &mdash; <code>cf_reconstruction_error</code>, <code>cf_memory_surprise</code>, <code>cf_search_attractor</code>, <code>cf_hopfield_co_retrieval</code>, <code>cf_hopfield_stats</code>, <code>cf_adapt_vigilance</code>.</li>
         </ul>
-        <h4>Fixed</h4>
+        <h3>Fixed</h3>
         <ul>
           <li>Negative <code>start_turn</code> in <code>read_transcript</code> &mdash; Python-style negative offsets now work correctly.</li>
           <li>CLI parser treats <code>-5</code> after <code>--start_turn</code> as a value, not a flag.</li>
@@ -1065,7 +1071,7 @@ body::before {
     <!-- 3.43.x -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v3.43.35</span>
+        <h2 class="version-number">v3.43.35</h2>
         <span class="version-date">February 25, 2026</span>
       </div>
 
@@ -1083,7 +1089,7 @@ body::before {
     <!-- 3.43.28–3.43.32 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v3.43.28&ndash;3.43.32</span>
+        <h2 class="version-number">v3.43.28&ndash;3.43.32</h2>
         <span class="version-date">February 23&ndash;24, 2026</span>
       </div>
 
@@ -1109,7 +1115,7 @@ body::before {
     <!-- 3.43.6–3.43.27 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v3.43.6&ndash;3.43.27</span>
+        <h2 class="version-number">v3.43.6&ndash;3.43.27</h2>
         <span class="version-date">February 21&ndash;23, 2026</span>
       </div>
 
@@ -1143,7 +1149,7 @@ body::before {
     <!-- 3.43.1–3.43.5 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v3.43.1&ndash;3.43.5</span>
+        <h2 class="version-number">v3.43.1&ndash;3.43.5</h2>
         <span class="version-date">February 20&ndash;21, 2026</span>
       </div>
 
@@ -1167,7 +1173,7 @@ body::before {
     <!-- 3.42.16 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v3.42.16</span>
+        <h2 class="version-number">v3.42.16</h2>
         <span class="version-date">February 20, 2026</span>
       </div>
 
@@ -1195,7 +1201,7 @@ body::before {
     <!-- 3.42.10–3.42.15 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v3.42.10&ndash;3.42.15</span>
+        <h2 class="version-number">v3.42.10&ndash;3.42.15</h2>
         <span class="version-date">February 17&ndash;19, 2026</span>
       </div>
 
@@ -1203,7 +1209,7 @@ body::before {
         <h3 class="change-category-title added">Added</h3>
         <ul class="change-list">
           <li><strong>Cross-session file timeline</strong> &mdash; Track file edits across sessions with temporal context</li>
-          <li><strong>Temporal fact versioning</strong> &mdash; Facts can be versioned over time for LoCoMo-style benchmark accuracy</li>
+          <li><strong>Temporal fact versioning</strong> &mdash; Facts can be versioned over time for LoCoMo<sup><a href="#ref-17">17</a></sup>-style benchmark accuracy</li>
           <li><strong>Enhanced query intent routing</strong> &mdash; Temporal subtypes (before/after/during/range) for finer retrieval granularity</li>
           <li><strong>LoCoMo benchmark improvements</strong> &mdash; Better retrieval and extraction for long-context memory evaluation</li>
         </ul>
@@ -1221,14 +1227,14 @@ body::before {
     <!-- 3.42.0–3.42.9 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v3.42.0&ndash;3.42.9</span>
+        <h2 class="version-number">v3.42.0&ndash;3.42.9</h2>
         <span class="version-date">February 10&ndash;16, 2026</span>
       </div>
 
       <div class="change-category">
         <h3 class="change-category-title added">Added</h3>
         <ul class="change-list">
-          <li><strong>RLM integration</strong> &mdash; Recursive Language Model patterns wired into hooks and sadhana for deep memory graph traversal</li>
+          <li><strong>RLM<sup><a href="#ref-71">71</a></sup> integration</strong> &mdash; Recursive Language Model patterns wired into hooks and sadhana for deep memory graph traversal</li>
           <li><strong>soul-repl</strong> &mdash; RLM-style programmatic memory exploration: explore &rarr; peek &rarr; expand &rarr; neighbors</li>
           <li><strong>Priority tiers and memory index</strong> &mdash; ClawVault-inspired tiered memory access (critical / high / normal / archive) with <code>set_priority_tier</code> and <code>recall_by_priority</code></li>
           <li><strong>Goal, habit, and curiosity CLI commands</strong> &mdash; <code>chitta goal</code>, <code>chitta habit</code>, <code>chitta curiosity</code> for managing long-term objectives from the terminal</li>
@@ -1251,7 +1257,7 @@ body::before {
     <!-- 3.41.x -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v3.41.x</span>
+        <h2 class="version-number">v3.41.x</h2>
         <span class="version-date">February 10, 2026</span>
       </div>
 
@@ -1267,7 +1273,7 @@ body::before {
     <!-- 3.40.0 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v3.40.0</span>
+        <h2 class="version-number">v3.40.0</h2>
         <span class="version-date">February 10, 2026</span>
       </div>
 
@@ -1283,7 +1289,7 @@ body::before {
     <!-- 3.39.x -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v3.39.x</span>
+        <h2 class="version-number">v3.39.x</h2>
         <span class="version-date">February 9&ndash;10, 2026</span>
       </div>
 
@@ -1309,7 +1315,7 @@ body::before {
     <!-- 3.38.x -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v3.38.x</span>
+        <h2 class="version-number">v3.38.x</h2>
         <span class="version-date">February 8&ndash;9, 2026</span>
       </div>
 
@@ -1336,7 +1342,7 @@ body::before {
     <!-- 3.37.x -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v3.37.x</span>
+        <h2 class="version-number">v3.37.x</h2>
         <span class="version-date">February 9, 2026</span>
       </div>
 
@@ -1358,7 +1364,7 @@ body::before {
     <!-- 3.36.0 -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v3.36.0</span>
+        <h2 class="version-number">v3.36.0</h2>
         <span class="version-date">February 8, 2026</span>
       </div>
 
@@ -1383,7 +1389,7 @@ body::before {
     <!-- 3.35.x -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v3.35.x</span>
+        <h2 class="version-number">v3.35.x</h2>
         <span class="version-date">February 2026</span>
       </div>
 
@@ -1407,7 +1413,7 @@ body::before {
     <!-- 3.30.x -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v3.30.x</span>
+        <h2 class="version-number">v3.30.x</h2>
         <span class="version-date">January 2026</span>
       </div>
 
@@ -1422,7 +1428,7 @@ body::before {
     <!-- 3.27.x -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v3.27.x</span>
+        <h2 class="version-number">v3.27.x</h2>
         <span class="version-date">December 2025</span>
       </div>
 
@@ -1439,7 +1445,7 @@ body::before {
     <!-- 3.17.x -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v3.17.x</span>
+        <h2 class="version-number">v3.17.x</h2>
       </div>
 
       <div class="change-category">
@@ -1455,7 +1461,7 @@ body::before {
     <!-- 3.16.x -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v3.16.x</span>
+        <h2 class="version-number">v3.16.x</h2>
       </div>
 
       <div class="change-category">
@@ -1470,7 +1476,7 @@ body::before {
     <!-- 3.x -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v3.x</span>
+        <h2 class="version-number">v3.x</h2>
       </div>
 
       <div class="change-category">
@@ -1486,7 +1492,7 @@ body::before {
     <!-- 2.x -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v2.x</span>
+        <h2 class="version-number">v2.x</h2>
       </div>
 
       <div class="change-category">
@@ -1500,7 +1506,7 @@ body::before {
     <!-- 1.x -->
     <article class="changelog-version reveal">
       <div class="version-header">
-        <span class="version-number">v1.x</span>
+        <h2 class="version-number">v1.x</h2>
       </div>
 
       <div class="change-category">
@@ -1522,13 +1528,44 @@ body::before {
 </section>
 
 <!-- FOOTER -->
-<footer class="footer">
+<!-- BEGIN CITATIONS -->
+<section id="references" class="references">
+  <div class="container">
+  <h2 class="heading-section">References</h2>
+  <ol>
+    <li id="ref-1" value="1">John R. Anderson and Lael J. Schooler. Reflections of the Environment in Memory. Psychological Science 2(6), 396–408 (1991). <a href="https://doi.org/10.1111/j.1467-9280.1991.tb00174.x">https://doi.org/10.1111/j.1467-9280.1991.tb00174.x</a></li>
+    <li id="ref-2" value="2">Edwin B. Wilson. Probable Inference, the Law of Succession, and Statistical Inference. Journal of the American Statistical Association 22(158), 209–212 (1927). <a href="https://doi.org/10.1080/01621459.1927.10502953">https://doi.org/10.1080/01621459.1927.10502953</a></li>
+    <li id="ref-3" value="3">Gordon V. Cormack, Charles L. A. Clarke, and Stefan Buettcher. Reciprocal rank fusion outperforms condorcet and individual rank learning methods. SIGIR, 758–759 (2009). <a href="https://doi.org/10.1145/1571941.1572114">https://doi.org/10.1145/1571941.1572114</a></li>
+    <li id="ref-4" value="4">Yu. A. Malkov and D. A. Yashunin. Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs. IEEE TPAMI 42(4), 824–836 (2020); arXiv:1603.09320 (2016). <a href="https://arxiv.org/abs/1603.09320">https://arxiv.org/abs/1603.09320</a> <a href="https://doi.org/10.1109/TPAMI.2018.2889473">https://doi.org/10.1109/TPAMI.2018.2889473</a></li>
+    <li id="ref-5" value="5">Amir Zandieh, Majid Daliri, Majid Hadian, and Vahab Mirrokni. TurboQuant: Online Vector Quantization with Near-optimal Distortion Rate. arXiv:2504.19874 (2025). <a href="https://arxiv.org/abs/2504.19874">https://arxiv.org/abs/2504.19874</a></li>
+    <li id="ref-6" value="6">A. Blumer, J. Blumer, D. Haussler, R. McConnell, and A. Ehrenfeucht. Complete inverted files for efficient text retrieval and analysis. Journal of the ACM 34(3), 578–595 (1987). <a href="https://doi.org/10.1145/28869.28873">https://doi.org/10.1145/28869.28873</a></li>
+    <li id="ref-10" value="10">Pentti Kanerva. Hyperdimensional Computing: An Introduction to Computing in Distributed Representation with High-Dimensional Random Vectors. Cognitive Computation 1, 139–159 (2009). <a href="https://doi.org/10.1007/s12559-009-9009-8">https://doi.org/10.1007/s12559-009-9009-8</a></li>
+    <li id="ref-11" value="11">Jorma Rissanen. Modeling by shortest data description. Automatica 14(5), 465–471 (1978). <a href="https://doi.org/10.1016/0005-1098(78)90005-5">https://doi.org/10.1016/0005-1098(78)90005-5</a></li>
+    <li id="ref-14" value="14">Subhadeep Pal, Fiona Y. Wang, and Markus J. Buehler. SwarmWorld: Stigmergic technological evolution in societies of language-model agents. arXiv:2608.26081 (2026). <a href="https://arxiv.org/abs/2608.26081">https://arxiv.org/abs/2608.26081</a> <a href="https://arxiv.org/html/2608.26081">https://arxiv.org/html/2608.26081</a></li>
+    <li id="ref-15" value="15">LAMM, MIT. MetaMaterialsDiscovery: Autonomous computational studies of hierarchical metamaterial fracture. Research archive, Hugging Face (accessed 2026-09-16). <a href="https://huggingface.co/lamm-mit/MetaMaterialsDiscovery">https://huggingface.co/lamm-mit/MetaMaterialsDiscovery</a></li>
+    <li id="ref-17" value="17">Adyasha Maharana, Dong-Ho Lee, Sergey Tulyakov, Mohit Bansal, Francesco Barbieri, and Yuwei Fang. Evaluating Very Long-Term Conversational Memory of LLM Agents. ACL (2024); arXiv:2402.17753. <a href="https://arxiv.org/abs/2402.17753">https://arxiv.org/abs/2402.17753</a> <a href="https://aclanthology.org/2024.acl-long.747/">https://aclanthology.org/2024.acl-long.747/</a></li>
+    <li id="ref-19" value="19">Tamas Spisak and Karl Friston. Self-orthogonalizing attractor neural networks emerging from the free energy principle. Neurocomputing, article 133472 (2026); arXiv:2505.22749 (2025). <a href="https://arxiv.org/abs/2505.22749">https://arxiv.org/abs/2505.22749</a> <a href="https://doi.org/10.1016/j.neucom.2026.133472">https://doi.org/10.1016/j.neucom.2026.133472</a></li>
+    <li id="ref-20" value="20">Gordon H. Bower. Mood and memory. American Psychologist 36(2), 129–148 (1981). <a href="https://doi.org/10.1037/0003-066X.36.2.129">https://doi.org/10.1037/0003-066X.36.2.129</a></li>
+    <li id="ref-24" value="24">Stephen Robertson and Hugo Zaragoza. The Probabilistic Relevance Framework: BM25 and Beyond. Foundations and Trends in Information Retrieval 3(4), 333–389 (2009). <a href="https://doi.org/10.1561/1500000019">https://doi.org/10.1561/1500000019</a></li>
+    <li id="ref-25" value="25">Craig G. Nevill-Manning and Ian H. Witten. Identifying Hierarchical Structure in Sequences: A linear-time algorithm. Journal of Artificial Intelligence Research 7, 67–82 (1997); arXiv:cs/9709102. <a href="https://arxiv.org/abs/cs/9709102">https://arxiv.org/abs/cs/9709102</a></li>
+    <li id="ref-27" value="27">Karl Friston. The free-energy principle: a unified brain theory? Nature Reviews Neuroscience 11, 127–138 (2010). <a href="https://doi.org/10.1038/nrn2787">https://doi.org/10.1038/nrn2787</a></li>
+    <li id="ref-28" value="28">Dan Sperber, Fabrice Clément, Christophe Heintz, Olivier Mascaro, Hugo Mercier, Gloria Origgi, and Deirdre Wilson. Epistemic Vigilance. Mind &amp; Language 25(4), 359–393 (2010). <a href="https://doi.org/10.1111/j.1468-0017.2010.01394.x">https://doi.org/10.1111/j.1468-0017.2010.01394.x</a></li>
+    <li id="ref-29" value="29">Noam Shazeer, Azalia Mirhoseini, Krzysztof Maziarz, Andy Davis, Quoc Le, Geoffrey Hinton, and Jeff Dean. Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer. arXiv:1701.06538 (2017). <a href="https://arxiv.org/abs/1701.06538">https://arxiv.org/abs/1701.06538</a></li>
+    <li id="ref-30" value="30">John G. Cleary and Ian H. Witten. Data Compression Using Adaptive Coding and Partial String Matching. IEEE Transactions on Communications 32(4), 396–402 (1984). <a href="https://doi.org/10.1109/TCOM.1984.1096090">https://doi.org/10.1109/TCOM.1984.1096090</a></li>
+    <li id="ref-33" value="33">John J. Hopfield. Neural networks and physical systems with emergent collective computational abilities. PNAS 79(8), 2554–2558 (1982). <a href="https://doi.org/10.1073/pnas.79.8.2554">https://doi.org/10.1073/pnas.79.8.2554</a></li>
+    <li id="ref-71" value="71">Alex L. Zhang, Tim Kraska, and Omar Khattab. Recursive Language Models. arXiv:2512.24601 (2025; revised 2026). <a href="https://arxiv.org/abs/2512.24601">https://arxiv.org/abs/2512.24601</a></li>
+  </ol>
+  </div>
+</section>
+<!-- END CITATIONS -->
+
+</main>
+<footer class="footer site-footer">
   <div class="container">
     <p class="footer-text">
-      Persistent memory for Claude Code and Codex.
-      <span class="footer-sep"></span>
-      <a href="https://github.com/genomewalker/chitta" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/genomewalker/chitta">GitHub repository</a> · <a href="https://opensource.org/licenses/MIT">MIT license</a> · <a href="/changelog.html">This page</a>
     </p>
+    <p class="site-status">Status as of 2026-09-16 · <a href="/changelog.html">Unreleased + v5.72.0</a></p>
   </div>
 </footer>
 

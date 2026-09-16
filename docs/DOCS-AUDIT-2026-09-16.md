@@ -258,3 +258,197 @@ grep exit: 1 (1 means zero matches)
 - Hooks, existing tests, runtime sources, benchmarks, contracts, dated decision
   memos, rename history, and `CHANGELOG.md` have no diff from the merged baseline.
   `Plan.md` and `Documentation.md` remain untracked.
+
+## Site UX pass
+
+Status as of 2026-09-16 · Unreleased + v5.72.0.
+
+All 79 HTML pages now share the same ordered static menu, home link, skip link, focusable main landmark, current-page marker, and repository/MIT/version/status footer. Each page has the `chitta — <page>` title format, language, viewport, description and favicon. The current-page marker is on the footer permalink for documents outside the menu (dream articles and 404).
+
+The existing design tokens and dark content palette remain. Navigation wraps without JavaScript; shared chrome follows light OS preference. Tables are named keyboard-scrollable regions; code scrolls; focus and reduced-motion rules are shared. Static style attributes moved to deduplicated CSS classes; visualization scripts retain runtime styles. Content is readable if reveal scripts do not run. Native fragment navigation now preserves URL history and skip-link focus; old scroll-only interceptors were removed. Root-relative URLs support nested 404 requests.
+
+### Changes per page
+
+Every row includes the common changes above. Dream article prose, dates and citations are retained; the malformed generated gap-recall metadata is repaired explicitly below.
+
+| Page | Additional changes |
+|---|---|
+| [404.html](404.html) | Replaced standalone styles with the shared design; root-relative assets and recovery links work for nested missing URLs. |
+| [architecture.html](architecture.html) | Extracted static styles; wrapped architecture tables; retained diagrams and animation scripts. |
+| [benchmarks.html](benchmarks.html) | Promoted every TOC category label to a heading; wrapped results tables. |
+| [brain-viz/index.html](brain-viz/index.html) | Added h1, description and favicon; added shared chrome around the existing architecture visualization. |
+| [changelog.html](changelog.html) | Release labels are h2, change categories h3; normalized status separator; preserved release history. |
+| [chitta-field.html](chitta-field.html) | Corrected card heading levels; wrapped tables; retained the incoming References block byte-for-byte. |
+| [cli.html](cli.html) | Promoted TOC category labels to headings; extracted static styles; wrapped tables. |
+| [constellation.html](constellation.html) | Kept graph modes and data; extracted static styles; placed header and visualization in main. |
+| [context.html](context.html) | Included page header in main; extracted static styles; wrapped tables. |
+| [dreams/2026-02-22-ancient-dna-damage-authentication-sediment-limits.html](dreams/2026-02-22-ancient-dna-damage-authentication-sediment-limits.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-22-apoha-contrastive-learning.html](dreams/2026-02-22-apoha-contrastive-learning.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-22-arrow-of-time-causal-primitive.html](dreams/2026-02-22-arrow-of-time-causal-primitive.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-22-crn-turing-completeness-chemistry-computation.html](dreams/2026-02-22-crn-turing-completeness-chemistry-computation.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-22-curry-howard-proofs-programs-classical-fracture.html](dreams/2026-02-22-curry-howard-proofs-programs-classical-fracture.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-22-explanatory-gap-levine-consciousness.html](dreams/2026-02-22-explanatory-gap-levine-consciousness.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-22-fitness-beats-truth-eaan-evolutionary-epistemology.html](dreams/2026-02-22-fitness-beats-truth-eaan-evolutionary-epistemology.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-22-ghost-lines-get-transcript-temporal-displacement.html](dreams/2026-02-22-ghost-lines-get-transcript-temporal-displacement.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-22-godel-incompleteness-formal-mechanism.html](dreams/2026-02-22-godel-incompleteness-formal-mechanism.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-22-integrated-information-theory.html](dreams/2026-02-22-integrated-information-theory.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-22-landauer-erasure-black-hole-information.html](dreams/2026-02-22-landauer-erasure-black-hole-information.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-22-lucas-penrose-whiteley-mirror-self-refutation.html](dreams/2026-02-22-lucas-penrose-whiteley-mirror-self-refutation.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-22-neural-criticality-stdp-cortex.html](dreams/2026-02-22-neural-criticality-stdp-cortex.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-22-past-hypothesis-thermodynamic-arrow.html](dreams/2026-02-22-past-hypothesis-thermodynamic-arrow.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-22-piraha-language-universal-grammar.html](dreams/2026-02-22-piraha-language-universal-grammar.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-22-reverse-edges-causal-introspection.html](dreams/2026-02-22-reverse-edges-causal-introspection.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-22-strange-loops-godel-consciousness.html](dreams/2026-02-22-strange-loops-godel-consciousness.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-22-three-numbers-one-posterior.html](dreams/2026-02-22-three-numbers-one-posterior.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-22-unreasonable-effectiveness-mathematics.html](dreams/2026-02-22-unreasonable-effectiveness-mathematics.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-22-vakyantra-bert-paradox-semantic-embeddings.html](dreams/2026-02-22-vakyantra-bert-paradox-semantic-embeddings.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-22-why-memory-has-a-direction-stosszahlansatz.html](dreams/2026-02-22-why-memory-has-a-direction-stosszahlansatz.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-22-wisdom-node-promotion-memory-consolidation.html](dreams/2026-02-22-wisdom-node-promotion-memory-consolidation.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-23-apoha-dharmakirti-contrastive-learning.html](dreams/2026-02-23-apoha-dharmakirti-contrastive-learning.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-23-boltzmann-brain-time-consciousness.html](dreams/2026-02-23-boltzmann-brain-time-consciousness.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-23-dignaga-russell-kripke.html](dreams/2026-02-23-dignaga-russell-kripke.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-23-fitness-beats-truth.html](dreams/2026-02-23-fitness-beats-truth.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-23-free-energy-principle-active-inference.html](dreams/2026-02-23-free-energy-principle-active-inference.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-23-hoffman-interface-theory-refutations.html](dreams/2026-02-23-hoffman-interface-theory-refutations.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-23-landauer-demon-erasure.html](dreams/2026-02-23-landauer-demon-erasure.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-23-landauer-erasure-arrow-time-debt.html](dreams/2026-02-23-landauer-erasure-arrow-time-debt.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-23-mags-ancient-modern-population-temporal.html](dreams/2026-02-23-mags-ancient-modern-population-temporal.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-23-platonism-formalism-godel-underdetermination.html](dreams/2026-02-23-platonism-formalism-godel-underdetermination.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-23-sadhana-recursive-self-improvement-strange-loop.html](dreams/2026-02-23-sadhana-recursive-self-improvement-strange-loop.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-23-soc-artifact-four-convergences.html](dreams/2026-02-23-soc-artifact-four-convergences.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-02-23-universality-classes-rg-eigenvalues.html](dreams/2026-02-23-universality-classes-rg-eigenvalues.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-04-03-attention-mechanisms-and-the-binding-problem-in-ne.html](dreams/2026-04-03-attention-mechanisms-and-the-binding-problem-in-ne.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-04-03-consciousness-and-the-hard-problem-of-subjective-e.html](dreams/2026-04-03-consciousness-and-the-hard-problem-of-subjective-e.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-04-03-entropy-and-the-arrow-of-time-in-biological-system.html](dreams/2026-04-03-entropy-and-the-arrow-of-time-in-biological-system.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-04-03-hierarchical-temporal-memory-and-sequence-learning.html](dreams/2026-04-03-hierarchical-temporal-memory-and-sequence-learning.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-04-03-sparse-distributed-representations-and-memory-effi.html](dreams/2026-04-03-sparse-distributed-representations-and-memory-effi.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-04-11-from-remembering-to-learning-autonomous-feedback.html](dreams/2026-04-11-from-remembering-to-learning-autonomous-feedback.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-04-11-the-nature-of-memory-and-forgetting-in-biological-.html](dreams/2026-04-11-the-nature-of-memory-and-forgetting-in-biological-.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-04-13-consciousness-and-the-hard-problem-of-subjective-e.html](dreams/2026-04-13-consciousness-and-the-hard-problem-of-subjective-e.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-04-16-emergent-complexity-in-distributed-systems.html](dreams/2026-04-16-emergent-complexity-in-distributed-systems.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-04-16-vedantic-philosophy-and-modern-neuroscience.html](dreams/2026-04-16-vedantic-philosophy-and-modern-neuroscience.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-04-17-self-organization-in-nature-from-cells-to-civiliza.html](dreams/2026-04-17-self-organization-in-nature-from-cells-to-civiliza.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-04-17-the-nature-of-memory-and-forgetting-in-biological-.html](dreams/2026-04-17-the-nature-of-memory-and-forgetting-in-biological-.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-04-18-consciousness-and-the-hard-problem-of-subjective-e.html](dreams/2026-04-18-consciousness-and-the-hard-problem-of-subjective-e.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-04-18-the-history-of-symbolic-ai-versus-connectionism.html](dreams/2026-04-18-the-history-of-symbolic-ai-versus-connectionism.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-04-22-attention-mechanisms-and-the-binding-problem.html](dreams/2026-04-22-attention-mechanisms-and-the-binding-problem.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-04-22-epistemic-humility-in-scientific-discovery.html](dreams/2026-04-22-epistemic-humility-in-scientific-discovery.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-05-02-the-nature-of-memory-and-forgetting-in-biological-.html](dreams/2026-05-02-the-nature-of-memory-and-forgetting-in-biological-.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-05-03-emergent-complexity-in-distributed-systems.html](dreams/2026-05-03-emergent-complexity-in-distributed-systems.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-05-19-session-id-febc8622-gdom-s-history-6-show-the-huma.html](dreams/2026-05-19-session-id-febc8622-gdom-s-history-6-show-the-huma.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-06-23-the-mathematics-of-forgetting-why-neural-networks-.html](dreams/2026-06-23-the-mathematics-of-forgetting-why-neural-networks-.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-06-29-gap-recall-episode-heavy-stores-structurally-broke.html](dreams/2026-06-29-gap-recall-episode-heavy-stores-structurally-broke.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/2026-06-29-gap-recall-tag-filter-use-type-wisdom-gap-recall-g.html](dreams/2026-06-29-gap-recall-tag-filter-use-type-wisdom-gap-recall-g.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. Repaired multiline title and unescaped quotes in description/social metadata. |
+| [dreams/2026-09-02-epistemic-humility-in-scientific-discovery.html](dreams/2026-09-02-epistemic-humility-in-scientific-discovery.html) | Updated archive title and chrome branding; retained article text, date, references and return-to-dreams link. |
+| [dreams/index.html](dreams/index.html) | Replaced old branding in chrome/metadata; retained dated archive cards and existing local styles. |
+| [evolve-bridge-live/index.html](evolve-bridge-live/index.html) | Added an HTML landing page listing existing evidence files with their formats; artifacts remain unchanged. |
+| [getting-started.html](getting-started.html) | Extracted static styles; wrapped setup tables; retained setup anchors. |
+| [hooks.html](hooks.html) | Promoted TOC category labels to headings; extracted static styles; wrapped tables. |
+| [index.html](index.html) | Added main landmark; corrected card headings; extracted static styles and wrapped the comparison table. |
+| [mind-viz/index.html](mind-viz/index.html) | Added h1, description and favicon; contained graph/panels below navigation; responsive stacked panels, container resizing and bounded dragging; computed-style panel toggles. |
+| [philosophy.html](philosophy.html) | Extracted static styles; wrapped comparison tables; retained philosophy content. |
+| [recall.html](recall.html) | Promoted TOC category labels to headings; normalized the status separator; wrapped tables. |
+| [sadhana.html](sadhana.html) | Corrected memory/use-case headings; extracted static styles; wrapped tables. |
+| [skills.html](skills.html) | Promoted skill categories to headings; normalized the status separator; extracted static styles. |
+| [tools.html](tools.html) | Promoted tool categories to headings; normalized the status separator; wrapped every parameter table. |
+| [vedanta/index.html](vedanta/index.html) | Added an HTML landing page linking the existing Markdown collection; original Markdown remains unchanged. |
+
+### Structural gate table
+
+Generated with `python3 scripts/check-site.py`. Chrome checks exact menu/footer markup and current-page identity; Metadata checks document metadata; Headings checks hierarchy, IDs and TOC targets; Layout checks main structure, CSS contracts, table regions and image alt attributes; Links checks published local files and HTML fragments.
+
+| Page | Chrome | Metadata | Headings | Layout | Links | Result |
+|---|---|---|---|---|---|---|
+| 404.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| architecture.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| benchmarks.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| brain-viz/index.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| changelog.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| chitta-field.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| cli.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| constellation.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| context.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-22-ancient-dna-damage-authentication-sediment-limits.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-22-apoha-contrastive-learning.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-22-arrow-of-time-causal-primitive.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-22-crn-turing-completeness-chemistry-computation.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-22-curry-howard-proofs-programs-classical-fracture.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-22-explanatory-gap-levine-consciousness.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-22-fitness-beats-truth-eaan-evolutionary-epistemology.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-22-ghost-lines-get-transcript-temporal-displacement.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-22-godel-incompleteness-formal-mechanism.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-22-integrated-information-theory.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-22-landauer-erasure-black-hole-information.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-22-lucas-penrose-whiteley-mirror-self-refutation.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-22-neural-criticality-stdp-cortex.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-22-past-hypothesis-thermodynamic-arrow.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-22-piraha-language-universal-grammar.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-22-reverse-edges-causal-introspection.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-22-strange-loops-godel-consciousness.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-22-three-numbers-one-posterior.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-22-unreasonable-effectiveness-mathematics.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-22-vakyantra-bert-paradox-semantic-embeddings.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-22-why-memory-has-a-direction-stosszahlansatz.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-22-wisdom-node-promotion-memory-consolidation.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-23-apoha-dharmakirti-contrastive-learning.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-23-boltzmann-brain-time-consciousness.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-23-dignaga-russell-kripke.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-23-fitness-beats-truth.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-23-free-energy-principle-active-inference.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-23-hoffman-interface-theory-refutations.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-23-landauer-demon-erasure.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-23-landauer-erasure-arrow-time-debt.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-23-mags-ancient-modern-population-temporal.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-23-platonism-formalism-godel-underdetermination.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-23-sadhana-recursive-self-improvement-strange-loop.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-23-soc-artifact-four-convergences.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-02-23-universality-classes-rg-eigenvalues.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-04-03-attention-mechanisms-and-the-binding-problem-in-ne.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-04-03-consciousness-and-the-hard-problem-of-subjective-e.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-04-03-entropy-and-the-arrow-of-time-in-biological-system.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-04-03-hierarchical-temporal-memory-and-sequence-learning.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-04-03-sparse-distributed-representations-and-memory-effi.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-04-11-from-remembering-to-learning-autonomous-feedback.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-04-11-the-nature-of-memory-and-forgetting-in-biological-.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-04-13-consciousness-and-the-hard-problem-of-subjective-e.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-04-16-emergent-complexity-in-distributed-systems.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-04-16-vedantic-philosophy-and-modern-neuroscience.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-04-17-self-organization-in-nature-from-cells-to-civiliza.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-04-17-the-nature-of-memory-and-forgetting-in-biological-.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-04-18-consciousness-and-the-hard-problem-of-subjective-e.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-04-18-the-history-of-symbolic-ai-versus-connectionism.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-04-22-attention-mechanisms-and-the-binding-problem.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-04-22-epistemic-humility-in-scientific-discovery.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-05-02-the-nature-of-memory-and-forgetting-in-biological-.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-05-03-emergent-complexity-in-distributed-systems.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-05-19-session-id-febc8622-gdom-s-history-6-show-the-huma.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-06-23-the-mathematics-of-forgetting-why-neural-networks-.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-06-29-gap-recall-episode-heavy-stores-structurally-broke.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-06-29-gap-recall-tag-filter-use-type-wisdom-gap-recall-g.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/2026-09-02-epistemic-humility-in-scientific-discovery.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| dreams/index.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| evolve-bridge-live/index.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| getting-started.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| hooks.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| index.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| mind-viz/index.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| philosophy.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| recall.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| sadhana.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| skills.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| tools.html | PASS | PASS | PASS | PASS | PASS | PASS |
+| vedanta/index.html | PASS | PASS | PASS | PASS | PASS | PASS |
+
+79 pages checked; 0 failed.
+
+### Verification and limits
+
+- `bash scripts/check-docs-links.sh`: recursive HTML plus existing Markdown checks; 102 documents, 3,098 local links, zero errors. Historical decision-memo path:line exemptions remain reported.
+- Gate mutation tests: valid fixture plus 19 broken-page variants, URL resolution and script parsing checks pass. Ruff and shell syntax checks pass.
+- Repository-required hook suites pass after rerunning session cards in fresh scratch state (the first shared scratch socket was already bound). CLI discovery is skipped because this worktree has no built CLI. MCP: 149 tests pass on retry; the first run hit a process-start timing race before its PID fixture existed. SMRITI: 46 tests pass. All ran against temporary state and stubs, without contacting the live daemon.
+- No browser is available: layout at actual viewport sizes, zoom, contrast, focus traversal, assistive technology, WebGL/canvas rendering, panel interaction and OS-theme appearance were not visually verified. Remote links, font/CDN availability and live visualization backends were not probed.
+- Additional JavaScript syntax verification could not start: the installed Node binary fails loading `sqlite3session_attach`. No JavaScript execution or browser interaction is claimed.
+
+### Final main integration
+
+Merged `main` again after the UX implementation. The incoming marketing copy, citation anchors, both earlier audit sections, bibliography CSS, and documentation CI job are retained. All 12 generated HTML References blocks match the incoming `main` byte-for-byte. The citation usage index is refreshed because layout changes moved source line numbers; canonical source records and bibliography content are unchanged. The structural gate still reports 79/79 pages passing after conflict resolution.
