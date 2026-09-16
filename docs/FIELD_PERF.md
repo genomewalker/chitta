@@ -357,3 +357,175 @@ These are sequential implementation measurements on a shared node, not an additi
 - <a id="ref-10"></a>**[10]** Pentti Kanerva. Hyperdimensional Computing: An Introduction to Computing in Distributed Representation with High-Dimensional Random Vectors. Cognitive Computation 1, 139–159 (2009). [source](<https://doi.org/10.1007/s12559-009-9009-8>)
 - <a id="ref-24"></a>**[24]** Stephen Robertson and Hugo Zaragoza. The Probabilistic Relevance Framework: BM25 and Beyond. Foundations and Trends in Information Retrieval 3(4), 333–389 (2009). [source](<https://doi.org/10.1561/1500000019>)
 <!-- END CITATIONS -->
+
+<!-- ORGAN-ABLATION-TABLE -->
+## Organ ablation 2026-09-16
+
+Three repetitions per arm; missing calibration or invariants block retirement.
+No organ or tool is deleted by the measurement runner.
+
+| Organ | Dependency class | Panels moved (Δ; margin) | Verdict |
+|---|---|---|---|
+| `session_registry` | event/API | not measured | unqualified |
+| `transcript_registry` | event/API | not measured | unqualified |
+| `task_registry` | event/API | not measured | unqualified |
+| `user_model_registry` | event/API | not measured | unqualified |
+| `theme_organ` | event/API | not measured | unqualified |
+| `analytics_registry` | event/API | not measured | unqualified |
+| `msg_registry` | event/API; snapshot section retained | not measured | unqualified |
+| `skill_registry` | event/API | not measured | unqualified |
+| `agent_registry` | event/API | not measured | unqualified |
+| `constraint_store` | event/API | not measured | unqualified |
+| `trigger_store` | event/API | not measured | unqualified |
+| `intervention_store` | event/API | not measured | unqualified |
+| `agent_protocol_store` | event/API | not measured | unqualified |
+| `wisdom_lineage_store` | event/API | not measured | unqualified |
+| `symbol_event_log` | event/API | not measured | unqualified |
+| `repl_sessions` | event/API | not measured | unqualified |
+| `event_tape` | event/API; write path (retain); snapshot section retained | not measured | unqualified |
+| `cdawg` | event/API; write path (retain) | not measured | unqualified |
+| `episode_hdc` | event/API | not measured | unqualified |
+| `refutation_ledger` | event/API | not measured | unqualified |
+| `cec_policy_store` | event/API | not measured | unqualified |
+| `decision_tape` | event/API; snapshot section retained | not measured | unqualified |
+| `hypothesis_market` | event/API | not measured | unqualified |
+| `turiya_monitor` | event/API; snapshot section retained | not measured | unqualified |
+| `fep_prior` | event/API; write path (retain) | not measured | unqualified |
+| `observer` | event/API; write path (retain) | not measured | unqualified |
+| `observer_state` | event/API; write path (retain); snapshot section retained | not measured | unqualified |
+| `interaction_ledger` | event/API; snapshot section retained | not measured | unqualified |
+| `predicate_store` | event/API; snapshot section retained | not measured | unqualified |
+| `archive` | event/API; write path (retain) | not measured | unqualified |
+| `cortical_idx` | recall-adjacent; write path (retain) | not measured | unqualified |
+| `hdc_idx` | recall-adjacent; write path (retain) | not measured | unqualified |
+| `lite_encoder` | recall-adjacent | not measured | unqualified |
+| `sparse_encoder` | recall-adjacent; write path (retain) | not measured | unqualified |
+| `learners` | recall-adjacent; write path (retain) | not measured | unqualified |
+| `span_store` | recall-adjacent; write path (retain) | not measured | unqualified |
+| `predictor` | recall-adjacent | not measured | unqualified |
+| `surprise_store` | recall-adjacent | not measured | unqualified |
+| `epistemic_debt_store` | recall-adjacent | not measured | unqualified |
+| `integration_kernel` | recall-adjacent | not measured | unqualified |
+| `surprise_learning` | recall-adjacent | not measured | unqualified |
+| `wisdom_promotion` | recall-adjacent | not measured | unqualified |
+| `learned_scorer` | recall-adjacent | not measured | unqualified |
+<!-- ORGAN-ABLATION-TABLE -->
+
+### Organ retention and rollback justification
+
+The checked-in noise declaration lacks `current_truth.p3` and
+`current_truth.abstain`; it cannot establish equivalence on every required panel.
+No deletions or contract changes are justified yet. The archive has no reader,
+but `put_memory` writes it, so the explicit write-dependency exclusion applies.
+
+`CHITTA_ABLATE_ORGANS` is parsed once per store open; unknown names reject open.
+Each disabled runtime organ starts empty. New organ-owned WAL records are
+suppressed; old WAL still replays into retained state. Snapshot assembly reads
+that retained state through the existing codecs. The snapshot layout is unchanged.
+The preserved state remains allocated: this experiment measures runtime effects,
+not memory savings or the eventual startup cost of removing an organ.
+
+`ablate-organs.py --preflight` prints the frozen margins and missing inputs.
+The default run measures each organ and four groups, three fresh copies each.
+Use `--organ NAME` to select an individual or group, `--output /tmp/RESULTS`
+for raw results, and `--write-table` to update the table above. The optional
+`--smriti-agent claude-code` runs the real visible panel without `--dry-run`;
+without an isolated replica agent, the report explicitly omits SMRITI.
+
+Every retained organ has an API or dependency below. API ownership was traced
+from `ChittaField` through store/FFI entry points; existing handlers, hooks, MCP
+and scripts remain untouched. These consumers justify retention independently
+of recall neutrality.
+
+| Remaining organ | Consumer / reason retained |
+|---|---|
+| `session_registry` | `cf_session_register / cf_session_list` |
+| `transcript_registry` | `cf_transcript_register / cf_transcript_list` |
+| `task_registry` | `cf_task_create / cf_task_get; log_event write path` |
+| `user_model_registry` | `cf_user_model_upsert / cf_user_model_list` |
+| `theme_organ` | `cf_theme_maintain / cf_theme_list` |
+| `analytics_registry` | `cf_analytics_append / cf_analytics_recent` |
+| `msg_registry` | `cf_emit_event / cf_get_events_by_target; task ledger and sessions` |
+| `skill_registry` | `cf_skill_upload / cf_skill_search` |
+| `agent_registry` | `cf_agent_upsert / cf_agent_list` |
+| `constraint_store` | `assert_constraint / query_constraints` |
+| `trigger_store` | `add_trigger / evaluate_triggers` |
+| `intervention_store` | `start_intervention / record_attribution` |
+| `agent_protocol_store` | `register_task / query_tasks` |
+| `wisdom_lineage_store` | `enroll_wisdom_lineage / query_wisdom_lineages` |
+| `symbol_event_log` | `log_symbol_event / query_symbol_events` |
+| `repl_sessions` | `repl_execute / repl_session_get` |
+| `event_tape` | `put_memory / log_event / recall_temporal_events` |
+| `cdawg` | `put_memory / log_event / recall_causal` |
+| `episode_hdc` | `log_event_ex / recall_hdcbind` |
+| `refutation_ledger` | `log_event / refutation_stats` |
+| `cec_policy_store` | `queue_experiments / executor_flush / list_policies` |
+| `decision_tape` | `log_decision / recall_true_counterfactual` |
+| `hypothesis_market` | `queue_experiments / hypothesis_probes` |
+| `turiya_monitor` | `consolidation_pass / turiya_status` |
+| `fep_prior` | `put_memory / consolidation_pass / fep_status` |
+| `observer` | `put_memory canonical BM25 terms` |
+| `observer_state` | `put_memory canonical BM25 terms and saved facts` |
+| `interaction_ledger` | `ledger_append / ledger_compile / ledger_query` |
+| `predicate_store` | `predicate_attach / predicate_run / predicate_list` |
+| `archive` | `put_memory writes process genomes; no reader found (retain: write dependency)` |
+| `cortical_idx` | `encode_memory / cf_search_attractor / recall_with_fallback_windowed` |
+| `hdc_idx` | `put_memory / recall_hdc` |
+| `lite_encoder` | `train_lite_encoder / encode_lite` |
+| `sparse_encoder` | `encode_memory / cf_reconstruction_error / cf_search_attractor` |
+| `learners` | `select_route / recommended_window / recall_semantic_ctx` |
+| `span_store` | `span_link_memory / span_query / span_for_memory` |
+| `predictor` | `enqueue_recall_effects / predict_needed` |
+| `surprise_store` | `record_surprise / query_surprises` |
+| `epistemic_debt_store` | `register_debt / query_debts` |
+| `integration_kernel` | `record_feedback / get_source_weights` |
+| `surprise_learning` | `record_surprise credit and feedback / surprise_learning_stats` |
+| `wisdom_promotion` | `upsert_wisdom_candidate / query_wisdom_candidates` |
+| `learned_scorer` | `update_scorer_model / effective_scorer_weight` |
+| `payloads / states / log / id_alloc` | core remember/get/WAL durability; not retirement candidates |
+| `retrieval_surfaces` | Stage B retrieval surface / reembedding; snapshot sidecar |
+| `assoc_edges / coactivation_stats` | recall_spreading / drain_pending_recall_effects; recall and snapshot |
+| `semantic_idx` | recall_semantic_ctx / put_memory; recall/write |
+| `time_idx` | recall_temporal / put_memory; recall/write |
+| `keyword_idx` | recall_keyword_ctx / put_memory; recall/write |
+| `artifacts / artifact_paths / artifact_idx` | recall_artifact / put_memory; recall/write |
+| `triplet_store` | query_subject / recall_spreading / keyed relations; recall/write |
+| `symbol_idx / call_graph / code_files` | code intelligence symbol/callgraph/file APIs |
+| `chunk_hash_idx / content_prov_idx` | put_memory duplicate admission; write path |
+| `prov_key_idx` | provenance_lookup; protected keyed lane |
+| `correction_key_idx` | correction_check; protected keyed lane |
+| `task_key_idx` | task_state_lookup; protected keyed lane |
+| `realm_members / kind_members` | realm and kind filtering / put_memory; recall/write |
+| `session_recent` | optional write-time same-session associations |
+| `hopfield` | recall_field; recall API |
+| `scoring_pipeline` | semantic and keyword ranking factors; recall |
+| `realm_stats / kind_stats` | put_memory embedding statistics |
+| `ack_scores` | acknowledged-use ranking; snapshot |
+| `recall_provenance` | cross-instance recall evidence; snapshot |
+
+### Ablation implementation validation
+
+Rust submodule `99351f7`: release build passed with the existing 768-dimensional
+`nomic-embed-text-v1.5`, text-format-1 identity; `format-id` remains
+`9230643459983636874`. This build wrapper has no `.chitta-embed-identity` file.
+Rust: **295 passed, 2 ignored** (289 baseline tests plus six ablation tests;
+none removed). All **25 CTests** passed across the initial run and targeted
+rechecks. Three initial chaos fixture timeouts are retained in the untracked
+logs; the model-dependent embed test passed after setting its model path.
+The actual NFS replica chaos panel passed **9/9**, including stale/foreign
+locks, SIGKILL, ENOSPC, WAL deletion, queue replay and hook/MCP restarts.
+MCP **149**, SMRITI unit tests **46**, all hook scripts (two isolated rechecks),
+CI Ruff and contract comparison passed; the latter printed `contracts unchanged`.
+No shell source changed. No tests, organs or tools were removed.
+
+The first corrected control repetition admitted **200/200** distinct remembers,
+recovered their IDs and exact contents through SIGKILL/WAL replay, preserved
+**3/3** keyed lanes, and matched **20/20 distinct-query ordered recall results**
+across a further restart (also **20/20** fixed-query full responses). Its golden
+nDCG was **0.500078363**, current-truth **4/40** answerable hits with **10/10**
+abstentions, and hook medians off/on **863/869 ms** (p95 **3548/1242 ms**,
+15 samples each, zero empty outputs). This is one control repetition, not an
+equivalence verdict. The three-repetition matrix remains in progress; raw
+reports are under `/tmp/p2-ablation-matrix`. The earlier diagnostic pilot
+(`/tmp/p2-ablation-pilot`) had a multiline-JSON assertion bug, was stopped,
+and is excluded from comparisons. The assertion now has a regression check.

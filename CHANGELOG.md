@@ -11,6 +11,14 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 ## [Unreleased]
 
 ### Added
+- Per-open `CHITTA_ABLATE_ORGANS` experiments for 43 field organs, with
+  empty runtime views, suppressed new organ WAL events, and preserved snapshot
+  state for rollback. Six new Rust tests cover parsing, runtime isolation,
+  rollback sections, disabled WAL writes, and core writes/keyed lanes.
+  `scripts/ablate-organs.py` declares noise margins before three-run scratch-copy
+  panels and refuses qualification when metrics or invariants are missing.
+  No tools or organs retired: the checked-in noise file lacks current-truth
+  margins. Per-organ consumers and measurements are in `docs/FIELD_PERF.md`.
 - Opt-in nightly replica canary with dated reports, calibrated golden-score
   regression exits, explicit current-truth availability/calibration checks,
   and a disabled-by-default user timer (`--enable-canary`). On 2026-09-16,
