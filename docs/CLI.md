@@ -3,7 +3,7 @@
 Status as of 2026-09-16.
 
 `chittad` is the daemon binary (memory server, background processing, Unix socket listener).
-The `chitta` client is implemented in `chitta/src/rpc_server.cpp`. Run
+The `chitta` client in `chitta/src/rpc_server.cpp` discovers tool commands from the daemon. Run
 `chitta --help` for categories and `chitta <tool> --help` for parameters.
 Global client options include `--socket-path PATH`, `--json`, `--toon`,
 `--text-only` and `--help`. `CHITTA_SOCKET_PATH` selects a private daemon.
@@ -40,6 +40,104 @@ chitta ledger_op --help
 - [Embed Model Resolution](#embed-model-resolution)
 - [Daemon Internals](#daemon-internals)
 - [Troubleshooting](#troubleshooting)
+
+---
+
+## chitta — Discovered tool commands
+
+`chitta <tool> --param value` resolves tools from the selected daemon's
+`tools/list`. Use `CHITTA_SOCKET_PATH` or `--socket-path` to select a daemon.
+`chitta <tool> --help` shows its schema description, parameters, required flags,
+and explicit defaults. Bare `chitta --help` keeps the existing usage text.
+
+The client caches schemas in `cli-tools-<socket-hash>.json` in its runtime
+socket directory (`$XDG_RUNTIME_DIR/chitta`, then `/run/user/<uid>/chitta`,
+then `~/.cache/chitta`). The cache records the full socket path, daemon PID,
+process start ticks, and boot ID. A different daemon identity or unknown tool
+triggers a fresh `tools/list`. Cache files are private and replaced atomically;
+a corrupt cache is fetched again. Previously cached help works while the daemon
+is down. A first-time tool needs a running daemon to discover its schema.
+
+Parameters follow the JSON schema: strings stay strings (including numeric IDs),
+numbers and booleans use JSON values, and objects/arrays accept JSON. Arrays also
+accept comma-separated values, including a single value. Both `--some-param`
+and `--some_param` address `some_param`. Required parameters are checked before
+calling the daemon; optional explicit schema defaults are supplied when omitted.
+Descriptions may mention daemon defaults without declaring a JSON Schema
+`default`; those parameters remain omitted. Unknown parameters are forwarded for
+handler extensions. `remember`/`grow` retain the `--kind` alias for `--type`.
+Global output and socket flags can appear before or after the tool name.
+
+The refactor expands CLI reachability from **184 to 369 names**: **320 advertised
+tools**, plus **49 legacy registered handlers**. The name contract covers
+the union of advertised daemon tools and retained legacy handlers (369 names). Existing client-side commands such as
+`realm_detect`, `status`, and `queue_write` keep their local behavior.
+
+These 49 old CLI names are absent from `tools/list` but still have registered
+handlers. They remain callable; the daemon validates their arguments, and their
+help explicitly says no schema is advertised:
+
+`cleanup`,
+`cycle`,
+`dedupe_symbols`,
+`describe_symbol`,
+`distill_status`,
+`epiplexity_check`,
+`export_soul`,
+`export_training_pairs`,
+`extract_symbols`,
+`fep_status`,
+`file_dependents`,
+`file_imports`,
+`harvest_scope`,
+`health_check_start`,
+`hygiene_run`,
+`import_soul`,
+`ingest_source`,
+`ledger_append`,
+`ledger_compile`,
+`ledger_contradictions`,
+`ledger_op`,
+`ledger_query`,
+`msg_ack`,
+`predicate_attach`,
+`predicate_list`,
+`predicate_run`,
+`queue_experiments`,
+`recall_temporal_events`,
+`reconcile_pass`,
+`reembed_memories`,
+`resolve_callsites`,
+`routed_recall`,
+`seed_hdc_geometry`,
+`session_deregister`,
+`session_heartbeat`,
+`session_register`,
+`tape_stats`,
+`transcript_get`,
+`transcript_list`,
+`transcript_parse`,
+`transcript_register`,
+`transcript_remove`,
+`transcript_update`,
+`turiya_status`,
+`type_hierarchy`,
+`verbalize_rules`,
+`version_check`,
+`wiki_export`,
+`witness_memory`.
+
+These six old names have no registered handler and are dropped:
+
+`background_schedule`, `background_status`, `cleanup_code_wisdom`, `migrate_vss`, `theme_assign_orphans`, `theme_maintain`.
+
+CLI help contracts now use schema descriptions, schema property order,
+required markers, explicit default values, and required-parameter examples.
+Parameters absent from a schema disappear; newly advertised parameters appear.
+The six names without handlers leave the help snapshot, 49 retained legacy
+handlers receive explicit fallback help, and 191 newly reachable daemon tools
+enter it. Bare usage, daemon/MCP
+schemas, and all non-CLI contracts remain unchanged.
 
 ---
 

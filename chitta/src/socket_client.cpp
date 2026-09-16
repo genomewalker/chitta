@@ -1,4 +1,5 @@
 #include <chitta/socket_client.hpp>
+#include <chitta/rpc/cli_tools.hpp>
 #include <chitta/version.hpp>
 #include <nlohmann/json.hpp>
 #include <sys/socket.h>
@@ -11,8 +12,133 @@
 #include <thread>
 #include <chrono>
 #include <iostream>
+#include <fstream>
+#include <sstream>
+#include <filesystem>
 
 namespace chitta {
+
+namespace {
+
+// SO_PEERCRED identifies the actual listener even for an explicit socket path.
+// /proc start ticks plus boot ID distinguish PID reuse and machine restarts.
+nlohmann::json cli_daemon_identity(const std::string& path) {
+    int fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    if (fd < 0) return nullptr;
+    sockaddr_un addr{};
+    addr.sun_family = AF_UNIX;
+    if (path.size() >= sizeof(addr.sun_path)) {
+        close(fd);
+        return nullptr;
+    }
+    std::memcpy(addr.sun_path, path.c_str(), path.size() + 1);
+    ucred peer{};
+    socklen_t size = sizeof(peer);
+    bool connected = ::connect(fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == 0;
+    bool identified = connected && getsockopt(fd, SOL_SOCKET, SO_PEERCRED, &peer, &size) == 0;
+    close(fd);
+    if (!identified) return nullptr;
+
+    std::ifstream stat("/proc/" + std::to_string(peer.pid) + "/stat");
+    std::string line, field, boot;
+    std::getline(stat, line);
+    const auto end = line.rfind(')'); // comm may itself contain spaces or ')'.
+    if (end == std::string::npos) return nullptr;
+    std::istringstream fields(line.substr(end + 1));
+    for (int number = 3; number <= 22; ++number) {
+        if (!(fields >> field)) return nullptr;
+    }
+    std::ifstream boot_file("/proc/sys/kernel/random/boot_id");
+    if (!std::getline(boot_file, boot)) return nullptr;
+    return {{"pid", peer.pid}, {"start_time", field}, {"boot_id", boot}};
+}
+
+bool normalize_cli_tools(nlohmann::json& tools) {
+    if (!tools.is_array()) return false;
+    for (auto& tool : tools) {
+        if (!tool.is_object() || !tool.contains("name") || !tool["name"].is_string() ||
+            !tool.contains("inputSchema") || !tool["inputSchema"].is_object()) return false;
+        if (!tool.contains("description")) tool["description"] = "";
+        if (!tool["description"].is_string()) return false;
+        auto& schema = tool["inputSchema"];
+        if (!schema.contains("properties") || schema["properties"].is_null())
+            schema["properties"] = nlohmann::json::object();
+        if (!schema["properties"].is_object()) return false;
+        for (const auto& property : schema["properties"]) {
+            if (!property.is_object()) return false;
+            for (const auto* key : {"type", "description"}) {
+                if (property.contains(key) && !property[key].is_string()) return false;
+            }
+        }
+        if (!schema.contains("required") || schema["required"].is_null())
+            schema["required"] = nlohmann::json::array();
+        if (!schema["required"].is_array()) return false;
+        for (const auto& name : schema["required"]) {
+            if (!name.is_string()) return false;
+        }
+    }
+    return true;
+}
+
+void write_cli_cache(const std::string& path, const nlohmann::json& cache) {
+    std::string temp = path + ".XXXXXX";
+    int fd = mkstemp(temp.data()); // private, atomic publication, concurrent readers safe
+    if (fd < 0) return;
+    const auto bytes = cache.dump();
+    size_t written = 0;
+    while (written < bytes.size()) {
+        auto n = write(fd, bytes.data() + written, bytes.size() - written);
+        if (n < 0 && errno == EINTR) continue;
+        if (n <= 0) break;
+        written += static_cast<size_t>(n);
+    }
+    const int closed = close(fd);
+    if (written == bytes.size() && closed == 0) std::rename(temp.c_str(), path.c_str());
+    unlink(temp.c_str());
+}
+
+} // namespace
+
+std::optional<nlohmann::json> discover_cli_tool(const std::string& socket_path,
+                                               const std::string& name) {
+    using json = nlohmann::json;
+    const auto socket = std::filesystem::absolute(socket_path).lexically_normal().string();
+    const auto path = get_socket_dir() + "/cli-tools-" + std::to_string(djb2_hash(socket)) + ".json";
+    json cached = json::object();
+    {
+        std::ifstream input(path);
+        if (input) {
+            auto candidate = json::parse(input, nullptr, false);
+            if (candidate.is_object() && candidate.value("socket", json()) == socket &&
+                candidate.value("version", json()) == 1 && candidate.contains("identity") &&
+                candidate.contains("tools") && normalize_cli_tools(candidate["tools"]))
+                cached = std::move(candidate);
+        }
+    }
+    auto find = [&](const json& tools) -> std::optional<json> {
+        for (const auto& tool : tools) if (tool.at("name") == name) return tool;
+        return std::nullopt;
+    };
+    const auto identity = cli_daemon_identity(socket);
+    if (cached.contains("tools") && (identity.is_null() || cached["identity"] == identity)) {
+        if (auto tool = find(cached["tools"])) return tool;
+    }
+
+    SocketClient client(socket);
+    if (!client.connect()) return std::nullopt;
+    auto response = client.request(R"({"jsonrpc":"2.0","id":1,"method":"tools/list"})");
+    if (!response) return std::nullopt;
+    auto reply = json::parse(*response, nullptr, false);
+    if (!reply.is_object() || !reply.contains("result") || !reply["result"].is_object() ||
+        !reply["result"].contains("tools")) return std::nullopt;
+    auto tools = reply["result"]["tools"];
+    if (!normalize_cli_tools(tools)) return std::nullopt;
+    // Never publish schemas for an identity that changed while fetching them.
+    if (!identity.is_null() && cli_daemon_identity(socket) == identity) {
+        write_cli_cache(path, {{"version", 1}, {"socket", socket}, {"identity", identity}, {"tools", tools}});
+    }
+    return find(tools);
+}
 
 
 SocketClient::SocketClient()
