@@ -588,6 +588,42 @@
   "name": "assert_fact"
  },
  {
+  "description": "Read-only assoc-graph census: per-EdgeType directed-edge count plus weight histogram (<0.05 / 0.05-0.2 / 0.2-0.5 / 0.5-0.8 / >=0.8). Measure-first gate for plasticity levers.",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "assoc_census"
+ },
+ {
+  "description": "Gate B: decay + floor-prune one assoc EdgeType (wire numbering 0-5, default 3=CoRetrieved). Every edge weight is multiplied by factor; edges below prune_below are removed. apply=false is a dry run (counts only). One-shot saturation migration: factor=1.0, prune_below=0.2. Snapshot before apply.",
+  "inputSchema": {
+   "properties": {
+    "apply": {
+     "type": "boolean"
+    },
+    "edge_type": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "factor": {
+     "type": "number"
+    },
+    "prune_below": {
+     "type": "number"
+    }
+   },
+   "type": "object"
+  },
+  "name": "assoc_decay"
+ },
+ {
   "description": "Attach supporting evidence to an epistemic debt \u2014 memory IDs + confidence",
   "inputSchema": {
    "properties": {
@@ -1278,6 +1314,18 @@
   "name": "defer_debt"
  },
  {
+  "description": "#13 retro-backfill of SameSession edges over existing session-tagged memories (same K=3 decaying-weight rule as the write-time hook). apply=false is a dry run: reports sessions, memories, sibling pairs, and a group-size histogram, writing nothing. apply=true creates the edges (idempotent; rollback via remove_assoc_edges_by_type).",
+  "inputSchema": {
+   "properties": {
+    "apply": {
+     "type": "boolean"
+    }
+   },
+   "type": "object"
+  },
+  "name": "densify_backfill"
+ },
+ {
   "description": "Detect contradictions for a stored memory against realm peers",
   "inputSchema": {
    "properties": {
@@ -1312,6 +1360,30 @@
    "type": "object"
   },
   "name": "disable_source"
+ },
+ {
+  "description": "Synchronously distill ONE session now and return the counts (learnings + value-facts stored/deduped). Runs the lock-fixed distill path in-daemon; recall stays responsive.",
+  "inputSchema": {
+   "properties": {
+    "realm": {
+     "description": "Optional realm (default brahman or the registered realm)",
+     "type": "string"
+    },
+    "session_id": {
+     "description": "Session ID to distill",
+     "type": "string"
+    },
+    "transcript_path": {
+     "description": "Optional JSONL path; registers it if given, else resolves from durable transcript/register",
+     "type": "string"
+    }
+   },
+   "required": [
+    "session_id"
+   ],
+   "type": "object"
+  },
+  "name": "distill_now"
  },
  {
   "description": "Change distillation model",
@@ -1470,6 +1542,29 @@
    "type": "object"
   },
   "name": "effective_scorer_weights"
+ },
+ {
+  "description": "Semantic-index coverage: how many memories SHOULD have a vector vs how many DO. pending_count cannot answer this \u2014 the embed queue drains on failure as well as success, so a lost embedding leaves the queue empty.",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "embed_coverage"
+ },
+ {
+  "description": "For a memory id: cosine of its STORED vector against a fresh single-prefix embed vs a double-prefix embed of the same content. ~1.0 identifies which vector space the memory actually lives in.",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "embed_probe"
  },
  {
   "description": "Fast embed symbol metadata",
@@ -1768,35 +1863,6 @@
    "type": "object"
   },
   "name": "explore_recall"
- },
- {
-  "description": "Export query-passage pairs as JSONL for BGE embedding fine-tuning. Generates positives from memories and hard negatives.",
-  "inputSchema": {
-   "properties": {
-    "include_negatives": {
-     "description": "Generate hard negatives (default: true)",
-     "type": "boolean"
-    },
-    "max_pairs": {
-     "description": "Max pairs to export (default: 10000)",
-     "type": "integer"
-    },
-    "min_confidence": {
-     "description": "Min confidence threshold (default: 0.5)",
-     "type": "number"
-    },
-    "output_path": {
-     "description": "Output JSONL path (default: ~/.claude/training/pairs.jsonl)",
-     "type": "string"
-    },
-    "realm": {
-     "description": "Filter to specific realm (default: all)",
-     "type": "string"
-    }
-   },
-   "type": "object"
-  },
-  "name": "export_training_pairs"
  },
  {
   "description": "Get file content at time (stub)",
@@ -2740,27 +2806,6 @@
   "name": "health_check"
  },
  {
-  "description": "Start autonomous health-check sadhana that monitors memory quality, dedup ratio, and embedding coverage",
-  "inputSchema": {
-   "properties": {
-    "interval_seconds": {
-     "description": "Check interval in seconds (default: 3600)",
-     "type": "integer"
-    },
-    "max_turns": {
-     "description": "Max check cycles (default: 0 = unlimited)",
-     "type": "integer"
-    },
-    "realm": {
-     "description": "Realm to monitor (default: brahman)",
-     "type": "string"
-    }
-   },
-   "type": "object"
-  },
-  "name": "health_check_start"
- },
- {
   "description": "Combined vector + BM25 + graph recall",
   "inputSchema": {
    "properties": {
@@ -2869,38 +2914,6 @@
    "type": "object"
   },
   "name": "impl_start"
- },
- {
-  "description": "Ingest external content (URL, file, directory) into memory via SSL distillation. Fetches content, chunks it, runs LLM distillation, stores learnings + triplets.",
-  "inputSchema": {
-   "properties": {
-    "max_chunks": {
-     "description": "Max chunks to process (default: 30)",
-     "type": "integer"
-    },
-    "model": {
-     "description": "LLM model for distillation",
-     "type": "string"
-    },
-    "realm": {
-     "description": "Target realm (default: brahman)",
-     "type": "string"
-    },
-    "source": {
-     "description": "URL, file path, or directory path to ingest",
-     "type": "string"
-    },
-    "type": {
-     "description": "Source type: auto|url|file|directory (default: auto)",
-     "type": "string"
-    }
-   },
-   "required": [
-    "source"
-   ],
-   "type": "object"
-  },
-  "name": "ingest_source"
  },
  {
   "description": "List global insights",
@@ -4452,6 +4465,31 @@
   "name": "memory_lock_status"
  },
  {
+  "description": "Record an observed outcome for a memory into its Beta utility posterior (success raises alpha, failure raises beta)",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "description": "Node ID the outcome is about",
+     "type": "string"
+    },
+    "success": {
+     "description": "Did acting on this memory work?",
+     "type": "boolean"
+    },
+    "weight": {
+     "description": "Observation weight, capped at 5.0 (default 1.0)",
+     "type": "number"
+    }
+   },
+   "required": [
+    "id",
+    "success"
+   ],
+   "type": "object"
+  },
+  "name": "memory_outcome"
+ },
+ {
   "description": "Show why a memory exists: source, evidence, superseded_by, supersedes relations",
   "inputSchema": {
    "properties": {
@@ -5860,6 +5898,69 @@
   "name": "recall"
  },
  {
+  "description": "Analogical recall over the triplet lane (vector-symbolic, no LLM/GPU). Two modes embedding similarity cannot express, because both are about structure rather than wording. 'proportional' solves a:b :: c:? \u2014 give three entities, get ranked fillers for the fourth. 'structural' finds memories whose relation graph has the same SHAPE as a probe memory, with entity names factored out, so a pattern learned in one project matches the same pattern in another; set exclude_realm (or cross_realm) for that cross-project transfer. Use when you want 'what else looks like this?', not 'what mentions these words?'.",
+  "inputSchema": {
+   "properties": {
+    "a": {
+     "description": "proportional: source entity",
+     "type": "string"
+    },
+    "b": {
+     "description": "proportional: what a maps to",
+     "type": "string"
+    },
+    "c": {
+     "description": "proportional: target entity; the tool returns its counterpart to b",
+     "type": "string"
+    },
+    "cross_realm": {
+     "description": "structural: shorthand for excluding the probe memory's own realm (default false)",
+     "type": "boolean"
+    },
+    "exclude_realm": {
+     "description": "structural: drop results from this realm \u2014 the cross-project transfer case",
+     "type": "string"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max results, 1-100 (default 8)"
+    },
+    "memory_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "structural: probe memory whose relation shape is matched (excluded from results)"
+    },
+    "mode": {
+     "description": "'proportional' (a:b :: c:?) or 'structural' (shape match). Default: structural",
+     "type": "string"
+    },
+    "realm": {
+     "description": "structural: restrict results to this realm",
+     "type": "string"
+    },
+    "text": {
+     "description": "structural: free-text probe, used when memory_id is absent; anchors on the entities it mentions",
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "recall_analogy"
+ },
+ {
   "description": "Budget-aware recall",
   "inputSchema": {
    "properties": {
@@ -6038,6 +6139,109 @@
    "type": "object"
   },
   "name": "recall_keyword"
+ },
+ {
+  "description": "Fan-in prompt recall lanes over one daemon RPC",
+  "inputSchema": {
+   "properties": {
+    "budget_ms": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Per-lane wall-clock budget override; capped by CHITTA_RPC_BUDGET_MS"
+    },
+    "ctx_query": {
+     "description": "Optional context query; defaults to query",
+     "type": "string"
+    },
+    "lanes": {
+     "description": "Subset of sem, ctx, hyb, kw, corr, corrk (default all)",
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "limits": {
+     "description": "Per-lane result limits (sem, ctx, hyb, kw, corr)",
+     "properties": {
+      "corr": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "string"
+        }
+       ],
+       "default": 3
+      },
+      "ctx": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "string"
+        }
+       ],
+       "default": 4
+      },
+      "hyb": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "string"
+        }
+       ],
+       "default": 5
+      },
+      "kw": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "string"
+        }
+       ],
+       "default": 3
+      },
+      "sem": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "string"
+        }
+       ],
+       "default": 6
+      }
+     },
+     "type": "object"
+    },
+    "query": {
+     "description": "Prompt query shared by sem, hyb, kw, corr, and corrk",
+     "type": "string"
+    },
+    "realm": {
+     "description": "Realm for sem, ctx, hyb, and kw",
+     "type": "string"
+    }
+   },
+   "required": [
+    "query"
+   ],
+   "type": "object"
+  },
+  "name": "recall_lanes"
  },
  {
   "description": "Return last k occurrences of (tool, entity) from the CEC event tape",
@@ -6709,6 +6913,24 @@
    "type": "object"
   },
   "name": "reject_memory"
+ },
+ {
+  "description": "Bulk-remap realms per {old:new} mapping (mapping_file=path or mapping=object; dry_run defaults true)",
+  "inputSchema": {
+   "properties": {
+    "dry_run": {
+     "type": "boolean"
+    },
+    "mapping": {
+     "type": "object"
+    },
+    "mapping_file": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "remap_realms"
  },
  {
   "description": "Store text in memory with optional tags and realm",
@@ -7646,6 +7868,31 @@
   "name": "search_symbols"
  },
  {
+  "description": "Dense-kNN SemanticNeighbor edge backfill: for each non-deleted memory, link its top-k realm-scoped HNSW neighbors (cosine>=min_cos) with bidirectional similarity edges (wire 6). The first genuine memory<->memory knowledge relation in the assoc graph, distinct from CoRetrieved's retrieval-history prior. apply=false is a dry run (counts candidate edges, no writes). apply=true creates them (idempotent; rollback via remove_assoc_edges_by_type edge_type=6).",
+  "inputSchema": {
+   "properties": {
+    "apply": {
+     "type": "boolean"
+    },
+    "k": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "min_cos": {
+     "type": "number"
+    }
+   },
+   "type": "object"
+  },
+  "name": "semantic_backfill"
+ },
+ {
   "description": "List active sessions",
   "inputSchema": {
    "properties": {
@@ -8273,6 +8520,25 @@
    "type": "object"
   },
   "name": "spectral_drift"
+ },
+ {
+  "description": "Stage B: set a memory's natural-language retrieval surface and re-embed from it (keeps telegraphic content as display). Pass surface='' to clear and re-embed from content. Returns the id and embedded flag.",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "type": "string"
+    },
+    "surface": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "id",
+    "surface"
+   ],
+   "type": "object"
+  },
+  "name": "stageb_set_surface"
  },
  {
   "description": "Begin tracking an agent intervention \u2014 records intent, action, preconditions and expected observables before execution",
@@ -9431,27 +9697,6 @@
    "type": "object"
   },
   "name": "why_active"
- },
- {
-  "description": "Export memories as Obsidian-compatible .md wiki with backlinks. Groups by realm and kind, generates index pages.",
-  "inputSchema": {
-   "properties": {
-    "max_memories": {
-     "description": "Max memories per realm (default: 5000)",
-     "type": "integer"
-    },
-    "output_dir": {
-     "description": "Output directory (default: ~/.claude/wiki/)",
-     "type": "string"
-    },
-    "realm": {
-     "description": "Filter to specific realm (default: all)",
-     "type": "string"
-    }
-   },
-   "type": "object"
-  },
-  "name": "wiki_export"
  },
  {
   "description": "Show wisdom homeostasis statistics \u2014 counts by state, mean staleness, support/contradiction mass totals",

@@ -1,6 +1,6 @@
 # chitta MCP API reference
 
-Generated from a live daemon on 2026-09-02, 343 tools — regenerate with `python3 scripts/gen-tools-docs.py`.
+API reference generated from a live daemon on 2026-09-02; MCP static table synchronized on 2026-09-16 (320 daemon tools) with `python3 scripts/gen-tools-static.py` (`--check` verifies freshness). Regenerate this reference with `python3 scripts/gen-tools-docs.py`.
 
 91 tools are listed in `tools/list` by default. The other 252 are hidden to keep the model's tool list small, and stay callable through the `advanced` gateway:
 
