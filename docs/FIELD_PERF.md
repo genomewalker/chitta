@@ -20,12 +20,12 @@ its Rust guards before returning; separate FFI calls are not one transaction.
 | Queue counters and paths | Counter values atomic; pointer/path publication uses a dedicated mutex and copy-out snapshot. File scans and FFI calls occur after releasing it. | `chitta/include/chitta/rpc/field_handler.hpp:208` |
 | Write notification callback | Mutex on setter/copy; callback invoked outside lock so reentrant replacement is safe. | `chitta/include/chitta/rpc/field_handler.hpp:220` |
 | Registrations, schemas, recall callback, embed/subconscious/load pointers | Published during construction/startup before serving; thereafter immutable. Owners remain alive while workers drain. | `chitta/include/chitta/rpc/field_handler.hpp:162`, `chitta/src/simple_cli.cpp:274` |
-| RPC budgets and maintenance load/wait counters | Atomics; immutable configured limits. | `chitta/include/chitta/rpc/work_policy.hpp:101`, `chitta/include/chitta/rpc/field_handler.hpp:748` |
+| RPC budgets and maintenance load/wait counters | Atomics; immutable configured limits. | `chitta/include/chitta/rpc/work_policy.hpp:101`, `chitta/include/chitta/rpc/field_handler.hpp:762` |
 | Consolidation admission | Atomic in-flight flag; request-local work and Rust-owned stored state. | `chitta/src/handlers/field_memory_recall.cpp:2165` |
-| RPC / compaction lifetime | Foreground pool explicitly drained before referenced locals die; owned compaction thread joined before pool and handlers are destroyed. | `chitta/src/simple_cli.cpp:264`, `chitta/src/simple_cli.cpp:1334` |
+| RPC / compaction lifetime | Foreground pool explicitly drained before referenced locals die; owned compaction thread joined before pool and handlers are destroyed. | `chitta/src/simple_cli.cpp:264`, `chitta/src/simple_cli.cpp:1335` |
 | Queue lane / applied-ack state | One worker owns each lane. Existing checked `cf_sync` precedes applied-ack fsync/rename. Phase 1 changes acquisition only. | `chitta/src/queue_processor.cpp:182`, `chitta/src/queue_processor.cpp:937` |
-| Maintenance / distillation / backfill | Handler factories acquire the global lock; Rust collect/plan/apply phases own their state. Belief read/decide/write sequences lack a store-level compare-and-apply transaction. | `chitta/src/distillation.cpp:78`, `chitta/include/chitta/rpc/field_handler.hpp:342`, `chitta/src/simple_cli.cpp:521` |
-| Subconscious direct store writes | Existing raw global-mutex injection must obey the same switch as handler factories. | `chitta/src/subconscious.cpp:106` |
+| Maintenance / distillation / backfill | Handler factories obey the startup switch; Rust collect/plan/apply phases own their state. Belief read/decide/write sequences lack a store-level compare-and-apply transaction. | `chitta/src/distillation.cpp:78`, `chitta/include/chitta/rpc/field_handler.hpp:352`, `chitta/src/simple_cli.cpp:534` |
+| Subconscious direct store writes | Startup injects a null global-mutex pointer when the shared switch is off; local queue locks remain. | `chitta/src/subconscious.cpp:106`, `chitta/src/simple_cli.cpp:284` |
 
 The acknowledgement policy is independent of acquisition: historically exclusive
 write classes call `FieldStore::sync()` after dispatch, while existing lock-free
@@ -72,6 +72,62 @@ the revised no-worse gate is unmet. Both fixed-query controls remain 20/20.
 Current-truth is still 20/50 and golden nDCG is 0.5772. These are observations,
 not qualification to remove the global lock. The profiler observes 33 exercised
 components, with startup-inclusive maximum hold 705.761 ms and wait 71.131 ms.
+
+## Global-lock switch validation — 2026-09-16
+
+`CHITTA_GLOBAL_LOCK=1` retains the historical dispatcher policy; exactly `0`
+removes `rpc_mutex_` from every RPC, queue dispatch and background lock factory,
+including maintenance, distillation, backfill and subconscious callbacks.
+Configuration is frozen at startup. Unset or invalid values retain the global
+lock. This keeps removal disabled by default while the exit gate is unmet.
+The previous write classification still controls WAL sync independently of
+mutex ownership. Four policy tests cover both values, unset/invalid input,
+publication of configuration, real contention and the actual `cf_sync` calls.
+
+All three migrated workload classes ran for 300 seconds with 12 persistent
+writer clients and 12 reader clients on private copies, with the switch set to
+0. The first ledger stage preceded the all-tools bypass; the two memory classes
+used the final bypass. Background backfill and Rust touch flushing remain active
+on these quiesced copies. No client exceeded its 30-second deadline.
+
+| Initial 300 s class run | Acknowledged writes | Reader iterations | Maximum RPC (ms) | Rust hold / wait maximum (ms) | Holds >50 ms |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| ledger | 15,103 | 3,197 | 2,567.902 | 348.833 / 219.516 | 2,237 |
+| observe | 21,113 | 11,023 | 1,928.914 | 242.633 / 831.098 | 4,945 |
+| remember | 22,825 | 9,023 | 1,131.022 | 350.516 / 717.085 | 4,350 |
+
+All three runs had zero client errors, exact memory counts and no malformed Rust
+timing records. Ledger replay verified all 15,103 acknowledgements. Initial
+memory runs failed an overly strict replay comparison: the remember diagnostic
+showed only access_count 16,342→16,363 and last_accessed_ms advancing while
+verification itself called touching reads. The observe failure did not retain
+field differences and remains unexplained by that initial report. These initial
+failures are preserved; they are not clean replay results. The stress tool's
+corrected comparison and follow-up measurements are documented separately below.
+
+A preceding connection-per-call smoke run reset a connection after 88 ledger
+acknowledgements. Persistent-client runs avoid connection churn; the tool keeps
+that mode available as a separate diagnostic. An observe smoke also exposed a
+Rust/native stderr interleaving. The profiler now emits each short record in one
+write; the final observe and remember runs recorded 27,214 and 20,329 intact
+timing lines respectively.
+
+Final gates: Rust release build and 291 tests pass (two existing ignored), CTest
+30/30, MCP 149/149, hooks 23/23, SMRITI 46/46, CI Ruff and chaos 9/9 with the
+switch off and BLAS/OMP/Rayon threads limited to one. An initial CTest ledger
+takeover fixture hit its 75 ms fail-open client budget; its unchanged retry and
+the final full suite passed. Same-original-copy restart identity is **20/20
+after versus 18/20 before**, with both fixed controls **20/20**. Separate initial
+stress-copy identities were ledger 18/20, observe 18/20 and remember 15/20;
+the last failed its individual no-worse gate. Current-truth remains 20/50;
+golden nDCG is 0.5691 versus 0.5708 before (both below the grader's 0.7 target).
+Embedding identity and contracts are unchanged.
+
+**Removal is unqualified for every class:** every full workload exceeded the
+50 ms Rust hold gate. Maintenance/control, sadhana, code-intelligence and deletion
+workloads have not each received a dedicated 300-second mixed-client run.
+Factory tests and chaos coverage do not substitute for those runs. The live-week
+hold gate is also unmeasured; deployment and live writes are outside this stream.
 
 ## Acknowledged-write durability
 

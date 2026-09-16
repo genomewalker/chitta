@@ -2,6 +2,20 @@
 
 Status as of 2026-09-16.
 
+### Phase 1 global-lock rollback switch (2026-09-16)
+
+`CHITTA_GLOBAL_LOCK` is read once at daemon startup. The default is `1`, which
+retains the existing C++ dispatcher serialization; exactly `0` bypasses it for
+every tool, the queue and background callers. Other values retain the mutex.
+The ledger, C++ caches, callback publication and Rust components keep their own
+locks. Existing write acknowledgement/sync classifications are unchanged.
+
+Global-lock removal is experimental: multi-FFI maintenance transactions remain
+unqualified, and the measured Rust hold and restart-identity gates must pass
+before changing the default. A hook environment alone cannot change an already
+running daemon's policy. See [FIELD_PERF.md](FIELD_PERF.md) for inventory and
+measurements. Stream tests use private copies from `scripts/eval-replica.sh`.
+
 ### Phase 6 runtime placement and embedding workers (2026-09-16)
 
 | Environment | Default | Meaning |

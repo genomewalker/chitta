@@ -165,7 +165,7 @@ public:
         register_tools();
     }
 
-    // Requires the caller to hold rpc_mutex_ (queue and normal dispatch).
+    // C++ state has local synchronization; global serialization is optional.
     ToolResult dispatch_session(const std::string& tool, const json& args);
 
     // Startup-only: embedder, subconscious, mind path and recall callback are
@@ -251,7 +251,16 @@ public:
     // returning. The FFI has no Rust→C++ callbacks; adding one would let the
     // two lock domains interleave and deadlock across the language boundary.
     // See the matching note at the top of field_store.hpp.
+    static bool global_lock_enabled() {
+        static const bool enabled = [] {
+            const char* value = std::getenv("CHITTA_GLOBAL_LOCK");
+            return !value || std::strcmp(value, "0") != 0;
+        }();
+        return enabled;
+    }
+
     std::unique_lock<std::shared_mutex> acquire_lock() {
+        if (!global_lock_enabled()) return {};
         const auto started = std::chrono::steady_clock::now();
         std::unique_lock<std::shared_mutex> lock(rpc_mutex_);
         record_lock_wait(ms_since(started));
@@ -264,6 +273,7 @@ public:
     // demotion) does not starve concurrent reader RPCs. Writer RPCs still
     // serialize via the exclusive side.
     std::shared_lock<std::shared_mutex> acquire_shared_lock() {
+        if (!global_lock_enabled()) return {};
         const auto started = std::chrono::steady_clock::now();
         std::shared_lock<std::shared_mutex> lock(rpc_mutex_);
         record_lock_wait(ms_since(started));
@@ -343,7 +353,7 @@ public:
                                 int stale_days = 30,
                                 float dup_threshold = 0.97f,
                                 size_t max_dups = 5) {
-        std::unique_lock<std::shared_mutex> _lk(rpc_mutex_);
+        auto _lk = acquire_lock();
         size_t demoted = 0, contradictions_archived = 0, dups_merged = 0;
 
         // 1. Stale belief demotion: archive Active memories with decayed strength below threshold
@@ -595,7 +605,7 @@ public:
         auto id = request.value("id", json());
 
         if (method == "tools/list") {
-            std::shared_lock<std::shared_mutex> _lk(rpc_mutex_);
+            auto _lk = acquire_shared_lock();
             return make_response(id, tool_list());
         }
         if (method == "tools/call") {
@@ -672,15 +682,21 @@ public:
             }
 
             ToolResult result;
-            bool _was_write = false;
+            // Durability follows the historical classification, independently
+            // of whether the global mutex is enabled for this process.
+            const bool legacy_bypass = is_subprocess_tool(name)
+                || is_lockfree_write(name) || is_lockfree_read(name);
+            const bool shared_tool = is_read_only_tool(name)
+                || (name == "ledger_op" && TaskLedger::is_read(args.value("op", "")));
+            const bool _was_write = !legacy_bypass && !shared_tool;
             const long _lp_thr = lockprof_threshold_ms();
-            if (is_subprocess_tool(name) || is_lockfree_write(name) || is_lockfree_read(name)) {
-                // No rpc_mutex_ held. The Rust side fully self-synchronizes via per-component
-                // RwLocks: lock-free writes touch no read-path structure (is_lockfree_write),
-                // and the hot recall path relies on publish ordering rather than this lock so
-                // an index-mutating write can never block it (is_lockfree_read).
+            if (!global_lock_enabled() || legacy_bypass) {
+                // With the switch off, every tool uses component synchronization.
+                // C++ tables/caches/callbacks have their own narrow locks; Rust
+                // guards own store state. Multi-FFI sequences remain separate
+                // transactions, as documented in FIELD_PERF.md.
                 result = it->second(args);
-            } else if (is_read_only_tool(name) || (name == "ledger_op" && TaskLedger::is_read(args.value("op", "")))) {
+            } else if (shared_tool) {
                 auto _lp_w0 = std::chrono::steady_clock::now();
                 auto _lk = acquire_shared_lock();
                 if (_lp_thr > 0) {
@@ -691,10 +707,8 @@ public:
                 }
                 result = it->second(args);
             } else {
-                _was_write = true;
                 auto _lp_w0 = std::chrono::steady_clock::now();
-                std::unique_lock<std::shared_mutex> _lk(rpc_mutex_);
-                record_lock_wait(ms_since(_lp_w0));
+                auto _lk = acquire_lock();
                 auto _lp_h0 = std::chrono::steady_clock::now();
                 result = it->second(args);
                 if (_lp_thr > 0) {
@@ -739,7 +753,7 @@ private:
     QueryEmbeddingCache query_embed_cache_;
     std::string mind_path_;                  // base mind dir (parent of chitta-field)
 
-    mutable std::shared_mutex rpc_mutex_;    // Reads share, writes exclusive; see is_read_only_tool()
+    mutable std::shared_mutex rpc_mutex_;    // Optional rollback authority; factories obey the startup switch.
     mutable std::mutex distill_mutex_;
     mutable std::mutex queue_state_mutex_;
     mutable std::mutex write_notify_mutex_;

@@ -33,7 +33,8 @@ ToolResult FieldRpcHandler::tool_ledger_op(const json& params) {
 }
 
 ToolResult FieldRpcHandler::dispatch_session(const std::string& tool, const json& args) {
-    // QueueProcessor already owns rpc_mutex_; never call handle() recursively.
+    // QueueProcessor has already applied the global-lock policy. The ledger
+    // owns its transaction mutex; never recurse through the RPC dispatcher.
     if (tool == "session_register") return tool_session_register(args);
     if (tool == "session_heartbeat") return tool_session_heartbeat(args);
     if (tool == "session_deregister") return tool_session_deregister(args);

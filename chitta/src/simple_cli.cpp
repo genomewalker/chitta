@@ -281,7 +281,8 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
     Subconscious subconscious(&field_store, yantra, sub_cfg);
 
     handler.set_subconscious(&subconscious);
-    subconscious.set_rpc_mutex(&handler.rpc_mutex());
+    subconscious.set_rpc_mutex(FieldRpcHandler::global_lock_enabled() ? &handler.rpc_mutex() : nullptr);
+    std::cerr << "[rpc] CHITTA_GLOBAL_LOCK=" << (FieldRpcHandler::global_lock_enabled() ? 1 : 0) << "\n";
     subconscious.set_maintenance_load_probe([&handler](const std::string& task) {
         return handler.maintenance_should_skip(task);
     });

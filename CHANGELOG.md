@@ -11,6 +11,13 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 ## [Unreleased]
 
 ### Added
+- 2026-09-16: `CHITTA_GLOBAL_LOCK=0` bypasses the dispatcher, queue and background
+  global mutex without changing WAL-sync classification. Default 1 retains the
+  existing policy: all three 300-second mixed-client workloads exceeded the
+  50 ms Rust hold gate. Named timing records now survive native stderr writes.
+  CTest 30/30, Rust 291 passed, chaos 9/9; same-copy restart identity 20/20
+  versus 18/20 before, fixed controls 20/20. Inventory and limitations are in
+  `docs/FIELD_PERF.md`.
 - 2026-09-16 follow-up validation: 200/200 writes, zero errors, embeddings
   drained; recall p95 113.9 ms during writes / 162.8 ms full window; cached
   restart 16.10 s. Full-window latency and restart gates remain unmet. Chaos

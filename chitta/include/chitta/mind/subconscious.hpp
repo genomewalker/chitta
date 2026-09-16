@@ -249,6 +249,8 @@ public:
 
     // Wire in embedder (may be initialized after construction).
     void set_embedder(VakYantra* e) { embedder_ = e; }
+    // Startup-only publication. Null selects the same global-lock bypass as
+    // the dispatcher factories; component-owned state still synchronizes itself.
     void set_rpc_mutex(std::shared_mutex* m) { rpc_mutex_ = m; }
 
 private:
