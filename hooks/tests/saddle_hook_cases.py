@@ -155,7 +155,8 @@ def main():
         # A stalled detector must fail open without writing a dedupe marker.
         (stubs / "jq").write_text(
             '#!/bin/sh\nif [ "$1" = "-Rrs" ]; then exec sleep 10; fi\nexec '
-            + shlex.quote(shutil.which("jq")) + ' "$@"\n'
+            + shlex.quote(shutil.which("jq"))
+            + ' "$@"\n'
         )
         (stubs / "jq").chmod(0o755)
         (mind / ".saddle_test-saddle").unlink()
