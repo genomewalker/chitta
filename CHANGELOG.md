@@ -11,6 +11,10 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 ## [Unreleased]
 
 ### Added
+- Opt-in isolated evolve implementation streams (`--candidates N`, default 1):
+  concurrent worktrees with private agent state, shared deadline and budget
+  fallback, gate-passing selection by measured bet delta then patch size, all
+  candidate outcomes in verdict/bet memories, and `python3 -m evolve.report`.
 - Automatic-learning experiment harness: provenance-based cohort classification,
   prospective task/grader freezes, isolated paired replica trials (strict bwrap
   mode or `home-audit` with post-hoc voiding), exposure checks, deterministic

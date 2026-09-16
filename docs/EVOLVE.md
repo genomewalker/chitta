@@ -84,6 +84,66 @@ rejects `gpt-6-astra`.
 > `~/.claude/mind/mdl_gate_shadow.jsonl` stays untouched and inert: retirement
 > neither appends to it nor consumes it for evolve coverage proposals.
 
+## Isolated best-of-N — 2026-09-16
+
+`--candidates N` opts into independent Codex implementations after the survey
+chooses one proposal and registers one bet. The default is 1 and retains the
+single-stream execution path (including Claude support). Counts above 1 require
+Codex. The wrapper forwards the option unchanged:
+
+```bash
+scripts/evolve-cycle.sh --candidates 2 --max-minutes 120
+PYTHONPATH=chitta-mcp python3 -m evolve.report
+# Offline report from retained artifacts, without querying memory:
+PYTHONPATH=chitta-mcp python3 -m evolve.report --cycles .evolve/cycles
+```
+
+Every stream starts from the same pinned base in a separate worktree and branch,
+using the same proposal, survey decision, and preregistered bet. Only its assigned
+paths/branch differ in the spec. Implementations and gates run concurrently.
+Each gets private HOME, CODEX_HOME, XDG config/cache/data/state/runtime, temporary
+files, CHITTA_DB_PATH, socket and queue paths; inherited Chitta/Claude/Codex task
+state is removed and both headless flags are set. No shared Codex configuration,
+MCP connections, hook state or session directories are copied. Supply Codex API
+authentication through `CODEX_API_KEY`; isolated homes do not inherit an interactive
+login. Tool executables must already be available on PATH (or CHITTA_CODEX_BIN).
+This isolates task state, not filesystem access: the spec also forbids inspecting
+other streams or live memory. Implementation worktrees and private state remain
+under `.evolve/` for review; no stream merges another stream's work.
+
+The runner checks clean committed changes, ancestry/branch, frozen paths and the
+immutable helper, existing path-dependent tests/builds, a changed SELF_CHECK test,
+and cleanliness after gates. Only passing streams are measured. Each receives
+the existing paired baseline/candidate evaluation on fresh copies of the same
+replica family. Measurements run sequentially to avoid competing replica loads.
+Selection maximizes the bet's target delta in its registered direction; equal
+deltas prefer fewer added-plus-deleted lines, then the lower candidate index.
+Binary changes cannot win a tie by claiming zero lines. Missing/incomparable
+metrics cannot win. Existing noise-band, quality and runtime-coverage verdict
+rules still apply to the selected artifact; selection alone does not accept it.
+The selected branch is retained for review, and the existing explicit `--open-pr`
+option can publish only an accepted selection.
+
+One monotonic `--max-minutes` deadline includes survey, setup, implementations,
+gates and evaluation. Fan-out admission requires at least ten minutes for shared
+implementation/gates plus five minutes per paired candidate evaluation (twenty
+with `--real-eval`). These are minimum allocations, not runtime predictions.
+Below that floor the runner falls back to one stream and records the explanation.
+The implementation deadline reserves those evaluation minutes; running process
+groups are reaped on timeout. Existing short process cleanup and verdict-memory
+bookkeeping grace periods still apply after a deadline. Long builds or measurements
+can exhaust the remaining budget; every candidate timeout/failure is retained.
+
+Verdicts and bet resolutions contain `candidates` with index, branch/worktree,
+gate outcomes, changed-line count and metric delta; verdicts also record the
+requested/effective counts, fallback reason and selected index. The report prints
+per-cycle selected/best and first-candidate deltas, using `n/a` when no eligible
+measurement exists. Failed streams are never silently converted to zero delta.
+These are observations for comparing isolation over cycles, not a claim of a
+measured improvement from this implementation. The proposal card's accepted-bet
+rate is not produced by the existing replica evaluator, so that metric cannot
+receive an acceptance without a dedicated evaluator.
+
 ## Proposal sources and scoring
 
 * Telemetry reads `~/.claude/mind/outcome_ledger.jsonl`: empty recall divided by
