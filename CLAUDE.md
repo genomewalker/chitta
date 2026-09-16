@@ -78,6 +78,15 @@ bash scripts/dev-install.sh
   drop-in makes other nodes' units exit 75 without restarting; a node honours
   it only after `systemctl --user daemon-reload` there. Stop the foreign unit
   (`ssh <node> systemctl --user stop chittad`) rather than touching the lock.
+- **`WAL segment … vanished — restoring from open descriptor` every 5 s plus
+  `Stale file handle (os error 116)`**: the writer's segment was unlinked
+  (2026-09-16: right after `[subconscious] WAL compact: deleted 1 segments`).
+  On NFS an unlinked open file is ESTALE, so the restore-from-fd path cannot
+  work and every write fails until restart; `compact_wal` and the shutdown
+  snapshot fail too. Recovery: `systemctl --user stop chittad`, then start;
+  the daemon loads the last committed family and opens a new segment. Check
+  `memory_count` before and after. Writes since the last full snapshot that
+  were not in that family are lost.
 - **Do not restart while a snapshot is in flight.** SIGTERM during a save
   abandons that family (`manifest family … failed validation` on the next
   start), so the daemon falls back to the previous family and replays the
