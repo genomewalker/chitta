@@ -11,6 +11,14 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 ## [Unreleased]
 
 ### Added
+- 2026-09-16: default-off document embedding workers with bounded admission and
+  separate Unix write dispatch; on private eval copies, 200 writes completed
+  with loaded recall p95 139.0 → 137.7 ms and write-active p95 624.7 → 128.1 ms.
+  Cached restart remained 20.0 s (5 s target unmet). Added scratch stress,
+  restart/durability and dated runtime-incident instruments.
+- 2026-09-16: experimental node-local queue/saddle/ledger-tail resolver and
+  checkpointed ledger append/replay. Runtime placement stays off: atomic
+  queue ack_id recovery and the remaining marker callers are unresolved gates.
 - Replication-weighted recall factor (`replication_max`, `CHITTA_REPLICATION_MAX`),
   landed default-off: distinct-session replications per memory are cached on
   load; the live store has 0 memories with ≥2 independent replications and the

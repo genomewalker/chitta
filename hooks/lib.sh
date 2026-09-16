@@ -235,7 +235,8 @@ saddle_check() (
     identity=${result%%$'\n'*}
     notice=${result#*$'\n'}
     # Same nonblocking advisory lock and line-based marker as Python check().
-    marker="$mind/.saddle_${identity%%:*}"
+    marker="$(runtime_state_dir "$mind")/.saddle_${identity%%:*}"
+    mkdir -p "${marker%/*}" || return 1
     exec {marker_fd}<>"$marker" || return 1
     flock -n "$marker_fd" || return 1
     while IFS= read -r previous || [[ -n "$previous" ]]; do
@@ -422,11 +423,29 @@ get_next_turn() {
     echo "$turn"
 }
 
+# One resolver for queue, markers and ledger tail. Match queue_path.hpp exactly.
+runtime_state_dir() {
+    local mind="${1:-${MIND_PATH:-${CHITTA_DB_PATH:-$HOME/.claude/mind}}}"
+    if [[ "${CHITTA_RUNTIME_LOCAL:-0}" != 1 ]]; then
+        printf '%s\n' "$mind"
+        return
+    fi
+    local canonical hash=5381 byte i
+    local LC_ALL=C
+    canonical=$(realpath -m -- "$mind") || return 1
+    for ((i = 0; i < ${#canonical}; i++)); do
+        printf -v byte '%d' "'${canonical:i:1}"
+        hash=$((hash * 33 + byte))
+    done
+    printf '%s/chitta/%016x\n' "${XDG_RUNTIME_DIR:-/tmp}" "$hash"
+}
+
 # Default queue file location (must match daemon's queue_path in simple_cli.cpp)
 get_queue_file() {
-    # Match daemon overrides; /tmp does not persist across nodes.
     local mind_path="${MIND_PATH:-${CHITTA_DB_PATH:-$HOME/.claude/mind}}"
-    echo "${CHITTA_QUEUE:-${CHITTA_QUEUE_PATH:-${mind_path%/}/queue.jsonl}}"
+    local runtime_dir
+    runtime_dir=$(runtime_state_dir "$mind_path") || return 1
+    echo "${CHITTA_QUEUE:-${CHITTA_QUEUE_PATH:-${runtime_dir%/}/queue.jsonl}}"
 }
 
 # Generate UUID for queue acknowledgments

@@ -14,11 +14,22 @@ ledger_append() {
     {
         [[ -z "$event_json" ]] && return 0
         local mind="${CHITTA_DB_PATH:-${HOME}/.claude/mind}"
-        mkdir -p "$mind"
+        local target="${mind}/outcome_ledger.jsonl"
+        if [[ "${CHITTA_RUNTIME_LOCAL:-0}" == 1 ]]; then
+            # Source only the shared path resolver when called as a standalone library.
+            if ! declare -F runtime_state_dir >/dev/null; then
+                # shellcheck source=hooks/lib.sh
+                source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+            fi
+            target="$(runtime_state_dir "$mind")/outcome_ledger.tail"
+            (umask 077; mkdir -p "${target%/*}")
+        else
+            mkdir -p "$mind"
+        fi
         local ts
         ts=$(date +%s%3N)
         printf '%s' "$event_json" | jq -c --argjson ts "$ts" --arg sid "$session_id" \
-            '. + {ts: $ts, session_id: $sid}' >> "${mind}/outcome_ledger.jsonl"
+            '. + {ts: $ts, session_id: $sid}' >> "$target"
     } 2>/dev/null
     return 0
 }

@@ -1,5 +1,122 @@
 # chitta-field performance
 
+## Acknowledged-write durability
+
+Status 2026-09-16 (Phase 6 source audit). A successful response is not a universal
+fsync guarantee. The dispatcher in `field_handler.hpp` calls `FieldStore::sync()`
+after exclusive write handlers release the C++ mutex. It bypasses that call for
+lock-free/subprocess handlers. The inventory below covers all 188 registered
+handlers outside its read-only set, including aliases and conservative write
+classifications. A read-only operation within `ledger_op` skips the sync.
+
+| Write RPCs | Acknowledgement boundary |
+| --- | --- |
+| `compact_wal` | Completed snapshot/manifest commit and covered-WAL compaction; handler checks the result. |
+| `learn_codebase`, `distill_now`, `consolidation_pass` | No dispatcher fsync. WAL-backed changes use append/OS flush and the WAL maintenance timer; snapshot-only state changed by these operations still needs a snapshot. Preview/disabled/no-op calls may write nothing. |
+| `log_event`, `log_event_ex`, `log_decision`, `predicate_run` | Primary tape/predicate state is snapshot-resident, not a WAL-append acknowledgement. Incidental WAL-backed side effects use timer sync. Do not treat these as durable event-ledger APIs. |
+| `ack_memory`, `add_delegation`, `add_observation`, `add_probe`, `agent_disable`, `agent_upsert`, `anticipation_observe`, `anticipation_record_outcome`, `anticipation_success`, `approve_memory`, `assert_fact`, `assoc_decay` | Dispatcher calls WAL fsync before returning. |
+| `attach_debt_evidence`, `batch_forget`, `branch_create`, `branch_resolve`, `calibration_record`, `checkpoint`, `cleanup`, `clear_codebase`, `close_intervention`, `close_rederive`, `compact_context`, `connect` | Dispatcher calls WAL fsync before returning. |
+| `connect_temporal`, `consolidate_similar`, `consolidation_auto`, `consolidation_merge`, `create_episode`, `curiosity_note_gap`, `curiosity_resolve`, `cycle`, `dedupe_symbols`, `defer_debt`, `densify_backfill`, `describe_symbol` | Dispatcher calls WAL fsync before returning. |
+| `disable_source`, `distill_set_model`, `dream_cancel`, `dream_force_woke`, `dream_start`, `dream_wander`, `embed_symbols`, `enroll_wisdom_lineage`, `executor_flush`, `export_soul`, `export_training_pairs`, `file_index_all` | Dispatcher calls WAL fsync before returning. |
+| `file_index_session`, `file_restore`, `flush_embeddings`, `forget`, `forget_kind`, `full_resonate`, `goal_complete`, `goal_progress`, `goal_set`, `grow`, `habit_observe`, `habit_strengthen` | Dispatcher calls WAL fsync before returning. |
+| `habit_weaken`, `health_check_start`, `hygiene_run`, `impl_start`, `import_soul`, `ingest_source`, `insight_promote`, `learn_outcome`, `ledger_append`, `ledger_compile`, `ledger_delete`, `ledger_op` | Dispatcher calls WAL fsync before returning. |
+| `ledger_save`, `lineage_expiry_check`, `link_evidence`, `log_exposure`, `long_task_complete`, `long_task_event`, `long_task_start`, `long_task_update`, `mark_memory_invalidated`, `memory_lock`, `memory_outcome`, `memory_unlock` | Dispatcher calls WAL fsync before returning. |
+| `msg_ack`, `msg_ack_all`, `msg_respond`, `msg_send`, `nack_memory`, `narrative_log`, `observe`, `pending_embed_ids`, `pin_memory`, `predicate_attach`, `probe_calibrate`, `probe_seed` | Dispatcher calls WAL fsync before returning. |
+| `profile_observe`, `profile_update`, `promote_memory`, `propose_change`, `prune_episodes`, `queue_experiments`, `realm_add`, `realm_remove`, `realm_set`, `realm_visibility`, `rebuild_fts_index`, `reconcile_pass` | Dispatcher calls WAL fsync before returning. |
+| `reconsolidate`, `record_attribution`, `record_feedback`, `record_surprise`, `reembed_memories`, `register_debt`, `register_task`, `reject_memory`, `remap_realms`, `remember`, `remember_batch`, `repl_execute` | Dispatcher calls WAL fsync before returning. |
+| `repl_session_delete`, `repl_session_set`, `resolve_contradiction`, `resolve_debt`, `resolve_merge`, `resolve_probe`, `restore_code_intel_confidence`, `retract_fact`, `sadhana_checkpoint`, `sadhana_pause`, `sadhana_resume`, `sadhana_set_goal` | Dispatcher calls WAL fsync before returning. |
+| `sadhana_set_interval`, `sadhana_set_max_turns`, `sadhana_set_model`, `sadhana_start`, `sadhana_stop`, `save_spectral_snapshot`, `seed_hdc_geometry`, `semantic_backfill`, `session_deregister`, `session_heartbeat`, `session_register`, `session_sync` | Dispatcher calls WAL fsync before returning. |
+| `set_affect`, `set_criterion`, `set_evidence_type`, `set_memory_type`, `set_priority_tier`, `skill_deprecate`, `skill_upload`, `span_backfill`, `span_backfill_memories`, `stageb_set_surface`, `start_intervention`, `strengthen` | Dispatcher calls WAL fsync before returning. |
+| `suggestion_resolve`, `suggestion_track`, `tag`, `think_wander`, `tick_lineage_staleness`, `transcript_register`, `transcript_remove`, `transcript_update`, `transition_wisdom_lineage`, `trigger_add`, `trigger_dismiss`, `trigger_fire` | Dispatcher calls WAL fsync before returning. |
+| `trim_realm_names`, `triplet_supersede`, `unpin_memory`, `update`, `update_scorer_model`, `update_source_weight`, `update_task`, `update_wisdom_lifecycle`, `upsert_wisdom_candidate`, `weaken`, `wiki_export`, `witness_memory` | Dispatcher calls WAL fsync before returning. |
+
+For the dispatcher-synced rows, this protects WAL-backed mutations on a healthy
+filesystem, not arbitrary C++ configuration, subprocess results, exports or
+snapshot-only organs. `FieldStore::sync()` currently discards `cf_sync`'s error
+code, so an I/O failure can still produce an apparent success; correcting that
+API is outside this phase's file scope. The WAL sync interval defaults to
+`CHITTA_WAL_SYNC_MS=200` ms. This is a scheduling interval, not a hard bound
+during I/O stalls.
+
+`scripts/stress-embed-recall.py --durability-test --mind PRIVATE_COPY --label kill
+--output /tmp/p6-kill.json` acknowledges a unique `remember`, kills that checked
+scratch process, restarts the **same** copied store, and asserts the memory is
+retrievable by ID. A process SIGKILL does not evict the kernel page cache and
+cannot establish power-loss safety; the timer-synced case must not be asserted
+lost. Never use `eval-replica.sh start` between ack and verification: it replaces
+the copy from its source and would invalidate this test.
+
+## Phase 6 measurements and remaining gates
+
+Status 2026-09-16: single sequential control/treatment runs on separate private
+NFS copies of family `bbcaed33`, generation 38047. Both use the local
+768-d nomic GGUF with four contexts (`CHITTA_WITH_LLAMA_CPP=ON`), with runtime
+placement off in both arms to isolate worker scheduling. Both admitted all 200
+concurrent remembers, reported zero RPC errors and reached zero pending
+embeddings. The 90-second post-ack sampling period includes asynchronous
+embedding work; the treatment backlog drained at 62.4 seconds. These are
+descriptive runs, not a noise-calibrated causal claim. Preliminary Ollama
+fallback runs were discarded after correcting a CMake compiler-reset issue.
+
+| Measurement | Default workers (off) | One bounded document worker |
+| --- | ---: | ---: |
+| Idle recall p50 / p95, 40 samples | 92.0 / 123.2 ms | 79.2 / 105.7 ms |
+| Recall during writes p50 / p95 | 124.4 / 624.7 ms (n=3) | 75.2 / 128.1 ms (n=15) |
+| Full loaded-window recall p50 / p95 | 78.2 / 139.0 ms (n=837) | 76.0 / 137.7 ms (n=863) |
+| Remember acknowledgement p50 / p95 | 430.9 / 754.5 ms | 787.8 / 1387.6 ms |
+| Cached restart to successful recall | 20.608 s | 20.001 s |
+
+The recall target passes in the treatment run; the small write-active sample
+counts limit percentile precision. Write acknowledgements are slower. The
+cached-start ≤5 s exit gate **does not pass**. The historical 9.5 s operational
+figure below was not reproduced by this worktree on these copies.
+`benchmarks/field-perf/run.sh --restart --mind PRIVATE_COPY --label LABEL
+--output /tmp/restart.json` measures existing-copy cached readiness, rejects
+`warming_up` replies, and compares 20 distinct queries before/after restart.
+`scripts/stress-embed-recall.py` multiplexes 200 concurrent remember RPCs over
+one connection (the daemon accepts at most 32 connections), samples recall on
+another connection, and reports both the write-active and full sampling windows,
+errors and remaining pending embeddings. It never accepts warm-up replies as
+successful writes and keeps sampling until embeddings drain (300-second limit)
+and the minimum post-ack interval elapses. Raw output belongs in /tmp or
+untracked results, never git.
+
+Validation on 2026-09-16: release Rust 285 passed (2 ignored), unchanged
+768/nomic/format-1 identity, all 16 real-GGUF CTests, 149 MCP tests, 46 SMRITI
+tests, all 21 hook scripts, CI ruff and touched-shell checks passed. The final
+contract snapshot printed **contracts unchanged**. Focused
+fixtures cover both placements, queue alias precedence, bounded admission,
+reader progress, and ledger append-before-offset crash recovery. An actual
+hook-to-daemon probe checkpointed a local tail to the private NFS ledger with
+its offset. An acknowledged durable remember survived immediate SIGKILL on the
+same copy; a timer-synced symbol also survived, which is permitted.
+
+The broader 20-distinct-query restart diagnostic is **not consistently stable**:
+initial pristine GGUF control/treatment both matched 20/20, the final pristine
+treatment matched 16/20, and post-load repeats matched 12/20 with workers off and
+11/20 with workers on/local placement. These failures are reported rather than
+counting only passing attempts; the default-control repeat does not isolate a
+worker regression. A further treatment repeat matched 18/20. Universal ordered-ID
+identity remains unestablished. Separately, the established fixed query
+`chitta recall performance lock contention`, realm `project:cc-soul`, limit 5,
+`no_learn=true`, passed **20/20 full-JSON response pairs** across restart with
+workers off and with one bounded worker/local placement on. The restart runner
+reports both the fixed-query gate and the broader diagnostic; the former does
+not imply that all queries are stable.
+
+Runtime placement remains default-off. Queue recovery is currently checkpointed
+at-least-once: no atomic store API couples an arbitrary queued mutation to its
+`ack_id` receipt. Exact idempotence across a crash in that gap remains an unmet
+Phase 6 gate; a receipt sidecar alone cannot fix it. Four marker callers also
+remain outside this stream's authorized file scope (prompt-core, stop-core,
+pre-tool-hook and file-changed-hook). Do not enable local placement as a completed
+migration until those gates are resolved.
+
+The fortnight instrument is `scripts/report-runtime-incidents.py chittad.log`.
+It reports open failures, stale-lock replacements, repeated starts within five
+minutes, and lockprof holds strictly over 150 ms. Undated records remain
+`undated`; a log with no matches does not prove a fortnight of coverage.
+
 Status as of 2026-09-16. The dated results below preserve the `fix/field-perf` measurements on private eval copies, including unmet targets and the ancillary MCP SDK failure. Two original JSON artifacts are absent; their committed tables are linked instead. Current live startup is about 9.5 s with sidecar hits, about 20 s on the first start after deployment or a format change; see [startup and recovery](CLI.md#startup-sidecars-and-instance-lock). These current operational figures do not replace the historical control/experiment measurements below.
 
 ## Measurement boundary

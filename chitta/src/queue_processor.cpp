@@ -143,6 +143,8 @@ void QueueProcessor::recover_processing(const std::string& queue_file) {
 }
 
 void QueueProcessor::start() {
+    const auto parent = std::filesystem::path(queue_path_).parent_path();
+    if (!parent.empty()) std::filesystem::create_directories(parent);
     recover_processing(queue_path_);
     recover_processing(slow_path_);
     thread_ = std::thread([this]() { run(); });
