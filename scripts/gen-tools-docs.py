@@ -21,7 +21,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from site_common import footer, navigation  # noqa: E402
+from site_common import STATUS_DATE, footer, navigation  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOCS = os.path.join(ROOT, "docs")
@@ -461,7 +461,7 @@ def build_html(groups, meta):
             '    <div class="tools-category" id="cat-{}">\n'
             '      <div class="tools-category-header" onclick="this.parentElement.classList.toggle(\'collapsed\')">\n'
             '        <div class="tools-category-icon">{}</div>\n'
-            '        <span class="tools-category-name">{}</span>\n'
+            '        <h2 class="tools-category-name">{}</h2>\n'
             '        <span class="tools-category-count">{} tool{}</span>\n'
             '        <span class="tools-category-toggle">&#x25BE;</span>\n'
             '      </div>\n'
@@ -476,7 +476,7 @@ def build_html(groups, meta):
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{title}</title>
+<title>chitta — {total} MCP tools</title>
 <meta name="description" content="{desc}">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta property="og:title" content="{title}">
@@ -666,10 +666,10 @@ def main():
 
     extra_md, extra_html = cli_appendix(native_cli_extras(set(merged)))
     page = build_html(groups, meta).replace('<section class="back-section">', extra_html + '<section class="back-section">')
-    page = page.replace('Generated from a live daemon on ', 'Status as of ' + meta["date"] + '. Generated from a live daemon on ', 1)
+    page = page.replace('Generated from a live daemon on ', 'Status as of ' + STATUS_DATE + ' · Generated from a live daemon on ', 1)
     page = page.replace('Every tool is served by', 'Native tools are served by', 1)
     page = page.replace('Click a row for its parameters.', 'Composed gateways run in chitta-mcp. Click a row for its parameters; additional native CLI entries appear below.', 1)
-    markdown = build_markdown(groups, meta).replace('\n\n', '\n\nStatus as of ' + meta["date"] + '.\n\n', 1)
+    markdown = build_markdown(groups, meta).replace('\n\n', '\n\nStatus as of ' + STATUS_DATE + '.\n\n', 1)
     open(args.out_html, "w", encoding="utf-8").write(page)
     open(args.out_md, "w", encoding="utf-8").write(markdown + extra_md)
     sys.stderr.write(f"wrote {args.out_html} and {args.out_md}: {meta['total']} tools "
