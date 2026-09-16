@@ -129,6 +129,76 @@ workloads have not each received a dedicated 300-second mixed-client run.
 Factory tests and chaos coverage do not substitute for those runs. The live-week
 hold gate is also unmeasured; deployment and live writes are outside this stream.
 
+## Reproducing mixed RPC stress — 2026-09-16
+
+`scripts/stress-rpc.py` requires an explicitly named private replica, validates
+its metadata, daemon argv, socket peer and worktree executable, and refuses to
+run unless `CHITTA_GLOBAL_LOCK=0`. Start each class from a fresh copy of the
+stopped evaluation replica family, using its own mind and port:
+
+```sh
+export PATH=/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/bin:$PATH
+export CHITTA_LIVE_MIND=/absolute/path/to/stopped-eval-replica
+export CHITTA_EVAL_MIND=/tmp/my-private-lock-stress
+export CHITTA_EVAL_PORT=17439
+export CHITTA_BIN="$PWD/bin/chitta" CHITTAD_BIN="$PWD/bin/chittad"
+export CHITTA_GLOBAL_LOCK=0 CHITTA_NO_ASSOC_LEARN=1
+export OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 RAYON_NUM_THREADS=1
+bash scripts/eval-replica.sh start
+python3 scripts/stress-rpc.py --mind "$CHITTA_EVAL_MIND" \
+  --handler-class remember --report /tmp/my-lock-stress.json
+```
+
+Defaults are 12 writers, 12 readers and 300 seconds. Repeat with `ledger` and
+`observe` on separate copies. Each client uses a persistent socket; optional
+`--connection-mode per-call` also stresses connection churn. Each complete RPC
+has a monotonic 30-second deadline, including send, receive and JSON parsing.
+The tool checks exact memory counts, unique acknowledgements, payload and state
+for every recall hit (including newly published memories), then SIGKILLs only
+the validated scratch daemon and checks every acknowledgement after WAL replay.
+It reports interval and lifetime Rust lock maxima separately; absent or malformed
+profiling records cannot qualify a run. Exit 0 requires every exit gate, including
+identity; short runs and `--skip-identity` are diagnostic and always exit 1.
+
+The identity panel runs before any workload creates memories. To use the lead's
+no-worse exception, record the baseline before changing the binary using
+`scripts/stress-embed-recall.py --restart-only --mind COPY --label before
+--output /tmp/before.json`, then supply `--identity-baseline /tmp/before.json`
+when measuring that same copy after the change. The ordered query list and both
+fixed-query controls are checked; a baseline containing a `mind` field must name
+this copy. Without a baseline, the distinct-query gate requires 20/20. Never
+invoke `eval-replica.sh start` between the before/after measurements: it recopies
+the family. Reports, replica contents and logs stay outside git.
+
+Replay comparison excludes wall-time-decayed strength. All other payload and
+authored state must match exactly; access counts and timestamps must not regress.
+Decay rate may change only when access state advances. This matters because
+`get` and `expand_memory` enqueue touches and the Rust worker persists them even
+while a verification pass is reading other rows. The verifier therefore proves
+authored-state durability and monotonic access state, not byte identity of
+read-induced bookkeeping. A real captured access-only mismatch is accepted;
+injected payload/confidence changes and count/timestamp regressions are rejected.
+Socket-stall, non-replica and absent/malformed-profile negative checks also pass.
+
+Final corrected-verifier repeats ran concurrently for 300 seconds each on their
+already-mutated private copies, with 12 writers and 12 readers per daemon.
+Both passed counts, hit payload/state checks and every acknowledgement after
+SIGKILL/WAL replay, with zero client errors and zero malformed timing records:
+
+| Repeat class | Writes replayed | Reader iterations | Maximum RPC (ms) | Interval Rust hold / wait maximum (ms) | Holds >50 ms |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| observe | 18,901 | 11,539 | 3,291.325 | 727.692 / 1,331.772 | 4,663 |
+| remember | 21,378 | 9,383 | 1,149.374 | 736.738 / 669.846 | 3,995 |
+
+These repeats used `--skip-identity` because the original-copy identity panel
+had already finished and these copies contained stress writes. They exited 1,
+correctly: diagnostic runs cannot meet the full gate and the hold limit was
+exceeded. Their timing differences from the sequential initial runs are not
+performance deltas: corpus size and concurrent load differed. Initial stress
+copy identity comparisons against the original-copy baseline are diagnostic,
+not the lead's required same-copy comparison; the latter is the separate final
+20/20 versus 18/20 measurement above. No class is qualified for default removal.
+
 ## Acknowledged-write durability
 
 Status 2026-09-16 (Phase 6 source audit). A successful response is not a universal

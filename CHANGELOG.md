@@ -11,6 +11,12 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 ## [Unreleased]
 
 ### Added
+- 2026-09-16: private-replica RPC stress tool with 12 writers/12 readers for
+  300 seconds, total 30-second call deadlines, named Rust lock maxima, count
+  and payload/state checks, and SIGKILL/WAL replay verification. Corrected
+  read-induced access-state comparison verifies 18,901 observe and 21,378
+  remember acknowledgements; Rust hold limits remain unmet. Diagnostic and
+  incomplete-gate runs exit nonzero; reproduction and limits are documented.
 - 2026-09-16: `CHITTA_GLOBAL_LOCK=0` bypasses the dispatcher, queue and background
   global mutex without changing WAL-sync classification. Default 1 retains the
   existing policy: all three 300-second mixed-client workloads exceeded the
