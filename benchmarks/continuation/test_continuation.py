@@ -4,8 +4,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import build
 import score
+
+import build
 
 
 class ContinuationTests(unittest.TestCase):
