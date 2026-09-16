@@ -168,6 +168,8 @@ def main():
     parser.add_argument("--replica", type=Path, required=True)
     parser.add_argument("--cli", type=Path, required=True)
     parser.add_argument("--hooks", type=Path, default=ROOT / "hooks")
+    parser.add_argument("--reference-hooks", type=Path)
+    parser.add_argument("--require-pipeline", action="store_true")
     parser.add_argument("--work", type=Path, required=True)
     parser.add_argument("--baseline", type=Path, default=FIXTURES / "baseline")
     parser.add_argument("--results", type=Path, required=True)
@@ -176,6 +178,10 @@ def main():
     parser.add_argument("--only", action="append")
     args = parser.parse_args()
     args.hooks = args.hooks.resolve(strict=True)
+    if args.reference_hooks:
+        args.reference_hooks = args.reference_hooks.resolve(strict=True)
+        if args.mode == "record":
+            parser.error("--reference-hooks is for check or measure, not baseline recording")
     config = load(FIXTURES / "suite.json")
     now = config["now_ms"]
     replica = args.replica.resolve()
@@ -198,25 +204,85 @@ def main():
             name = case["name"]
             if args.only and name not in args.only:
                 continue
-            env = prepare(work, cli, metadata["CHITTA_EVAL_SOCKET"], now)
-            env.update(case.get("env", {}))
-            if args.mode == "measure":
-                env.pop("CHITTA_HOOK_NOW", None)
-            for rel, content in case.get("state", {}).items():
-                target = work / "home/.claude/mind" / rel
-                target.write_text(content)
-                os.utime(target, (now / 1000, now / 1000))
-            transcript = (FIXTURES / "transcript.jsonl").read_text().replace("@WORK@", str(work))
-            (work / "transcript.jsonl").write_text(transcript)
-            payload = (FIXTURES / case["input"]).read_bytes().replace(b"@WORK@", os.fsencode(work))
-            stdout, stderr, result = run_hook(
-                ["bash", str(args.hooks / case["hook"])],
-                payload,
-                env,
-                work / "project",
-                case.get("timeout_s", 15),
-            )
+
+            def execute(hook_root, case=case):
+                env = prepare(work, cli, metadata["CHITTA_EVAL_SOCKET"], now)
+                env.update(case.get("env", {}))
+                if args.mode == "measure":
+                    env.pop("CHITTA_HOOK_NOW", None)
+                if args.mode == "measure" or args.require_pipeline:
+                    env["CHITTA_HOOK_PROFILE"] = str(work / "prompt-profile.json")
+                for rel, content in case.get("state", {}).items():
+                    target = work / "home/.claude/mind" / rel
+                    target.write_text(content)
+                    os.utime(target, (now / 1000, now / 1000))
+                transcript = (
+                    (FIXTURES / "transcript.jsonl").read_text().replace("@WORK@", str(work))
+                )
+                (work / "transcript.jsonl").write_text(transcript)
+                payload = (
+                    (FIXTURES / case["input"]).read_bytes().replace(b"@WORK@", os.fsencode(work))
+                )
+                stdout, stderr, result = run_hook(
+                    ["bash", str(hook_root / case["hook"])],
+                    payload,
+                    env,
+                    work / "project",
+                    case.get("timeout_s", 15),
+                )
+                return stdout, stderr, result
+
+            reference = execute(args.reference_hooks) if args.reference_hooks else None
+            stdout, stderr, result = execute(args.hooks)
             row = {"name": name, "iteration": iteration, **result}
+            profile = work / "prompt-profile.json"
+            if (
+                args.require_pipeline
+                and name in ("prompt", "codex-prompt")
+                and not profile.is_file()
+            ):
+                failures.append(f"{iteration}:{name}: single-call pipeline did not run")
+            if profile.is_file():
+                data = load(profile)
+                retrieval = data.get("retrieval", {})
+                row["daemon_ms"] = {
+                    "embedding": retrieval.get("embedding_ms"),
+                    "retrieval_including_embedding": retrieval.get("retrieval_ms"),
+                    "admission": data.get("admission_ms"),
+                }
+                row["lane_status"] = {
+                    lane: value.get("status") for lane, value in retrieval.get("lanes", {}).items()
+                }
+                if args.require_pipeline and data.get("count", 0):
+                    ledger = work / "home/.claude/mind/outcome_ledger.jsonl"
+                    events = (
+                        [json.loads(line) for line in ledger.read_text().splitlines()]
+                        if ledger.is_file()
+                        else []
+                    )
+                    injected = [event for event in events if event.get("event") == "injected"]
+                    expected_ms = {
+                        lane: value["ms"] if args.mode == "measure" else 0
+                        for lane, value in retrieval.get("lanes", {}).items()
+                    }
+                    expected_timeout = {
+                        lane: value["timed_out"]
+                        for lane, value in retrieval.get("lanes", {}).items()
+                    }
+                    if (
+                        not injected
+                        or injected[-1].get("lane_ms") != expected_ms
+                        or injected[-1].get("lane_timeout") != expected_timeout
+                    ):
+                        failures.append(
+                            f"{iteration}:{name}: lane accounting differs from daemon response"
+                        )
+            if reference:
+                row["reference"] = reference[2]
+                if reference[2]["timed_out"] or reference[2]["returncode"] != 0:
+                    failures.append(f"{iteration}:{name}: reference process failed")
+                if case.get("contains") and case["contains"].encode() not in reference[0]:
+                    failures.append(f"{iteration}:{name}: reference missing expected output")
             rows.append(row)
             status = {key: result[key] for key in ("returncode", "timed_out")}
             outputs = {
@@ -227,6 +293,19 @@ def main():
             for suffix, content in outputs.items():
                 (args.results / f"{iteration}-{name}.{suffix}").write_bytes(content)
                 baseline = args.baseline / f"{name}.{suffix}"
+                if reference:
+                    ref_status = {key: reference[2][key] for key in ("returncode", "timed_out")}
+                    ref_outputs = {
+                        "stdout": reference[0],
+                        "stderr": reference[1],
+                        "status.json": (json.dumps(ref_status, sort_keys=True) + "\n").encode(),
+                    }
+                    (args.results / f"{iteration}-{name}.reference.{suffix}").write_bytes(
+                        ref_outputs[suffix]
+                    )
+                    if args.mode != "measure" and content != ref_outputs[suffix]:
+                        failures.append(f"{iteration}:{name}.{suffix}: paired reference mismatch")
+                    continue
                 if iteration < 0:
                     continue
                 if args.mode == "record" and iteration == 0:
@@ -245,6 +324,13 @@ def main():
     if not rows:
         parser.error("no fixtures selected")
     report = {
+        "reference_hook_root": str(args.reference_hooks) if args.reference_hooks else None,
+        "reference_hook_sha256": {
+            p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+            for p in sorted(args.reference_hooks.glob("*.sh"))
+        }
+        if args.reference_hooks
+        else {},
         "replica": metadata,
         "now_ms": now,
         "rows": rows,

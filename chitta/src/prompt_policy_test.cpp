@@ -1,4 +1,4 @@
-#include <chitta/prompt_policy.hpp>
+#include <chitta/prompt_fusion.hpp>
 #include <cassert>
 #include <iostream>
 
@@ -52,5 +52,15 @@ int main(int argc, char** argv) {
         state["memories"] = "#9 [99%] [wisdom] " + noise;
         assert(admit(state)["dropped"]["meta"] == 1);
     }
+    const json lanes = {
+        {"sem", {{"text", "Smart recall (keyword, ep=1)\n#1 [5%] [wisdom] apricot\n#2 [8%] [thought] hidden\n"}}},
+        {"hyb", {{"text", "Found 2 results in realm 'project:test' (maxrel 72%):\n#3 [65%] [insight] apricot\n#4 [70%] [thought] hidden"}}},
+        {"kw", {{"text", "#5 [60%] [belief] echo\n#6 [60%] [research] apricot\n"}}},
+        {"corr", {{"text", "#7 [85%] [correction] apricot\n"}}}};
+    const auto fused = chitta::prompt_policy::fuse(lanes, json::object());
+    assert(fused["small_realm"] == true && fused["c2_pct"] == "72");
+    assert(fused["memories"] == "[kw]#1 [5%] [wisdom] apricot\n[kw]#2 [8%] [thought] hidden\n\n[hyb]#3 [65%] [insight] apricot\n[kw]#6 [60%] [research] apricot\n[corr]#7 [85%] [correction] apricot");
+    assert(chitta::prompt_policy::c2_from_text("No memories found") == "0");
+    assert(chitta::prompt_policy::c2_from_text("") == "");
     std::cout << "prompt_policy_test: passed\n";
 }

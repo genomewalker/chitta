@@ -53,3 +53,17 @@ replica and pinned inputs. Reports include CLI and hook digests. A control failu
 is a retrieval stability failure; do not normalize rows or rewrite the historical
 baseline to hide it. Step 2 observed two SessionStart correction rows exchanging
 positions across a daemon restart, reproduced by the unchanged Step 1 hooks.
+
+`check --reference-hooks /path/to/unchanged/hooks` runs each unchanged hook
+immediately before the candidate on the same daemon, resetting local fixture
+state before both. It compares all bytes and statuses, including warm-up pairs,
+and records both outputs and source digests. Use this adjacent control when
+mutable recall ordering drifts between whole-suite passes. It never changes the
+historical baseline. `measure --reference-hooks ...` also records both arms'
+wall times; candidate daemon stage spans and lane statuses are in `daemon_ms`
+and `lane_status`. Lane spans overlap; retrieval includes embedding time.
+
+For the fusion migration, add `--require-pipeline` to the gate. Every prompt
+fixture must capture a daemon fusion response, including during warm-up; falling
+back silently cannot count as verification of the new path. This instrumentation
+copies one private response file and leaves stdout/stderr unchanged.

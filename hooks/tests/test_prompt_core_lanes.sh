@@ -28,6 +28,11 @@ fi
 get() { local flag="$1" a p; shift; for a in "$@"; do [[ "$p" == "$flag" ]] && { echo "$a"; return; }; p="$a"; done; }
 case "$sub" in
     prompt_context)
+        state=$(get --state "$@")
+        if [[ "$state" == *'"retrieval":'* ]]; then
+            [[ -n "${STUB_OVERLAP_DIR:-}" ]] && touch "$STUB_OVERLAP_DIR/rpc-started"
+            [[ "${STUB_PIPELINE_TIMEOUT:-0}" == 1 ]] && exit 124
+        fi
         [[ -n "${STUB_POLICY_BIN:-}" ]] || exit 1
         if [[ "${1:-}" != --local && "${STUB_POLICY_MODE:-}" == timeout ]]; then
             sleep 1
@@ -370,6 +375,14 @@ assert "heartbeat proceeds alongside RPC" "[[ -f '$T/overlap/heartbeat-overlappe
 assert "concurrent continuity is joined before rendering" \
     "grep -q '\\[last-session\\] #99' '$T/stdout.rpc-concurrent'"
 unset STUB_OVERLAP_DIR
+
+# A pipeline timeout replaces the old batch wait; it must not add a second one.
+: > "$STUB_CALL_LOG"
+STUB_PIPELINE_TIMEOUT=1 CHITTA_PROMPT_CONTEXT=1 CHITTA_RECALL_LANES_RPC=1 \
+    run_hook "pipeline-timeout" "what does the persimmon fixture show"
+assert "pipeline timeout skips a second batch wait" "! grep -q '^recall_lanes ' '$STUB_CALL_LOG'"
+assert "pipeline timeout retains standalone lane fallback" "grep -q '^smart_recall ' '$STUB_CALL_LOG'"
+assert "pipeline timeout preserves admission" "grep -q '\\[sem\\]#31' '$T/stdout.pipeline-timeout'"
 
 # Even with a model installed, ordinary turns must not start Python. Matching
 # regex evidence still requests a model verdict before emitting a learning hint.

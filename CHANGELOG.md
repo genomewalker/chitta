@@ -10,6 +10,13 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 ## [Unreleased]
 
+- Route prompt lane fusion through one `prompt_context` call. Existing daemon
+  recall handlers retain their query identities and scoring; C2 extraction,
+  lane retagging/type filters, empty-realm retry and admission now assemble in
+  process. Return per-lane status and timing plus embedding/retrieval/admission
+  spans. Adjacent unchanged-hook controls preserve raw output parity when
+  SessionStart correction ordering drifts between whole-suite passes.
+
 - Add advanced `prompt_context` RPC for shared Claude Code/Codex prompt admission,
   C2 labels, hash deduplication and lane accounting. Its CLI-local timeout fallback
   uses the same native policy; older clients retain shell compatibility. Synthetic
