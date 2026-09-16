@@ -431,6 +431,25 @@ struct FieldRpcHandler::RecallPipeline {
     int64_t win_from = 0, win_to = 0;
     std::vector<FieldRecallHit> hits;
     std::unordered_map<uint64_t, float> bridge_boost;
+    json diagnostics = {{"embeddings", json::array()}, {"lanes", json::array()}};
+
+    void trace_embedding(const std::string& text, const std::vector<float>& emb) {
+        if (!params.value("explain", false)) return;
+        // Hex encodes the actual in-process f32 bytes, not rounded JSON floats.
+        std::ostringstream bytes;
+        bytes << std::hex << std::setfill('0');
+        const auto* data = reinterpret_cast<const unsigned char*>(emb.data());
+        for (size_t i = 0; i < emb.size() * sizeof(float); ++i)
+            bytes << std::setw(2) << static_cast<unsigned>(data[i]);
+        diagnostics["embeddings"].push_back({{"query", text}, {"dimension", emb.size()},
+                                             {"f32_native_hex", bytes.str()}});
+    }
+
+    void trace_lane(const std::string& name, const std::vector<FieldRecallHit>& lane) {
+        if (!params.value("explain", false)) return;
+        diagnostics["lanes"].push_back({{"name", name},
+                                       {"hits", handler.hits_to_results_json(lane, true)}});
+    }
 
     RecallPipeline(FieldRpcHandler& handler, const json& params)
         : handler(handler), params(params),
@@ -564,7 +583,8 @@ std::optional<ToolResult> FieldRpcHandler::RecallPipeline::dispatch_lanes() {
         std::unordered_map<uint64_t, FieldRecallHit> best_hit;
         const float kRRF = 60.0f;
 
-        auto rrf_lane = [&](const std::vector<FieldRecallHit>& lane) {
+        auto rrf_lane = [&](const std::string& name, const std::vector<FieldRecallHit>& lane) {
+            trace_lane(name, lane);
             int rank = 1;
             for (const auto& h : lane) {
                 rrf_scores[h.memory_id] += 1.0f / (kRRF + rank);
@@ -577,23 +597,25 @@ std::optional<ToolResult> FieldRpcHandler::RecallPipeline::dispatch_lanes() {
         std::vector<float> base_emb;
         if (params.contains("_preembedding"))
             base_emb = params["_preembedding"].get<std::vector<float>>();
+        trace_embedding(query, base_emb);
         // Only attempt semantic lanes if we have a working embedding (base_emb non-empty).
         // When yantra is unavailable, skip SSL-variant embed calls (each costs a full timeout).
         profile.next("semantic_lanes");
         if (!base_emb.empty()) {
             for (const auto& f : forms) {
                 auto emb = (f == query) ? base_emb : handler.embed_query(f);
+                if (f != query) trace_embedding(f, emb);
                 if (emb.empty()) continue;
-                rrf_lane(window_gate(handler.field_store_->recall(emb, lane_depth, realm, no_learn)));
+                rrf_lane("semantic:" + f, window_gate(handler.field_store_->recall(emb, lane_depth, realm, no_learn)));
             }
         }
         profile.next("keyword");
         // BM25 lane
-        rrf_lane(window_gate(handler.field_store_->recall_keyword(query, lane_depth, realm, no_learn)));
+        rrf_lane("keyword", window_gate(handler.field_store_->recall_keyword(query, lane_depth, realm, no_learn)));
         profile.next("hdc");
         // HDC lane (skipped when disable_hdc=true for ablation/benchmarking)
         if (!params.value("disable_hdc", false)) {
-            rrf_lane(window_gate(handler.field_store_->recall_hdc(query, lane_depth, realm)));
+            rrf_lane("hdc", window_gate(handler.field_store_->recall_hdc(query, lane_depth, realm)));
         }
 
         fuse_lanes(rrf_scores, best_hit, kRRF);
@@ -602,14 +624,18 @@ std::optional<ToolResult> FieldRpcHandler::RecallPipeline::dispatch_lanes() {
         // Never call handler.embed_query() here — that's inside rpc_mutex_ and blocks readers.
         if (params.contains("_preembedding")) {
             auto emb = params["_preembedding"].get<std::vector<float>>();
+            trace_embedding(query, emb);
             hits = window_gate(handler.field_store_->recall(emb, pool_limit, realm, no_learn));
+            trace_lane("semantic", hits);
         } else {
             // Realm scoping: this is the pre-embed-miss fallback (embed_queue
             // timed out at 50ms, so no _preembedding), which fires for ordinary
             // recalls, not just diagnostics. It passed "" for realm, so every
             // cold-cache recall silently returned cross-realm memories while the
             // semantic leg two branches up was correctly scoped. Same `realm`.
+            trace_embedding(query, {});
             hits = window_gate(handler.field_store_->recall_keyword(query, pool_limit, realm, no_learn));
+            trace_lane("keyword-fallback", hits);
         }
     }
 
@@ -1257,6 +1283,7 @@ ToolResult FieldRpcHandler::RecallPipeline::format() {
                  {"status", recall_status},
                  {"atoms", atoms_json},
                  {"abstain", weak}, {"max_relevance", max_rel}};
+    if (explain) meta["diagnostics"] = std::move(diagnostics);
     if (windowed) {
         // Surface the applied gate so a mis-parsed phrase is visible and correctable.
         auto iso = [](int64_t ms) {
