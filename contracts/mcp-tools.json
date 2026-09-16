@@ -5111,6 +5111,26 @@
   "name": "promote_memory"
  },
  {
+  "description": "Apply shared prompt admission and render its budget metadata",
+  "inputSchema": {
+   "properties": {
+    "local": {
+     "description": "CLI only: run the same pure policy locally for timeout fallback",
+     "type": "boolean"
+    },
+    "state": {
+     "description": "Lane text, session hashes, query tokens and policy settings",
+     "type": "object"
+    }
+   },
+   "required": [
+    "state"
+   ],
+   "type": "object"
+  },
+  "name": "prompt_context"
+ },
+ {
   "description": "Propose change to memory",
   "inputSchema": {
    "properties": {

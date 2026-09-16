@@ -1,0 +1,122 @@
+{
+  "now_ms": 1789516800000,
+  "cases": [
+    {
+      "name": "prompt",
+      "hook": "prompt-hook.sh",
+      "input": "prompt.json",
+      "contains": "[admit]",
+      "state": {
+        ".session_active": "1\n",
+        ".turn_index_p5-parity": "2\n"
+      }
+    },
+    {
+      "name": "codex-prompt",
+      "hook": "codex-prompt-hook.sh",
+      "input": "prompt.json",
+      "contains": "[admit]",
+      "state": {
+        ".session_active": "1\n",
+        ".turn_index_p5-parity": "2\n"
+      }
+    },
+    {
+      "name": "session-start",
+      "hook": "session-start-hook.sh",
+      "input": "session-start.json"
+    },
+    {
+      "name": "bash",
+      "hook": "post-bash-hook.sh",
+      "input": "bash.json"
+    },
+    {
+      "name": "codex-bash",
+      "hook": "post-bash-hook.sh",
+      "input": "codex-bash.json"
+    },
+    {
+      "name": "stop",
+      "hook": "stop-hook.sh",
+      "input": "stop.json"
+    },
+    {
+      "name": "codex-stop",
+      "hook": "codex-stop-hook.sh",
+      "input": "stop.json"
+    },
+    {
+      "name": "session-handoff",
+      "hook": "session-start-hook.sh",
+      "input": "session-start.json",
+      "contains": "[handoff]",
+      "ledger_setup": [
+        {
+          "op": "session_bind",
+          "args": {
+            "session_id": "p5-capsule-fixture",
+            "project_dir": "@WORK@/project",
+            "metadata": {
+              "handoff": {
+                "version": 1,
+                "next_action": "Next action: run the apricot continuation fixture",
+                "verified": true,
+                "branch": "",
+                "project_dir": "@WORK@/project",
+                "artifact_paths": [
+                  "docs/apricot.md"
+                ],
+                "blocker": "waiting for synthetic input",
+                "source": {
+                  "kind": "visible_plan",
+                  "session_id": "p5-capsule-fixture",
+                  "thread_id": ""
+                },
+                "saved_at": 1789516800
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "stop-handoff",
+      "hook": "stop-hook.sh",
+      "input": "stop.json",
+      "transcript": "handoff-transcript.jsonl"
+    },
+    {
+      "name": "session-compact",
+      "hook": "session-start-hook.sh",
+      "input": "session-compact.json",
+      "contains": "[session-restored]"
+    }
+  ],
+  "ledger_setup": [
+    {
+      "op": "session_bind",
+      "args": {
+        "session_id": "p5-capsule-fixture",
+        "project_dir": "@WORK@/project",
+        "metadata": {
+          "handoff": {
+            "version": 1,
+            "next_action": "",
+            "verified": false,
+            "branch": "",
+            "project_dir": "@WORK@/project",
+            "artifact_paths": [],
+            "blocker": "",
+            "source": {
+              "kind": "visible_plan",
+              "session_id": "p5-capsule-fixture",
+              "thread_id": ""
+            },
+            "saved_at": 1789516800
+          }
+        }
+      }
+    }
+  ]
+}

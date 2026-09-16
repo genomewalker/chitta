@@ -10,6 +10,32 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 ## [Unreleased]
 
+- Record Phase 5 verification and unmet exit gates in
+  `docs/PHASE5-POLICY-REPORT.md`: 30 measured paired fixtures match, but shell
+  lines grow 8,743 → 8,988; prompt medians 415/457 ms and Bash added overhead
+  about 92 ms miss their targets. SessionStart median 304 ms meets its target.
+
+- Move SessionStart ledger/task/handoff cards and Stop capsule assembly behind
+  `ledger_op`; route admitted Stop turns through its `hook_turn` operation while
+  preserving transcript event payloads and durable cursor acknowledgement.
+  Fix queued `ledger_op` being silently ignored, with a real queued-capsule
+  regression test. Add positive handoff/Stop and compact-card parity fixtures;
+  keep local transcript parsing and bounded compatibility fallbacks.
+
+- Route prompt lane fusion through one `prompt_context` call. Existing daemon
+  recall handlers retain their query identities and scoring; C2 extraction,
+  lane retagging/type filters, empty-realm retry and admission now assemble in
+  process. Return per-lane status and timing plus embedding/retrieval/admission
+  spans. Adjacent unchanged-hook controls preserve raw output parity when
+  SessionStart correction ordering drifts between whole-suite passes.
+
+- Add advanced `prompt_context` RPC for shared Claude Code/Codex prompt admission,
+  C2 labels, hash deduplication and lane accounting. Its CLI-local timeout fallback
+  uses the same native policy; older clients retain shell compatibility. Synthetic
+  legacy/native and timeout outputs match byte for byte; seven replica hook
+  fixtures pass three paired repetitions against unchanged hooks on one daemon.
+  Regenerate RPC contracts, MCP schemas and tool documentation.
+
 - Preserve calibrated recall confidence when repository sources are merged.
   Source BM25 ranks have no similarity calibration, so `max_relevance` and
   abstention retain their memory values; `source_hits` reports source coverage.

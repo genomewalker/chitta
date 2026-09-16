@@ -27,6 +27,9 @@ if [[ "${STUB_HANG:-}" == cli || ( "${STUB_HANG:-}" == registration && "$1" == s
     trap '' TERM
     sleep 10
 fi
+# This fixture exercises an older daemon: unknown operations fail at dispatch,
+# before the artificial delay applied to supported retrieval operations.
+case "$*" in *'--op hook_'*) exit 1 ;; esac
 sleep "${STUB_DELAY:-0}"
 case "$1" in
 realm_detect) echo project:latency ;;

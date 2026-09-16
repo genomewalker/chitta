@@ -1,0 +1,2 @@
+{"type": "user", "message": {"role": "user", "content": "Verify the apricot continuation fixture."}}
+{"type": "assistant", "message": {"role": "assistant", "content": [{"type": "text", "text": "Verified the apricot continuation fixture.\nNext action: run the focused ledger tests\nBlocker: waiting for synthetic fixture data"}]}}

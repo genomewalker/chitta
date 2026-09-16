@@ -27,6 +27,19 @@ if [[ -n "${STUB_CALL_LOG:-}" ]]; then
 fi
 get() { local flag="$1" a p; shift; for a in "$@"; do [[ "$p" == "$flag" ]] && { echo "$a"; return; }; p="$a"; done; }
 case "$sub" in
+    prompt_context)
+        state=$(get --state "$@")
+        if [[ "$state" == *'"retrieval":'* ]]; then
+            [[ -n "${STUB_OVERLAP_DIR:-}" ]] && touch "$STUB_OVERLAP_DIR/rpc-started"
+            [[ "${STUB_PIPELINE_TIMEOUT:-0}" == 1 ]] && exit 124
+        fi
+        [[ -n "${STUB_POLICY_BIN:-}" ]] || exit 1
+        if [[ "${1:-}" != --local && "${STUB_POLICY_MODE:-}" == timeout ]]; then
+            sleep 1
+            exit 1
+        fi
+        printf '%s' "$(get --state "$@")" | "$STUB_POLICY_BIN" --stdin
+        ;;
     session_heartbeat)
         [[ "${STUB_HEARTBEAT_FAIL:-0}" == 0 ]] || exit 1
         if [[ -n "${STUB_OVERLAP_DIR:-}" ]]; then
@@ -107,6 +120,13 @@ assert "stub daemon socket exists" "[[ -S '$SOCK' ]]"
 run_hook() {  # $1 = session_id  $2 = prompt
     printf '{"session_id":"%s","prompt":"%s","cwd":"/tmp"}' "$1" "$2" \
         | bash "$SCRIPT_DIR/prompt-core.sh" 2>"$T/stderr.$1" 1>"$T/stdout.$1"
+    rc=$?
+    if [[ -n "${HOOK_PARITY_CAPTURE:-}" ]]; then
+        cp "$T/stderr.$1" "$HOOK_PARITY_CAPTURE/$1.stderr"
+        cp "$T/stdout.$1" "$HOOK_PARITY_CAPTURE/$1.stdout"
+        printf '%s\n' "$rc" > "$HOOK_PARITY_CAPTURE/$1.status"
+    fi
+    return "$rc"
 }
 
 # ============================================================
@@ -278,8 +298,14 @@ assert "fan-in switch makes exactly one recall_lanes CLI call" \
 assert "fan-in success skips standalone recall processes" \
     "! grep -Eq '^(smart_recall|recall|correction_check) ' '$STUB_CALL_LOG'"
 assert "fan-in lane text reaches normal admission" "grep -q '\[sem\]#31' '$T/stdout.rpc-on'"
+_rpc_timing='t:sem=12,hyb=34,kw=5,corr=3,corrk=2,total='
+_rpc_ablated_timing='t:sem=12,corr=3,corrk=2,total='
+if [[ "${CHITTA_HOOK_NOW:-}" =~ ^[1-9][0-9]{12}$ ]]; then
+    _rpc_timing='t:sem=0,hyb=0,kw=0,corr=0,corrk=0,total='
+    _rpc_ablated_timing='t:sem=0,corr=0,corrk=0,total='
+fi
 assert "fan-in lane timings come from RPC response" \
-    "grep -Eq 't:sem=12,hyb=34,kw=5,corr=3,corrk=2,total=' '$T/stdout.rpc-on'"
+    "grep -Eq '$_rpc_timing' '$T/stdout.rpc-on'"
 
 STUB_RPC_FILE="$T/recall-lanes-ablated.json"
 jq 'del(.lanes.hyb, .lanes.kw)' "$T/recall-lanes.json" > "$STUB_RPC_FILE"
@@ -290,7 +316,7 @@ STUB_RPC_MODE=ok CHITTA_RECALL_LANES_RPC=1 CHITTA_ABLATE_LANES=hyb,kw \
 assert "fan-in request omits ablated lanes" \
     "grep -Fq -- '--lanes [\"sem\",\"corr\",\"corrk\"]' '$STUB_CALL_LOG'"
 assert "fan-in ablation omits their timing entries" \
-    "grep -Eq 't:sem=12,corr=3,corrk=2,total=' '$T/stdout.rpc-ablated'"
+    "grep -Eq '$_rpc_ablated_timing' '$T/stdout.rpc-ablated'"
 
 # ============================================================
 # Item 7: a failed fan-in call falls back, for that same prompt, to
@@ -349,6 +375,14 @@ assert "heartbeat proceeds alongside RPC" "[[ -f '$T/overlap/heartbeat-overlappe
 assert "concurrent continuity is joined before rendering" \
     "grep -q '\\[last-session\\] #99' '$T/stdout.rpc-concurrent'"
 unset STUB_OVERLAP_DIR
+
+# A pipeline timeout replaces the old batch wait; it must not add a second one.
+: > "$STUB_CALL_LOG"
+STUB_PIPELINE_TIMEOUT=1 CHITTA_PROMPT_CONTEXT=1 CHITTA_RECALL_LANES_RPC=1 \
+    run_hook "pipeline-timeout" "what does the persimmon fixture show"
+assert "pipeline timeout skips a second batch wait" "! grep -q '^recall_lanes ' '$STUB_CALL_LOG'"
+assert "pipeline timeout retains standalone lane fallback" "grep -q '^smart_recall ' '$STUB_CALL_LOG'"
+assert "pipeline timeout preserves admission" "grep -q '\\[sem\\]#31' '$T/stdout.pipeline-timeout'"
 
 # Even with a model installed, ordinary turns must not start Python. Matching
 # regex evidence still requests a model verdict before emitting a learning hint.

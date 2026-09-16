@@ -1,0 +1,7 @@
+{
+  "hookSpecificOutput": {
+    "hookEventName": "UserPromptSubmit",
+    "additionalContext": "[soul]\n[corr]#13754488991409766722 [50%] [wisdom] (on: 2026-09-14) [correction] The prompt hook must not pipe injected memories through 'sqz compress': sqz dedup r\n[kw]#832609994791715313 [100%] [preference] [design] avoid-resurrecting-failed-architectures | do-not-revive-ignition-forward-admission-or-\n[admit] C2:KNOWN(45%) hyb:1 kw:1 corr:1 | drop conf:2 cap:7 | t:sem=0,ctx=0,hyb=0,kw=0,corr=0,corrk=0,total=0 | relevant memory present — verify before fully trusting; recall() more if it matters"
+  },
+  "systemMessage": "CORRECTION: [correction] The prompt hook must not pipe injected memories through 'sqz compress': sqz dedup replaces previously seen memory lines with §ref:HASH§ tokens the model cannot expand, so memories silently vanish from context. Masked for weeks because sqz's NFS session store failed open; surfaced 2026-09-14 when the store was repaired (hooks/tests/test_prompt_core_lanes.sh failed on '[kw]#11' missin ["
+}

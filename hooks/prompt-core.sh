@@ -44,8 +44,10 @@ mkdir -p "$MIND_PATH" 2>/dev/null || true
 # ceiling: budget is wall-clock, not CPU; a stalled daemon still costs one
 # per-call timeout after the last check. upgrade: pass a deadline to chitta.
 _HOOK_T0=$(date +%s%3N)
+_HOOK_BUDGET_T0=$_HOOK_T0
+[[ "${CHITTA_HOOK_NOW:-}" =~ ^[1-9][0-9]{12}$ ]] && _HOOK_BUDGET_T0=$(command date +%s%3N)
 HOOK_BUDGET_MS="${CHITTA_HOOK_BUDGET_MS:-${CC_SOUL_HOOK_BUDGET_MS:-6000}}"
-budget_left() { (( $(date +%s%3N) - _HOOK_T0 < HOOK_BUDGET_MS )); }
+budget_left() { (( $(command date +%s%3N) - _HOOK_BUDGET_T0 < HOOK_BUDGET_MS )); }
 
 # Recall scheduling telemetry. EPOCHREALTIME is a Bash builtin, so lane
 # boundaries add no processes to the already latency-sensitive fan-out. The
@@ -61,6 +63,10 @@ _RECALL_CONTEXT_EMITTED=0
 _LEDGER_OUTPUT=""
 _NOW_MS=0
 _clock_ms() {
+    if [[ "${CHITTA_HOOK_NOW:-}" =~ ^[1-9][0-9]{12}$ ]]; then
+        _NOW_MS=$CHITTA_HOOK_NOW
+        return
+    fi
     local _stamp="${EPOCHREALTIME:-}"
     if [[ -n "$_stamp" ]]; then
         _NOW_MS="${_stamp/./}"
@@ -123,20 +129,24 @@ _read_lane() {
 
 _render_lane_telemetry() {
     local _lane _sep="" _bad
-    _LANE_TIMING_FIELD=""
-    _LANE_MS_JSON="{"
-    _LANE_TIMEOUT_JSON="{"
-    for _lane in "${_LANE_ORDER[@]}"; do
-        [[ -n "${_LANE_MS[$_lane]+set}" ]] || continue
-        _bad=""
-        [[ "${_LANE_TIMEOUT[$_lane]}" == "true" ]] && _bad="!"
-        _LANE_TIMING_FIELD+="${_sep}${_lane}=${_LANE_MS[$_lane]}${_bad}"
-        _LANE_MS_JSON+="${_sep}\"${_lane}\":${_LANE_MS[$_lane]}"
-        _LANE_TIMEOUT_JSON+="${_sep}\"${_lane}\":${_LANE_TIMEOUT[$_lane]}"
-        _sep=","
-    done
-    _LANE_MS_JSON+="}"
-    _LANE_TIMEOUT_JSON+="}"
+    if [[ "${_POLICY_READY:-0}" -ne 1 ]]; then
+        _LANE_TIMING_FIELD=""
+        _LANE_MS_JSON="{"
+        _LANE_TIMEOUT_JSON="{"
+        for _lane in "${_LANE_ORDER[@]}"; do
+            [[ -n "${_LANE_MS[$_lane]+set}" ]] || continue
+            # Pin presentation only; retain the daemon's real timeout/degraded flag.
+            [[ "${CHITTA_HOOK_NOW:-}" =~ ^[1-9][0-9]{12}$ ]] && _LANE_MS["$_lane"]=0
+            _bad=""
+            [[ "${_LANE_TIMEOUT[$_lane]}" == "true" ]] && _bad="!"
+            _LANE_TIMING_FIELD+="${_sep}${_lane}=${_LANE_MS[$_lane]}${_bad}"
+            _LANE_MS_JSON+="${_sep}\"${_lane}\":${_LANE_MS[$_lane]}"
+            _LANE_TIMEOUT_JSON+="${_sep}\"${_lane}\":${_LANE_TIMEOUT[$_lane]}"
+            _sep=","
+        done
+        _LANE_MS_JSON+="}"
+        _LANE_TIMEOUT_JSON+="}"
+    fi
     _clock_ms
     _HOOK_ELAPSED_MS=$(( _NOW_MS - _HOOK_T0 ))
 }
@@ -470,6 +480,29 @@ _ABLATE_LANES=",${_ABLATE_LANES_RAW},"
 [[ "${_NO_TOPIC_LANES:-0}" == "1" ]] && _ABLATE_LANES="${_ABLATE_LANES}sem,hyb,kw,ctx,xr,"
 _lane_ablated() { [[ "$_ABLATE_LANES" == *",$1,"* ]]; }
 
+_build_prompt_policy_state() {
+    _INJECTED_FILE="${HOOK_STATE_DIR}/.injected_hashes_${SESSION_ID}"
+    _render_lane_telemetry
+    _policy_seen=""
+    [[ -f "$_INJECTED_FILE" ]] && _policy_seen=$(<"$_INJECTED_FILE")
+    _policy_state=$(jq -nc --arg query "$CLEAN_QUERY" --arg memories "$memories" \
+        --arg qt "$_QTOK" --arg distinct "${_QTOK_DISTINCT:-}" --arg ctx "$_CTXTOK" \
+        --arg seen "$_policy_seen" --arg sid "$SESSION_ID" --arg c2 "${_c2_pct:-}" \
+        --arg small "${_c2_small_realm_relax:-0}" --arg ablated "$_ABLATE_LANES_RAW" \
+        --arg unknown "${CHITTA_UNKNOWN_SILENCE:-${CC_SOUL_UNKNOWN_SILENCE:-1}}" \
+        --arg anchor "${CHITTA_ANCHOR_ENFORCE:-${CC_SOUL_ANCHOR_ENFORCE:-0}}" \
+        --arg debug "${CHITTA_ADMIT_DEBUG:-${CC_SOUL_ADMIT_DEBUG:-}}" \
+        --argjson kwmin "${CHITTA_KW_SINGLE_TOKEN_MIN:-60}" \
+        --argjson ms "$_LANE_MS_JSON" --argjson timeouts "$_LANE_TIMEOUT_JSON" \
+        '{query:$query,memories:$memories,query_tokens:$qt,distinct_tokens:$distinct,
+          context_tokens:$ctx,seen_hashes:$seen,session_id:$sid,c2_pct:$c2,
+          small_realm:($small=="1"),ablated:$ablated,unknown_silence:($unknown=="1"),
+          anchor_enforce:($anchor=="1"),debug:($debug!=""),kw_single_token_min:$kwmin,
+          lane_ms:$ms,lane_timeout:$timeouts}' 2>/dev/null)
+}
+
+_POLICY_READY=0
+_PIPELINE_READY=0
 _RECALL_TELEMETRY_ACTIVE=1
 # Fetch continuity concurrently with recall; consume it only when rendering.
 _SESSION_PID=""
@@ -478,7 +511,61 @@ if [[ ! -f "$MIND_PATH/.session_active" ]] && budget_left; then
         >"$_ld/session" 2>/dev/null &
     _SESSION_PID=$!
 fi
-if [[ -n "$RLM_MODE" ]]; then
+# One daemon call owns lane scheduling, fusion and admission. Invalid or late
+# replies retain the existing bounded recall/admission fallback below.
+if [[ -z "$RLM_MODE" && "${CHITTA_PROMPT_CONTEXT:-1}" == 1 &&
+      "${CHITTA_RECALL_LANES_RPC:-${CC_SOUL_RECALL_LANES_RPC:-1}}" == 1 ]]; then
+    _build_prompt_policy_state
+    _pipeline_state=$(jq -nc --argjson state "$_policy_state" --arg query "$QUERY" \
+        --arg ctx "$CTX_QUERY" --arg realm "$REALM" --arg ablated "$_ABLATE_LANES" \
+        --arg pin "${CHITTA_HOOK_NOW:-}" --argjson hyblimit "$HYB_LANE_LIMIT" \
+        --arg small "${CHITTA_C2_SMALL_REALM:-1}" \
+        --argjson maxn "${CHITTA_C2_SMALL_REALM_MAXN:-3}" \
+        --argjson minpct "${CHITTA_C2_SMALL_REALM_MINPCT:-50}" \
+        --argjson remaining "$(( HOOK_BUDGET_MS - $(command date +%s%3N) + _HOOK_BUDGET_T0 ))" \
+        --argjson budget "$(( MAX_WAIT * 1000 ))" '
+        $state + {retrieval:{query:$query,ctx_query:$ctx,realm:$realm,
+          lanes:((["sem","hyb","kw","corr"] | map(select(. as $n | $ablated | contains(","+$n+",") | not)))
+            + ["corrk"] + (if $ctx!="" and ($ablated|contains(",ctx,")|not) then ["ctx"] else [] end)),
+          limits:{sem:6,ctx:4,hyb:$hyblimit,kw:3,corr:3}},
+          fusion_options:{hyb_limit:$hyblimit,small_realm_enabled:($small=="1"),
+            small_realm_maxn:$maxn,small_realm_minpct:$minpct,cross_realm:($ablated|contains(",xr,")|not)},
+          remaining_ms:$remaining,lane_budget_ms:$budget,pin_timings:($pin|test("^[1-9][0-9]{12}$"))}' 2>/dev/null)
+    _pipeline_rc=0
+    if [[ -n "$_pipeline_state" ]]; then
+        timeout "$((MAX_WAIT + 1))" "$CHITTA_BIN" prompt_context \
+            --state "$_pipeline_state" --json >"$_ld/policy.json" 2>/dev/null || _pipeline_rc=$?
+    fi
+    if [[ -n "$_pipeline_state" && "$_pipeline_rc" == 0 ]] &&
+        jq -sjer 'if length==1 then .[0] else error("multiple replies") end |
+          select((.fused_block|type)=="string" and (.admit_line|type)=="string" and
+            (.retrieval.memories|type)=="string" and (.retrieval.c2_pct|type)=="string" and
+            (.retrieval.small_realm|type)=="boolean" and (.retrieval.lanes|type)=="object") |
+          .retrieval | .memories,"\u0000",.c2_pct,"\u0000",
+          (if .small_realm then "1" else "0" end),"\u0000",
+          (.lanes.corr.text // ""),"\u0000",(.lanes.corrk.text // ""),"\u0000"' \
+          "$_ld/policy.json" >"$_ld/fusion.records" 2>/dev/null; then
+        {
+            IFS= read -r -d '' memories
+            IFS= read -r -d '' _c2_pct
+            IFS= read -r -d '' _c2_small_realm_relax
+            IFS= read -r -d '' _corr_out
+            IFS= read -r -d '' _corrk_out
+        } <"$_ld/fusion.records"
+        while IFS=$'\t' read -r _name _ms _bad; do
+            _LANE_MS["$_name"]=$_ms
+            _LANE_TIMEOUT["$_name"]=$_bad
+        done < <(jq -r '.retrieval.lanes|to_entries[]|[.key,.value.ms,.value.timed_out]|@tsv' "$_ld/policy.json")
+        _render_lane_telemetry
+        _PIPELINE_READY=1
+        if [[ -n "${CHITTA_HOOK_PROFILE:-}" ]]; then
+            cp "$_ld/policy.json" "$CHITTA_HOOK_PROFILE" 2>/dev/null || true
+        fi
+    fi
+fi
+if [[ "$_PIPELINE_READY" == 1 ]]; then
+    : # The daemon already returned the fused text and correction slots.
+elif [[ -n "$RLM_MODE" ]]; then
     # RLM-style exploration via Python soul_repl.
     # Query passed via env, never interpolated into Python source — the raw
     # prompt is attacker-influenceable text.
@@ -513,7 +600,10 @@ else
     _lanes_rpc_ok=0
     # Default ON since 2026-09-13: bench (3 queries × 20 runs/arm) median 1496→1201 ms,
     # p95 3208→3087, 0 empties both arms; fail-open fallback to the six-process path.
-    if [[ "${CHITTA_RECALL_LANES_RPC:-${CC_SOUL_RECALL_LANES_RPC:-1}}" == "1" ]]; then
+    # A timed-out pipeline already spent the batch wait. Go directly to the
+    # legacy per-lane fallback instead of charging another batch timeout.
+    if [[ "${CHITTA_RECALL_LANES_RPC:-${CC_SOUL_RECALL_LANES_RPC:-1}}" == "1" &&
+          "${_pipeline_rc:-0}" != 124 && "${_pipeline_rc:-0}" != 137 ]]; then
         _rpc_lane_names=()
         for _rpc_lane in sem hyb kw corr; do
             _lane_ablated "$_rpc_lane" || _rpc_lane_names+=("$_rpc_lane")
@@ -726,7 +816,7 @@ fi
 # Cross-realm fallback: if scoped recall found nothing, retry without realm.
 # Lets project:geodesic/environment memories surface in foreign-realm sessions.
 # Cost: one extra hybrid call (~0.3s). Only fires when scoped recall was empty.
-if [[ -z "$memories" ]] && [[ "$REALM" != "brahman" ]] && budget_left && ! _lane_ablated xr; then
+if [[ "$_PIPELINE_READY" != 1 && -z "$memories" ]] && [[ "$REALM" != "brahman" ]] && budget_left && ! _lane_ablated xr; then
     if [[ "$_RECALL_TELEMETRY_ACTIVE" -eq 1 && -n "${_ld:-}" ]]; then
         _run_lane xr "$MAX_WAIT" "$CHITTA_BIN" recall --query "$QUERY" --strategy hybrid --limit 5
         _fallback=$(<"$_ld/xr")
@@ -743,6 +833,60 @@ if [[ -z "$memories" ]]; then
     [[ -z "$CACHE_WARN" && -z "$SESSION_WARN" ]] && exit 0
 fi
 
+# Admission policy is daemon-owned. The new CLI carries the same pure policy
+# for a short local fallback; older CLIs retain the shell compatibility path.
+_INJECTED_FILE="${HOOK_STATE_DIR}/.injected_hashes_${SESSION_ID}"
+_POLICY_READY=0
+if [[ "${CHITTA_PROMPT_CONTEXT:-1}" == "1" ]]; then
+    if [[ "${_PIPELINE_READY:-0}" != 1 ]]; then
+        _build_prompt_policy_state
+        if [[ -n "$_policy_state" ]]; then
+            # Never spend the remaining enrichment budget waiting for admission.
+            if ! budget_left || ! timeout 0.15 "$CHITTA_BIN" prompt_context \
+                --state "$_policy_state" --json >"$_ld/policy.json" 2>/dev/null; then
+                timeout 0.25 "$CHITTA_BIN" prompt_context --local \
+                    --state "$_policy_state" --json >"$_ld/policy.json" 2>/dev/null || true
+            fi
+        fi
+    fi
+    if [[ -s "$_ld/policy.json" ]]; then
+        if jq -sjer '
+            if length==1 then .[0] else error("expected one policy response") end |
+            select((.fused_block|type)=="string" and
+                (.count|type=="number" and .>=0 and .<=3 and .==floor) and
+                (.admit_line|type)=="string" and (.c2_tag|type)=="string" and
+                (.c2_phrase|type)=="string" and (.timing_field|type)=="string" and
+                (.admit_tail|type)=="string" and
+                (.hashes|type=="array" and all(.[]; type=="string" and test("^[0-9a-f]{16}$"))) and
+                (.shadow|type)=="array" and (.debug_text|type)=="string" and
+                (.terse_negation|type)=="boolean") |
+            .fused_block,"\u0000",(.count|tostring),"\u0000",.admit_line,"\u0000",
+            .c2_tag,"\u0000",.c2_phrase,"\u0000",.timing_field,"\u0000",
+            .admit_tail,"\u0000",.debug_text,"\u0000",(.terse_negation|tostring),"\u0000"
+        ' "$_ld/policy.json" >"$_ld/policy.records" 2>/dev/null; then
+            {
+                IFS= read -r -d '' OUTPUT
+                IFS= read -r -d '' COUNT
+                IFS= read -r -d '' ADMIT_LINE
+                IFS= read -r -d '' _c2_tag
+                IFS= read -r -d '' _c2_phrase
+                IFS= read -r -d '' _LANE_TIMING_FIELD
+                IFS= read -r -d '' _POLICY_ADMIT_TAIL
+                IFS= read -r -d '' _policy_debug
+                IFS= read -r -d '' _policy_negation
+            } <"$_ld/policy.records"
+            printf '%s' "$_policy_debug" >&2
+            [[ "$_policy_negation" == true ]] && _corr_out=""
+            if [[ "$SESSION_ID" != unknown && -n "$SESSION_ID" && "$COUNT" -gt 0 ]]; then
+                jq -r '.hashes[]' "$_ld/policy.json" >>"$_INJECTED_FILE"
+            fi
+            jq -c '.shadow[]' "$_ld/policy.json" >>"${MIND_PATH}/.inj_anchor_shadow.jsonl"
+            _LEDGER_OUTPUT="$OUTPUT"
+            _POLICY_READY=1
+        fi
+    fi
+fi
+if [[ "$_POLICY_READY" -ne 1 ]]; then
 # Filter and format results
 # Workspace inspector: every candidate carries an admission reason (its recall
 # lane), and every rejection is counted by cause. Rendered as per-item [lane]
@@ -1058,6 +1202,8 @@ if [[ $COUNT -gt 0 || $((_drop_conf + _drop_dup + _drop_meta + _drop_cap + _drop
     [[ $_drop_unk  -gt 0 ]] && _out="$_out unk:$_drop_unk"
     _sr_tag=""; [[ "${_c2_small_realm_relax:-0}" -eq 1 ]] && _sr_tag=" sr:on"
     ADMIT_LINE="[admit]${_ABLATE_LANES_RAW:+ abl:$_ABLATE_LANES_RAW}${_c2_tag:+ C2:$_c2_tag($_c2_cal%)}${_sr_tag}${_in:- none} | drop${_out:- none}"
+fi
+
 fi
 
 # ===========================================
@@ -1611,7 +1757,11 @@ if [[ -n "$ADMIT_LINE" ]]; then
         _HOOK_ELAPSED_MS=$(( _NOW_MS - _HOOK_T0 ))
         _LANE_TIMING_FIELD=""
     fi
+    if [[ "${_POLICY_READY:-0}" -eq 1 ]]; then
+        ADMIT_LINE+="${_POLICY_ADMIT_TAIL//@HOOK_MS@/$_HOOK_ELAPSED_MS}"
+    else
     ADMIT_LINE+=" | t:${_LANE_TIMING_FIELD}${_LANE_TIMING_FIELD:+,}total=${_HOOK_ELAPSED_MS}${_c2_phrase}"
+    fi
 fi
 if [[ -n "$OUTPUT" && $COUNT -gt 0 ]]; then
     # #5: sqz intra-turn dedup — collapse repeated memory text seen earlier this session.

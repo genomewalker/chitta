@@ -252,7 +252,7 @@ FILES_JSON=$(transcript_tool_files_json 2>/dev/null || echo "[]")
 # Store in the task ledger's session metadata: session_bind merges metadata
 # atomically, so concurrent thread inference cannot erase unrelated fields.
 _save_handoff_capsule() {
-    local project branch action blocker source_kind thread_id row args capsule visible paths
+    local project branch action blocker source_kind thread_id row args capsule visible paths response
     project=$(jq -r '.cwd // .project_dir // empty' <<< "$INPUT")
     [[ -d "$project" && "$SESSION_ID" != unknown ]] || return 0
     project=$(cd "$project" && pwd -P) || return 0
@@ -275,6 +275,26 @@ _save_handoff_capsule() {
         /^[[:space:]]*(```|~~~)/ { fenced = !fenced; next }
         !fenced && /^[[:space:]]*([-*][[:space:]]*)?([Bb]locker|[Bb]locked):[[:space:]]*[^[:space:]]/ { line = $0 }
         END { print line }' | head -c 400)
+    if [[ "${CHITTA_LEDGER_POLICY:-1}" == 1 ]]; then
+        args=$(jq -nc --arg sid "$SESSION_ID" --arg project "$project" --arg branch "$branch" \
+            --arg action "$action" --arg blocker "$blocker" --argjson paths "$paths" \
+            --argjson saved "$(date +%s.%N)" \
+            '{session_id:$sid,project_dir:$project,branch:$branch,next_action:$action,
+              blocker:$blocker,artifact_paths:$paths,saved_at:$saved}')
+        response=$(timeout 0.15 "$CHITTA_BIN" ledger_op --op hook_handoff_prepare \
+            --args "$args" --json 2>/dev/null) || response='{}'
+        if jq -se --arg sid "$SESSION_ID" --arg project "$project" \
+            'length==1 and (.[0] | .value.op=="session_bind" and
+              .value.args.session_id==$sid and .value.args.project_dir==$project and
+              (.value.args.metadata.handoff|type)=="object")' <<< "$response" >/dev/null 2>&1; then
+            _LEDGER_POLICY_SUPPORTED=1
+            if [[ -n "${CHITTA_LEDGER_PROFILE:-}" ]]; then
+                printf '%s\n' "$response" > "$CHITTA_LEDGER_PROFILE"
+            fi
+            queue_write ledger_op "$(jq -c '.value' <<< "$response")"
+            return $?
+        fi
+    fi
     source_kind=visible_plan
     thread_id=""
     if [[ -z "$action" ]]; then
@@ -296,7 +316,9 @@ _save_handoff_capsule() {
         --arg sid "$SESSION_ID" --argjson paths "$paths" \
         '{version:1, next_action:$action, verified:($action != ""), branch:$branch,
           project_dir:$project, artifact_paths:($paths | unique | .[:20]), blocker:$blocker,
-          source:{kind:$source,session_id:$sid,thread_id:$tid}, saved_at:now}') || return 0
+          source:{kind:$source,session_id:$sid,thread_id:$tid},
+          saved_at:(if (env.CHITTA_HOOK_NOW // "" | test("^[1-9][0-9]{12}$"))
+            then (env.CHITTA_HOOK_NOW|tonumber)/1000 else now end)}') || return 0
     args=$(jq -nc --arg sid "$SESSION_ID" --arg project "$project" --argjson capsule "$capsule" \
         '{op:"session_bind",args:{session_id:$sid,project_dir:$project,metadata:{handoff:$capsule}}}') || return 0
     queue_write ledger_op "$args"
@@ -315,7 +337,13 @@ echo "$RESPONSE" | grep -qiE '(error|failed|exception|traceback)' && HAS_ERROR=t
 
 # Store assistant turn, then advance the transcript cursor.  If durable queueing
 # fails, leave the cursor untouched so the next Stop event retries this slice.
-if safe_queue_write "store_turn" "{\"session_id\":\"$SESSION_ID\",\"role\":\"assistant\",\"content\":$(echo "$RESPONSE" | jq -Rs .),\"turn_index\":$TURN_INDEX,\"tools_used\":$TOOLS_JSON,\"files_touched\":$FILES_JSON,\"has_error\":$HAS_ERROR}"; then
+_turn_tool=store_turn
+_turn_args="{\"session_id\":\"$SESSION_ID\",\"role\":\"assistant\",\"content\":$(echo "$RESPONSE" | jq -Rs .),\"turn_index\":$TURN_INDEX,\"tools_used\":$TOOLS_JSON,\"files_touched\":$FILES_JSON,\"has_error\":$HAS_ERROR}"
+if [[ "${_LEDGER_POLICY_SUPPORTED:-0}" == 1 ]]; then
+    _turn_tool=ledger_op
+    _turn_args=$(jq -nc --argjson args "$_turn_args" '{op:"hook_turn",args:$args}')
+fi
+if safe_queue_write "$_turn_tool" "$_turn_args"; then
     timeout 3 python3 "$_SNAPSHOT_HELPER" commit \
         --snapshot "$_SNAPSHOT_FILE" --cursor "$_CURSOR_FILE" \
         >/dev/null 2>&1 || true

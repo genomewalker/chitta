@@ -1,0 +1,10 @@
+chitta prompt_context - Apply shared prompt admission and render its budget metadata
+
+Parameters:
+  --local
+      CLI only: run the same pure policy locally for timeout fallback
+  --state (required)
+      Lane text, session hashes, query tokens and policy settings
+
+Example:
+  chitta prompt_context --state "..."

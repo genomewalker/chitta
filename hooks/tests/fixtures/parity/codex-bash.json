@@ -1,0 +1,1 @@
+{"hook_event_name":"PostToolUse","session_id":"p5-parity","tool_name":"Bash","tool_input":{"command":"rg missing-fixture"},"tool_response":"Exit code 1\nNo matches found","cwd":"@WORK@/project"}

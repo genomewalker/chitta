@@ -396,6 +396,13 @@ void FieldRpcHandler::register_memory_core_tools() {
             }},{"required",{"query"}}},
             &FieldRpcHandler::tool_hybrid_recall, handlers_["hybrid_recall"]},
 
+        {"prompt_context", "Apply shared prompt admission and render its budget metadata",
+            {{"type", "object"}, {"properties", {
+                {"state", {{"type", "object"}, {"description", "Lane text, session hashes, query tokens and policy settings"}}},
+                {"local", {{"type", "boolean"}, {"description", "CLI only: run the same pure policy locally for timeout fallback"}}}
+            }}, {"required", {"state"}}},
+            &FieldRpcHandler::tool_prompt_context, handlers_["prompt_context"]},
+
         {"recall_lanes", "Fan-in prompt recall lanes over one daemon RPC",
             {{"type","object"},{"properties",{
                 {"query",{{"type","string"},{"description","Prompt query shared by sem, hyb, kw, corr, and corrk"}}},

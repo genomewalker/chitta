@@ -163,7 +163,7 @@ REALM=$(detect_project_realm "$PROJECT_DIR")
 
 # BEGIN handoff capsule
 _load_handoff_capsule() {
-    local project branch args tid
+    local project branch args tid response
     [[ -d "$PROJECT_DIR" ]] || return 0
     project=$(cd "$PROJECT_DIR" && pwd -P) || return 0
     branch=$(git -C "$project" symbolic-ref --quiet --short HEAD 2>/dev/null ||
@@ -171,6 +171,14 @@ _load_handoff_capsule() {
     tid=$(jq -r '.thread_id // empty' <<< "$INPUT")
     args=$(jq -nc --arg project "$project" --arg tid "$tid" \
         '{project_dir:$project,limit:100} + (if $tid == "" then {} else {thread_id:$tid} end)')
+    if [[ "${CHITTA_LEDGER_POLICY:-1}" == 1 ]]; then
+        response=$(timeout 0.15 "$CHITTA_BIN" ledger_op --op hook_handoff_context \
+            --args "$(jq -c --arg branch "$branch" '. + {branch:$branch}' <<< "$args")" --json 2>/dev/null) || response='{}'
+        if jq -se 'length==1 and (.[0].value.text|type)=="string"' <<< "$response" >/dev/null 2>&1; then
+            jq -r '.value.text' <<< "$response"
+            return 0
+        fi
+    fi
     timeout "$MAX_WAIT" "$CHITTA_BIN" ledger_op --op session_list --args "$args" --json |
         jq -r --arg branch "$branch" --arg project "$project" '
         [.value.rows[]? | (.metadata_json | fromjson? // {}) | .handoff // empty |
@@ -238,6 +246,19 @@ fi
 # ═══════════════════════════════════════════════════════════════════════════
 
 _load_ledger() {
+    local args response
+    if [[ "${CHITTA_LEDGER_POLICY:-1}" == 1 ]]; then
+        args=$(jq -nc --arg project "$REALM" --arg source "$HOOK_SOURCE" \
+            --argjson now "$(date +%s)" '{project:$project,source:$source,now:$now}')
+        response=$(timeout 0.15 "$CHITTA_BIN" ledger_op --op hook_session_context \
+            --args "$args" --json 2>/dev/null) || response='{}'
+        if jq -se 'length==1 and (.[0] | (.value.ledger|type)=="object" and (.value.card|type)=="string" and
+            (.value.post_compact|type)=="boolean" and (.value.post_clear|type)=="boolean")' \
+            <<< "$response" >/dev/null 2>&1; then
+            printf '%s\n' "$response"
+            return 0
+        fi
+    fi
     timeout "$MAX_WAIT" "$CHITTA_BIN" ledger_load --project "$REALM" --json || echo '{}'
 }
 _launch_lane ledger _load_ledger
@@ -247,7 +268,15 @@ if [[ -n "${REALM:-}" && "$REALM" != brahman ]]; then
 fi
 
 _render_tasks() {
-    local inbox_args thread_args inbox_pid thread_pid
+    local inbox_args thread_args inbox_pid thread_pid response
+    if [[ "${CHITTA_LEDGER_POLICY:-1}" == 1 ]]; then
+        response=$(timeout 0.15 "$CHITTA_BIN" ledger_op --op hook_task_context \
+            --args "$(jq -nc --arg realm "$REALM" '{realm:$realm}')" --json 2>/dev/null) || response='{}'
+        if jq -se 'length==1 and (.[0].value.text|type)=="string"' <<< "$response" >/dev/null 2>&1; then
+            jq -r '.value.text' <<< "$response"
+            return 0
+        fi
+    fi
     inbox_args=$(jq -nc --arg realm "$REALM" '{target_realm:$realm,state:"pending",limit:5}')
     thread_args=$(jq -nc --arg realm "$REALM" '{realm:$realm,status:"active",limit:3}')
     # ledger_op exposes separate list operations. Dispatch concurrently, then
@@ -358,6 +387,16 @@ _read_lane handoff HANDOFF_CAPSULE
 # Get full ledger entry (not just summary)
 # ledger_load returns the most recent entry for the project
 _read_lane ledger LEDGER_JSON
+_LEDGER_POLICY=0
+_LEDGER_CONTEXT_JSON="$LEDGER_JSON"
+if jq -se 'length==1 and (.[0] | (.value.ledger|type)=="object" and (.value.card|type)=="string")' \
+    <<< "$LEDGER_JSON" >/dev/null 2>&1; then
+    LEDGER_JSON=$(jq -c '.value.ledger' <<< "$LEDGER_JSON")
+    _LEDGER_POLICY=1
+    if [[ -n "${CHITTA_LEDGER_PROFILE:-}" ]]; then
+        printf '%s\n' "$_LEDGER_CONTEXT_JSON" > "$CHITTA_LEDGER_PROFILE"
+    fi
+fi
 
 # The query depends on the ledger. Speculate the fallback concurrently, but
 # display it only when the scoped answer contains no usable memory.
@@ -375,6 +414,10 @@ fi
 # Check if this is a post-compaction session
 # Primary signal: Claude Code passes source="compact" in hook input (authoritative)
 # Fallback: ledger mood="pre-compact" (requires daemon to have saved checkpoint before compact)
+if [[ "$_LEDGER_POLICY" == 1 ]]; then
+    IFS=$'\t' read -r IS_POST_COMPACT IS_POST_CLEAR < <(
+        jq -r '[.value.post_compact,.value.post_clear]|@tsv' <<< "$_LEDGER_CONTEXT_JSON")
+else
 MOOD=$(echo "$LEDGER_JSON" | jq -r '.mood // empty')
 IS_POST_COMPACT=false
 [[ "$HOOK_SOURCE" == "compact" ]] && IS_POST_COMPACT=true
@@ -395,6 +438,8 @@ if [[ "$HOOK_SOURCE" == "clear" ]]; then
     if [[ "$MOOD" == "in_progress" || "$MOOD" == "pre-compact" ]] && [[ "$_age_s" -lt 14400 ]]; then
         IS_POST_CLEAR=true
     fi
+fi
+
 fi
 
 _collect_corrections() {
@@ -449,6 +494,9 @@ _collect_corrections() {
 }
 
 if [[ "$IS_POST_COMPACT" == "true" ]]; then
+    if [[ "$_LEDGER_POLICY" == 1 ]]; then
+        jq -j '.value.card' <<< "$_LEDGER_CONTEXT_JSON"
+    else
     # This is a continuation after compaction - inject full state
     echo ""
     echo "[session-restored]"
@@ -513,7 +561,11 @@ if [[ "$IS_POST_COMPACT" == "true" ]]; then
 
     echo "[/session-restored]"
     echo ""
+    fi
 elif [[ "$IS_POST_CLEAR" == "true" ]]; then
+    if [[ "$_LEDGER_POLICY" == 1 ]]; then
+        jq -j '.value.card' <<< "$_LEDGER_CONTEXT_JSON"
+    else
     # /clear with a recent in-progress ledger — inject bounded resume hint
     _clear_goal=$(echo "$LEDGER_JSON" | jq -r '.snapshot // empty' | grep -m1 '^Goal:' | sed 's/^Goal:[[:space:]]*//' | head -c 200)
     [[ -z "$_clear_goal" ]] && _clear_goal=$(echo "$LEDGER_JSON" | jq -r '.snapshot // empty' | head -1 | head -c 200)
@@ -528,6 +580,7 @@ elif [[ "$IS_POST_CLEAR" == "true" ]]; then
     [[ -n "$_clear_updated" ]] && _card="${_card}\nSaved: ${_clear_updated}"
     _card="${_card}\nRun /recap for full context. [/last-session]"
     echo -e "$_card"
+    fi
 else
     # Normal session start - just show minimal info
     # Dependent correction tags start as soon as their recall has completed.
@@ -543,8 +596,10 @@ else
         [[ "$memories" != "0" ]] && echo "[soul] m=$memories t=$triplets"
     fi
 
-    # Quick ledger check
-    if [[ -n "$LEDGER_JSON" && "$LEDGER_JSON" != "{}" ]]; then
+    # The daemon returns the same normal/clear/compact ledger card.
+    if [[ "$_LEDGER_POLICY" == 1 ]]; then
+        jq -j '.value.card' <<< "$_LEDGER_CONTEXT_JSON"
+    elif [[ -n "$LEDGER_JSON" && "$LEDGER_JSON" != "{}" ]]; then
         session=$(echo "$LEDGER_JSON" | jq -r '.session_id // empty')
         mood=$(echo "$LEDGER_JSON" | jq -r '.mood // empty')
         [[ -n "$session" ]] && echo "[ledger] $session ($mood)"

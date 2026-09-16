@@ -4,6 +4,17 @@
 #
 # Common functions used across session-start, prompt, and stop hooks.
 
+# Evaluation wall clock in Unix milliseconds. Explicit date parsing remains real;
+# timeout(1) and prompt's budget clock remain unpinned. Invalid values are ignored.
+if [[ "${CHITTA_HOOK_NOW:-}" =~ ^[1-9][0-9]{12}$ ]]; then
+    date() {
+        case " $* " in
+            *' -d '*|*' --date'*|*' -r '*|*' --reference'*) command date "$@" ;;
+            *) command date --date="@${CHITTA_HOOK_NOW:0:10}.${CHITTA_HOOK_NOW:10:3}" "$@" ;;
+        esac
+    }
+fi
+
 # --- CC_SOUL_* / CHITTA_* env var alias shim -------------------------------
 # Every CC_SOUL_* knob keeps working under its CHITTA_* twin and vice versa.
 # If a caller sets only one name, this exports the other so any process that
@@ -18,8 +29,8 @@ _CHITTA_ALIAS_VARS=(
     CHECKPOINT_INTERVAL CTX_LANE DEEP_SEARCH DISCIPLINE_ENFORCE
     EDIT_REINDEX_RATE ENRICH_INTERVAL HEADLESS HOOK_BUDGET_MS HOOK_ENFORCE
     HOOK_STATE_DIR INDEX_INTERVAL LEAN LEGACY_MARKERS LOOP_LIMIT LOOP_WARN
-    MAX_INDEX_FILES MAX_OUTPUT_CHARS MAX_WAIT MCP_DIR MODEL PLUGIN_DIR
-    REINDEX_RATE_LIMIT RETAG_INTERVAL RLM_MODE RLM_QUERY SADHANA_MAX
+    LEDGER_POLICY MAX_INDEX_FILES MAX_OUTPUT_CHARS MAX_WAIT MCP_DIR MODEL PLUGIN_DIR
+    PROMPT_CONTEXT REINDEX_RATE_LIMIT RETAG_INTERVAL RLM_MODE RLM_QUERY SADHANA_MAX
     SADHANA_TIMEOUT SNAPSHOT_TIMEOUT STOP_BOOTSTRAP_BYTES
     STOP_ENRICH_INTERVAL STOP_GRACE STOP_MAX_INCREMENT_BYTES STORE_INTERVAL
     STRICT_MODE STRICT_MODE_DEFAULT SUBAGENT_BASH_RECALL UNKNOWN_SILENCE
@@ -197,7 +208,8 @@ saddle_check() (
         ($input.session_id // "" | tostring) as $sid |
         select($sid|test("\\A[a-zA-Z0-9_-]+\\z")) |
         ($input.tool_input.command // "") as $cmd |
-        (now * 1000) as $now |
+        (if (env.CHITTA_HOOK_NOW // "" | test("^[1-9][0-9]{12}$"))
+         then (env.CHITTA_HOOK_NOW | tonumber) else (now * 1000) end) as $now |
         (utf8bytelength > 1048576) as $partial |
         # One extra byte detects truncation without stat. If that byte is a
         # newline, Python starts at the next record and discards that too.
