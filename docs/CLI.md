@@ -36,12 +36,43 @@ chitta ledger_op --help
   - [health](#health)
   - [format-id](#format-id)
   - [hint_extract](#hint_extract)
+- [One daemon per shared store](#one-daemon-per-shared-store-across-login-nodes)
 - [Environment Variables](#environment-variables)
 - [Embed Model Resolution](#embed-model-resolution)
 - [Daemon Internals](#daemon-internals)
 - [Troubleshooting](#troubleshooting)
 
 ---
+
+## One daemon per shared store across login nodes
+
+The primary host runs the daemon and owns the NFS store lock. The installer
+writes `<mind>/.daemon-node` with `hostname -s`, overridden by
+`CHITTA_DAEMON_NODE`, and writes `chittad.service.d/primary-node.conf` in the
+user unit directory. Its guard matches the 2026-09-16 hand-installed behavior:
+a missing/empty marker permits startup; a different host exits 75; the drop-in
+sets `RestartPreventExitStatus=75`. Custom mind paths are passed through a
+quoted environment entry. Installing on another host reassigns the marker
+unless `CHITTA_DAEMON_NODE` names the existing primary. The shared unit file
+takes effect on each node only after that node reloads its unit configuration.
+The NFS instance lock remains the final cross-host fence.
+
+The cross-node client contract is: when the local socket is absent, hooks and
+MCP on other hosts reach the primary via HTTP JSON-RPC using `CHITTA_RPC_HOST`
+and `CHITTA_RPC_PORT` (deployment convention: 7432). The primary must enable a
+reachable RPC listener; the daemon's generic default remains 0 (disabled).
+
+**Automatic fallback is the next step, not implemented by this change.** The
+shell availability gate currently requires a local socket. Python hook calls
+support explicit host/port, but MCP's `daemon_bridge.py` hard-codes localhost
+and can attempt a local daemon start after connection failure. The CLI and
+socket-only hook helpers also need consistent transport selection. Changing
+only `hooks/lib.sh` and `daemon_client.py` would leave those paths inconsistent.
+A complete follow-up must share endpoint resolution, preserve explicit socket
+overrides, bound remote timeouts, and suppress all local startup attempts on
+secondary nodes. Do not enable node-local queues on secondary nodes: only the
+primary drains its own runtime directory, and no remote queue relay exists.
+
 
 ## chitta — Discovered tool commands
 

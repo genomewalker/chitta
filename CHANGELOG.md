@@ -11,6 +11,10 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 ## [Unreleased]
 
 ### Added
+- 2026-09-16: installer writes the primary-host `.daemon-node` marker and
+  `primary-node.conf` guard (exit 75 elsewhere), including custom mind paths.
+  Automatic secondary-host RPC fallback is documented as the next step;
+  partial transport changes were not added.
 - 2026-09-16: runtime placement for heartbeat, turn discipline, prompt/Stop
   recall state and PreTool caches, with real hook tests for default and local
   paths. Shared lifecycle markers stay on NFS; atomic queue mutation/ack replay

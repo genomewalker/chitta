@@ -843,6 +843,35 @@ stop_daemon() {
     rm -f /tmp/chitta-*.sock /tmp/chitta-*.lock /tmp/chitta-*.pid 2>/dev/null || true
 }
 
+# Write only configuration; kept separate so tests never invoke service management.
+write_primary_node_config() {
+    local service_dir="$1"
+    local primary_node="${CHITTA_DAEMON_NODE:-$(hostname -s)}"
+    [[ "$primary_node" =~ ^[a-zA-Z0-9][a-zA-Z0-9._-]*$ ]] || {
+        echo "[cc-soul] Invalid CHITTA_DAEMON_NODE: $primary_node" >&2
+        return 1
+    }
+    # Environment= quoting preserves custom mind paths (including spaces).
+    # Double percent signs prevent systemd specifier expansion in literal paths.
+    local marker="$MIND_PATH/.daemon-node"
+    marker="${marker//\\/\\\\}"
+    marker="${marker//\"/\\\"}"
+    marker="${marker//%/%%}"
+    [[ "$marker" != *$'\n'* && "$marker" != *$'\r'* ]] || return 1
+    mkdir -p "$MIND_PATH" "$service_dir/chittad.service.d" || return 1
+    printf '%s\n' "$primary_node" > "$MIND_PATH/.daemon-node" || return 1
+    local marker_assignment='m="$${CHITTA_PRIMARY_MARKER}"'
+    [[ "$MIND_PATH" != "$HOME/.claude/mind" ]] || marker_assignment='m=%h/.claude/mind/.daemon-node'
+    cat > "$service_dir/chittad.service.d/primary-node.conf" <<EOF
+[Service]
+# One daemon per NFS store. Same guard as the 2026-09-16 hand-installed unit;
+# a custom mind path is passed through Environment rather than hard-coded %h.
+Environment="CHITTA_PRIMARY_MARKER=$marker"
+ExecStartPre=/bin/sh -c '$marker_assignment; [ ! -s "\$m" ] || [ "\$(cat "\$m")" = "\$(hostname -s)" ] || { echo "chittad: primary node is \$(cat "\$m"), not \$(hostname -s)"; exit 75; }'
+RestartPreventExitStatus=75
+EOF
+}
+
 # Install and enable the systemd user service for chittad (Linux only)
 setup_systemd_service() {
     # Only Linux with systemd user session
@@ -891,6 +920,8 @@ StandardError=journal
 [Install]
 WantedBy=default.target
 EOF
+
+    write_primary_node_config "$service_dir" || return 1
 
     systemctl --user daemon-reload
     systemctl --user enable chittad 2>/dev/null || true
