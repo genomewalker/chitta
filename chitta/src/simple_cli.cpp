@@ -1726,6 +1726,30 @@ int main(int argc, char* argv[]) {
 
     // Commands that need Mind - daemonize first if needed
     if (command == "daemon") {
+        // One daemon per store across login nodes: the user unit lives in the
+        // shared home, so every node starts it. If <mind>/.daemon-node names
+        // another host, exit 75 (RestartPreventExitStatus=75 in the unit keeps
+        // systemd from looping; an ExecStartPre exit is not covered by that
+        // setting, probed 2026-09-16). CHITTA_DAEMON_NODE_IGNORE=1 bypasses.
+        if (!getenv("CHITTA_DAEMON_NODE_IGNORE")) {
+            std::ifstream marker(mind_path + "/.daemon-node");
+            std::string primary;
+            if (marker && std::getline(marker, primary)) {
+                while (!primary.empty() && (primary.back() == '\n' || primary.back() == '\r' || primary.back() == ' '))
+                    primary.pop_back();
+                char host[256] = {0};
+                ::gethostname(host, sizeof(host) - 1);
+                std::string here(host);
+                if (auto dot = here.find('.'); dot != std::string::npos) here.resize(dot);
+                std::string want(primary);
+                if (auto dot = want.find('.'); dot != std::string::npos) want.resize(dot);
+                if (!want.empty() && want != here) {
+                    std::cerr << "[daemon] primary node for " << mind_path << " is " << primary
+                              << ", not " << here << "; exiting 75 (set CHITTA_DAEMON_NODE_IGNORE=1 to override)\n";
+                    return 75;
+                }
+            }
+        }
         if (!foreground) {
             const char* home = getenv("HOME");
             std::string log_path = std::string(home ? home : ".") + "/.claude/mind/.subconscious.log";
