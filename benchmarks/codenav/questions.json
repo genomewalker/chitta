@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "source_commit": "18444e02",
+  "submodule_commit": "089a056",
+  "questions": [
+    {"id": "lock", "question": "Where is the store instance lock acquired, including stale lock recovery?", "file": "chitta-field/src/field.rs", "symbol": "acquire_instance_lock"},
+    {"id": "lanes", "question": "What calls tool_recall_lanes to assemble prompt retrieval context?", "file": "chitta/src/handlers/field_prompt_context.cpp", "symbol": "tool_prompt_context"},
+    {"id": "ledger", "question": "Which RPC handler writes task ledger operations to the WAL?", "file": "chitta/src/handlers/field_task_ledger.cpp", "symbol": "tool_ledger_op"},
+    {"id": "exit75", "question": "Where does the daemon exit 75 when the primary node marker names another host?", "file": "chitta/src/simple_cli.cpp", "symbol": "main"},
+    {"id": "acks", "question": "What implements the queue applied acknowledgement ledger and records ack IDs?", "file": "chitta/src/queue_processor.cpp", "symbol": "AppliedAcks"},
+    {"id": "runtime", "question": "Where is the node-local runtime state directory computed from the canonical mind path using DJB2?", "file": "chitta/include/chitta/queue_path.hpp", "symbol": "runtime_state_dir"},
+    {"id": "identity", "question": "What checks SO_PEERCRED, process start ticks and boot ID for the CLI daemon cache identity?", "file": "chitta/src/socket_client.cpp", "symbol": "cli_daemon_identity"},
+    {"id": "flags", "question": "Where are shell command CLI flags parsed into input files, output files and parameters for provenance?", "file": "chitta-mcp/provenance.py", "symbol": "parse_cli_flags"},
+    {"id": "resume", "question": "What selects one inactive transcript to resume and reports ambiguous or locked candidates?", "file": "chitta-mcp/resume_selector.py", "symbol": "select_resume"},
+    {"id": "manifest", "question": "Where are the two manifest slots loaded and the newer generation merged with older snapshot families?", "file": "chitta-field/src/manifest.rs", "symbol": "load"},
+    {"id": "project", "question": "Where are code files removed by project, accepting both bare and project-prefixed labels?", "file": "chitta-field/src/organ/codefile.rs", "symbol": "remove_by_project"},
+    {"id": "markdown", "question": "What extracts Markdown heading chunks while ignoring headings inside fenced examples?", "file": "chitta/include/chitta/code_intel.hpp", "symbol": "extract_markdown"},
+    {"id": "anchor", "question": "What creates artifact and done source anchors while preserving a captured SHA-256 for delayed observations?", "file": "chitta/src/code_intel.cpp", "symbol": "source_anchor"},
+    {"id": "mcp_source", "question": "Where does MCP attach source_session to remember calls before forwarding them to the daemon?", "file": "chitta-mcp/daemon_bridge.py", "symbol": "daemon_call"},
+    {"id": "budget", "question": "Which Python daemon call wrapper subtracts elapsed time from the remaining hook transport budget?", "file": "chitta-mcp/daemon_client.py", "symbol": "daemon_call"},
+    {"id": "fsdiff", "question": "What compares before and after filesystem snapshots to find newly created or modified provenance files?", "file": "chitta-mcp/provenance.py", "symbol": "filesystem_diff"},
+    {"id": "scheduler", "question": "Where is a Slurm job status check inferred as an squeue command from a job ID?", "file": "chitta-mcp/provenance.py", "symbol": "infer_status_check"},
+    {"id": "claim", "question": "What claims the selected resume thread, creating a thread when the transcript has none?", "file": "chitta-mcp/resume_selector.py", "symbol": "claim_selected"},
+    {"id": "queuepath", "question": "Where is CHITTA_QUEUE preferred over CHITTA_QUEUE_PATH before falling back to queue.jsonl?", "file": "chitta/include/chitta/queue_path.hpp", "symbol": "queue_path_for_mind"},
+    {"id": "sourcehash", "question": "What streams a source file through SHA-256 to validate its content hash?", "file": "chitta/src/code_intel.cpp", "symbol": "file_hash"}
+  ]
+}

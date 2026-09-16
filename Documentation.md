@@ -194,3 +194,32 @@ Frozen-copy chaos passed 9/9. Restart-identity passed 20/20 ordered queries
 across three restarts, with no numeric score deltas. No recall scoring change.
 Contracts regenerated for the added install-manifest entry; RPC contracts
 unchanged in this step. All experiments used owned scratch processes.
+
+
+## Phase 9, step 4 — frozen navigation evaluation
+
+benchmarks/codenav fixes 20 source-verified file:symbol answers from 18444e02
+and store 089a056. Questions were fixed before retrieval measurements; their
+SHA-256 remains 49fb3d96acd9c7b966e489e9b3dc6c57535665b21c18e0d22a1f54ab419240a3.
+The runner selects answers from code_query alone. Independent byte accounting
+charges query text, full pre-read blocks (including truncation notices), and
+answer bodies even on misses. It conservatively charges lines the hook byte
+cap could omit. Two trust tests reject unstable repeated answers and prove
+that ground-truth body reads cannot convert a failed retrieval into a hit.
+The package and protocol are protected by EVAL_IMMUTABLE with owner approval.
+
+Final fresh empty-mind qualification with the benchmark package staged:
+717/719 tracked supported files (99.72%), 718 eligible including untracked
+Plan.md, 48.927 s wall index time, 74,966,923 mind bytes. The two missing tracked
+files are explicitly gitignored. Store symbols by language: C/C++ 2,587;
+Python 2,031; Rust 2,694; Markdown 1,875. Query score: 18/20 before and after
+restart. Each run sampled 100 RPCs; p95 was 140.946 ms before and 133.943 ms
+after restart. All 20 complete query responses matched across restart.
+The byte proxy was 253,830 versus 604,946 bytes, a 58.04% reduction.
+These are structural navigation measurements, not an LLM end-to-end trial.
+
+Per-commit gates: all hook suites, MCP 159, SMRITI 46, Rust 296 (2 ignored),
+CI ruff and shell checks passed. CTest passed 35 cases; the remaining existing
+daemon-isolation log-order assertion failed during the parallel run and passed
+in its isolated rerun (13.51 s). No test threshold or production behavior was
+changed to pass it. Benchmark trust tests passed. Contracts unchanged.
