@@ -10,6 +10,14 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 ## [Unreleased]
 
+- Add complete Git-aware structural indexing, `code_query` and `code_path`, a
+  deterministic repo map, and symbol/edge context before indexed file reads.
+  Session start and installed commit/checkout hooks refresh the uncapped index;
+  stale file bodies require reindexing. Preserve code-context counters and clear
+  the graph with `clear_codebase`. Defer historical repository scans until a
+  scoped query needs them, preserving recall ordering across restart. Add the
+  frozen 20-question `benchmarks/codenav` navigation and byte-proxy gate.
+
 - Record Phase 5 verification and unmet exit gates in
   `docs/PHASE5-POLICY-REPORT.md`: 30 measured paired fixtures match, but shell
   lines grow 8,743 → 8,988; prompt medians 415/457 ms and Bash added overhead
