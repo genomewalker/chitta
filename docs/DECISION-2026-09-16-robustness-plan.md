@@ -70,11 +70,35 @@
 > than before on the same replica copy, same script"; the 20/20 gate returns
 > once the shared `scripts/restart-identity.py` passes on main.
 
+> Phase 1 status 2026-09-16 (evening): merged and deployed (ac09d5b7, store
+> 6792a05). Task-ledger transactions own their mutex; handler queue metadata,
+> write-notify and subconscious callbacks are published under narrow locks;
+> the sadhana manager is published before serving and the compact_wal thread
+> is joined at shutdown; every Rust store component RwLock is named and
+> profiled (`[lockprof] RUST component=…`). `CHITTA_GLOBAL_LOCK` exists and
+> stays **on** by default: `scripts/stress-rpc.py` (12 writers + 12 readers,
+> 300 s) preserved 40,279 writes through WAL replay, but Rust holds over 50 ms
+> occurred in every tested class, so the switch does not flip. Restart
+> identity on the same replica copy 18/20 → 20/20 after the store fixes.
+
 ### Phase 3 — Memory that knows what is current
 - Answer repository questions from the index first: extend code intel to Markdown headings (`code_intel.hpp` currently excludes Markdown), make the FileChanged hook handle deletions and lose its 300 s throttle for the index path, validate content hashes at query and startup because watchers miss edits. Identity is repository + path + heading (or symbol); the content hash is the version.
 - Source-anchored memories only for hook-generated file facts at first (`artifact-trace.sh`, `[done]` provenance); explicit supersession through the queue's `observe` path and filtering in recall, not a blanket "unanchored is fresher" rule. Facts sharing a file must not supersede each other.
 - Handoff capsule (F9): Stop writes, and SessionStart renders, a verified next action, branch, artifact paths and blocker from the ledger; measured by a cold-session continuation fixture (≥ 90% correct continuation on a 20-case set).
 - Exit gate: current-truth ≥ 40/50 including holdout; the five 2026-09-16 probes kept as regression fixtures and answered 5/5; golden nDCG within its band; the continuation fixture met.
+
+> Phase 3 status 2026-09-16 (evening): merged and deployed (45de7d13, store
+> 36039ba). Markdown headings and code chunks are indexed as first-class
+> sources with anchors; obsolete file facts are demoted only within exact
+> score ties and superseded ones dropped; recall merges up to three source
+> chunks unless `sources=false`; Stop writes a handoff capsule to the task
+> ledger and SessionStart renders it. On the frozen replica: current-truth
+> 20 → 36/50 with no losses, golden with `sources=false` unchanged (0.4804),
+> restart identity 20/20 on three restarts, chaos 9/9, prompt median within
+> the noise band. Not met: the 40/50 target, probes 3/5, and the continuation
+> gate (0/20: none of the 20 past sessions wrote an explicit plan line, which
+> the capsule now adds going forward; `benchmarks/continuation` re-scores as
+> sessions accumulate).
 
 ### Phase 2 — Retirement by measurement (with Phase 4)
 - Inventory every organ by dependency class (Astra's table: recall/write, keyed, index maintenance, code intel, event/API, and snapshot-resident state marked). Snapshot-resident codecs and WAL replay stay until compatibility tests pass; V23 defaults do not preserve discarded data on rollback.
