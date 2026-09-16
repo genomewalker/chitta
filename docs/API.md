@@ -1,11 +1,10 @@
 # chitta MCP API reference
 
 Status as of 2026-09-16.
-API reference generated from a live daemon on 2026-09-02; MCP static table synchronized on 2026-09-16 (320 daemon tools) with `python3 scripts/gen-tools-static.py` (`--check` verifies freshness). Regenerate this reference with `python3 scripts/gen-tools-docs.py`.
 
-Generated from a live daemon on 2026-09-16, 344 tools — regenerate with `python3 scripts/gen-tools-docs.py`.
+Generated from frozen contracts on 2026-09-16, 339 tools — regenerate with `python3 scripts/gen-tools-static.py --docs`.
 
-89 tools are listed in `tools/list` by default. The other 255 are hidden to keep the model's tool list small, and stay callable through the `advanced` gateway:
+54 tools are listed in `tools/list` by default. The other 285 are hidden to keep the model's tool list small, and stay callable through the `advanced` gateway:
 
 ```json
 {"tool": "pin_memory", "arguments": {"id": 123}}
@@ -13,12 +12,12 @@ Generated from a live daemon on 2026-09-16, 344 tools — regenerate with `pytho
 
 `advanced` with `{"action": "list"}` enumerates them at runtime, optionally filtered by `category` (`advanced` or `internal`).
 
-Tools marked **gateway** are composed in `chitta-mcp/server.py` rather than served directly by the daemon; tools marked **via advanced** are daemon tools kept out of the default listing.
+Tools marked **gateway** are composed in `chitta-mcp/server.py` rather than served directly by the daemon; tools marked **via advanced** are tools kept out of the default listing.
 
 ## Contents
 
 - [Core Memory](#core) — 53
-- [Recall & Search](#recall) — 27
+- [Recall & Search](#recall) — 26
 - [Graph & Triplets](#graph) — 15
 - [Code Intelligence](#code) — 10
 - [Context & Status](#context) — 16
@@ -26,7 +25,7 @@ Tools marked **gateway** are composed in `chitta-mcp/server.py` rather than serv
 - [Sessions & Continuity](#session) — 19
 - [Cross-Harness Messaging](#messaging) — 6
 - [Narrative & Work Modes](#narrative) — 5
-- [Distillation & Embeddings](#distill) — 14
+- [Distillation & Embeddings](#distill) — 13
 - [Consolidation & Contradictions](#consolidation) — 15
 - [Themes](#theme) — 4
 - [Provenance & Verification](#provenance) — 13
@@ -41,13 +40,13 @@ Tools marked **gateway** are composed in `chitta-mcp/server.py` rather than serv
 - [Surprise & Epistemic Debt](#surprise) — 11
 - [Wisdom Lifecycle](#wisdom) — 14
 - [Causal Episode Compiler](#cec) — 5
-- [Import / Export & Files](#io) — 8
+- [Import / Export & Files](#io) — 5
 
 <a id="core"></a>
 
 ## Core Memory
 
-### `ack_memory` *(gateway)*
+### `ack_memory` *(gateway, via advanced)*
 
 Increment ack signal for a memory. Records [ack] memory:<id> score:+1 with tag ack-signal.
 
@@ -55,7 +54,7 @@ Increment ack signal for a memory. Records [ack] memory:<id> score:+1 with tag a
 |---|---|---|---|---|
 | `id` | string | yes | — | Memory ID to ack |
 
-### `approve_memory`
+### `approve_memory` *(via advanced)*
 
 Approve a Proposed memory, promoting it to Active
 
@@ -69,11 +68,11 @@ Create dialogue episode for conversation tracking
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `end_turn` | integer | no | — |  |
+| `end_turn` | any | no | — |  |
 | `episode_type` | string | no | — |  |
 | `realm` | string | no | — |  |
 | `session_id` | string | yes | — |  |
-| `start_turn` | integer | yes | — |  |
+| `start_turn` | any | yes | — |  |
 | `title` | string | yes | — |  |
 
 ### `episode_cluster_status` *(via advanced)*
@@ -82,7 +81,7 @@ Find similar episode clusters
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `min_occurrences` | integer | no | — |  |
+| `min_occurrences` | any | no | — |  |
 | `similarity_threshold` | number | no | — |  |
 
 ### `expand_memory` *(via advanced)*
@@ -91,7 +90,7 @@ Expand a memory to full hierarchical context
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `depth` | integer | no | — |  |
+| `depth` | any | no | — |  |
 | `id` | string | yes | — |  |
 
 ### `forget`
@@ -102,17 +101,17 @@ Remove a memory
 |---|---|---|---|---|
 | `id` | string | yes | — | Node ID to forget |
 
-### `forget_kind`
+### `forget_kind` *(via advanced)*
 
 Bulk-delete all memories of a given kind (e.g. 'habit'). Optionally filter by realm.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `kind` | string | yes | — | Memory kind to delete (e.g. habit, unknown) |
-| `limit` | integer | no | — | Max to delete (default 5000) |
+| `limit` | any | no | — | Max to delete (default 5000) |
 | `realm` | string | no | — | Optional realm filter |
 
-### `get` *(via advanced)*
+### `get`
 
 Get a node by ID
 
@@ -126,10 +125,10 @@ Get tracked entities
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `type` | string | no | — |  |
 
-### `get_evidence_type`
+### `get_evidence_type` *(via advanced)*
 
 Retrieve the evidence type tag of a memory
 
@@ -137,14 +136,14 @@ Retrieve the evidence type tag of a memory
 |---|---|---|---|---|
 | `id` | string | yes | — | Memory ID |
 
-### `labile_memories`
+### `labile_memories` *(via advanced)*
 
 List memories recalled multiple times recently — candidates for reconsolidation (excludes freshly-written hook memories)
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — | Max results (default 20) |
-| `min_access` | integer | no | — | Min recall count to qualify (default 2) |
+| `limit` | any | no | — | Max results (default 20) |
+| `min_access` | any | no | — | Min recall count to qualify (default 2) |
 | `realm` | string | no | — | Filter by realm |
 | `window_hours` | number | no | — | Recency window in hours (default 48) |
 
@@ -154,7 +153,7 @@ List the most-accessed (most labile) memories — candidates for reconsolidation
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — | Max results (default 20) |
+| `limit` | any | no | — | Max results (default 20) |
 | `realm` | string | no | — | Filter by realm |
 
 ### `list_aspects` *(via advanced)*
@@ -170,28 +169,28 @@ List memories by semantic aspect
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `aspect` | string | yes | — |  |
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `min_confidence` | number | no | — |  |
 
-### `list_by_status`
+### `list_by_status` *(via advanced)*
 
 List memories filtered by lifecycle status (active/superseded/contradicted/archived)
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | `50` | Max results |
+| `limit` | any | no | `50` | Max results |
 | `realm` | string | no | — | Filter by realm |
 | `status` | string | no | `"superseded"` | Filter: active, superseded, contradicted, archived, or all |
 
-### `list_memories_brief`
+### `list_memories_brief` *(via advanced)*
 
 Fast memory index
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `kind` | string | no | — |  |
-| `limit` | integer | no | — |  |
-| `priority_tier` | integer | no | — |  |
+| `limit` | any | no | — |  |
+| `priority_tier` | any | no | — |  |
 | `realm` | string | no | — |  |
 
 ### `list_merge_queue` *(via advanced)*
@@ -200,7 +199,7 @@ List pending merge proposals
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `status` | string | no | — |  |
 
 ### `list_pinned` *(via advanced)*
@@ -209,12 +208,12 @@ List pinned memories
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `realm` | string | no | — |  |
 
 ### `lookup` *(gateway)*
 
-Unified memory lookup. Classifies query intent, fans out to optimal backends (keyword/semantic/triplet/temporal/code), fuses with weighted RRF [3](#ref-3). Default entry point for memory search — use instead of recall/smart_recall/hybrid_recall.
+Unified memory lookup. Classifies query intent, fans out to optimal backends (keyword/semantic/triplet/temporal/code), fuses with weighted RRF. Default entry point for memory search — use instead of recall/smart_recall/hybrid_recall.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
@@ -230,7 +229,7 @@ Mark a memory as invalidated by a commit hash or symbol-change ID.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `memory_id` | integer | yes | — | Memory ID to mark |
+| `memory_id` | any | yes | — | Memory ID to mark |
 | `reason` | string | no | — | Commit hash or change ID causing invalidation |
 
 ### `memory_edit` *(gateway)*
@@ -250,8 +249,8 @@ View memory version history
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `id` | integer | yes | — |  |
-| `limit` | integer | no | — |  |
+| `id` | any | yes | — |  |
+| `limit` | any | no | — |  |
 
 ### `memory_lock` *(via advanced)*
 
@@ -259,10 +258,10 @@ Acquire memory lock
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `duration` | integer | no | — |  |
+| `duration` | any | no | — |  |
 | `holder_id` | string | yes | — |  |
 | `holder_type` | string | no | — |  |
-| `id` | integer | yes | — |  |
+| `id` | any | yes | — |  |
 
 ### `memory_lock_status` *(via advanced)*
 
@@ -270,7 +269,7 @@ Check lock status
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `id` | integer | yes | — |  |
+| `id` | any | yes | — |  |
 
 ### `memory_outcome` *(gateway)*
 
@@ -282,14 +281,14 @@ Record an observed outcome for a memory into its Beta utility posterior (success
 | `success` | boolean | yes | — | Did acting on this memory work? |
 | `weight` | number | no | — | Observation weight, capped at 5.0 (default 1.0) |
 
-### `memory_provenance`
+### `memory_provenance` *(via advanced)*
 
 Show why a memory exists: source, evidence, superseded_by, supersedes relations
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `id` | string | no | — | Memory ID to inspect |
-| `memory_id` | integer | no | — | Memory ID (numeric) |
+| `memory_id` | any | no | — | Memory ID (numeric) |
 
 ### `memory_revert` *(via advanced)*
 
@@ -297,18 +296,18 @@ Revert memory to previous version
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `id` | integer | yes | — |  |
+| `id` | any | yes | — |  |
 | `reason` | string | no | — |  |
-| `version` | integer | yes | — |  |
+| `version` | any | yes | — |  |
 
-### `memory_status`
+### `memory_status` *(via advanced)*
 
 Get effective status of a memory: active, superseded, or contradicted — checks incoming supersedes triplets
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `id` | string | no | — |  |
-| `memory_id` | integer | no | — |  |
+| `memory_id` | any | no | — |  |
 
 ### `memory_type_stats` *(via advanced)*
 
@@ -325,9 +324,9 @@ Release memory lock
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `holder_id` | string | yes | — |  |
-| `id` | integer | yes | — |  |
+| `id` | any | yes | — |  |
 
-### `nack_memory` *(gateway)*
+### `nack_memory` *(gateway, via advanced)*
 
 Decrement nack signal for a memory. Records [nack] memory:<id> score:-1 with tag nack-signal.
 
@@ -341,10 +340,10 @@ Pin memory to keep hot
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `id` | integer | yes | — |  |
+| `id` | any | yes | — |  |
 | `reason` | string | no | — |  |
 
-### `promote_memory`
+### `promote_memory` *(via advanced)*
 
 Promote a memory one tier: Proposed→Observed→Verified→Active
 
@@ -359,17 +358,17 @@ Propose change to memory
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `content` | string | yes | — |  |
-| `id` | integer | yes | — |  |
+| `id` | any | yes | — |  |
 | `proposed_by` | string | yes | — |  |
 
-### `prune_episodes`
+### `prune_episodes` *(via advanced)*
 
 Prune old/excess episode memories. Deletes episodes older than max_age_days (strength<0.3) and caps total count at max_count.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `max_age_days` | integer | no | — | Delete episodes older than this (default 90) |
-| `max_count` | integer | no | — | Cap total episode count at this (default 10000) |
+| `max_age_days` | any | no | — | Delete episodes older than this (default 90) |
+| `max_count` | any | no | — | Cap total episode count at this (default 10000) |
 
 ### `recall` *(gateway)*
 
@@ -377,20 +376,17 @@ Search memory by semantic similarity with realm filtering Routed by the chitta-m
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `explain` | boolean | no | — | Include score decomposition per hit (default: false) |
-| `gwt_mode` | boolean | no | — | Global Workspace Theory mode (default: false) |
-| `include_global` | boolean | no | — | Include global memories (default: true) |
-| `limit` | integer | no | — | Max results (default 10) |
+| `explain` | boolean | no | — | Include score decomposition per hit (default: False) |
+| `gwt_mode` | boolean | no | — | Global Workspace Theory mode (default: False) |
+| `include_global` | boolean | no | — | Include global memories (default: True) |
+| `limit` | any | no | — | Max results (default 10) |
 | `min_confidence` | number | no | — | Minimum confidence threshold |
-| `pool` | integer | no | — | Candidate pool depth before the recall-biased pre-filter (default 60, max 160; env CHITTA_RECALL_POOL) |
-| `prefilter` | boolean | no | — | Recall-biased pre-filter (default true; false or CHITTA_RECALL_PREFILTER=0 restores the narrow-pool path) |
 | `query` | string | yes | — | Search query |
 | `realm` | string | no | — | Filter by realm |
-| `separation_mode` | boolean | no | — | Diverse results via MMR (default: false) |
-| `strategy` | string | no | — | Retrieval lane: fused (default), keyword (BM25 [24](#ref-24) only, realm-scoped), field (Hopfield [7](#ref-7) [33](#ref-33)/DAM [8](#ref-8)) |
+| `separation_mode` | boolean | no | — | Diverse results via MMR (default: False) |
 | `tag` | string | no | — | Filter by tag |
 
-### `reject_memory`
+### `reject_memory` *(via advanced)*
 
 Reject a Proposed memory, archiving it
 
@@ -410,9 +406,9 @@ Store text in memory with optional tags and realm
 | `shared_realms` | array<string> | no | — | Additional realms |
 | `tags` | array<string> | no | — | Optional tags |
 | `type` | string | no | — | Node type (wisdom, insight, signal, episode) |
-| `visibility` | integer | no | — | 0=Private, 1=Shared, 2=Global (default: 0) |
+| `visibility` | any | no | — | 0=Private, 1=Shared, 2=Global (default: 0) |
 
-### `remember_batch`
+### `remember_batch` *(via advanced)*
 
 Store multiple memories in a single round-trip (high-throughput bulk ingest)
 
@@ -421,7 +417,7 @@ Store multiple memories in a single round-trip (high-throughput bulk ingest)
 | `items` | array<object> | yes | — | Array of memory objects (same fields as remember) |
 | `realm` | string | no | — | Default realm for all items |
 
-### `remember_typed` *(gateway)*
+### `remember_typed` *(gateway, via advanced)*
 
 Store a typed memory node (digest-node, decision, open-question, etc.) with optional graph links (supersedes, invalidated-by, anchors-to).
 
@@ -439,11 +435,11 @@ Resolve merge proposal
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `merge_id` | integer | yes | — |  |
+| `merge_id` | any | yes | — |  |
 | `resolution` | string | no | — |  |
 | `status` | string | yes | — |  |
 
-### `set_affect`
+### `set_affect` *(via advanced)*
 
 Set affect dimensions (valence, arousal) on a memory
 
@@ -453,7 +449,7 @@ Set affect dimensions (valence, arousal) on a memory
 | `id` | string | yes | — |  |
 | `valence` | number | yes | — | Emotional valence: -1.0 to +1.0 |
 
-### `set_evidence_type`
+### `set_evidence_type` *(via advanced)*
 
 Tag a memory with its epistemological evidence class (observation/inference/hearsay/authoritative/prediction)
 
@@ -462,13 +458,13 @@ Tag a memory with its epistemological evidence class (observation/inference/hear
 | `evidence_type` | string | yes | — | One of: observation, inference, hearsay, authoritative, prediction |
 | `id` | string | yes | — | Memory ID |
 
-### `set_memory_type` *(via advanced)*
+### `set_memory_type`
 
 Set memory semantic type
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `memory_id` | integer | yes | — |  |
+| `memory_id` | any | yes | — |  |
 | `type` | string | yes | — |  |
 
 ### `set_priority_tier` *(via advanced)*
@@ -477,8 +473,8 @@ Set memory priority tier
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `memory_id` | integer | yes | — |  |
-| `tier` | integer | yes | — |  |
+| `memory_id` | any | yes | — |  |
+| `tier` | any | yes | — |  |
 
 ### `strengthen` *(via advanced)*
 
@@ -505,7 +501,7 @@ Unpin a memory
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `id` | integer | yes | — |  |
+| `id` | any | yes | — |  |
 
 ### `update` *(via advanced)*
 
@@ -516,7 +512,7 @@ Update node content
 | `content` | string | yes | — |  |
 | `id` | string | yes | — |  |
 
-### `verify_correction` *(gateway)*
+### `verify_correction` *(gateway, via advanced)*
 
 Mark a correction memory as verified at a specific code locus. Stores a verification record and updates the original correction's tags.
 
@@ -534,7 +530,7 @@ Decrease confidence of a memory
 | `amount` | number | no | — |  |
 | `id` | string | yes | — |  |
 
-### `what_do_i_know_about`
+### `what_do_i_know_about` *(via advanced)*
 
 Introspection: return claims + provenance + staleness + contradictions for a topic
 
@@ -543,7 +539,7 @@ Introspection: return claims + provenance + staleness + contradictions for a top
 | `confidence_min` | number | no | — | Minimum confidence threshold (default 0.0) |
 | `include_contradictions` | boolean | no | — | Include contradiction info (default true) |
 | `include_stale` | boolean | no | — | Include stale memories (default true) |
-| `k` | integer | no | — | Max claims to return (default 10) |
+| `k` | any | no | — | Max claims to return (default 10) |
 | `realm` | string | no | — | Realm filter |
 | `topic` | string | yes | — | Topic or question to introspect |
 
@@ -557,13 +553,13 @@ No parameters.
 
 ## Recall & Search
 
-### `5w_search`
+### `5w_search` *(via advanced)*
 
 Multi-dimensional semantic search across who/what/when/where/why axes
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — | Max results (default 10) |
+| `limit` | any | no | — | Max results (default 10) |
 | `realm` | string | no | — | Filter by realm |
 | `what` | string | no | — | What is happening/topic |
 | `when` | string | no | — | Temporal description |
@@ -587,7 +583,7 @@ Semantic search with full context
 |---|---|---|---|---|
 | `exclude_kinds` | array<string> | no | — |  |
 | `include_global` | boolean | no | — |  |
-| `k` | integer | no | — |  |
+| `k` | any | no | — |  |
 | `partnership_only` | boolean | no | — |  |
 | `query` | string | yes | — |  |
 | `realm` | string | no | — |  |
@@ -600,9 +596,9 @@ Combined vector + BM25 + graph recall
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `bm25_weight` | number | no | — |  |
-| `explain` | boolean | no | — | Include score decomposition per hit (default: false) |
+| `explain` | boolean | no | — | Include score decomposition per hit (default: False) |
 | `graph_weight` | number | no | — |  |
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `query` | string | yes | — |  |
 | `realm` | string | no | — |  |
 | `recency_weight` | number | no | — |  |
@@ -616,14 +612,14 @@ Query semantic claims
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `active_only` | boolean | no | — |  |
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `predicate` | string | no | — |  |
 | `scope` | string | no | — |  |
 | `subject` | string | no | — |  |
 
 ### `recall_analogy`
 
-Analogical recall over the triplet lane (vector-symbolic [10](#ref-10), no LLM/GPU). Two modes embedding similarity cannot express, because both are about structure rather than wording. 'proportional' solves a:b :: c:? — give three entities, get ranked fillers for the fourth. 'structural' finds memories whose relation graph has the same SHAPE as a probe memory, with entity names factored out, so a pattern learned in one project matches the same pattern in another; set exclude_realm (or cross_realm) for that cross-project transfer. Use when you want 'what else looks like this?', not 'what mentions these words?'.
+Analogical recall over the triplet lane (vector-symbolic, no LLM/GPU). Two modes embedding similarity cannot express, because both are about structure rather than wording. 'proportional' solves a:b :: c:? — give three entities, get ranked fillers for the fourth. 'structural' finds memories whose relation graph has the same SHAPE as a probe memory, with entity names factored out, so a pattern learned in one project matches the same pattern in another; set exclude_realm (or cross_realm) for that cross-project transfer. Use when you want 'what else looks like this?', not 'what mentions these words?'.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
@@ -632,8 +628,8 @@ Analogical recall over the triplet lane (vector-symbolic [10](#ref-10), no LLM/G
 | `c` | string | no | — | proportional: target entity; the tool returns its counterpart to b |
 | `cross_realm` | boolean | no | — | structural: shorthand for excluding the probe memory's own realm (default false) |
 | `exclude_realm` | string | no | — | structural: drop results from this realm — the cross-project transfer case |
-| `limit` | integer | no | — | Max results, 1-100 (default 8) |
-| `memory_id` | integer | no | — | structural: probe memory whose relation shape is matched (excluded from results) |
+| `limit` | any | no | — | Max results, 1-100 (default 8) |
+| `memory_id` | any | no | — | structural: probe memory whose relation shape is matched (excluded from results) |
 | `mode` | string | no | — | 'proportional' (a:b :: c:?) or 'structural' (shape match). Default: structural |
 | `realm` | string | no | — | structural: restrict results to this realm |
 | `text` | string | no | — | structural: free-text probe, used when memory_id is absent; anchors on the entities it mentions |
@@ -644,7 +640,7 @@ Budget-aware recall
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `budget_tokens` | integer | no | — |  |
+| `budget_tokens` | any | no | — |  |
 | `include_global` | boolean | no | — |  |
 | `query` | string | no | — |  |
 | `realm` | string | no | — |  |
@@ -656,18 +652,18 @@ PMI-ranked causal antecedents: what actions typically precede (tool, entity)?
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `entity` | string | yes | — |  |
-| `k` | integer | no | — |  |
+| `k` | any | no | — |  |
 | `tool` | string | yes | — |  |
 
 ### `recall_counterfactual` *(via advanced)*
 
-CDAWG [6](#ref-6) sibling-edge counterfactual: what alternative tool/entity would have had a lower failure rate in this same context?
+CDAWG sibling-edge counterfactual: what alternative tool/entity would have had a lower failure rate in this same context?
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `entity` | string | yes | — |  |
-| `k` | integer | no | — |  |
-| `outcome` | integer | no | — | 0=success 1=fail 2=error 3=partial (default 1) |
+| `k` | any | no | — |  |
+| `outcome` | any | no | — | 0=success 1=fail 2=error 3=partial (default 1) |
 | `tool` | string | yes | — |  |
 
 ### `recall_failure_pattern` *(via advanced)*
@@ -676,7 +672,7 @@ Return top-k CDAWG states with high failure rates (fail_ratio > 0.6, fail_count 
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `k` | integer | no | — |  |
+| `k` | any | no | — |  |
 
 ### `recall_hdcbind` *(via advanced)*
 
@@ -684,7 +680,7 @@ Heteroassociative HDC query: given known_role=known_val, infer query_role. Roles
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `k` | integer | no | — |  |
+| `k` | any | no | — |  |
 | `known_role` | string | yes | — |  |
 | `known_val` | string | yes | — |  |
 | `query_role` | string | yes | — |  |
@@ -695,10 +691,9 @@ BM25 keyword search
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `explain` | boolean | no | — | Include score decomposition per hit (default: false) |
-| `limit` | integer | no | — | Max results (default 10) |
+| `explain` | boolean | no | — | Include score decomposition per hit (default: False) |
+| `limit` | any | no | — | Max results (default 10) |
 | `query` | string | yes | — | Search query |
-| `realm` | string | no | — | Filter by realm (empty = all visible) |
 
 ### `recall_lanes`
 
@@ -706,7 +701,7 @@ Fan-in prompt recall lanes over one daemon RPC
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `budget_ms` | integer | no | — | Per-lane wall-clock budget override; capped by CHITTA_RPC_BUDGET_MS |
+| `budget_ms` | any | no | — | Per-lane wall-clock budget override; capped by CHITTA_RPC_BUDGET_MS |
 | `ctx_query` | string | no | — | Optional context query; defaults to query |
 | `lanes` | array<string> | no | — | Subset of sem, ctx, hyb, kw, corr, corrk (default all) |
 | `limits` | object | no | — | Per-lane result limits (sem, ctx, hyb, kw, corr) |
@@ -720,7 +715,7 @@ Return last k occurrences of (tool, entity) from the CEC event tape
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `entity` | string | yes | — |  |
-| `k` | integer | no | — |  |
+| `k` | any | no | — |  |
 | `tool` | string | yes | — |  |
 
 ### `recall_motif_value` *(via advanced)*
@@ -730,22 +725,22 @@ Return top-k CDAWG motif states reachable from (tool, entity) ranked by Q-value:
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `entity` | string | yes | — |  |
-| `k` | integer | no | — | Max states to return (default 5) |
+| `k` | any | no | — | Max states to return (default 5) |
 | `tool` | string | yes | — |  |
 
-### `recall_session`
+### `recall_session` *(via advanced)*
 
 Session-level recall: groups chunk evidence by source session using noisy-OR aggregation. Returns ranked sessions with best evidence.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — | Max sessions to return (default 10) |
+| `limit` | any | no | — | Max sessions to return (default 10) |
 | `query` | string | yes | — | Natural language query |
 | `realm` | string | no | — | Realm filter (optional) |
 
-### `recall_smart` *(gateway)*
+### `recall_smart` *(gateway, via advanced)*
 
-Multi-lane retrieval planner: uses an LLM call to extract entities and speech-act type, then fans out to semantic, typed, spreading-activation, and session-level lanes, merging results with Reciprocal Rank Fusion. Supports multi-part queries.
+Multi-lane retrieval planner: uses a fast LLM call to extract entities and speech-act type, then fans out to semantic, typed, spreading-activation, and session-level lanes, merging results with Reciprocal Rank Fusion. Best for complex queries.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
@@ -754,7 +749,7 @@ Multi-lane retrieval planner: uses an LLM call to extract entities and speech-ac
 | `realm` | string | no | — | Memory realm |
 | `skip_llm_plan` | boolean | no | `false` | Skip LLM planning step (faster) |
 
-### `recall_spreading` *(gateway)*
+### `recall_spreading` *(gateway, via advanced)*
 
 Retrieve memories via entity graph spreading activation. Extracts capitalized words, @refs, and quoted strings from the query as entity seeds, then traverses the triplet graph (BFS depth 2, decay 0.6) to find related memories.
 
@@ -772,7 +767,7 @@ Search memories within a time window (defaults to last 7 days)
 |---|---|---|---|---|
 | `end` | string | no | — | End date |
 | `include_global` | boolean | no | — | Include global memories |
-| `limit` | integer | no | — | Max results (default 20) |
+| `limit` | any | no | — | Max results (default 20) |
 | `query` | string | no | — | Optional semantic search query |
 | `realm` | string | no | — | Filter by realm |
 | `start` | string | no | — | Start date (ISO8601 or YYYY-MM-DD) |
@@ -784,19 +779,19 @@ Return decision points where (tool, entity) was explicitly considered and reject
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `entity` | string | yes | — |  |
-| `k` | integer | no | — | Max results (default 5) |
-| `outcome` | integer | no | — | 0=success 1=fail 2=error (default 0) |
+| `k` | any | no | — | Max results (default 5) |
+| `outcome` | any | no | — | 0=success 1=fail 2=error (default 0) |
 | `tool` | string | yes | — |  |
 
-### `recall_ucb1`
+### `recall_ucb1` *(via advanced)*
 
 Recall with UCB1 exploration bonus — surfaces novel under-accessed memories alongside relevant ones
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `exploration` | number | no | — | Exploration weight sqrt(2)≈1.414 (default) |
-| `fetch_k` | integer | no | — | Candidate pool size before re-ranking (default 40) |
-| `limit` | integer | no | — | Max results (default 10) |
+| `fetch_k` | any | no | — | Candidate pool size before re-ranking (default 40) |
+| `limit` | any | no | — | Max results (default 10) |
 | `query` | string | yes | — | Search query |
 | `realm` | string | no | — | Filter by realm |
 
@@ -806,32 +801,32 @@ Show ResonanceLearner Bayesian bandit stats
 
 No parameters.
 
-### `search_symbols`
+### `search_symbols` *(via advanced)*
 
 Semantic search for code symbols
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `kind` | string | no | — |  |
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `project` | string | no | — |  |
 | `query` | string | yes | — |  |
 
-### `smart_recall` *(via advanced)*
+### `smart_recall`
 
 Intelligent memory recall with hierarchical expansion
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `expand_top` | integer | no | — |  |
+| `expand_top` | any | no | — |  |
 | `gwt_mode` | boolean | no | — |  |
 | `include_global` | boolean | no | — |  |
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `query` | string | yes | — |  |
 | `realm` | string | no | — |  |
 | `separation_mode` | boolean | no | — |  |
 
-### `stageb_set_surface`
+### `stageb_set_surface` *(via advanced)*
 
 Stage B: set a memory's natural-language retrieval surface and re-embed from it (keeps telegraphic content as display). Pass surface='' to clear and re-embed from content. Returns the id and embedded flag.
 
@@ -840,13 +835,13 @@ Stage B: set a memory's natural-language retrieval surface and re-embed from it 
 | `id` | string | yes | — |  |
 | `surface` | string | yes | — |  |
 
-### `structured_recall`
+### `structured_recall` *(via advanced)*
 
 Three-lens recall: facts, context, and temporal agents merged for high-fidelity retrieval
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `query` | string | yes | — |  |
 | `realm` | string | no | — |  |
 
@@ -854,20 +849,20 @@ Three-lens recall: facts, context, and temporal agents merged for high-fidelity 
 
 ## Graph & Triplets
 
-### `assoc_census`
+### `assoc_census` *(via advanced)*
 
 Read-only assoc-graph census: per-EdgeType directed-edge count plus weight histogram (<0.05 / 0.05-0.2 / 0.2-0.5 / 0.5-0.8 / >=0.8). Measure-first gate for plasticity levers.
 
 No parameters.
 
-### `assoc_decay`
+### `assoc_decay` *(via advanced)*
 
 Gate B: decay + floor-prune one assoc EdgeType (wire numbering 0-5, default 3=CoRetrieved). Every edge weight is multiplied by factor; edges below prune_below are removed. apply=false is a dry run (counts only). One-shot saturation migration: factor=1.0, prune_below=0.2. Snapshot before apply.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `apply` | boolean | no | — |  |
-| `edge_type` | integer | no | — |  |
+| `edge_type` | any | no | — |  |
 | `factor` | number | no | — |  |
 | `prune_below` | number | no | — |  |
 
@@ -881,7 +876,7 @@ Create a triplet relationship
 | `predicate` | string | yes | — | Relationship type |
 | `subject` | string | yes | — | Subject entity |
 
-### `connect_temporal` *(via advanced)*
+### `connect_temporal`
 
 Create triplet with temporal validity
 
@@ -901,21 +896,21 @@ Show top co-activated memory associations for a given memory
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `id` | string | yes | — | Memory ID |
-| `limit` | integer | no | — | Max edges to return (default 10) |
+| `limit` | any | no | — | Max edges to return (default 10) |
 
-### `graph_pagerank`
+### `graph_pagerank` *(via advanced)*
 
-Personalized PageRank [70](#ref-70) over the triplet graph
+Personalized PageRank over the triplet graph
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `damping` | number | no | — | Damping factor (default 0.85) |
 | `edge_types` | array<string> | no | — | Predicate filter (empty = all) |
-| `iterations` | integer | no | — | PPR iterations (default 20) |
+| `iterations` | any | no | — | PPR iterations (default 20) |
 | `seeds` | array<string> | yes | — | Seed nodes |
-| `top_k` | integer | no | — | Nodes to return (default 20) |
+| `top_k` | any | no | — | Nodes to return (default 20) |
 
-### `graph_traverse`
+### `graph_traverse` *(via advanced)*
 
 BFS graph traversal from a start node over triplet edges
 
@@ -923,8 +918,8 @@ BFS graph traversal from a start node over triplet edges
 |---|---|---|---|---|
 | `direction` | string (outgoing|incoming|both) | no | — | Edge direction (default outgoing) |
 | `edge_types` | array<string> | no | — | Predicate filter (empty = all) |
-| `max_hops` | integer | no | — | Max BFS depth (default 3) |
-| `max_results` | integer | no | — | Max nodes returned (default 50) |
+| `max_hops` | any | no | — | Max BFS depth (default 3) |
+| `max_results` | any | no | — | Max nodes returned (default 50) |
 | `start` | string | yes | — | Starting node |
 
 ### `grow` *(via advanced)*
@@ -948,7 +943,7 @@ Query triplets with flexible filters
 | `predicate` | string | no | — |  |
 | `subject` | string | no | — |  |
 
-### `query_graph` *(via advanced)*
+### `query_graph`
 
 Query triplets by subject or object
 
@@ -964,7 +959,7 @@ Query triplets at a point in time
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `at_date` | string | no | — | YYYY-MM-DD |
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `object` | string | no | — |  |
 | `predicate` | string | no | — |  |
 | `subject` | string | no | — |  |
@@ -975,28 +970,28 @@ Get history of a subject-predicate relationship
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `predicate` | string | yes | — |  |
 | `subject` | string | yes | — |  |
 
-### `triplet_query_as_of`
+### `triplet_query_as_of` *(via advanced)*
 
 Query triplets for a subject valid at a given world timestamp, excluding superseded entries
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `subject` | string | yes | — | Subject node to query |
-| `world_ms` | integer | no | — | World-time epoch ms (default: now) |
+| `world_ms` | any | no | — | World-time epoch ms (default: now) |
 
-### `triplet_supersede`
+### `triplet_supersede` *(via advanced)*
 
 Mark one triplet as superseded by another (bi-temporal update)
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `at_ms` | integer | no | — | Ingestion-time of supersession (default: now) |
-| `new_id` | integer | yes | — | Replacing triplet ID |
-| `old_id` | integer | yes | — | Triplet ID being superseded |
+| `at_ms` | any | no | — | Ingestion-time of supersession (default: now) |
+| `new_id` | any | yes | — | Replacing triplet ID |
+| `old_id` | any | yes | — | Triplet ID being superseded |
 
 ### `triplets` *(gateway)*
 
@@ -1038,19 +1033,22 @@ Fast embed symbol metadata
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `batch_size` | integer | no | — |  |
+| `batch_size` | any | no | — |  |
 | `reset` | boolean | no | — |  |
 
 ### `find_symbol`
 
-Search for symbols by name
+Search for symbols by name. Scope with path (substring the file path must contain, e.g. a repo dir) and lang (cpp|c|python|rust|js|go|java|ruby).
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `kind` | string | no | — |  |
+| `lang` | string | no | — |  |
+| `limit` | integer | no | — |  |
 | `name` | string | yes | — |  |
+| `path` | string | no | — |  |
 
-### `learn_codebase` *(via advanced)*
+### `learn_codebase`
 
 Learn codebase by extracting symbols. path can be a local directory or a remote git URL (https://github.com/..., git@github.com:...). Remote repos are shallow-cloned into a temp dir, indexed, then deleted.
 
@@ -1060,11 +1058,11 @@ Learn codebase by extracting symbols. path can be a local directory or a remote 
 | `exclude` | string | no | — |  |
 | `force` | boolean | no | — |  |
 | `incremental` | boolean | no | — |  |
-| `max_files` | integer | no | — |  |
+| `max_files` | any | no | — |  |
 | `path` | string | yes | — | Local path or remote git URL |
 | `project` | string | no | — | Project name (defaults to repo/dir name) |
 
-### `read_function` *(gateway)*
+### `read_function` *(gateway, via advanced)*
 
 Read a function's code. Convenience wrapper for read_symbol with kind=function.
 
@@ -1085,7 +1083,7 @@ Read just a symbol's code, not entire file. ~10x token savings vs full file read
 | `name` | string | yes | — | Symbol name to read (e.g., 'DuckDBStore', 'daemon_call') |
 | `project` | string | no | — | Project name filter (optional) |
 
-### `symbol_callees` *(gateway)*
+### `symbol_callees` *(gateway, via advanced)*
 
 Find all symbols that a symbol calls. Queries triplets where predicate=calls and subject=symbol.
 
@@ -1094,7 +1092,7 @@ Find all symbols that a symbol calls. Queries triplets where predicate=calls and
 | `limit` | integer | no | — | Max results (default: 20) |
 | `name` | string | yes | — | Symbol name to find callees for |
 
-### `symbol_callers` *(gateway)*
+### `symbol_callers` *(gateway, via advanced)*
 
 Find all callers of a symbol without grep. Queries triplets where predicate=calls and object=symbol.
 
@@ -1110,20 +1108,20 @@ Query the symbol-keyed event log. Filter by symbol_name and/or file_path.
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `file_path` | string | no | — | Filter by file path |
-| `limit` | integer | no | — | Max events to return (default 50) |
+| `limit` | any | no | — | Max events to return (default 50) |
 | `symbol_name` | string | no | — | Filter by symbol name |
 
 <a id="context"></a>
 
 ## Context & Status
 
-### `ask`
+### `ask` *(via advanced)*
 
 Natural language insight query: retrieves and synthesizes memories to answer a question about the user, session, or project
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `question` | string | yes | — |  |
 | `realm` | string | no | — |  |
 
@@ -1140,7 +1138,7 @@ Save session state
 | `realm` | string | no | — |  |
 | `summary` | string | no | — |  |
 
-### `compact_context`
+### `compact_context` *(via advanced)*
 
 Memory-aware context compaction. Scores conversation messages by recency, semantic relevance to query, and memory coverage (content already in memory is safer to drop). Returns a subset of messages fitting the target token budget.
 
@@ -1151,7 +1149,7 @@ Memory-aware context compaction. Scores conversation messages by recency, semant
 | `query` | string | no | — | Upcoming task hint for semantic scoring |
 | `target_ratio` | number | no | — | Fraction of tokens to KEEP (default 0.4) |
 
-### `explore_expand` *(via advanced)*
+### `explore_expand`
 
 Get full content of a memory
 
@@ -1159,7 +1157,7 @@ Get full content of a memory
 |---|---|---|---|---|
 | `id` | string | yes | — | Memory ID |
 
-### `explore_neighbors` *(via advanced)*
+### `explore_neighbors`
 
 Get nodes connected via triplets
 
@@ -1168,7 +1166,7 @@ Get nodes connected via triplets
 | `direction` | string | no | — | outgoing, incoming, or both |
 | `node` | string | yes | — | Node name |
 
-### `explore_peek` *(via advanced)*
+### `explore_peek`
 
 Get summary of a memory (first 200 chars)
 
@@ -1176,13 +1174,13 @@ Get summary of a memory (first 200 chars)
 |---|---|---|---|---|
 | `id` | string | yes | — | Memory ID |
 
-### `explore_recall` *(via advanced)*
+### `explore_recall`
 
 Lightweight recall - titles/scores only
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — | Max results (default 10) |
+| `limit` | any | no | — | Max results (default 10) |
 | `query` | string | yes | — | Search query |
 
 ### `get_policies` *(via advanced)*
@@ -1191,18 +1189,18 @@ Get active policies
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `scope` | string | no | — |  |
 | `type` | string | no | — |  |
 
-### `impl_start`
+### `impl_start` *(via advanced)*
 
 Start self-improvement implementation sadhana
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `interval_seconds` | integer | no | — |  |
-| `max_turns` | integer | no | — |  |
+| `interval_seconds` | any | no | — |  |
+| `max_turns` | any | no | — |  |
 | `realm` | string | no | — |  |
 | `repo` | string | no | — |  |
 
@@ -1226,7 +1224,7 @@ Store an observation/learning (SSL v0.4)
 | `content` | string | yes | — |  |
 | `derivation` | string | no | — | SSL v0.4 <=@ provenance: comma-separated source memory IDs this was abstracted from (required at G:1+) |
 | `flags` | string | no | — | Structural flags: ORIGIN,CORE,PIVOT,GENESIS,TURNING |
-| `granularity` | integer | no | — | SSL v0.4 granularity tier: 0=atom,1=episode,2=claim,3=operator,4=boundary |
+| `granularity` | any | no | — | SSL v0.4 granularity tier: 0=atom,1=episode,2=claim,3=operator,4=boundary |
 | `refs` | string | no | — | Cross-references: comma-separated tag names or memory IDs |
 | `source_loc` | string | no | — | SSL v0.4 src: external source grounding, e.g. file:line or doc section |
 | `tags` | string | no | — |  |
@@ -1235,7 +1233,7 @@ Store an observation/learning (SSL v0.4)
 
 ### `smart_context` *(gateway)*
 
-Build intelligent context. Modes: fast (<80ms), full (<200ms), rlm (RLM [71](#ref-71)-style dynamic exploration via soul_repl). With resolver_mode=true (default), prepends digest-node and decision memories before code symbols.
+Build intelligent context. Modes: fast (<80ms), full (<200ms), rlm (RLM-style dynamic exploration via soul_repl). With resolver_mode=true (default), prepends digest-node and decision memories before code symbols.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
@@ -1254,7 +1252,7 @@ Get current soul state and statistics
 
 No parameters.
 
-### `soul_repl` *(gateway)*
+### `soul_repl` *(gateway, via advanced)*
 
 RLM-style Python REPL for programmatic memory exploration. Write code with soul.* methods: search(), recall(), expand(), triplets(), recent(), remember(), symbols(). Supports persistent sessions via session_id. Call with no code for API reference.
 
@@ -1264,7 +1262,7 @@ RLM-style Python REPL for programmatic memory exploration. Write code with soul.
 | `reset` | boolean | no | — | Reset namespace before execution (default: false) |
 | `session_id` | string | no | — | Session name for persistent state — variables survive across calls with the same session_id |
 
-### `think_wander`
+### `think_wander` *(via advanced)*
 
 Trigger internal memory synthesis
 
@@ -1278,7 +1276,7 @@ Attention-weighted turn selection from a transcript. Embeds each turn, scores by
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `budget_tokens` | integer | no | — | Target token budget (default 4000) |
+| `budget_tokens` | any | no | — | Target token budget (default 4000) |
 | `include_system` | boolean | no | — | Include system turns (default false) |
 | `mad_k` | number | no | — | MAD threshold multiplier (default 1.5, lower=more turns) |
 | `path` | string | no | — | Direct path to JSONL transcript |
@@ -1299,7 +1297,7 @@ Add memory to a shared realm (stub)
 | `id` | string | yes | — |  |
 | `realm` | string | yes | — |  |
 
-### `realm_detect` *(via advanced)*
+### `realm_detect`
 
 Detect current realm from environment
 
@@ -1344,9 +1342,9 @@ Set visibility level (stub)
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `id` | string | yes | — |  |
-| `visibility` | integer | yes | — |  |
+| `visibility` | any | yes | — |  |
 
-### `remap_realms`
+### `remap_realms` *(via advanced)*
 
 Bulk-remap realms per {old:new} mapping (mapping_file=path or mapping=object; dry_run defaults true)
 
@@ -1356,7 +1354,7 @@ Bulk-remap realms per {old:new} mapping (mapping_file=path or mapping=object; dr
 | `mapping` | object | no | — |  |
 | `mapping_file` | string | no | — |  |
 
-### `trim_realm_names`
+### `trim_realm_names` *(via advanced)*
 
 Fix realm names with trailing whitespace/newlines
 
@@ -1372,9 +1370,9 @@ Get conversation turns for a session
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `session_id` | string | no | — |  |
-| `start_index` | integer | no | — |  |
+| `start_index` | any | no | — |  |
 
 ### `ledger_delete` *(via advanced)*
 
@@ -1386,7 +1384,7 @@ Delete checkpoint
 | `project` | string | no | — |  |
 | `session_id` | string | no | — |  |
 
-### `ledger_get` *(via advanced)*
+### `ledger_get`
 
 Get checkpoint by key or session/project
 
@@ -1403,16 +1401,16 @@ Get ledger event counts by kind and queue health metrics
 
 No parameters.
 
-### `ledger_list` *(via advanced)*
+### `ledger_list`
 
 List recent checkpoints
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `project` | string | no | — |  |
 
-### `ledger_load` *(via advanced)*
+### `ledger_load`
 
 Load most recent checkpoint
 
@@ -1422,7 +1420,7 @@ Load most recent checkpoint
 | `project` | string | no | — |  |
 | `session_id` | string | no | — |  |
 
-### `ledger_save` *(via advanced)*
+### `ledger_save`
 
 Save session checkpoint
 
@@ -1442,7 +1440,7 @@ Save session checkpoint
 | `todos` | array | no | — |  |
 | `transcript_path` | string | no | — |  |
 
-### `long_task_active` *(via advanced)*
+### `long_task_active`
 
 Get active long-running task
 
@@ -1450,7 +1448,7 @@ Get active long-running task
 |---|---|---|---|---|
 | `realm` | string | no | — |  |
 
-### `long_task_complete` *(via advanced)*
+### `long_task_complete`
 
 Mark task as completed
 
@@ -1467,7 +1465,7 @@ Evaluate task completion
 |---|---|---|---|---|
 | `task_id` | string | yes | — |  |
 
-### `long_task_event` *(via advanced)*
+### `long_task_event`
 
 Append event to task log
 
@@ -1487,17 +1485,17 @@ Get a long-running task by ID
 |---|---|---|---|---|
 | `task_id` | string | yes | — |  |
 
-### `long_task_snapshot` *(via advanced)*
+### `long_task_snapshot`
 
 Get synthesized task context
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `max_tokens` | integer | no | — |  |
+| `max_tokens` | any | no | — |  |
 | `mode` | string | no | — |  |
 | `task_id` | string | yes | — |  |
 
-### `long_task_start` *(via advanced)*
+### `long_task_start`
 
 Start a long-running task
 
@@ -1510,7 +1508,7 @@ Start a long-running task
 | `task_id` | string | yes | — |  |
 | `work_items` | array<string> | no | — |  |
 
-### `long_task_update` *(via advanced)*
+### `long_task_update`
 
 Update long-running task progress
 
@@ -1521,20 +1519,20 @@ Update long-running task progress
 | `task_id` | string | yes | — |  |
 | `work_items` | array<string> | no | — |  |
 
-### `read_transcript`
+### `read_transcript` *(via advanced)*
 
 Read JSONL transcript with pagination
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `keyword` | string | no | — |  |
-| `limit` | integer | no | — |  |
-| `max_chars_per_turn` | integer | no | — |  |
+| `limit` | any | no | — |  |
+| `max_chars_per_turn` | any | no | — |  |
 | `metadata_only` | boolean | no | — |  |
 | `path` | string | no | — |  |
 | `role_filter` | string | no | — |  |
 | `session_id` | string | no | — |  |
-| `start_turn` | integer | no | — |  |
+| `start_turn` | any | no | — |  |
 
 ### `session_list` *(via advanced)*
 
@@ -1542,10 +1540,8 @@ List active sessions
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `active_only` | boolean | no | — |  |
 | `realm` | string | no | — |  |
 | `status` | string | no | — |  |
-| `ttl_seconds` | integer | no | — |  |
 
 ### `session_sync` *(via advanced)*
 
@@ -1555,7 +1551,7 @@ Sync session registry
 |---|---|---|---|---|
 | `projects_dir` | string | no | — |  |
 
-### `task_state`
+### `task_state` *(via advanced)*
 
 Deterministic task-state check (capability #3): what is the current state of task X? Exact keyed lookup of the LATEST stored [task] record by its slug — bypasses fuzzy recall so an agent resuming a discontinuous session gets the durable status/next-step. Returns found + the record.
 
@@ -1567,13 +1563,13 @@ Deterministic task-state check (capability #3): what is the current state of tas
 
 ## Cross-Harness Messaging
 
-### `cross_harness_conflicts`
+### `cross_harness_conflicts` *(via advanced)*
 
 Find memories where claude-code and codex harnesses disagree on the same topic
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — | Max conflict pairs to return (default 20) |
+| `limit` | any | no | — | Max conflict pairs to return (default 20) |
 | `min_disagreement_score` | number | no | — | Minimum 1-cosine_similarity threshold (default 0.3) |
 | `realm` | string | no | — | Realm filter (default: all) |
 
@@ -1591,7 +1587,7 @@ Get message history
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `session_id` | string | no | — |  |
 
 ### `msg_inbox` *(via advanced)*
@@ -1601,8 +1597,8 @@ Check unread messages
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `auto_ack` | boolean | no | — |  |
-| `limit` | integer | no | — |  |
-| `min_priority` | integer | no | — |  |
+| `limit` | any | no | — |  |
+| `min_priority` | any | no | — |  |
 | `session_id` | string | no | — |  |
 
 ### `msg_respond` *(via advanced)*
@@ -1612,10 +1608,10 @@ Reply to a message using the original sender/target from the event
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `content` | string | yes | — | Reply content |
-| `message_id` | integer | yes | — | Event ID of the message to reply to |
+| `message_id` | any | yes | — | Event ID of the message to reply to |
 | `session_id` | string | no | — | Override sender session_id (defaults to original target) |
 
-### `msg_send` *(via advanced)*
+### `msg_send`
 
 Send message to another session
 
@@ -1623,28 +1619,28 @@ Send message to another session
 |---|---|---|---|---|
 | `content` | string | yes | — |  |
 | `content_type` | string | no | — |  |
-| `priority` | integer | no | — |  |
+| `priority` | any | no | — |  |
 | `session_id` | string | no | — |  |
 | `target` | string | yes | — |  |
 | `target_type` | string | no | — |  |
-| `ttl` | integer | no | — |  |
+| `ttl` | any | no | — |  |
 
 <a id="narrative"></a>
 
 ## Narrative & Work Modes
 
-### `log_decision`
+### `log_decision` *(via advanced)*
 
 Log a decision point to the DecisionTape: chosen action + alternatives considered and rejected. Enables recall_true_counterfactual.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `chosen_entity` | string | yes | — |  |
-| `chosen_outcome` | integer | no | — | 0=success 1=fail 2=error 3=partial |
+| `chosen_outcome` | any | no | — | 0=success 1=fail 2=error 3=partial |
 | `chosen_tool` | string | yes | — |  |
 | `confidence_delta` | number | no | — | chosen_confidence - best_alternative_confidence |
 | `rejected_json` | string | no | — | JSON array of [sym_u64, rejection_reason_u8] pairs |
-| `ts_ms` | integer | no | — |  |
+| `ts_ms` | any | no | — |  |
 
 ### `log_exposure` *(via advanced)*
 
@@ -1653,11 +1649,11 @@ Log memory exposure (SUS)
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `hook_type` | string | yes | — |  |
-| `memory_ids` | array<integer> | yes | — |  |
-| `ranks` | array<integer> | no | — |  |
+| `memory_ids` | array<any> | yes | — |  |
+| `ranks` | array<any> | no | — |  |
 | `resonance_scores` | array<number> | no | — |  |
 | `session_id` | string | yes | — |  |
-| `turn_id` | integer | yes | — |  |
+| `turn_id` | any | yes | — |  |
 
 ### `narrative_history` *(via advanced)*
 
@@ -1665,7 +1661,7 @@ Get work mode segment history
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `session_id` | string | no | — |  |
 
 ### `narrative_log` *(via advanced)*
@@ -1700,7 +1696,7 @@ Compact WAL: save full snapshot then delete covered segments
 
 No parameters.
 
-### `densify_backfill`
+### `densify_backfill` *(via advanced)*
 
 #13 retro-backfill of SameSession edges over existing session-tagged memories (same K=3 decaying-weight rule as the write-time hook). apply=false is a dry run: reports sessions, memories, sibling pairs, and a group-size histogram, writing nothing. apply=true creates the edges (idempotent; rollback via remove_assoc_edges_by_type).
 
@@ -1708,7 +1704,7 @@ No parameters.
 |---|---|---|---|---|
 | `apply` | boolean | no | — |  |
 
-### `distill_now`
+### `distill_now` *(via advanced)*
 
 Synchronously distill ONE session now and return the counts (learnings + value-facts stored/deduped). Runs the lock-fixed distill path in-daemon; recall stays responsive.
 
@@ -1727,13 +1723,13 @@ Change distillation model
 | `enabled` | boolean | no | — |  |
 | `model` | string | yes | — |  |
 
-### `embed_coverage`
+### `embed_coverage` *(via advanced)*
 
 Semantic-index coverage: how many memories SHOULD have a vector vs how many DO. pending_count cannot answer this — the embed queue drains on failure as well as success, so a lost embedding leaves the queue empty.
 
 No parameters.
 
-### `embed_probe`
+### `embed_probe` *(via advanced)*
 
 For a memory id: cosine of its STORED vector against a fresh single-prefix embed vs a double-prefix embed of the same content. ~1.0 identifies which vector space the memory actually lives in.
 
@@ -1741,13 +1737,13 @@ For a memory id: cosine of its STORED vector against a fresh single-prefix embed
 |---|---|---|---|---|
 | `id` | string | yes | — |  |
 
-### `flush_embeddings`
+### `flush_embeddings` *(via advanced)*
 
-Flush the pending embedding queue synchronously — call after remember_batch to ensure HNSW [4](#ref-4)/semantic recall is available immediately. Returns {flushed: N}.
+Flush the pending embedding queue synchronously — call after remember_batch to ensure HNSW/semantic recall is available immediately. Returns {flushed: N}.
 
 No parameters.
 
-### `get_embeddings`
+### `get_embeddings` *(via advanced)*
 
 Batch-fetch raw embedding vectors for memory IDs. Returns JSON object mapping id→vector. Used for computing S-entropy (Gram matrix effective rank) over recall candidates.
 
@@ -1755,23 +1751,13 @@ Batch-fetch raw embedding vectors for memory IDs. Returns JSON object mapping id
 |---|---|---|---|---|
 | `ids` | array<string> | yes | — | Array of memory ID strings |
 
-### `health_check` *(via advanced)*
+### `health_check`
 
 Check daemon health
 
 No parameters.
 
-### `health_check_start` *(gateway)*
-
-Start autonomous health-check sadhana that monitors memory quality, dedup ratio, and embedding coverage
-
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `interval_seconds` | integer | no | — | Check interval in seconds (default: 3600) |
-| `max_turns` | integer | no | — | Max check cycles (default: 0 = unlimited) |
-| `realm` | string | no | — | Realm to monitor (default: brahman) |
-
-### `pending_embed_ids`
+### `pending_embed_ids` *(via advanced)*
 
 Return IDs of memories awaiting embedding (stuck embed queue)
 
@@ -1789,27 +1775,27 @@ Rebuild FTS index for BM25 search
 
 No parameters.
 
-### `semantic_backfill`
+### `semantic_backfill` *(via advanced)*
 
 Dense-kNN SemanticNeighbor edge backfill: for each non-deleted memory, link its top-k realm-scoped HNSW neighbors (cosine>=min_cos) with bidirectional similarity edges (wire 6). The first genuine memory<->memory knowledge relation in the assoc graph, distinct from CoRetrieved's retrieval-history prior. apply=false is a dry run (counts candidate edges, no writes). apply=true creates them (idempotent; rollback via remove_assoc_edges_by_type edge_type=6).
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `apply` | boolean | no | — |  |
-| `k` | integer | no | — |  |
+| `k` | any | no | — |  |
 | `min_cos` | number | no | — |  |
 
 <a id="consolidation"></a>
 
 ## Consolidation & Contradictions
 
-### `conflict_inspector`
+### `conflict_inspector` *(via advanced)*
 
 Semantic search + show status and contradiction partners for each hit
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — | Max memories to scan (default 10) |
+| `limit` | any | no | — | Max memories to scan (default 10) |
 | `query` | string | yes | — | Search query |
 | `realm` | string | no | — | Filter by realm |
 
@@ -1820,17 +1806,17 @@ Merge near-duplicate memories — keeps stronger, soft-deletes weaker
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `dry_run` | boolean | no | — | Preview without deleting (default true) |
-| `limit` | integer | no | — | Max pairs to merge (default 10) |
+| `limit` | any | no | — | Max pairs to merge (default 10) |
 | `realm` | string | no | — | Filter by realm |
 | `threshold` | number | no | — | Similarity threshold (default 0.92) |
 
 ### `consolidation_pass` *(via advanced)*
 
-Run Sequitur [25](#ref-25) grammar consolidation: find frequent bigrams in EventTape and promote rules to the triplet KG (subject=rule:..., predicates: compresses/avg_outcome/support/tape_range).
+Run Sequitur grammar consolidation: find frequent bigrams in EventTape and promote rules to the triplet KG (subject=rule:..., predicates: compresses/avg_outcome/support/tape_range).
 
 No parameters.
 
-### `detect_contradictions`
+### `detect_contradictions` *(via advanced)*
 
 Detect contradictions for a stored memory against realm peers
 
@@ -1839,7 +1825,7 @@ Detect contradictions for a stored memory against realm peers
 | `memory_id` | string | yes | — | Memory ID to check |
 | `realm` | string | no | — | Realm to scan (default global) |
 
-### `disable_source`
+### `disable_source` *(via advanced)*
 
 Add a source to the deny-list via triplet
 
@@ -1853,7 +1839,7 @@ Find memory pairs with high semantic similarity (near-duplicates)
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — | Max pairs to return (default 20) |
+| `limit` | any | no | — | Max pairs to return (default 20) |
 | `realm` | string | no | — | Filter by realm |
 | `threshold` | number | no | — | Cosine similarity threshold (default 0.90) |
 
@@ -1863,7 +1849,7 @@ Get memory hygiene statistics
 
 No parameters.
 
-### `reconsolidate`
+### `reconsolidate` *(via advanced)*
 
 Update content of a memory during its labile window (reconsolidation)
 
@@ -1873,7 +1859,7 @@ Update content of a memory during its labile window (reconsolidation)
 | `id` | string | yes | — | Memory ID to update |
 | `reason` | string | no | — | Optional reason for reconsolidation |
 
-### `resolve_contradiction`
+### `resolve_contradiction` *(via advanced)*
 
 Resolve a contradiction: declare winner supersedes loser, store CORRECTION memory
 
@@ -1883,19 +1869,19 @@ Resolve a contradiction: declare winner supersedes loser, store CORRECTION memor
 | `reason` | string | no | — | Explanation for the resolution |
 | `winner_id` | string | yes | — | Memory ID that is correct |
 
-### `save_spectral_snapshot`
+### `save_spectral_snapshot` *(via advanced)*
 
 Save spectral stats snapshot for drift tracking
 
 No parameters.
 
-### `scan_contradictions`
+### `scan_contradictions` *(via advanced)*
 
 Background scan: find contradiction candidates across all memories in a realm
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — | Max candidates to return (default 50) |
+| `limit` | any | no | — | Max candidates to return (default 50) |
 | `realm` | string | no | — | Realm to scan |
 
 ### `show_conflicts` *(via advanced)*
@@ -1904,11 +1890,11 @@ Semantic search + show contradiction pairs for matching memories
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — | Max memories to scan (default 20) |
+| `limit` | any | no | — | Max memories to scan (default 20) |
 | `query` | string | yes | — | Search query |
 | `realm` | string | no | — | Filter by realm |
 
-### `spectral_drift`
+### `spectral_drift` *(via advanced)*
 
 Compare current embedding geometry with last snapshot
 
@@ -1940,7 +1926,7 @@ Get theme details
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `id` | integer | yes | — |  |
+| `id` | any | yes | — |  |
 
 ### `theme_list` *(via advanced)*
 
@@ -1948,7 +1934,7 @@ List all themes with statistics
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `realm` | string | no | — |  |
 
 ### `theme_recall` *(via advanced)*
@@ -1957,7 +1943,7 @@ Two-stage theme-based retrieval
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `query` | string | yes | — |  |
 | `realm` | string | no | — |  |
 
@@ -2000,7 +1986,7 @@ Get accuracy score
 
 ### `correction_check`
 
-Deterministic durable-correction check (capability #2): does any stored [correction] trigger recur in this turn? Exact keyed bigram probe of the turn text against corrected-mistake phrases — reserves an injection slot, bypassing fuzzy recall (which loses corrections on cosine similarity ~99% of the time). Returns found + the correction(s), newest first (latest-wins).
+Deterministic durable-correction check (capability #2): does any stored [correction] trigger recur in this turn? Exact keyed bigram probe of the turn text against corrected-mistake phrases — bypasses fuzzy recall (which loses corrections on cosine similarity ~99% of the time). Returns found + the correction(s), newest first (latest-wins).
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
@@ -2013,7 +1999,7 @@ Get relationship events
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `event_type` | string | no | — |  |
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `session_id` | string | no | — |  |
 
 ### `probe_calibrate` *(via advanced)*
@@ -2041,7 +2027,7 @@ Show how many exemplars exist per behavioral class. Use to verify the probe is s
 
 No parameters.
 
-### `provenance_check`
+### `provenance_check` *(via advanced)*
 
 Deterministic anti-reprocessing check: has this file/task already been processed? Exact keyed lookup of a prior [done] record by content-hash and/or input path — bypasses fuzzy recall. Returns found + the record.
 
@@ -2064,13 +2050,13 @@ Backfill the memory↔span edge: run the atom extractor over every live memory's
 
 No parameters.
 
-### `span_query`
+### `span_query` *(via advanced)*
 
 Retrieve verbatim transcript atoms (file paths, URLs, file:line locators, bash commands, error signatures) captured across all sessions. No LLM/GPU: exact-substring recall over a deduplicated span index. Realm-scoped by default to prevent cross-project bleed. Use when you need an exact locator you saw before, not a paraphrase.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `k` | integer | no | — | Max atoms to return (default 6) |
+| `k` | any | no | — | Max atoms to return (default 6) |
 | `query` | string | yes | — | Substring or token to match against stored atoms |
 | `realm` | string | no | — | Restrict to this realm (project); empty = unscoped |
 
@@ -2103,7 +2089,7 @@ Report mid-cycle checkpoint
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `id` | integer | yes | — |  |
+| `id` | any | yes | — |  |
 | `status` | string (progressed|achieved|blocked) | yes | — |  |
 | `summary` | string | yes | — |  |
 
@@ -2113,7 +2099,7 @@ List sadhanas
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `realm` | string | no | — |  |
 | `state` | string | no | — |  |
 
@@ -2123,7 +2109,7 @@ Pause a sadhana
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `id` | integer | yes | — |  |
+| `id` | any | yes | — |  |
 
 ### `sadhana_resume` *(via advanced)*
 
@@ -2131,7 +2117,7 @@ Resume a paused sadhana
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `id` | integer | yes | — |  |
+| `id` | any | yes | — |  |
 
 ### `sadhana_set_goal` *(via advanced)*
 
@@ -2140,7 +2126,7 @@ Change sadhana goal
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `goal` | string | yes | — |  |
-| `id` | integer | yes | — |  |
+| `id` | any | yes | — |  |
 
 ### `sadhana_set_interval` *(via advanced)*
 
@@ -2148,8 +2134,8 @@ Change tick interval
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `id` | integer | yes | — |  |
-| `interval` | integer | yes | — |  |
+| `id` | any | yes | — |  |
+| `interval` | any | yes | — |  |
 
 ### `sadhana_set_max_turns` *(via advanced)*
 
@@ -2157,8 +2143,8 @@ Set max turns per cycle
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `id` | integer | yes | — |  |
-| `max_turns` | integer | yes | — |  |
+| `id` | any | yes | — |  |
+| `max_turns` | any | yes | — |  |
 
 ### `sadhana_set_model` *(via advanced)*
 
@@ -2166,7 +2152,7 @@ Change brain model
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `id` | integer | yes | — |  |
+| `id` | any | yes | — |  |
 | `model` | string | yes | — |  |
 
 ### `sadhana_start` *(via advanced)*
@@ -2179,8 +2165,8 @@ Create and start an autonomous agent
 | `brain_provider` | string | no | — |  |
 | `goal` | string | yes | — |  |
 | `goal_dsl` | object | no | — |  |
-| `interval_seconds` | integer | no | — |  |
-| `max_turns` | integer | no | — |  |
+| `interval_seconds` | any | no | — |  |
+| `max_turns` | any | no | — |  |
 | `realm` | string | no | — |  |
 
 ### `sadhana_status` *(via advanced)*
@@ -2189,8 +2175,8 @@ Get sadhana status
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `history_limit` | integer | no | — |  |
-| `id` | integer | yes | — |  |
+| `history_limit` | any | no | — |  |
+| `id` | any | yes | — |  |
 
 ### `sadhana_stop` *(via advanced)*
 
@@ -2198,7 +2184,7 @@ Stop a sadhana
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `id` | integer | yes | — |  |
+| `id` | any | yes | — |  |
 | `reason` | string | no | — |  |
 | `success` | boolean | no | — |  |
 
@@ -2212,7 +2198,7 @@ List knowledge gaps
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `realm` | string | no | — |  |
 
 ### `curiosity_note_gap` *(via advanced)*
@@ -2231,7 +2217,7 @@ Mark gap as resolved
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `id` | integer | yes | — |  |
+| `id` | any | yes | — |  |
 | `learned` | string | no | — |  |
 
 ### `dream_cancel` *(via advanced)*
@@ -2240,7 +2226,7 @@ Cancel a dream
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `id` | integer | yes | — |  |
+| `id` | any | yes | — |  |
 
 ### `dream_force_woke` *(via advanced)*
 
@@ -2248,18 +2234,18 @@ Force stuck dream to woke
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `id` | integer | yes | — |  |
+| `id` | any | yes | — |  |
 
-### `dream_list` *(via advanced)*
+### `dream_list`
 
 List recent dreams
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `realm` | string | no | — |  |
 
-### `dream_start` *(via advanced)*
+### `dream_start`
 
 Start an autonomous dream
 
@@ -2271,15 +2257,15 @@ Start an autonomous dream
 | `realm` | string | no | — |  |
 | `topic` | string | yes | — |  |
 
-### `dream_status` *(via advanced)*
+### `dream_status`
 
 Get dream details
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `id` | integer | yes | — |  |
+| `id` | any | yes | — |  |
 
-### `dream_wander` *(via advanced)*
+### `dream_wander`
 
 Auto-select topic and dream
 
@@ -2303,7 +2289,7 @@ Curiosity-driven research. Actions: cycle (get topic to research), topics (list 
 | `sources` | array<string> | no | — | URLs (store) |
 | `topic` | string | no | — | Topic (store) |
 
-### `research_cycle` *(gateway)*
+### `research_cycle` *(gateway, via advanced)*
 
 Run one curiosity-driven research cycle. Returns a topic to research with context. After calling this, use WebSearch to find information, then call research_store with results.
 
@@ -2311,7 +2297,7 @@ Run one curiosity-driven research cycle. Returns a topic to research with contex
 |---|---|---|---|---|
 | `realm` | string | no | — | Filter by realm/project |
 
-### `research_store` *(gateway)*
+### `research_store` *(gateway, via advanced)*
 
 Store research results as memories with source attribution. Call after using WebSearch to learn about a topic.
 
@@ -2323,7 +2309,7 @@ Store research results as memories with source attribution. Call after using Web
 | `sources` | array<string> | no | — | URLs or references |
 | `topic` | string | yes | — | What was researched |
 
-### `research_topics` *(gateway)*
+### `research_topics` *(gateway, via advanced)*
 
 Get topics that need research. Returns curiosity gaps, low-confidence memories, or suggested topics. Use WebSearch to research these, then store results with research_store.
 
@@ -2357,7 +2343,7 @@ Get Soul Utility Score metrics
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `days` | integer | no | — |  |
+| `days` | any | no | — |  |
 
 ### `integration_stats` *(via advanced)*
 
@@ -2393,7 +2379,7 @@ Store learning in soul memory. Types: correction (wrong→right fix), preference
 | `type` | string | yes | — | correction\|preference\|insight\|approach\|outcome\|milestone\|analysis |
 | `wrong` | string | no | — | What was wrong (correction) |
 
-### `learn_analysis` *(gateway)*
+### `learn_analysis` *(gateway, via advanced)*
 
 Record an analysis with data and script locations. Makes analyses reproducible and findable later. Use after completing any significant analysis.
 
@@ -2406,7 +2392,7 @@ Record an analysis with data and script locations. Makes analyses reproducible a
 | `project` | string | no | — | Project name for organization (optional) |
 | `script_paths` | array<string> | no | — | Paths to analysis scripts |
 
-### `learn_approach` *(gateway)*
+### `learn_approach` *(gateway, via advanced)*
 
 Store what approach worked when in a particular state/mood. Builds emotional memory for adapting to session dynamics.
 
@@ -2416,7 +2402,7 @@ Store what approach worked when in a particular state/mood. Builds emotional mem
 | `outcome` | string | no | — | What happened after (optional) |
 | `state` | string | yes | — | State/mood: stuck, debugging, exploring, flowing, frustrated, uncertain, rushing |
 
-### `learn_correction` *(gateway)*
+### `learn_correction` *(gateway, via advanced)*
 
 Store a correction when I was wrong. Creates high-confidence counter-memory with 'corrects' triplet linking to original mistake.
 
@@ -2426,7 +2412,7 @@ Store a correction when I was wrong. Creates high-confidence counter-memory with
 | `correct` | string | yes | — | The correct information/approach |
 | `wrong` | string | yes | — | What I said/did that was incorrect |
 
-### `learn_insight` *(gateway)*
+### `learn_insight` *(gateway, via advanced)*
 
 Store a generalizable insight that applies across projects. Use for patterns, techniques, and wisdom not tied to specific codebase.
 
@@ -2436,7 +2422,7 @@ Store a generalizable insight that applies across projects. Use for patterns, te
 | `insight` | string | yes | — | The generalizable insight or pattern |
 | `learned_from` | string | no | — | Context where this was learned (optional, for future reference) |
 
-### `learn_milestone` *(gateway)*
+### `learn_milestone` *(gateway, via advanced)*
 
 Record a relationship milestone - achievements, personal context, significant moments worth remembering.
 
@@ -2446,9 +2432,9 @@ Record a relationship milestone - achievements, personal context, significant mo
 | `milestone` | string | yes | — | What happened (e.g., 'shipped v1.0', 'first successful release') |
 | `significance` | string | no | — | Why it matters (optional) |
 
-### `learn_outcome` *(gateway)*
+### `learn_outcome` *(gateway, via advanced)*
 
-Record whether a suggestion/approach actually helped. Records outcomes for the suggestion feedback loop.
+Record whether a suggestion/approach actually helped. Builds feedback loop for improving future suggestions.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
@@ -2456,7 +2442,7 @@ Record whether a suggestion/approach actually helped. Records outcomes for the s
 | `helped` | boolean | yes | — | Did it help? true/false |
 | `suggestion` | string | yes | — | What was suggested or tried |
 
-### `learn_preference` *(gateway)*
+### `learn_preference` *(gateway, via advanced)*
 
 Store a user preference for adapting communication/behavior. Global visibility so it applies across all projects.
 
@@ -2501,8 +2487,8 @@ Apply learned weight deltas to the scoring model from outcome calibration
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `mean_loss` | number | no | — | EWMA loss from calibration |
-| `model_version` | integer | no | — | Monotonic version number |
-| `outcome_count` | integer | no | — | Total outcomes used for calibration |
+| `model_version` | any | no | — | Monotonic version number |
+| `outcome_count` | any | no | — | Total outcomes used for calibration |
 | `weights` | object | no | — | Factor name → {delta, min_delta, max_delta} learned adjustments |
 
 ### `update_source_weight` *(via advanced)*
@@ -2525,7 +2511,7 @@ Get predictions passing annoyance gate
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `max` | integer | no | — |  |
+| `max` | any | no | — |  |
 | `session_id` | string | no | — |  |
 
 ### `anticipation_list` *(via advanced)*
@@ -2534,7 +2520,7 @@ List learned anticipation patterns
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `realm` | string | no | — |  |
 | `sort_by` | string | no | — |  |
 
@@ -2555,7 +2541,7 @@ Predict likely actions
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `context` | string | yes | — |  |
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `min_confidence` | number | no | — |  |
 | `realm` | string | no | — |  |
 
@@ -2565,20 +2551,20 @@ Mark prediction as successful
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `id` | integer | yes | — |  |
+| `id` | any | yes | — |  |
 
-### `habit_list` *(via advanced)*
+### `habit_list`
 
 List formed habits
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `min_strength` | number | no | — |  |
 | `realm` | string | no | — |  |
 | `sort_by` | string | no | — |  |
 
-### `habit_match` *(via advanced)*
+### `habit_match`
 
 Find matching habits
 
@@ -2598,14 +2584,14 @@ Record trigger->response pattern
 | `response` | string | yes | — |  |
 | `trigger` | string | yes | — |  |
 
-### `habit_strengthen` *(via advanced)*
+### `habit_strengthen`
 
 Strengthen a habit
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `amount` | number | no | — |  |
-| `id` | integer | yes | — |  |
+| `id` | any | yes | — |  |
 
 ### `habit_weaken` *(via advanced)*
 
@@ -2614,7 +2600,7 @@ Weaken a habit
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `amount` | number | no | — |  |
-| `id` | integer | yes | — |  |
+| `id` | any | yes | — |  |
 
 ### `predict_needed` *(via advanced)*
 
@@ -2622,7 +2608,7 @@ Get predicted next-needed memories from the Markov chain access predictor
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `k` | integer | no | — | Number of predictions (default 8) |
+| `k` | any | no | — | Number of predictions (default 8) |
 
 ### `trigger_add` *(via advanced)*
 
@@ -2632,7 +2618,7 @@ Create a trigger automaton (prospective memory). Arms on creation, fires when co
 |---|---|---|---|---|
 | `action` | object | yes | — | Action on fire (Notify, InjectMemory, EmitEvent, RememberFact) |
 | `condition` | object | yes | — | Trigger condition (TimeAfter, ConstraintMatch, EventMatch, AllOf, AnyOf) |
-| `deadline_ms` | integer | no | — | Deadline timestamp ms (0=no deadline) |
+| `deadline_ms` | any | no | — | Deadline timestamp ms (0=no deadline) |
 | `gain` | number | no | — | Emotional importance 0-1 (default 0.5) |
 | `name` | string | yes | — | Human-readable trigger name |
 | `realm` | string | no | — | Realm scope (default: global) |
@@ -2644,7 +2630,7 @@ Expire/dismiss a trigger without firing
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `trigger_id` | integer | yes | — | Trigger ID to dismiss |
+| `trigger_id` | any | yes | — | Trigger ID to dismiss |
 
 ### `trigger_fire` *(via advanced)*
 
@@ -2652,7 +2638,7 @@ Manually fire a trigger
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `trigger_id` | integer | yes | — | Trigger ID to fire |
+| `trigger_id` | any | yes | — | Trigger ID to fire |
 
 ### `trigger_list` *(via advanced)*
 
@@ -2670,7 +2656,7 @@ Mark goal completed
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `id` | integer | yes | — |  |
+| `id` | any | yes | — |  |
 | `outcome` | string | yes | — |  |
 
 ### `goal_get` *(via advanced)*
@@ -2679,7 +2665,7 @@ Get goal by ID
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `id` | integer | yes | — |  |
+| `id` | any | yes | — |  |
 
 ### `goal_list` *(via advanced)*
 
@@ -2687,7 +2673,7 @@ List goals
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `realm` | string | no | — |  |
 | `sort_by` | string | no | — |  |
 | `status` | string | no | — |  |
@@ -2698,7 +2684,7 @@ Update goal progress
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `id` | integer | yes | — |  |
+| `id` | any | yes | — |  |
 | `milestone` | string | no | — |  |
 | `progress` | number | yes | — |  |
 
@@ -2708,7 +2694,7 @@ Define a long-term goal
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `deadline` | integer | no | — |  |
+| `deadline` | any | no | — |  |
 | `description` | string | no | — |  |
 | `milestones` | string | no | — |  |
 | `realm` | string | no | — |  |
@@ -2754,7 +2740,7 @@ Record a delegation edge — tracks which agent handed off to which, with option
 |---|---|---|---|---|
 | `from_agent` | string | yes | — | Delegating agent name |
 | `handoff_note` | string | no | — | Optional context passed at handoff |
-| `task_id` | integer | yes | — | Task ID |
+| `task_id` | any | yes | — | Task ID |
 | `to_agent` | string | yes | — | Receiving agent name |
 
 ### `add_probe` *(via advanced)*
@@ -2764,11 +2750,11 @@ Add a pending probe — an open question that must be answered to unblock or com
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `expected_answerer` | string | no | — | Agent or role expected to answer |
-| `priority` | integer | no | — | Priority 1-10 (default 5) |
+| `priority` | any | no | — | Priority 1-10 (default 5) |
 | `question` | string | yes | — | Open question to be answered |
-| `task_id` | integer | yes | — | Task ID |
+| `task_id` | any | yes | — | Task ID |
 
-### `agent_disable` *(gateway)*
+### `agent_disable` *(gateway, via advanced)*
 
 Disable (revoke) an agent.
 
@@ -2776,7 +2762,7 @@ Disable (revoke) an agent.
 |---|---|---|---|---|
 | `agent_id` | string | yes | — | Agent identifier to disable |
 
-### `agent_get` *(gateway)*
+### `agent_get` *(gateway, via advanced)*
 
 Get an agent's identity record.
 
@@ -2784,7 +2770,7 @@ Get an agent's identity record.
 |---|---|---|---|---|
 | `agent_id` | string | yes | — | Agent identifier |
 
-### `agent_list` *(gateway)*
+### `agent_list` *(gateway, via advanced)*
 
 List all registered agents.
 
@@ -2796,7 +2782,7 @@ Show agent protocol memory statistics — total tasks, delegations, evidence lin
 
 No parameters.
 
-### `agent_upsert` *(gateway)*
+### `agent_upsert` *(gateway, via advanced)*
 
 Register or update an agent identity in the multi-agent registry.
 
@@ -2812,7 +2798,7 @@ Get full task view — contract, delegations, evidence links, pending probes, an
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `task_id` | integer | yes | — | Task ID |
+| `task_id` | any | yes | — | Task ID |
 
 ### `link_evidence` *(via advanced)*
 
@@ -2820,11 +2806,11 @@ Link a memory to a task as evidence — records which agent produced it and evid
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `evidence_kind` | integer | no | — | 0=Observation 1=Artifact 2=Result 3=Analysis 4=UserFeedback |
-| `memory_id` | integer | yes | — | Memory ID to link |
+| `evidence_kind` | any | no | — | 0=Observation 1=Artifact 2=Result 3=Analysis 4=UserFeedback |
+| `memory_id` | any | yes | — | Memory ID to link |
 | `produced_by` | string | no | — | Agent that produced this evidence |
 | `relevance` | number | no | — | Relevance score 0-1 (default 1.0) |
-| `task_id` | integer | yes | — | Task ID |
+| `task_id` | any | yes | — | Task ID |
 
 ### `query_tasks` *(via advanced)*
 
@@ -2832,10 +2818,10 @@ Query task contracts — filter by realm, session, status, or tag
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — | Max results (default 50) |
+| `limit` | any | no | — | Max results (default 50) |
 | `realm` | string | no | — | Filter by realm |
 | `session_id` | string | no | — | Filter by session ID |
-| `status` | integer | no | — | Filter by status (0-4) |
+| `status` | any | no | — | Filter by status (0-4) |
 | `tag` | string | no | — | Filter by tag |
 
 ### `register_task` *(via advanced)*
@@ -2846,10 +2832,10 @@ Register a task contract — records goal, constraints, acceptance criteria, pri
 |---|---|---|---|---|
 | `acceptance_criteria` | array<string> | no | — | Criteria for task completion |
 | `constraints` | array<string> | no | — | Constraints that must be respected |
-| `deadline_ms` | integer | no | — | Optional deadline as Unix ms timestamp |
+| `deadline_ms` | any | no | — | Optional deadline as Unix ms timestamp |
 | `goal` | string | yes | — | Task goal description |
-| `parent_task_id` | integer | no | — | Parent task ID for subtasks |
-| `priority` | integer | no | — | Priority 1-10 (default 5) |
+| `parent_task_id` | any | no | — | Parent task ID for subtasks |
+| `priority` | any | no | — | Priority 1-10 (default 5) |
 | `realm` | string | no | — | Realm: coding, research, planning (default: coding) |
 | `session_id` | string | no | — | Session this task belongs to |
 | `tags` | array<string> | no | — | Optional tags |
@@ -2861,8 +2847,8 @@ Resolve a pending probe — mark as Answered (1) or Dismissed (2) and optionally
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `answer` | string | no | — | Optional answer text |
-| `probe_id` | integer | yes | — | Probe ID |
-| `status` | integer | yes | — | 1=Answered 2=Dismissed |
+| `probe_id` | any | yes | — | Probe ID |
+| `status` | any | yes | — | 1=Answered 2=Dismissed |
 
 ### `set_criterion` *(via advanced)*
 
@@ -2873,9 +2859,9 @@ Upsert a completion criterion for a task — creates if new, updates if existing
 | `criterion` | string | yes | — | Criterion description |
 | `evidence_note` | string | no | — | Optional evidence supporting the criterion check |
 | `is_met` | boolean | no | — | Whether criterion is met (default false) |
-| `task_id` | integer | yes | — | Task ID |
+| `task_id` | any | yes | — | Task ID |
 
-### `skill_deprecate` *(gateway)*
+### `skill_deprecate` *(gateway, via advanced)*
 
 Deprecate a skill (marks latest version as deprecated).
 
@@ -2883,13 +2869,13 @@ Deprecate a skill (marks latest version as deprecated).
 |---|---|---|---|---|
 | `skill_id` | string | yes | — | Skill identifier to deprecate |
 
-### `skill_list` *(gateway)*
+### `skill_list` *(gateway, via advanced)*
 
 List all registered skills with their latest version number.
 
 No parameters.
 
-### `skill_read` *(gateway)*
+### `skill_read` *(gateway, via advanced)*
 
 Read a skill version. version=0 means latest.
 
@@ -2898,7 +2884,7 @@ Read a skill version. version=0 means latest.
 | `skill_id` | string | yes | — | Skill identifier |
 | `version` | integer | no | — | Version number (0=latest) |
 
-### `skill_search` *(gateway)*
+### `skill_search` *(gateway, via advanced)*
 
 Search skills by text match on id, tags, or content.
 
@@ -2907,7 +2893,7 @@ Search skills by text match on id, tags, or content.
 | `limit` | integer | no | — | Max results (default: 20) |
 | `query` | string | yes | — | Search query |
 
-### `skill_upload` *(gateway)*
+### `skill_upload` *(gateway, via advanced)*
 
 Upload a new version of a reusable skill. Skills are immutable versioned text blobs (prompts, templates, procedures).
 
@@ -2924,10 +2910,10 @@ Update task status (Active=0, Blocked=1, Completed=2, Failed=3, Abandoned=4), op
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `add_intervention_id` | integer | no | — | Attach intervention to task |
+| `add_intervention_id` | any | no | — | Attach intervention to task |
 | `add_tag` | string | no | — | Add a tag to the task |
-| `status` | integer | yes | — | 0=Active 1=Blocked 2=Completed 3=Failed 4=Abandoned |
-| `task_id` | integer | yes | — | Task ID |
+| `status` | any | yes | — | 0=Active 1=Blocked 2=Completed 3=Failed 4=Abandoned |
+| `task_id` | any | yes | — | Task ID |
 
 <a id="intervention"></a>
 
@@ -2940,9 +2926,9 @@ Record an observation during an open intervention (stdout, test result, file dif
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `confidence` | number | no | — | Confidence in this observation (0.0-1.0) |
-| `evidence_refs` | array<integer> | no | — | Memory IDs that constitute evidence |
-| `intervention_id` | integer | yes | — | Intervention ID from start_intervention |
-| `kind` | integer | no | — | 0=Stdout 1=Stderr 2=FileDiff 3=TestResult 4=EnvState 5=UserFeedback |
+| `evidence_refs` | array<any> | no | — | Memory IDs that constitute evidence |
+| `intervention_id` | any | yes | — | Intervention ID from start_intervention |
+| `kind` | any | no | — | 0=Stdout 1=Stderr 2=FileDiff 3=TestResult 4=EnvState 5=UserFeedback |
 | `summary` | string | yes | — | Human-readable observation summary |
 
 ### `close_intervention` *(via advanced)*
@@ -2951,8 +2937,8 @@ Close an intervention with its final outcome status
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `intervention_id` | integer | yes | — | Intervention ID to close |
-| `status` | integer | yes | — | 0=Open 1=Succeeded 2=Failed 3=Partial 4=Aborted |
+| `intervention_id` | any | yes | — | Intervention ID to close |
+| `status` | any | yes | — | 0=Open 1=Succeeded 2=Failed 3=Partial 4=Aborted |
 
 ### `get_intervention` *(via advanced)*
 
@@ -2960,7 +2946,7 @@ Get a single intervention record by ID
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `intervention_id` | integer | yes | — | Intervention ID |
+| `intervention_id` | any | yes | — | Intervention ID |
 
 ### `intervention_stats` *(via advanced)*
 
@@ -2980,10 +2966,10 @@ Query the intervention ledger with optional filters
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — | Max results (default 50) |
+| `limit` | any | no | — | Max results (default 50) |
 | `realm` | string | no | — | Filter by realm |
 | `session_id` | string | no | — | Filter by session ID |
-| `status` | integer | no | — | Filter by status (0-4) |
+| `status` | any | no | — | Filter by status (0-4) |
 
 ### `record_attribution` *(via advanced)*
 
@@ -2992,14 +2978,14 @@ Attribute a closed intervention to a causal class — routes feedback to the app
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `confidence_delta` | number | no | — | Magnitude of the learning signal (0.0-1.0) |
-| `debt_ids` | array<integer> | no | — | Linked epistemic debt IDs |
-| `intervention_id` | integer | yes | — | Intervention ID |
+| `debt_ids` | array<any> | no | — | Linked epistemic debt IDs |
+| `intervention_id` | any | yes | — | Intervention ID |
 | `note` | string | no | — | Optional human-readable note |
-| `primary_class` | integer | yes | — | 0=MemoryRecallError 1=SourceTrustError 2=ProcedureError 3=ToolExecutionError 4=EnvironmentShift 5=HiddenPrecondition 6=AmbiguousState 7=GoalSpecError 8=UserOverride 9=ExternalNondeterminism |
-| `secondary_class` | integer | no | — | Optional secondary attribution class (same enum) |
-| `skill_memory_ids` | array<integer> | no | — | Skill memory IDs that were applied |
-| `source_memory_ids` | array<integer> | no | — | Memory IDs that contributed to this outcome |
-| `surprise_id` | integer | no | — | Linked surprise event ID if available |
+| `primary_class` | any | yes | — | 0=MemoryRecallError 1=SourceTrustError 2=ProcedureError 3=ToolExecutionError 4=EnvironmentShift 5=HiddenPrecondition 6=AmbiguousState 7=GoalSpecError 8=UserOverride 9=ExternalNondeterminism |
+| `secondary_class` | any | no | — | Optional secondary attribution class (same enum) |
+| `skill_memory_ids` | array<any> | no | — | Skill memory IDs that were applied |
+| `source_memory_ids` | array<any> | no | — | Memory IDs that contributed to this outcome |
+| `surprise_id` | any | no | — | Linked surprise event ID if available |
 
 ### `start_intervention` *(via advanced)*
 
@@ -3008,16 +2994,16 @@ Begin tracking an agent intervention — records intent, action, preconditions a
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `action_ref` | string | yes | — | Reference to the action (tool name, file path, command) |
-| `action_type` | integer | no | — | 0=ToolCall 1=MultiStepPlan 2=Delegation 3=Edit 4=Command |
+| `action_type` | any | no | — | 0=ToolCall 1=MultiStepPlan 2=Delegation 3=Edit 4=Command |
 | `agent_id` | string | no | — | Agent performing the action |
 | `domain` | string | no | — | Domain area (e.g. git, filesystem, testing, compiler) |
 | `expected_observables` | array<string> | no | — | What success looks like |
 | `intent` | string | yes | — | What the agent intends to achieve |
 | `preconditions` | array<string> | no | — | Known preconditions |
 | `realm` | string | no | — | Realm: coding, research, planning (default: coding) |
-| `reversal_cost` | integer | no | — | 0=None 1=Low 2=Medium 3=High |
+| `reversal_cost` | any | no | — | 0=None 1=Low 2=Medium 3=High |
 | `session_id` | string | no | — | Current session ID |
-| `task_id` | integer | no | — | Optional task ID |
+| `task_id` | any | no | — | Optional task ID |
 
 <a id="facts"></a>
 
@@ -3029,7 +3015,7 @@ Assert a constraint fact (subject-predicate-object) with provenance and scope. A
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `branch_id` | integer | no | — | Branch to assert into (0=trunk) |
+| `branch_id` | any | no | — | Branch to assert into (0=trunk) |
 | `confidence` | number | no | — | Confidence 0-1 (default 0.8) |
 | `confidence_basis` | string | no | — | Basis: stated, observed, derived, corrected |
 | `object` | string | yes | — | Value (e.g. 'Rust', 'vim', 'Copenhagen') |
@@ -3044,7 +3030,7 @@ Fork a rival branch for conflicting interpretations
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `parent_id` | integer | no | — | Parent branch ID (0=trunk) |
+| `parent_id` | any | no | — | Parent branch ID (0=trunk) |
 | `scope` | string | no | — | Branch scope (default: global) |
 
 ### `branch_resolve` *(via advanced)*
@@ -3053,8 +3039,8 @@ Resolve a branch conflict: winner stays, loser abandoned
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `loser_id` | integer | yes | — | Branch ID to abandon |
-| `winner_id` | integer | yes | — | Branch ID that wins |
+| `loser_id` | any | yes | — | Branch ID to abandon |
+| `winner_id` | any | yes | — | Branch ID that wins |
 
 ### `explain_fact` *(via advanced)*
 
@@ -3062,7 +3048,7 @@ Explain a fact: provenance chain + supporting/conflicting facts
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `fact_id` | integer | yes | — | Fact ID to explain |
+| `fact_id` | any | yes | — | Fact ID to explain |
 
 ### `query_chain` *(via advanced)*
 
@@ -3090,7 +3076,7 @@ Soft-retract a constraint fact (preserves history)
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `fact_id` | integer | yes | — | Fact ID to retract |
+| `fact_id` | any | yes | — | Fact ID to retract |
 
 <a id="surprise"></a>
 
@@ -3103,8 +3089,8 @@ Attach supporting evidence to an epistemic debt — memory IDs + confidence
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `confidence` | number | no | — | Evidence confidence 0-1 (default 0.5) |
-| `debt_id` | integer | yes | — | Epistemic debt ID |
-| `memory_ids` | array<integer> | no | — | Memory IDs that serve as evidence |
+| `debt_id` | any | yes | — | Epistemic debt ID |
+| `memory_ids` | array<any> | no | — | Memory IDs that serve as evidence |
 | `note` | string | no | — | Optional note about the evidence |
 
 ### `debt_stats` *(via advanced)*
@@ -3119,7 +3105,7 @@ Defer an epistemic debt for later investigation
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `debt_id` | integer | yes | — | Debt ID to defer |
+| `debt_id` | any | yes | — | Debt ID to defer |
 
 ### `get_blind_spots` *(via advanced)*
 
@@ -3127,7 +3113,7 @@ Identify recurring surprise patterns — domains/actions where predictions consi
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — | Max blind spots (default 10) |
+| `limit` | any | no | — | Max blind spots (default 10) |
 | `realm` | string | no | — | Filter by realm |
 
 ### `get_fragile_decisions` *(via advanced)*
@@ -3136,7 +3122,7 @@ List open epistemic debts sorted by fragility — decisions most likely to be wr
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — | Max results (default 20) |
+| `limit` | any | no | — | Max results (default 20) |
 | `threshold` | number | no | — | Minimum fragility threshold (default 0.5) |
 
 ### `query_debts` *(via advanced)*
@@ -3146,7 +3132,7 @@ Query epistemic debts with filters
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `domain` | string | no | — | Filter by domain |
-| `limit` | integer | no | — | Max results (default 50) |
+| `limit` | any | no | — | Max results (default 50) |
 | `min_fragility` | number | no | — | Minimum fragility score |
 | `realm` | string | no | — | Filter by realm |
 | `status` | string | no | — | Filter: open, resolved, deferred |
@@ -3158,10 +3144,10 @@ Query recorded surprise/prediction-error events with filters
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `domain` | string | no | — | Filter by domain |
-| `limit` | integer | no | — | Max results (default 50) |
+| `limit` | any | no | — | Max results (default 50) |
 | `min_magnitude` | number | no | — | Minimum surprise magnitude |
 | `realm` | string | no | — | Filter by realm |
-| `since_ms` | integer | no | — | Only events after this timestamp (ms) |
+| `since_ms` | any | no | — | Only events after this timestamp (ms) |
 
 ### `record_surprise` *(via advanced)*
 
@@ -3176,7 +3162,7 @@ Record a prediction error event — what was expected vs what actually happened
 | `expected` | string | no | — | What was predicted/expected (optional) |
 | `realm` | string | no | — | Realm filter (default global) |
 | `session_id` | string | no | — | Session ID (optional) |
-| `source_memory_id` | integer | no | — | Related memory ID (optional) |
+| `source_memory_id` | any | no | — | Related memory ID (optional) |
 | `surprise_magnitude` | number | no | — | How surprising [0-1] (default 0.5) |
 
 ### `register_debt` *(via advanced)*
@@ -3199,7 +3185,7 @@ Mark an epistemic debt as resolved with a resolution
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `debt_id` | integer | yes | — | Debt ID to resolve |
+| `debt_id` | any | yes | — | Debt ID to resolve |
 | `resolution` | string | yes | — | How the uncertainty was resolved |
 
 ### `surprise_stats` *(via advanced)*
@@ -3218,10 +3204,10 @@ Close a re-derivation contract for an Inflamed wisdom lineage. Actions: reaffirm
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `action` | integer | yes | — | 0=reaffirm 1=narrow 2=split 3=demote |
+| `action` | any | yes | — | 0=reaffirm 1=narrow 2=split 3=demote |
 | `fork_claim` | string | no | — | Claim for the forked lineage (action=split) |
-| `fork_lineage_id` | integer | no | — | Pre-enrolled fork lineage ID (action=split) |
-| `lineage_id` | integer | yes | — | Lineage ID |
+| `fork_lineage_id` | any | no | — | Pre-enrolled fork lineage ID (action=split) |
+| `lineage_id` | any | yes | — | Lineage ID |
 | `new_envelope` | object | no | — | Narrowed applicability envelope (for action=narrow/split) |
 
 ### `enroll_wisdom_lineage` *(via advanced)*
@@ -3230,15 +3216,15 @@ Enroll a Trusted wisdom candidate into the Wisdom Homeostasis layer — creates 
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `ancestor_lineage_id` | integer | no | — | Parent lineage ID if this is a fork/split |
+| `ancestor_lineage_id` | any | no | — | Parent lineage ID if this is a fork/split |
 | `claim` | string | yes | — | The claim this wisdom encodes |
 | `derivation_relation` | string | no | — | Relation to ancestor: supersedes\|branches_from\|narrows\|splits_from |
 | `envelope` | object | yes | — | Applicability envelope: {domain, action_types, preconditions, source_families} |
-| `seed_debt_ids` | array<integer> | no | — | Epistemic debt IDs |
-| `seed_episode_ids` | array<integer> | no | — | Episode IDs that seeded this wisdom |
-| `seed_intervention_ids` | array<integer> | no | — | Intervention IDs |
-| `seed_surprise_ids` | array<integer> | no | — | Surprise event IDs |
-| `wisdom_candidate_id` | integer | yes | — | ID of the WisdomCandidate to enroll |
+| `seed_debt_ids` | array<any> | no | — | Epistemic debt IDs |
+| `seed_episode_ids` | array<any> | no | — | Episode IDs that seeded this wisdom |
+| `seed_intervention_ids` | array<any> | no | — | Intervention IDs |
+| `seed_surprise_ids` | array<any> | no | — | Surprise event IDs |
+| `wisdom_candidate_id` | any | yes | — | ID of the WisdomCandidate to enroll |
 
 ### `get_wisdom_lineage` *(via advanced)*
 
@@ -3246,7 +3232,7 @@ Get full details of a wisdom lineage by ID, including challenger evidence and st
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `lineage_id` | integer | yes | — | Lineage ID |
+| `lineage_id` | any | yes | — | Lineage ID |
 
 ### `insight_global` *(via advanced)*
 
@@ -3254,7 +3240,7 @@ List global insights
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `tag` | string | no | — |  |
 
 ### `insight_promote` *(via advanced)*
@@ -3263,7 +3249,7 @@ Promote memory to global
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `id` | integer | yes | — |  |
+| `id` | any | yes | — |  |
 | `reason` | string | no | — |  |
 
 ### `lineage_expiry_check` *(via advanced)*
@@ -3279,8 +3265,8 @@ Query wisdom candidates by lifecycle stage and/or domain
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `domain` | string | no | — | Filter by domain |
-| `lifecycle` | integer | no | — | Filter by lifecycle: 0=candidate, 1=provisional, 2=trusted, 3=demoted |
-| `limit` | integer | no | — | Max results (default 50) |
+| `lifecycle` | any | no | — | Filter by lifecycle: 0=candidate, 1=provisional, 2=trusted, 3=demoted |
+| `limit` | any | no | — | Max results (default 50) |
 
 ### `query_wisdom_lineages` *(via advanced)*
 
@@ -3289,7 +3275,7 @@ List wisdom lineages filtered by state and/or domain
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `domain` | string | no | — | Filter by domain |
-| `limit` | integer | no | — | Max results (default 50) |
+| `limit` | any | no | — | Max results (default 50) |
 | `state` | string | no | — | Filter: trusted\|watch\|inflamed\|demoted |
 
 ### `tick_lineage_staleness` *(via advanced)*
@@ -3304,10 +3290,10 @@ Manually transition a wisdom lineage state (Trusted/Watch/Inflamed/Demoted). Nor
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `lineage_id` | integer | yes | — | Lineage ID |
-| `new_state` | integer | yes | — | 0=Trusted 1=Watch 2=Inflamed 3=Demoted |
+| `lineage_id` | any | yes | — | Lineage ID |
+| `new_state` | any | yes | — | 0=Trusted 1=Watch 2=Inflamed 3=Demoted |
 | `reason` | string | no | — | Why this transition is happening |
-| `rederive_task_id` | integer | no | — | Task contract ID if opening re-derivation |
+| `rederive_task_id` | any | no | — | Task contract ID if opening re-derivation |
 
 ### `update_wisdom_lifecycle` *(via advanced)*
 
@@ -3315,8 +3301,8 @@ Advance a wisdom candidate through lifecycle stages: candidate→provisional→t
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `candidate_id` | integer | yes | — | Wisdom candidate ID |
-| `new_state` | integer | yes | — | 0=candidate, 1=provisional, 2=trusted, 3=demoted |
+| `candidate_id` | any | yes | — | Wisdom candidate ID |
+| `new_state` | any | yes | — | 0=candidate, 1=provisional, 2=trusted, 3=demoted |
 
 ### `upsert_wisdom_candidate` *(via advanced)*
 
@@ -3326,14 +3312,14 @@ Create or update a wisdom candidate from clustered surprise patterns
 |---|---|---|---|---|
 | `action` | string | no | — | Action or behavior pattern |
 | `cluster_key` | string | yes | — | Unique key for this pattern cluster (domain+action+sig) |
-| `cross_session_count` | integer | no | — | Number of distinct sessions with evidence |
-| `debt_ids` | array<integer> | no | — | Resolved debt IDs linked to this candidate |
+| `cross_session_count` | any | no | — | Number of distinct sessions with evidence |
+| `debt_ids` | array<any> | no | — | Resolved debt IDs linked to this candidate |
 | `domain` | string | no | — | Knowledge domain |
-| `episode_ids` | array<integer> | no | — | Surprise event IDs supporting this candidate |
+| `episode_ids` | array<any> | no | — | Surprise event IDs supporting this candidate |
 | `mean_surprise` | number | no | — | Average surprise magnitude across episodes |
 | `promotion_score` | number | no | — | Computed promotion readiness score 0-1 |
 | `summary` | string | no | — | Human-readable summary of the wisdom |
-| `support_count` | integer | no | — | Number of supporting episodes |
+| `support_count` | any | no | — | Number of supporting episodes |
 
 ### `wisdom_lineage_stats` *(via advanced)*
 
@@ -3359,11 +3345,11 @@ No parameters.
 
 ### `hypothesis_probes` *(via advanced)*
 
-Top-k Sequitur rules ranked by expected information gain (Wilson [2](#ref-2) probe_value). Maximized at p_hat=0.5 — rules the system is most uncertain about. Run consolidation_pass first to populate.
+Top-k Sequitur rules ranked by expected information gain (Wilson probe_value). Maximized at p_hat=0.5 — rules the system is most uncertain about. Run consolidation_pass first to populate.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `k` | integer | no | — | Max rules to return (default 10) |
+| `k` | any | no | — | Max rules to return (default 10) |
 
 ### `log_event` *(via advanced)*
 
@@ -3372,25 +3358,25 @@ Log a structured action event to the CEC tape and CDAWG (tool, entity, outcome: 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `entity` | string | yes | — |  |
-| `outcome` | integer | no | — |  |
-| `session_id` | integer | no | — |  |
+| `outcome` | any | no | — |  |
+| `session_id` | any | no | — |  |
 | `tool` | string | yes | — |  |
-| `ts_ms` | integer | no | — |  |
+| `ts_ms` | any | no | — |  |
 
-### `log_event_ex`
+### `log_event_ex` *(via advanced)*
 
 Log a CEC event with regret-shaping telemetry (token_cost, latency_ms, retry_count). Updates Q-values with utility = outcome_reward - 0.001*token_cost - 0.00001*latency_ms - 0.1*retry_count.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `entity` | string | yes | — |  |
-| `latency_ms` | integer | no | — | Wall-clock ms (0=unknown) |
-| `outcome` | integer | no | — | 0=success 1=fail 2=error 3=partial |
-| `retry_count` | integer | no | — | Retries before this outcome |
-| `session_id` | integer | no | — |  |
-| `token_cost` | integer | no | — | Tokens consumed (0=unknown) |
+| `latency_ms` | any | no | — | Wall-clock ms (0=unknown) |
+| `outcome` | any | no | — | 0=success 1=fail 2=error 3=partial |
+| `retry_count` | any | no | — | Retries before this outcome |
+| `session_id` | any | no | — |  |
+| `token_cost` | any | no | — | Tokens consumed (0=unknown) |
 | `tool` | string | yes | — |  |
-| `ts_ms` | integer | no | — |  |
+| `ts_ms` | any | no | — |  |
 
 ### `refutation_stats` *(via advanced)*
 
@@ -3398,7 +3384,7 @@ Show Sequitur rules that are being falsified: rules whose antecedent appears but
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `k` | integer | no | — | Max rules to show (default 10) |
+| `k` | any | no | — | Max rules to show (default 10) |
 
 <a id="io"></a>
 
@@ -3414,18 +3400,6 @@ Gateway to hidden/advanced tools. Use action='list' to see every hidden tool (ab
 | `arguments` | object | no | — | Arguments to pass to the hidden tool |
 | `category` | string | no | — | Filter list by category: 'advanced' or 'internal' |
 | `tool` | string | no | — | Hidden tool name to call |
-
-### `export_training_pairs` *(gateway)*
-
-Export query-passage pairs as JSONL for BGE embedding fine-tuning. Generates positives from memories and hard negatives.
-
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `include_negatives` | boolean | no | — | Generate hard negatives (default: true) |
-| `max_pairs` | integer | no | — | Max pairs to export (default: 10000) |
-| `min_confidence` | number | no | — | Min confidence threshold (default: 0.5) |
-| `output_path` | string | no | — | Output JSONL path (default: ~/.claude/training/pairs.jsonl) |
-| `realm` | string | no | — | Filter to specific realm (default: all) |
 
 ### `file_at_time` *(via advanced)*
 
@@ -3446,7 +3420,7 @@ Restore file version (stub)
 |---|---|---|---|---|
 | `file_path` | string | yes | — |  |
 | `preview` | boolean | no | — |  |
-| `version_id` | integer | no | — |  |
+| `version_id` | any | no | — |  |
 
 ### `file_timeline` *(via advanced)*
 
@@ -3456,26 +3430,14 @@ Show files modified in time range
 |---|---|---|---|---|
 | `cross_session` | boolean | no | — |  |
 | `file_pattern` | string | no | — |  |
-| `limit` | integer | no | — |  |
+| `limit` | any | no | — |  |
 | `path` | string | no | — |  |
 | `query` | string | no | — |  |
 | `session_id` | string | no | — |  |
 
-### `ingest_source` *(gateway)*
-
-Ingest external content (URL, file, directory) into memory via SSL distillation. Fetches content, chunks it, runs LLM distillation, stores learnings + triplets.
-
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `max_chunks` | integer | no | — | Max chunks to process (default: 30) |
-| `model` | string | no | — | LLM model for distillation |
-| `realm` | string | no | — | Target realm (default: brahman) |
-| `source` | string | yes | — | URL, file path, or directory path to ingest |
-| `type` | string | no | — | Source type: auto\|url\|file\|directory (default: auto) |
-
 ### `run_hint_enricher` *(gateway)*
 
-Generate retrieval hints for unprocessed memories using chitta-hint-tuned. Reads memories without a retrieval_hint tag, calls the local hint model, stores each hint as a derived memory (kind=hint, tags=retrieval_hint), and marks the source memory with hint:done. Run after a session to add retrieval hints to new memories.
+Generate retrieval hints for unprocessed memories using chitta-hint-tuned. Reads memories without a retrieval_hint tag, calls the local hint model, stores each hint as a derived memory (kind=hint, tags=retrieval_hint), and marks the source memory with hint:done. Run after a session to enrich new memories for better recall.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
@@ -3483,373 +3445,86 @@ Generate retrieval hints for unprocessed memories using chitta-hint-tuned. Reads
 | `limit` | integer | no | `100` | Max memories to enrich per run (default: 100) |
 | `model` | string | no | `"chitta-hint-tuned"` | Ollama model to use (default: chitta-hint-tuned) |
 
-### `wiki_export` *(gateway)*
 
-Export memories as Obsidian-compatible .md wiki with backlinks. Groups by realm and kind, generates index pages.
-
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `max_memories` | integer | no | — | Max memories per realm (default: 5000) |
-| `output_dir` | string | no | — | Output directory (default: ~/.claude/wiki/) |
-| `realm` | string | no | — | Filter to specific realm (default: all) |
-
-
-## Additional native CLI tools
-
-These native CLI help entries are in rpc_server.cpp TOOL_SPECS / KNOWN_TOOLS but absent from the MCP listing used above. They are not included in its visibility counts. Use chitta <tool> --help; an empty help schema does not prove that the handler takes no arguments.
-
-### `background_schedule`
-
-Schedule background task
-
-- `--task_type`: Task type to schedule (required)
-- `--params`: JSON params for task
-
-### `background_status`
-
-Get background processing and embedding scheduler status
-
-
-### `cleanup`
-
-Remove weak/garbage nodes
-
-- `--dry_run`: Preview only
-
-### `cleanup_code_wisdom`
-
-Migration: delete [code] wisdom memories and clear orphaned symbol.memory_id
-
-- `--dry-run`: Preview only without changes (default: true)
-
-### `cycle`
-
-Run maintenance cycle (decay, cleanup)
-
-- `--force`: Force full cycle
-
-### `dedupe_symbols`
-
-GC the symbol index: stale-line duplicates, excluded paths, dead files
-
-- `--dry_run`: Count only, remove nothing (default true)
-- `--check_fs`: Treat symbols whose file no longer exists as dead
-- `--exclude`: Comma-separated path substrings to purge
-
-### `describe_symbol`
-
-Set description for a code symbol (stores directly in symbol table)
-
-- `--symbol-id`: Symbol ID to describe (required)
-- `--description`: Semantic description of the symbol (required)
-
-### `distill_status`
-
-Get distillation system status: transcripts, realms, pending work
-
-
-### `epiplexity_check`
-
-Compute epiplexity (ε) score for a seed - measures reconstruction quality
-
-- `--original`: Original full text (required)
-- `--seed`: Compressed SSL seed (required)
-- `--reconstructed`: Text reconstructed from seed (required)
-
-### `export_soul`
-
-Export memories to SSL format
-
-- `--file`: Output file path
-- `--tag`: Filter by tag
-- `--limit`: Max nodes to export
-
-### `extract_symbols`
-
-Extract symbols from source file using tree-sitter
-
-- `--path`: File path to analyze (required)
-
-### `fep_status`
-
-CEC Phase 15 FEP prior organ: obs_count, states_modeled, ewma_drift (context_drift if >0.5), ewma_shock (emission_shock if >0.3). Context drift = world-model silently degrading; emission shock = known context, novel outcome.
-
-
-### `file_dependents`
-
-Get all files that import/include the given module
-
-- `--name`: Module/file name to find dependents for (required)
-
-### `file_imports`
-
-Get all imports/includes for a source file
-
-- `--path`: File path to get imports for (required)
-
-### `harvest_scope`
-
-CEC Phase 17 open-weight harvest targeting: derive scope from current Turīya anomalies + router miss patterns. Output JSON used by scripts/harvest_ow.py for demand-driven extraction.
-
-
-### `hygiene_run`
-
-Run memory hygiene: decay, prune, consolidate
-
-- `--prune-threshold`: Confidence below which to prune
-- `--min-age-days`: Minimum age for pruning
-- `--consolidation-threshold`: Similarity threshold for consolidation
-- `--max-consolidations`: Max consolidations per run
-
-### `import_soul`
-
-Import .soul file (SSL format)
-
-- `--file`: Path to .soul file
-- `--content`: SSL content (alternative to file)
-
-### `ledger_append`
-
-v6.0 Interaction Ledger: record a retrieve/inject/outcome/override event. Pass full InteractionEvent JSON.
-
-- `--kind`: Event kind: Retrieve | Inject | Outcome | Override (required)
-- `--session_id`: Session UUID (required)
-- `--payload`: Typed payload JSON matching EventPayload variant (required)
-- `--thread_id`: Optional thread ID
-- `--causal_parent`: Optional parent event_id
-
-### `ledger_compile`
-
-v6.0 Interaction Ledger: compile Override events into versioned VersionedAssertions.
-
-
-### `ledger_contradictions`
-
-v6.0 Interaction Ledger: list contested (subject, predicate) pairs with >1 active assertion.
-
-
-### `ledger_op`
-
-Daemon-owned task ledger operation
-
-- `--op`: Operation name (required)
-- `--args`: Operation arguments JSON
-
-### `ledger_query`
-
-v6.0 Interaction Ledger: query events by kind/session/time.
-
-- `--kind`: Filter by kind: Retrieve | Inject | Outcome | Override
-- `--session_id`: Filter by session UUID
-- `--since_ms`: Only events at or after this epoch ms
-- `--limit`: Max events to return
-
-### `migrate_vss`
-
-Migrate embeddings from main DB VARCHAR to VSS DB FLOAT[768]
-
-
-### `msg_ack`
-
-Acknowledge a cross-session message
-
-- `--message_id`: Message ID (required)
-- `--session_id`: Session ID (default: current)
-
-### `predicate_attach`
-
-v7.0 Falsifiable memories: attach an executable shell predicate to a memory. check_cmd is run to verify the memory is still true.
-
-
-### `predicate_list`
-
-v7.0 Falsifiable memories: list all predicates attached to a memory and their current status.
-
-
-### `predicate_run`
-
-v7.0 Falsifiable memories: run all predicates for a memory; returns passed/failed counts and epistemic_status. Decays confidence on failure.
-
-
-### `queue_experiments`
-
-CEC Phase 14 Self-directed experimentation: file OpenTask interventions for the k most uncertain Sequitur rules (probe_value > 0.4). Skips rules with refutation_ratio >= 0.3 (adversarial gate). Also triggered automatically by consolidation_pass when turiya_status reports high_uncertainty.
-
-- `--k`: Max experiments to queue
-
-### `recall_temporal_events`
-
-Bridge query: find entities active in a time window via EventTape, then recall their memories. Use when you don't know the realm — EventTape discovers which realms had activity.
-
-- `--start`: Start date (ISO8601 or YYYY-MM-DD)
-- `--end`: End date (ISO8601 or YYYY-MM-DD)
-- `--limit`: Max results
-
-### `reconcile_pass`
-
-CEC Phase 17 R0 reconcile operator: scan all assoc_edges for MemoryKind legality violations and content contradictions. Model-free and deterministic. Reports illegal_edges, contradictions, unresolved counts.
-
-
-### `reembed_memories`
-
-Re-embed memories with missing/zero embeddings
-
-- `--all`: Re-embed ALL memories with NULL embeddings
-- `--limit`: Max memories to process
-- `--kind`: Filter by kind: belief, wisdom, episode, correction, preference
-- `--min_confidence`: Min confidence threshold
-- `--dry_run`: Preview without updating
-
-### `resolve_callsites`
-
-Resolve callsites to symbols and populate call_edge table
-
-- `--project`: Filter to specific project path
-
-### `routed_recall`
-
-CEC Phase 16 CPU-native query router: dispatches to cheapest lane (exact/fuzzy/temporal/causal/hybrid) without an LLM call. Returns needs_disambiguation with named unbound slots when the typed grammar cannot fully bind the request.
-
-- `--subject`: Exact triplet subject — compiles to relational lookup
-- `--predicate`: Exact triplet predicate
-- `--freetext`: Free-text query — fuzzy ANN+BM25 lane
-- `--realm`: Filter by realm
-- `--causal_tool`: CEC causal query: tool name
-- `--causal_entity`: CEC causal query: entity name (required with causal_tool)
-- `--time_from_ms`: Temporal lower bound (epoch ms)
-- `--time_to_ms`: Temporal upper bound (epoch ms)
-- `--k`: Max hits to return
-
-### `seed_hdc_geometry`
-
-CEC Phase 17 Part D: seed HDC codebook from vocab_geometry harvest JSON. Binarizes f32 PCA directions from open-weight embedding matrix into HdcVec entries, replacing random hash projections for harvested tokens.
-
-- `--json_path`: Path to qwen2.5-7b_vocab_geometry.json produced by harvest_ow.py --mode vocab_geometry (required)
-
-### `session_deregister`
-
-Remove session from registry
-
-- `--session_id`: Session ID (required)
-
-### `session_heartbeat`
-
-Update session heartbeat
-
-- `--session_id`: Session ID (required)
-- `--metadata`: Updated JSON metadata
-
-### `session_register`
-
-Register session for cross-session messaging
-
-- `--session_id`: Session ID (required)
-- `--realm`: Realm
-- `--pid`: Process ID
-- `--transcript_path`: Path to transcript .jsonl file (stable ID)
-- `--project_dir`: Working directory
-- `--metadata`: JSON metadata
-
-### `tape_stats`
-
-CEC Phase 12 EventTape statistics: event count, tombstoned events (temporal compression), unique sessions, tools, entities, and failure events.
-
-
-### `theme_assign_orphans`
-
-Assign orphan memories to themes in batches
-
-- `--batch_size`: Memories per batch
-- `--realm`: Filter by realm
-
-### `theme_maintain`
-
-Force theme maintenance: split, merge, reassign
-
-- `--realm`: Filter by realm
-
-### `transcript_get`
-
-Get transcript state for a session
-
-- `--session_id`: Session ID to look up (required)
-
-### `transcript_list`
-
-List all registered transcripts
-
-
-### `transcript_parse`
-
-Parse new turns from a transcript JSONL file
-
-- `--session_id`: Session ID to parse (required)
-- `--min_turns`: Minimum turns to return
-
-### `transcript_register`
-
-Register a transcript file for distillation tracking
-
-- `--session_id`: Claude session ID (required)
-- `--transcript_path`: Path to .jsonl transcript file (required)
-- `--realm`: Project/realm isolation
-
-### `transcript_remove`
-
-Remove transcript from tracking
-
-- `--session_id`: Session ID to remove (required)
-
-### `transcript_update`
-
-Update transcript processing progress
-
-- `--session_id`: Session ID (required)
-- `--last_line`: Last processed line number (required)
-
-### `turiya_status`
-
-CEC Phase 11 Turīya witness: read-only health vector across all CEC organs. Reports CDAWG growth, Sequitur rule churn, Q-value variance, refutation pressure, and hypothesis uncertainty. Diagnoses: healthy|stale|q_collapse|refutation_flood|high_uncertainty|fep_context_drift|fep_emission_shock.
-
-
-### `type_hierarchy`
-
-Get type hierarchy (base classes, implemented interfaces) for a type
-
-- `--name`: Type name to query (required)
-- `--direction`: ancestors, descendants, or both (default: both)
-
-### `verbalize_rules`
-
-CEC Phase 13 Verbalization: convert top-k Sequitur rules to natural language using a deterministic template. No LLM. Shows what the agent has learned as readable heuristics.
-
-- `--k`: Max rules to return
-
-### `version_check`
-
-Get version information
-
-
-### `witness_memory`
-
-CEC Phase 17 candidate promotion: provide an outcome-witness to promote a candidate-band memory to established. Witnesses: correction|outcome|hit_rate_delta. Open-weight-generated writes start in candidate band until witnessed.
-
-- `--memory_id`: Memory ID to promote (required)
-- `--witness_kind`: Type: correction|outcome|hit_rate_delta (required)
-
-<!-- BEGIN CITATIONS -->
-## References
-
-- <a id="ref-2"></a>**[2]** Edwin B. Wilson. Probable Inference, the Law of Succession, and Statistical Inference. Journal of the American Statistical Association 22(158), 209–212 (1927). [source](<https://doi.org/10.1080/01621459.1927.10502953>)
-- <a id="ref-3"></a>**[3]** Gordon V. Cormack, Charles L. A. Clarke, and Stefan Buettcher. Reciprocal rank fusion outperforms condorcet and individual rank learning methods. SIGIR, 758–759 (2009). [source](<https://doi.org/10.1145/1571941.1572114>)
-- <a id="ref-4"></a>**[4]** Yu. A. Malkov and D. A. Yashunin. Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs. IEEE TPAMI 42(4), 824–836 (2020); arXiv:1603.09320 (2016). [source](<https://arxiv.org/abs/1603.09320>) [source](<https://doi.org/10.1109/TPAMI.2018.2889473>)
-- <a id="ref-6"></a>**[6]** A. Blumer, J. Blumer, D. Haussler, R. McConnell, and A. Ehrenfeucht. Complete inverted files for efficient text retrieval and analysis. Journal of the ACM 34(3), 578–595 (1987). [source](<https://doi.org/10.1145/28869.28873>)
-- <a id="ref-7"></a>**[7]** Hubert Ramsauer et al. Hopfield Networks is All You Need. arXiv:2008.02217 (2020). [source](<https://arxiv.org/abs/2008.02217>)
-- <a id="ref-8"></a>**[8]** Dmitry Krotov and John J. Hopfield. Dense Associative Memory for Pattern Recognition. NeurIPS 29 (2016); arXiv:1606.01164. [source](<https://arxiv.org/abs/1606.01164>)
-- <a id="ref-10"></a>**[10]** Pentti Kanerva. Hyperdimensional Computing: An Introduction to Computing in Distributed Representation with High-Dimensional Random Vectors. Cognitive Computation 1, 139–159 (2009). [source](<https://doi.org/10.1007/s12559-009-9009-8>)
-- <a id="ref-24"></a>**[24]** Stephen Robertson and Hugo Zaragoza. The Probabilistic Relevance Framework: BM25 and Beyond. Foundations and Trends in Information Retrieval 3(4), 333–389 (2009). [source](<https://doi.org/10.1561/1500000019>)
-- <a id="ref-25"></a>**[25]** Craig G. Nevill-Manning and Ian H. Witten. Identifying Hierarchical Structure in Sequences: A linear-time algorithm. Journal of Artificial Intelligence Research 7, 67–82 (1997); arXiv:cs/9709102. [source](<https://arxiv.org/abs/cs/9709102>)
-- <a id="ref-33"></a>**[33]** John J. Hopfield. Neural networks and physical systems with emergent collective computational abilities. PNAS 79(8), 2554–2558 (1982). [source](<https://doi.org/10.1073/pnas.79.8.2554>)
-- <a id="ref-70"></a>**[70]** Sergey Brin and Lawrence Page. The Anatomy of a Large-Scale Hypertextual Web Search Engine. Computer Networks 30, 107–117 (1998). [source](<https://research.google/pubs/the-anatomy-of-a-large-scale-hypertextual-web-search-engine/>)
-- <a id="ref-71"></a>**[71]** Alex L. Zhang, Tim Kraska, and Omar Khattab. Recursive Language Models. arXiv:2512.24601 (2025; revised 2026). [source](<https://arxiv.org/abs/2512.24601>)
-<!-- END CITATIONS -->
+## Unadvertised native handlers
+
+These registered daemon handlers have no advertised MCP schema. They remain callable by name or through advanced. Arguments are validated by the daemon; absence of a schema does not mean no arguments.
+
+| Handler | Tier |
+|---|---|
+| `anticipation_gate_status` | hidden |
+| `anticipation_record_outcome` | hidden |
+| `batch_forget` | hidden |
+| `chitta_health` | hidden |
+| `cleanup` | hidden |
+| `clear_codebase` | hidden |
+| `clear_triplets` | hidden |
+| `consolidation_auto` | hidden |
+| `consolidation_merge` | hidden |
+| `consolidation_scan` | hidden |
+| `cycle` | hidden |
+| `dedupe_symbols` | hidden |
+| `describe_symbol` | hidden |
+| `distill_status` | hidden |
+| `enrichment_status` | hidden |
+| `epiplexity_check` | hidden |
+| `export_soul` | hidden |
+| `export_training_pairs` | advanced |
+| `extract_symbols` | hidden |
+| `fep_status` | advanced |
+| `file_dependents` | hidden |
+| `file_imports` | hidden |
+| `file_index_all` | hidden |
+| `file_index_session` | advanced |
+| `harvest_scope` | advanced |
+| `health_check_start` | advanced |
+| `hygiene_run` | hidden |
+| `import_soul` | hidden |
+| `ingest_source` | advanced |
+| `ledger_append` | advanced |
+| `ledger_compile` | advanced |
+| `ledger_contradictions` | advanced |
+| `ledger_op` | advanced |
+| `ledger_query` | advanced |
+| `metacognition_corrections` | hidden |
+| `metacognition_outcomes` | hidden |
+| `msg_ack` | hidden |
+| `predicate_attach` | advanced |
+| `predicate_list` | advanced |
+| `predicate_run` | advanced |
+| `queue_experiments` | advanced |
+| `recall_temporal_events` | advanced |
+| `reconcile_pass` | advanced |
+| `reembed_memories` | hidden |
+| `repl_execute` | advanced |
+| `repl_session_delete` | advanced |
+| `repl_session_get` | advanced |
+| `repl_session_list` | advanced |
+| `repl_session_set` | advanced |
+| `resolve_callsites` | hidden |
+| `restore_code_intel_confidence` | hidden |
+| `routed_recall` | advanced |
+| `seed_hdc_geometry` | advanced |
+| `session_deregister` | hidden |
+| `session_heartbeat` | hidden |
+| `session_register` | hidden |
+| `ssl_convert` | hidden |
+| `subconscious_stats` | hidden |
+| `suggestion_count` | hidden |
+| `suggestion_pending` | hidden |
+| `suggestion_resolve` | hidden |
+| `suggestion_track` | hidden |
+| `tape_stats` | advanced |
+| `transcript_get` | hidden |
+| `transcript_list` | hidden |
+| `transcript_parse` | hidden |
+| `transcript_register` | hidden |
+| `transcript_remove` | hidden |
+| `transcript_search` | hidden |
+| `transcript_update` | hidden |
+| `turiya_status` | advanced |
+| `type_hierarchy` | hidden |
+| `verbalize_rules` | advanced |
+| `version_check` | hidden |
+| `wiki_export` | advanced |
+| `witness_memory` | advanced |
