@@ -18,6 +18,7 @@ extern "C" const TSLanguage* tree_sitter_julia();
 extern "C" const TSLanguage* tree_sitter_fortran();
 extern "C" const TSLanguage* tree_sitter_nextflow();
 extern "C" const TSLanguage* tree_sitter_snakemake();
+extern "C" const TSLanguage* tree_sitter_perl();
 
 namespace chitta {
 const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
@@ -27,10 +28,11 @@ const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
     if (language == "fortran") return tree_sitter_fortran();
     if (language == "nextflow") return tree_sitter_nextflow();
     if (language == "snakemake") return tree_sitter_snakemake();
+    if (language == "perl") return tree_sitter_perl();
     return nullptr;
 }
 void CodeIntel::initialize_extended_parsers() {
-    for (const auto* language : {"bash", "r", "julia", "fortran", "nextflow", "snakemake"}) {
+    for (const auto* language : {"bash", "r", "julia", "fortran", "nextflow", "snakemake", "perl"}) {
         auto* parser = ts_parser_new();
         if (!ts_parser_set_language(parser, extended_grammar(language))) {
             ts_parser_delete(parser);
@@ -44,6 +46,7 @@ std::string CodeIntel::detect_extended_language(const std::string& path) {
     if (ext == ".sh" || ext == ".bash") return "bash";
     auto filename = std::filesystem::path(path).filename().string();
     if (ext == ".smk" || filename == "Snakefile" || filename == "snakefile") return "snakemake";
+    if (ext == ".pl" || ext == ".pm" || ext == ".t" || ext == ".perl") return "perl";
     if (ext == ".nf") return "nextflow";
     if (ext == ".jl") return "julia";
     if (ext == ".R" || ext == ".r" || std::filesystem::path(path).filename() == ".Rprofile") return "r";
@@ -100,6 +103,7 @@ void CodeIntel::extract_extended(TSNode root, const std::string& source,
         if (type == "field_expression" || type == "dot_expression") return leaf_name(ts_node_named_child(node, count - 1));
         return leaf_name(ts_node_named_child(node, 0));
     };
+    std::string perl_package;
     std::function<void(TSNode, std::string)> visit = [&](TSNode node, std::string parent) {
         std::string type = ts_node_type(node);
         if (language == "bash" && type == "function_definition") {
@@ -353,6 +357,49 @@ void CodeIntel::extract_extended(TSNode root, const std::string& source,
                     result.callsites.back().kind = CallKind::Channel;
                 }
             }
+        }
+        if (language == "perl") {
+            if (type == "package_statement") {
+                auto previous = perl_package;
+                perl_package = text(field(node, "name"));
+                define(node, perl_package, "module", "");
+                auto block = find_child(node, "block");
+                if (!ts_node_is_null(block)) {
+                    visit(block, perl_package);
+                    perl_package = previous;
+                    return;
+                }
+            }
+            if (type == "subroutine_declaration_statement") {
+                auto name = text(field(node, "name")), scope = perl_package;
+                auto split = name.rfind("::");
+                if (split != std::string::npos) { scope = name.substr(0, split); name = name.substr(split + 2); }
+                define(node, name, "function", scope, field(node, "body"));
+                parent = name;
+            }
+            if (type == "use_statement") {
+                auto module = text(field(node, "module"));
+                result.imports.push_back({path, module, "", {}, uint32_t(node_line(node))});
+                if ((module == "parent" || module == "base") && !perl_package.empty()) {
+                    for (uint32_t i = 0; i < ts_node_named_child_count(node); ++i) {
+                        auto value = ts_node_named_child(node, i);
+                        if (std::strcmp(ts_node_type(value), "string_literal") == 0)
+                            result.type_relationships.push_back({perl_package, literal(value), "extends", path, uint32_t(node_line(node))});
+                    }
+                }
+            }
+            if (type == "require_expression") {
+                auto value = ts_node_named_child(node, 0);
+                if (!ts_node_is_null(value)) result.imports.push_back({path, literal(value), "", {}, uint32_t(node_line(node))});
+            }
+            if (type == "function_call_expression" || type == "ambiguous_function_call_expression") {
+                auto name = text(field(node, "function")), scope = std::string{};
+                auto split = name.rfind("::");
+                if (split != std::string::npos) { scope = name.substr(0, split); name = name.substr(split + 2); }
+                call(node, name, parent, scope);
+            }
+            if (type == "method_call_expression")
+                call(node, text(field(node, "method")), parent, "", text(field(node, "invocant")));
         }
         for (uint32_t i = 0; i < ts_node_named_child_count(node); ++i) visit(ts_node_named_child(node, i), parent);
     };

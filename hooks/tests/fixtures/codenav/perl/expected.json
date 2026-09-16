@@ -1,0 +1,9 @@
+{
+  "file": "navigation.pl", "language": "perl", "aliases": ["Reads.pm", "check.t", "script.perl"],
+  "symbols": {"BaseReads": "module", "Reads": "module", "base_count": "function", "normalize": "function", "run": "function"},
+  "parents": {"base_count": "BaseReads", "normalize": "Reads", "run": "Reads"},
+  "signatures": {"normalize": "sub normalize", "run": "sub run"},
+  "calls": ["helper", "normalize"],
+  "imports": ["strict", "warnings", "Exporter", "parent", "helpers.pl"],
+  "inherits": ["BaseReads"], "absent": ["phantom"]
+}

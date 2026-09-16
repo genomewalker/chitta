@@ -141,6 +141,10 @@ def main():
                 result = call("learn_codebase", path=str(root), project="chitta")
                 elapsed = time.perf_counter() - started
                 extensions = {
+                    ".pl",
+                    ".pm",
+                    ".t",
+                    ".perl",
                     ".smk",
                     ".nf",
                     ".jl",

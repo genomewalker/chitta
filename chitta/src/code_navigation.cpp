@@ -158,6 +158,12 @@ struct CodeNavigation::Impl {
                 int from = enclosing_cache[line];
                 if (from < 0) continue;
                 std::string target = raw["target"], kind = raw["kind"];
+                const auto derived = raw.value("derived", "");
+                if (kind == "inherits" && !derived.empty() && nodes[from].data.value("name", "") != derived) {
+                    std::vector<size_t> local;
+                    for (auto id : names[derived]) if (nodes[id].file == item.key()) local.push_back(id);
+                    if (local.size() == 1) from = static_cast<int>(local.front());
+                }
                 const auto source_name = raw.value("source_name", "");
                 if (!source_name.empty()) {
                     std::vector<size_t> sources;
@@ -396,7 +402,7 @@ void CodeNavigation::update(const std::string& root, const std::string& project,
             file["edges"].push_back({{"kind", "imports"}, {"target", target}, {"line", c.line}});
         }
         for (const auto* c : inherits[path])
-            file["edges"].push_back({{"kind", "inherits"}, {"target", c->base_name}, {"line", c->line}});
+            file["edges"].push_back({{"kind", "inherits"}, {"target", c->base_name}, {"derived", c->derived_name}, {"line", c->line}});
         for (const auto* c : references[path])
             file["edges"].push_back({{"kind", "references"}, {"target", c->name}, {"line", c->line}});
         impl_->files[path] = std::move(file);

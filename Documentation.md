@@ -332,3 +332,16 @@ The fixture yields 9 definitions, 2 calls (one rule dependency), 2 imports and
 18 identifier references. Fresh parsing averages 291.94 microseconds/KiB;
 daemon size is 65,027,832 bytes (+823,328). All language fixtures and graph
 regressions pass; contracts and recall scoring are unchanged.
+
+### Perl
+
+Perl navigation now extracts packages and subroutines with package scope,
+function/method calls, `use`/`require`, and literal `use parent`/`use base`
+relationships. A package inheritance edge starts at its named package and
+retains the actual pragma line as evidence. The generated release revision
+builds offline with the ABI-15 runtime.
+
+The fixture has 5 definitions, 2 calls, 5 imports and 1 inheritance edge. Fresh
+parsing averages 472.68 microseconds/KiB; daemon size is 69,770,184 bytes
+(+4,742,352). All language fixtures and graph regressions pass; contracts and
+recall scoring are unchanged.

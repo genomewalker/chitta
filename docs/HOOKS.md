@@ -1460,6 +1460,7 @@ connections. Runtime dispatch and dynamic import paths are not evaluated.
 | Fortran | `.f`, `.for`, `.f77`, `.f90`, `.f95`, `.f03`, `.f08` (also uppercase) | Modules, programs, subroutines, functions and derived types; `use`, includes, calls and `extends`. Names are case-insensitive; signatures preserve source spelling. |
 | Nextflow | `.nf` | Processes, named/entry workflows and functions; includes, calls and channel routing through process outputs or pipes. Shell script bodies remain data. |
 | Snakemake | `.smk`, `Snakefile`, `snakefile` | Rules, checkpoints, modules, named input/output/params sections and Python definitions; calls, includes/module files and explicit `rules.NAME.output` dependencies. |
+| Perl | `.pl`, `.pm`, `.t`, `.perl` | Packages and subroutines with package scope; calls, `use`/`require`, and literal `use parent`/`use base` inheritance. |
 
 New grammars use CMake FetchContent with immutable commits. After populating the
 cache, configure with `FETCHCONTENT_FULLY_DISCONNECTED=ON`; a source mirror can

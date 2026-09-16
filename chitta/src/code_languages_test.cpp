@@ -25,6 +25,11 @@ int main(int argc, char** argv) {
             if (found == result.symbols.end()) { std::cerr << language << ": missing symbol " << name << '\n'; return 1; }
             assert(found->kind == kind.get<std::string>() && !found->signature.empty() && found->line_start > 0 && found->line_end >= found->line_start);
         }
+        const auto parents = expected.value("parents", nlohmann::json::object());
+        for (const auto& [name, parent] : parents.items()) {
+            auto found = std::find_if(result.symbols.begin(), result.symbols.end(), [&](const auto& s) { return s.name == name; });
+            assert(found != result.symbols.end() && found->parent == parent.get<std::string>());
+        }
         const auto signatures = expected.value("signatures", nlohmann::json::object());
         for (const auto& [name, signature] : signatures.items()) {
             auto found = std::find_if(result.symbols.begin(), result.symbols.end(), [&](const auto& s) { return s.name == name; });

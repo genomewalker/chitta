@@ -125,6 +125,18 @@ int main() {
             assert(edge["confidence"] == "INFERRED"); rule_flow = true;
         }
     assert(rule_flow);
+    auto perl = root / "Reads.pm";
+    fs::copy_file(fixture.parent_path().parent_path() / "perl/navigation.pl", perl);
+    paths.push_back(perl.string()); changed = {perl.string()};
+    nav.update(root.string(), "fixture", paths, changed, intel.extract_files(changed), false);
+    auto packages = nav.query({{"question", "Reads BaseReads"}, {"path", perl.string()}, {"limit", 40}});
+    bool package_base = false;
+    for (const auto& edge : packages["edges"])
+        if (edge["kind"] == "inherits" && edge["surface"] == "BaseReads") {
+            assert(edge["source"].get<std::string>().ends_with(":Reads") && edge["line"] == 7);
+            package_base = true;
+        }
+    assert(package_base);
     fs::remove_all(root);
     std::cout << "navigation: confidence, ambiguity, scope, paths, restart identity, stale reads and deletion passed\n";
 }

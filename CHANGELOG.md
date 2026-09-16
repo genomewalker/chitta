@@ -10,6 +10,8 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 ## [Unreleased]
 
+- Add Perl package/subroutine navigation, imports, calls and literal parent/base relationships.
+
 - Add Snakemake rules, input/output/params sections, includes/modules and explicit rule-output dependencies using its dedicated grammar.
 
 - Add Nextflow processes, workflows, includes and channel routing, backed by the dedicated grammar and the compatible tree-sitter 0.25.10 runtime.
