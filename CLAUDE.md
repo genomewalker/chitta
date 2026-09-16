@@ -52,6 +52,9 @@ systemctl --user try-restart chitta-hintd 2>/dev/null || true
 bash scripts/dev-install.sh
 ```
 
+- Gates: `scripts/gate-quick.sh` per commit (about a minute), `scripts/gate-full.sh
+  [--replica] [--recall]` before a merge; heavy steps run on a compute node via
+  `scripts/on-compute.sh -- <cmd>` (the login nodes sit at load 70–140).
 - `install`, never `cp`: `cp` over a running binary gives ETXTBSY. `install` is an
   atomic rename.
 - `chitta_hintd` exists only in a `CHITTA_WITH_LLAMA_CPP=ON` build.

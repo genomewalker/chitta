@@ -119,6 +119,26 @@ orchestrator builds again on `main` and deploys after review. Streams run in
 parallel only on disjoint file sets; if your spec's scope overlaps another
 stream's, stop and say so.
 
+### Gates: two tiers, heavy work on a compute node
+
+- Per commit: `bash scripts/gate-quick.sh` (about a minute on the login node:
+  ruff, shell syntax and shellcheck, MCP and hook Python tests, generated MCP
+  table, surface budget, contracts, docs gates). Nothing native, no replica.
+- Once per stream and before the merge: `bash scripts/gate-full.sh`
+  (quick gate, Rust release build and tests, C++ build and ctest, every hook
+  suite); add `--replica` when you touched the store or daemon (chaos 9/9,
+  restart identity 20/20) and `--recall` when you touched recall (golden and
+  current-truth on a private replica copy).
+- The login nodes run at a load average of 70–140. Every build, test run,
+  replica start, chaos, identity or panel run goes through
+  `scripts/on-compute.sh -c 16 -m 64G -- <command>` (synchronous `srun`, cwd
+  and env preserved, `TMPDIR` on `/projects/caeg/scratch`). `gate-full.sh`
+  already does this. Codex itself stays on the login node. Replica copies live
+  under `/projects/caeg/scratch/kbd606/tmp`, never node-local `/tmp`.
+- Pin evaluations: `CHITTA_RECALL_NOW`, `CHITTA_RECALL_EMBED_WAIT_MS=10000`,
+  single-threaded BLAS inside each trial; run independent trials in parallel
+  on the allocation rather than serially.
+
 ## Hook experiments in an isolated worktree
 
 - Unset **both** `CHITTA_HEADLESS` and `CC_SOUL_HEADLESS` for hook tests and
