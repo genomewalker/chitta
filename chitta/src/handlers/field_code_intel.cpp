@@ -172,6 +172,7 @@ ToolResult FieldRpcHandler::tool_learn_codebase(const json& params) {
             auto removed = field_store_->remove_symbols_by_file(path);
             field_store_->invalidate_triplets_by_source_file(path);
             repository_index_.index(path, project);
+            (void)field_store_->source_anchors({{"path", path}, {"realm", project}});
             return ToolResult::ok("Removed deleted source: " + path,
                 {{"path", path}, {"project", project}, {"symbols_stored", 0}, {"stale_removed", removed}});
         }
@@ -199,7 +200,10 @@ ToolResult FieldRpcHandler::tool_learn_codebase(const json& params) {
     size_t max_files = static_cast<size_t>(params.value("max_files", 500));
     // The watcher path refreshes source knowledge without embedding symbols.
     // Full symbol extraction retains its independently throttled hook request.
-    if (!cloned) repository_index_.index(path, project);
+    if (!cloned) {
+        repository_index_.index(path, project);
+        (void)field_store_->source_anchors({{"path", path}, {"realm", project}});
+    }
     if (params.value("incremental", false) && !cloned)
         return ToolResult::ok("Source index refreshed: " + path,
             {{"path", path}, {"project", project}, {"symbols_stored", 0}});

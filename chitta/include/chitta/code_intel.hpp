@@ -46,6 +46,7 @@ public:
     static std::string content_hash(const std::string& bytes);
     static std::string file_hash(const std::string& path);
     static std::string repository_root(const std::string& path);
+    static nlohmann::json source_anchor(const std::string& content, const nlohmann::json& supplied);
     void open(const std::string& sidecar, const std::string& known_files);
     void index(const std::string& path, const std::string& realm);
     nlohmann::json search(const std::string& query, const std::string& realm, size_t limit);

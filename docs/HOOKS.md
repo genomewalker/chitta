@@ -15,6 +15,23 @@ so missed watcher events cannot leave an old source chunk marked current.
 The root registry is a derived sidecar in the daemon mind; snapshot formats are
 unchanged. Queries with tag or historical time filters retain their memory lane.
 
+Hook artifact facts carry a full SHA-256 anchor in their payload: repository,
+relative path and heading/symbol scope (whole-file facts use `<file>`).
+The queue observe path also anchors hook `[done] input:/absolute/path` facts;
+an existing full hash is retained for delayed events, and legacy short hashes
+are left unanchored. Different done facts receive different scope identities.
+Rust rebuilds the anchor index on load and updates it for ingestion, content
+replacement, forgetting and foreign replay. FileChanged refresh checks anchors
+for the affected path; recall checks them again and shows `current`, `stale`,
+`missing` or `unavailable`. File IO occurs after releasing Rust index locks.
+
+A current hook observation supersedes earlier versions of the same realm,
+repository, path and scope through the existing `supersedes` relation. Delayed
+old observations cannot supersede the current source version. Recall excludes
+superseded anchored versions and moves stale/missing facts behind other facts
+only when scores are equal. Current and unanchored facts keep their original
+relative order; there is no general preference for unanchored memories.
+
 Status as of 2026-09-16.
 
 ### Phase 6 runtime placement and embedding workers (2026-09-16)

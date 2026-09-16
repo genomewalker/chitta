@@ -18,7 +18,10 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 ### Added
 - Markdown heading extraction through code intel, including hierarchical heading
   names, duplicate-heading disambiguation, fenced examples and Setext headings.
-  This is preparatory Phase 3 work; repository recall integration remains pending.
+  Repository recall integration now validates sources on startup and query.
+- Derived source anchors for hook file facts, with replay-safe lifecycle indexing,
+  same-anchor supersession, visible freshness state and equal-score stale demotion.
+  No snapshot format or queue dispatcher/ack-ledger changes.
 - Stop-to-SessionStart handoff capsules in task-ledger session metadata, carrying
   an explicit next action, branch, artifact paths, blocker and source provenance.
   Capsules render before other context on the matching project and branch;

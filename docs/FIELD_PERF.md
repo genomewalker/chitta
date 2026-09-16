@@ -20,6 +20,40 @@ Verification: 26 CTests, 149 MCP tests (explicit stub binary), 46 SMRITI tests
 and all hook scripts passed. Replica chaos passed eight cases; its NFS lock
 case was skipped on the initial XFS scratch directory and must be rerun on NFS.
 
+### Phase 3 anchors and final paired checks (2026-09-16)
+
+The derived Rust anchor index adds no snapshot fields. Lifecycle tests cover
+foreign replay, load, changed/missing files and forgetting. A private-daemon
+fixture also passed current-state rendering, missed-watcher detection,
+same-scope supersession, independent scopes and delayed old events.
+
+On the same `da86decb` copy, current-truth remains **36/50** versus **20/50**:
+visible **20/30** versus **11/30**, holdout **16/20** versus **9/20**. The 16
+gains comprise seven environment-variable/default questions, seven hook
+questions, one operational-safety question and the rename date; no question
+regressed. Original strict probes are **3/5** (deploy, PostToolUse and field
+performance); reconstructed frozen probes are **1/5**. Neither probe rubric is
+the historical memo's human useful-hit judgment.
+
+Final-binary golden nDCG@20 over three runs was **0.452860, 0.449226,
+0.449226**, mean **0.450437**, below the paired baseline mean **0.480335** and
+its noise band. The final fixed-source ordered restart comparison was **16/20
+before and 15/20 after** (same queries, script and replica copy), failing the
+replacement gate. Earlier comparisons scored 13/20 while sources were changing
+and 16/20 before the final learning-order fix; those results are retained rather
+than selecting the passing repeat. Prompt median was **965 ms** versus
+**935 ms**, within the baseline's 354 ms allowance. The preceding binary's
+three-run golden mean was 0.445206 and prompt median was 893 ms.
+
+The complete final NFS chaos run passed **9/9**, including the unchanged 8-second
+hook deadline, with all three thread caps set to one. The initial XFS run's
+NFS skip was also rerun alone on NFS and passed. Rust release tests: **291
+passed, 2 ignored**; CTest **26/26**, MCP **149**, SMRITI **46**, hooks **27/27**.
+Format ID remains `9230643459983636874`; the embedding identity sidecar remains
+absent. Current-truth, original probes, golden recall and restart identity
+remain unqualified. Co-retrieval learning runs after source merging, so source
+IDs and displaced memory IDs do not receive memory co-occurrence updates.
+
 ## Acknowledged-write durability
 
 Status 2026-09-16 (Phase 6 source audit). A successful response is not a universal
@@ -423,7 +457,11 @@ These are sequential implementation measurements on a shared node, not an additi
 
 2026-09-16 — Snapshot decode (V23 unchanged): four bounded Rayon workers decode immutable mmap section ranges, pre-size root maps, and overlap triplet-index reconstruction; keyword reverse reconstruction overlaps Turbo/HDC/lite startup. Two cold-process starts on the same scratch checkpoint plus one-row replay delta (Turbo cache hit both arms): snapshot **9195/7819 → 4263/3567 ms**, field_store **14999/14575 → 9516/9263 ms**. Targets <2500/<9000 ms were **not met**; triplet reconstruction remains 2944/2325 ms. The repeated-query restart gate is **20/20 byte-identical CLI JSON pairs**; the broader 20-query diagnostic is 19/20 after versus 18/20 in the warmed control (not a claim of universal determinism). Release build, 279 Rust tests (2 ignored), and all 16 CTests pass; current-main binary opens the new writer's checkpoint. Embedding constants remain 768/nomic-embed-text-v1.5/format-1; the worktree identity stamp was absent before/after and the main stamp hash is unchanged. OS caches and shared-host load were uncontrolled; overlapping phases must not be summed.
 
-## Phase 3 preparation, 2026-09-16 (not qualified)
+## Historical Phase 3 preparation checkpoint, 2026-09-16 (not qualified)
+
+This records the earlier pre-authorization checkpoint and its different
+`bbcaed33` family. The source-index and anchor work and comparable `da86decb`
+measurements above supersede its implementation status and gates.
 
 The `feat/freshness` worktree adds Markdown heading extraction to the existing
 code-intel API and task-ledger handoff capsules. It does not yet implement the

@@ -37,6 +37,21 @@ int main() {
     assert(reopened.search("CHITTA_RESTART_CACHE", "project:test", 3).empty());
     write(repo / "added.sh", "#!/bin/bash\nexport CHITTA_NEW_SOURCE=1\n");
     assert(!reopened.search("where is CHITTA_NEW_SOURCE", "project:test", 3).empty());
+    const auto input = (repo / "added.sh").string();
+    const auto captured = chitta::RepositoryIndex::file_hash(input);
+    auto anchor = chitta::RepositoryIndex::source_anchor("[done] compile input:" + input + " sha:" + captured, nullptr);
+    assert(anchor.is_object() && anchor["content_hash"] == captured);
+    write(repo / "added.sh", "#!/bin/bash\nexport CHITTA_NEW_SOURCE=2\n");
+    auto delayed = chitta::RepositoryIndex::source_anchor("[done] compile input:" + input + " sha:" + captured, nullptr);
+    assert(delayed == anchor); // Never relabel delayed facts with today's hash.
+    auto next_hash = chitta::RepositoryIndex::file_hash(input);
+    auto next = chitta::RepositoryIndex::source_anchor("[done] compile input:" + input + " sha:" + next_hash, nullptr);
+    assert(next["scope"] == anchor["scope"] && next["content_hash"] != anchor["content_hash"]);
+    auto other_fact = chitta::RepositoryIndex::source_anchor("[done] lint input:" + input + " sha:" + next_hash, nullptr);
+    assert(other_fact["scope"] != next["scope"]);
+    assert(chitta::RepositoryIndex::source_anchor("[done] compile input:" + input + " sha:abcd", nullptr).is_null());
+    anchor["path"] = "../secret";
+    assert(chitta::RepositoryIndex::source_anchor("[artifact] example", anchor).is_null());
     assert(chitta::RepositoryIndex::content_hash("abc") ==
         "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
     assert(!chitta::RepositoryIndex::repository_question("my favorite breakfast"));

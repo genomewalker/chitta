@@ -109,6 +109,40 @@ bool RepositoryIndex::repository_question(const std::string& query) {
     return false;
 }
 
+nlohmann::json RepositoryIndex::source_anchor(const std::string& content, const json& supplied) {
+    if (content.rfind("[artifact]", 0) != 0 && content.rfind("[done]", 0) != 0) return nullptr;
+    json anchor = supplied;
+    if (!anchor.is_object()) {
+        std::smatch match;
+        static const std::regex input(R"re(input:(?:"([^"]+)"|([^\s|,;]+)))re");
+        if (!std::regex_search(content, match, input)) return nullptr;
+        const std::string path = match[1].matched ? match[1].str() : match[2].str();
+        if (!std::filesystem::path(path).is_absolute()) return nullptr;
+        const auto root = repository_root(path);
+        if (root.empty()) return nullptr;
+        auto hash = file_hash(path);
+        // Preserve a capture-time hash even if observation was delayed. A short
+        // legacy hash is insufficient to invent a full anchor for an old fact.
+        static const std::regex sha(R"(\bsha:([a-f0-9]+))");
+        std::smatch recorded;
+        if (std::regex_search(content, recorded, sha)) {
+            if (recorded[1].length() != 64) return nullptr;
+            hash = recorded[1].str();
+        }
+        const auto scope = content.rfind("[artifact]", 0) == 0 ? "<file>" :
+            "done:" + content_hash(std::regex_replace(content, sha, "sha:"));
+        anchor = {{"repo", root}, {"path", std::filesystem::path(path).lexically_relative(root).string()},
+                  {"scope", scope}, {"content_hash", hash}};
+    }
+    for (const auto* key : {"repo", "path", "scope", "content_hash"})
+        if (!anchor.contains(key) || !anchor[key].is_string() || anchor[key].get<std::string>().empty()) return nullptr;
+    const std::filesystem::path relative(anchor["path"].get<std::string>());
+    if (!std::filesystem::path(anchor["repo"].get<std::string>()).is_absolute() || relative.is_absolute()) return nullptr;
+    for (const auto& part : relative) if (part == ".." || part == "." || part.empty()) return nullptr;
+    if (!std::regex_match(anchor["content_hash"].get<std::string>(), std::regex("[a-f0-9]{64}"))) return nullptr;
+    return anchor;
+}
+
 void RepositoryIndex::open(const std::string& sidecar, const std::string& known_files) {
     std::lock_guard<std::mutex> lock(mutex_);
     sidecar_ = sidecar;
