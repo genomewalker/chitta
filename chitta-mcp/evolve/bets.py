@@ -69,6 +69,7 @@ def resolve(
     evidence: str = "",
     existing_wisdom: str = "",
     bet: dict | None = None,
+    candidates: list[dict] | None = None,
 ) -> dict:
     store = store or MemoryStore()
     if bet is None:
@@ -85,5 +86,7 @@ def resolve(
         cycle_id=bet.get("cycle_id"),
         resolved_ts=datetime.now(timezone.utc).isoformat(),
     )
+    if candidates is not None:
+        result["candidates"] = candidates
     result["memory_id"] = store.remember("bet-resolution", result)
     return result

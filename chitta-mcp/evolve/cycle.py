@@ -267,7 +267,7 @@ def agent_output(args, worktree: Path, prompt: str, artifacts: Path, phase: str,
         implement_command(args, worktree, prompt, output),
         worktree,
         log,
-        env=dict(os.environ, CHITTA_HEADLESS="1", CC_SOUL_HEADLESS="1"),
+        env=dict(getattr(budget, "env", os.environ), CHITTA_HEADLESS="1", CC_SOUL_HEADLESS="1"),
         final_output=output if args.implementer == "codex" else None,
     )
     if args.implementer == "claude":
@@ -647,10 +647,91 @@ def verdict_for(bet: dict, before: dict, after: dict, bands: dict) -> tuple[str,
     return ("accept" if delta > bands[metric] else "inconclusive"), deltas
 
 
+def implementation_gates(worktree, branch, base, final, artifacts, budget, gates=None):
+    """The same committed-change gates for single and isolated streams."""
+    gates = gates if gates is not None else {}
+    gates["committed_change"] = "running"
+    if budget.run(
+        ["git", "status", "--porcelain", "--untracked-files=all"], worktree
+    ).stdout.strip():
+        raise ValueError("implementer left uncommitted changes")
+    if budget.run(["git", "branch", "--show-current"], worktree).stdout.strip() != branch:
+        raise ValueError("implementer changed the assigned branch")
+    budget.run(["git", "merge-base", "--is-ancestor", base, "HEAD"], worktree)
+    paths = changed_files(worktree, base, budget)
+    gates["frozen_paths"] = "running"
+    frozen_check(paths)
+    gates["frozen_paths"] = "pass"
+    self_check = self_check_in_diff(final, worktree, base, paths, budget)
+    if not paths:
+        raise ValueError("implementer produced no committed change")
+    gates["committed_change"] = "pass"
+    gates["self_check"] = "pass" if self_check else "fail"
+    gates["tests"] = "running"
+    if any(p == "chitta-field" or p.startswith(("chitta/", "chitta-field/")) for p in paths):
+        budget.run(["git", "submodule", "update", "--init", "--no-fetch", "chitta-field"], worktree)
+    for n, (cwd, cmd) in enumerate(gate_commands(worktree, paths)):
+        budget.run(cmd, cwd, artifacts / f"gate-{n}.log")
+    gates["tests"] = "pass"
+    gates["immutable"] = "running"
+    immutable(worktree, budget, base, "HEAD")
+    gates["immutable"] = "pass"
+    gates["clean_after_gates"] = "running"
+    if budget.run(
+        ["git", "status", "--porcelain", "--untracked-files=all"], worktree
+    ).stdout.strip():
+        raise ValueError("gates left uncommitted changes")
+    gates["clean_after_gates"] = "pass"
+    return paths, self_check
+
+
+def evaluate_candidate(
+    repo, worktree, artifacts, budget, real_eval, cycle_id, base, paths, bet, bands, eval_env=None
+):
+    """Paired replica comparison, retaining the existing coverage guard."""
+    native = any(p == "chitta-field" or p.startswith(("chitta/", "chitta-field/")) for p in paths)
+    baseline_worktree = worktree
+    if native:
+        # Build the pinned base only when native code changed. Comparing a
+        # candidate to an arbitrary deployed version confounds the experiment.
+        baseline_worktree = repo / ".evolve/baselines" / cycle_id
+        baseline_worktree.parent.mkdir(parents=True, exist_ok=True)
+        budget.run(["git", "worktree", "add", "--detach", str(baseline_worktree), base], repo)
+        budget.run(
+            ["git", "submodule", "update", "--init", "--no-fetch", "chitta-field"],
+            baseline_worktree,
+        )
+        for n, (cwd, cmd) in enumerate(
+            gate_commands(baseline_worktree, ["chitta/src/baseline.cpp"])
+        ):
+            budget.run(cmd, cwd, artifacts / f"baseline-build-{n}.log")
+        validate_binaries(baseline_worktree)
+        validate_binaries(worktree)
+    if eval_env is None:
+        eval_env = replica_env(repo, budget)
+    baseline = evaluate(repo, baseline_worktree, artifacts, budget, real_eval, "before", eval_env)
+    after = evaluate(repo, worktree, artifacts, budget, real_eval, "after", eval_env)
+    verdict, deltas = verdict_for(bet, baseline, after, bands)
+    reason = "paired replica measurements compared with preregistered bands"
+    # The grader exercises the native candidate in its private replica.
+    # Installed hooks/MCP are not replaced, so changes to those paths
+    # need a dedicated evaluator before they can receive an accept.
+    uncovered = any(p.startswith(("hooks/", "chitta-mcp/")) and "/tests/" not in p for p in paths)
+    if not native or uncovered:
+        verdict, reason = (
+            "inconclusive",
+            "changed runtime paths are not fully exercised by this replica evaluator",
+        )
+    return verdict, deltas, reason, baseline, after
+
+
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(description=__doc__)
     result.add_argument("--repo", type=Path, default=Path(__file__).resolve().parents[2])
     result.add_argument("--backlog", type=Path, help="JSON array, replacing source gathering")
+    result.add_argument(
+        "--candidates", type=int, default=1, help="isolated Codex streams (default: 1)"
+    )
     result.add_argument("--max-minutes", type=float, default=120)
     result.add_argument("--survey-minutes", type=float, default=20)
     result.add_argument("--top-k", type=int, default=3)
@@ -665,6 +746,10 @@ def parser() -> argparse.ArgumentParser:
 
 
 def run(args) -> int:
+    if args.candidates < 1:
+        raise ValueError("candidates must be positive")
+    if args.candidates > 1 and args.implementer != "codex":
+        raise ValueError("multiple candidates require the Codex implementer")
     repo = args.repo.resolve()
     budget = Budget(args.max_minutes)
     store = MemoryStore(timeout=min(30, budget.remaining()))
@@ -717,6 +802,10 @@ def run(args) -> int:
     spec = ""
     self_check = None
     implementation_finished = False
+    candidate_results = []
+    selected_candidate = None
+    fanout = dict(requested=args.candidates, effective=1, fallback=None)
+    single_result = None
     stage = "survey"
     try:
         worktree.parent.mkdir(parents=True, exist_ok=True)
@@ -759,6 +848,8 @@ def run(args) -> int:
                     reason="survey found no tractable candidate",
                     survey=survey,
                     prior_effort_updates=updates,
+                    candidates=[],
+                    fanout=fanout,
                     branch=branch,
                     base=base,
                 ),
@@ -785,90 +876,91 @@ def run(args) -> int:
         )
         (artifacts / "spec.md").write_text(spec)
         (artifacts / "proposal.json").write_text(json.dumps(proposal.to_dict(), indent=2))
-        stage = "implementation"
-        final = agent_output(args, worktree, spec, artifacts, "implementer", budget)
-        implementation_finished = True
-        if budget.run(
-            ["git", "status", "--porcelain", "--untracked-files=all"], worktree
-        ).stdout.strip():
-            raise ValueError("implementer left uncommitted changes")
-        if budget.run(["git", "branch", "--show-current"], worktree).stdout.strip() != branch:
-            raise ValueError("implementer changed the assigned branch")
-        budget.run(["git", "merge-base", "--is-ancestor", base, "HEAD"], worktree)
-        paths = changed_files(worktree, base, budget)
-        frozen_check(paths)
-        self_check = self_check_in_diff(final, worktree, base, paths, budget)
-        if not paths:
-            raise ValueError("implementer produced no committed change")
-        if any(p == "chitta-field" or p.startswith(("chitta/", "chitta-field/")) for p in paths):
-            budget.run(
-                ["git", "submodule", "update", "--init", "--no-fetch", "chitta-field"], worktree
+        from .fanout import choose_count, run_candidates
+
+        fanout = choose_count(args.candidates, budget.remaining(), args.real_eval)
+        if fanout["fallback"]:
+            print("WARNING: " + fanout["fallback"])
+        if fanout["effective"] > 1:
+            stage = "evaluation"
+            winner = run_candidates(
+                args,
+                repo,
+                worktree,
+                branch,
+                base,
+                spec,
+                artifacts,
+                budget,
+                bet,
+                bands,
+                fanout,
+                candidate_results,
             )
-        for n, (cwd, cmd) in enumerate(gate_commands(worktree, paths)):
-            budget.run(cmd, cwd, artifacts / f"gate-{n}.log")
-        immutable(worktree, budget, base, "HEAD")
-        if budget.run(
-            ["git", "status", "--porcelain", "--untracked-files=all"], worktree
-        ).stdout.strip():
-            raise ValueError("gates left uncommitted changes")
-        stage = "evaluation"
-        native = any(
-            p == "chitta-field" or p.startswith(("chitta/", "chitta-field/")) for p in paths
-        )
-        baseline_worktree = worktree
-        if native:
-            # Build the pinned base only when native code changed. Comparing a
-            # candidate to an arbitrary deployed version confounds the experiment.
-            baseline_worktree = repo / ".evolve/baselines" / cycle_id
-            baseline_worktree.parent.mkdir(parents=True, exist_ok=True)
-            budget.run(["git", "worktree", "add", "--detach", str(baseline_worktree), base], repo)
-            budget.run(
-                ["git", "submodule", "update", "--init", "--no-fetch", "chitta-field"],
-                baseline_worktree,
-            )
-            for n, (cwd, cmd) in enumerate(
-                gate_commands(baseline_worktree, ["chitta/src/baseline.cpp"])
-            ):
-                budget.run(cmd, cwd, artifacts / f"baseline-build-{n}.log")
-            validate_binaries(baseline_worktree)
-            validate_binaries(worktree)
-        eval_env = replica_env(repo, budget)
-        baseline = evaluate(
-            repo, baseline_worktree, artifacts, budget, args.real_eval, "before", eval_env
-        )
-        if baseline:
-            after = evaluate(repo, worktree, artifacts, budget, args.real_eval, "after", eval_env)
-            verdict, deltas = verdict_for(bet, baseline, after, bands)
-            reason = "paired replica measurements compared with preregistered bands"
-            # The grader exercises the native candidate in its private replica.
-            # Installed hooks/MCP are not replaced, so changes to those paths
-            # need a dedicated evaluator before they can receive an accept.
-            uncovered = any(
-                p.startswith(("hooks/", "chitta-mcp/")) and "/tests/" not in p for p in paths
-            )
-            if not native or uncovered:
+            if winner is None:
                 verdict, reason = (
                     "inconclusive",
-                    "changed runtime paths are not fully exercised by this replica evaluator",
+                    "no gate-passing candidate has a comparable target delta",
                 )
-            surprise = any(
-                key != bet["metric"] and key in bands and abs(delta) > bands[key]
-                for key, delta in deltas.items()
+                baseline = after = None
+            else:
+                selected_candidate = winner["index"]
+                worktree, branch = Path(winner["worktree"]), winner["branch"]
+                self_check = winner["self_check"]
+                spec = (Path(winner["artifacts"]) / "spec.md").read_text()
+                verdict, deltas, reason = winner["verdict"], winner["delta"], winner["reason"]
+                baseline, after = winner["before"], winner["after"]
+        else:
+            single_result = dict(
+                index=1,
+                worktree=str(worktree),
+                branch=branch,
+                gates={},
+                gates_passed=False,
+                delta={},
+                changed_lines=None,
+                outcome="implementing",
+                reason="",
             )
-            if surprise or bet["metric"] in deltas and band is not None:
-                wisdom = "\n".join(
-                    str(r.get("content", r.get("text", ""))) for r in store.recall("bet-resolution")
-                )
-                resolution = bets.resolve(
-                    bet_id,
-                    deltas,
-                    store,
-                    json.dumps(
-                        dict(proposal_evidence=proposal.evidence, before=baseline, after=after)
-                    ),
-                    wisdom,
-                    bet,
-                )
+            candidate_results.append(single_result)
+            stage = "implementation"
+            final = agent_output(args, worktree, spec, artifacts, "implementer", budget)
+            implementation_finished = True
+            paths, self_check = implementation_gates(
+                worktree, branch, base, final, artifacts, budget, single_result["gates"]
+            )
+            from .fanout import changed_lines
+
+            single_result.update(
+                gates_passed=bool(self_check),
+                self_check=self_check,
+                changed_lines=changed_lines(worktree, base, budget),
+                outcome="gated",
+            )
+            stage = "evaluation"
+            verdict, deltas, reason, baseline, after = evaluate_candidate(
+                repo, worktree, artifacts, budget, args.real_eval, cycle_id, base, paths, bet, bands
+            )
+            single_result.update(delta=deltas, verdict=verdict, outcome="measured", reason=reason)
+            if self_check and bet["metric"] in deltas:
+                selected_candidate = 1
+        surprise = any(
+            key != bet["metric"] and key in bands and abs(delta) > bands[key]
+            for key, delta in deltas.items()
+        )
+        if surprise or bet["metric"] in deltas and band is not None:
+            wisdom = "\n".join(
+                str(r.get("content", r.get("text", ""))) for r in store.recall("bet-resolution")
+            )
+            resolution = bets.resolve(
+                bet_id,
+                deltas,
+                store,
+                json.dumps(dict(proposal_evidence=proposal.evidence, before=baseline, after=after)),
+                wisdom,
+                bet,
+                candidates=candidate_results,
+            )
     except TimeoutError as exc:
         if stage == "recording":
             raise
@@ -882,8 +974,14 @@ def run(args) -> int:
         )
     if implementation_finished and not self_check:
         verdict, reason = "inconclusive:no_self_check", "no changed module test matches SELF_CHECK"
+    if single_result is not None and single_result["outcome"] != "measured":
+        single_result.update(outcome="failed", reason=reason)
+        for key, status in single_result["gates"].items():
+            if status == "running":
+                single_result["gates"][key] = "fail"
     value = dict(
         cycle_id=cycle_id,
+        metric=proposal.expected_gain["metric"] if proposal else None,
         proposal_id=proposal.id if proposal else None,
         mechanism=proposal.mechanism if proposal else None,
         survey=survey,
@@ -898,6 +996,9 @@ def run(args) -> int:
         branch=branch,
         base=base,
         spec_sha256=hashlib.sha256(spec.encode()).hexdigest(),
+        candidates=candidate_results,
+        selected_candidate=selected_candidate,
+        fanout=fanout,
     )
     record_verdict(artifacts, store, value)
     if args.open_pr and verdict == "accept":
