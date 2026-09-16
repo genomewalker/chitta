@@ -851,9 +851,9 @@ Unqualified raw observations remain in the report and are not equivalence estima
 | `wisdom_lineage_store` | event/API | not measured | unqualified: not run |
 | `symbol_event_log` | event/API | not measured | unqualified: not run |
 | `repl_sessions` | event/API | not measured | unqualified: not run |
-| `event_tape` | event/API; write path (retain); snapshot section retained | not measured | unqualified: not run |
-| `cdawg` | event/API; write path (retain) | not measured | unqualified: not run |
-| `episode_hdc` | event/API | not measured | unqualified: not run |
+| `event_tape` | event/API; write path (retain); snapshot section retained | not qualified; raw observations retained | unqualified; consumer API test evidence missing: event_tape: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `cdawg` | event/API; write path (retain) | not qualified; raw observations retained | unqualified; consumer API test evidence missing: cdawg: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `episode_hdc` | event/API | not qualified; raw observations retained | unqualified; consumer API test evidence missing: episode_hdc: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
 | `refutation_ledger` | event/API | not measured | unqualified: not run |
 | `cec_policy_store` | event/API | not measured | unqualified: not run |
 | `decision_tape` | event/API; snapshot section retained | not measured | unqualified: not run |
@@ -865,12 +865,12 @@ Unqualified raw observations remain in the report and are not equivalence estima
 | `interaction_ledger` | event/API; snapshot section retained | not measured | unqualified: not run |
 | `predicate_store` | event/API; snapshot section retained | not measured | unqualified: not run |
 | `archive` | event/API; write path (retain) | not measured | unqualified: not run |
-| `cortical_idx` | recall-adjacent; write path (retain); index sidecar retained | not measured | unqualified: not run |
-| `hdc_idx` | recall-adjacent; write path (retain); index sidecar retained | not measured | unqualified: not run |
-| `lite_encoder` | recall-adjacent | not measured | unqualified: not run |
-| `sparse_encoder` | recall-adjacent; write path (retain) | not measured | unqualified: not run |
+| `cortical_idx` | recall-adjacent; write path (retain); index sidecar retained | not qualified; raw observations retained | unqualified; consumer API test evidence missing: cortical_idx: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `hdc_idx` | recall-adjacent; write path (retain); index sidecar retained | golden.ndcg: +0.00500551; margin=0.0017901251267712533; hook_total_ms: +31.3333; margin=1833.3949929025114 | not equivalent; consumer API test evidence missing: hdc_idx: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens; observed beyond band: golden.ndcg |
+| `lite_encoder` | recall-adjacent | not qualified; raw observations retained | unqualified; consumer API test evidence missing: lite_encoder: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `sparse_encoder` | recall-adjacent; write path (retain) | not qualified; raw observations retained | unqualified; consumer API test evidence missing: sparse_encoder: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
 | `learners` | recall-adjacent; write path (retain) | not measured | unqualified: not run |
-| `span_store` | recall-adjacent; write path (retain) | not measured | unqualified: not run |
+| `span_store` | recall-adjacent; write path (retain) | not qualified; raw observations retained | unqualified; consumer API test evidence missing: span_store: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
 | `predictor` | recall-adjacent | not measured | unqualified: not run |
 | `surprise_store` | recall-adjacent | not measured | unqualified: not run |
 | `epistemic_debt_store` | recall-adjacent | not measured | unqualified: not run |
@@ -892,6 +892,7 @@ separate from the calibrated `hook_total_ms` statistic above.
 | Ablation | Off median/p95 | On median/p95 | Empty outputs | Write/restart invariants |
 |---|---|---|---|---|
 | `control` | 903/1103, 938/5094, 863/1167 | 908/4922, 920/995, 878/1065 | 0 | 3/3 passed; recall identity 20/20, 20/20, 20/20 |
+| `hdc_idx` | 977/3161, 924/1611, 1044/1555 | 868/1570, 884/4713, 909/1107 | 0 | 3/3 passed; recall identity 20/20, 20/20, 20/20 |
 | `recall_adjacent` | 842/1347, 930/1345, 932/1892 | 883/3310, 912/1053, 901/1809 | 0 | 3/3 passed; recall identity 20/20, 20/20, 20/20 |
 | `all` | 914/1143, 891/1077, 827/4680 | 937/4971, 858/1200, 818/995 | 0 | 3/3 passed; recall identity 20/20, 20/20, 20/20 |
 <!-- ORGAN-ABLATION-TABLE -->
@@ -1019,7 +1020,7 @@ passed eight and skipped the NFS-only case; it is not the 9/9 evidence.
 CI Ruff, shell syntax and ShellCheck pass. Contract checks printed
 `contracts unchanged` at the commits. No tests were removed.
 
-### Pinned controls and group checkpoint
+### Pinned controls, groups and largest-organ checkpoint
 
 Runner `f3ea9cd9` fixes the clock at **1789581502687 ms**, embedding wait at
 **10000 ms**, and the three thread limits at **1**. All three control golden
@@ -1043,8 +1044,19 @@ and 3/40 for recall-adjacent/all; all have 10/10 correct abstentions. These
 truth counts are descriptive: their margins are absent from the frozen noise
 file. No isolated SMRITI agent is configured, and no consumer-test commands
 were supplied. SMRITI unit-test success is not a real visible-panel result.
-The eight largest individual organs are the next block; the remainder is
-conditional on node load. Raw post-fix reports are in
+The eight-largest block adds **24/24 completed trials**, three per organ.
+`hdc_idx` scores **0.5050838724598726** in all three: delta
+**+0.005005509837521904**, outside the frozen golden band, hence **not
+equivalent**. Its answerable current-truth hits are 3/40. `cortical_idx`,
+`cdawg`, `span_store`, `episode_hdc`, `event_tape`, `lite_encoder` and
+`sparse_encoder` each match the control golden score and 4/40 truth hits in
+all three runs; their equivalence remains **unqualified** for the missing
+evidence above. All eight preserve 10/10 correct abstentions.
+
+Across all **39 completed trials**, every run passes 200-write recovery,
+three keyed lanes and canonical restart identity **20/20**, with no trial
+errors or empty hook outputs. The remaining 35 individuals are conditional
+on the recorded one-minute node-load limit of **96**. Raw post-fix reports are in
 `/tmp/p2-ablation-postfix`.
 
 **Retired organs: none. Removed tools: none. Retirement lines removed: 0.

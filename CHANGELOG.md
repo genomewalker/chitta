@@ -33,7 +33,9 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
   restart-identity gate. Three controls have golden spread 0 against margin
   0.0017901251267712533. Four groups have three runs each: recall-adjacent and
   all-organ ablation change golden nDCG by +0.004632109418440722 and are not
-  equivalent; all 15 control/group trials pass 200-write recovery, three keyed
+  equivalent. The eight largest organs have three runs each; HDC changes
+  golden by +0.005005509837521904 (not equivalent), while the other seven
+  remain unqualified. All 39 trials pass 200-write recovery, three keyed
   lanes and identity 20/20. The 105 pre-fix trials remain quarantined.
   No tools or organs retired (retirement LOC 0); positive equivalence still
   lacks current-truth margins, a real isolated SMRITI panel and consumer API
