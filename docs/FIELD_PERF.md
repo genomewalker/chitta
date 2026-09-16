@@ -115,8 +115,10 @@ on NFS; file-changed-hook is outside the follow-up scope. Do not enable local
 placement as a completed migration until those gates are resolved.
 
 The fortnight instrument is `scripts/report-runtime-incidents.py chittad.log`.
-It reports open failures, stale-lock replacements, repeated starts within five
-minutes, and lockprof holds strictly over 150 ms. Undated records remain
+It reports open failures, stale-lock replacements, cross-host lock holders,
+repeated starts within five minutes, and lockprof holds strictly over 150 ms.
+Daemon stderr now carries ISO-8601 UTC timestamps, including Rust/C diagnostics.
+Use `--host` when analyzing logs from another host. Undated records remain
 `undated`; a log with no matches does not prove a fortnight of coverage.
 
 Status as of 2026-09-16. The dated results below preserve the `fix/field-perf` measurements on private eval copies, including unmet targets and the ancillary MCP SDK failure. Two original JSON artifacts are absent; their committed tables are linked instead. Current live startup is about 9.5 s with sidecar hits, about 20 s on the first start after deployment or a format change; see [startup and recovery](CLI.md#startup-sidecars-and-instance-lock). These current operational figures do not replace the historical control/experiment measurements below.

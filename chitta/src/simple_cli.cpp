@@ -58,6 +58,8 @@
 #include <unistd.h>
 #include <climits>
 #include <fcntl.h>
+#include <poll.h>
+#include <ctime>
 #if defined(__linux__)
 #include <malloc.h>
 #endif
@@ -69,6 +71,96 @@
 
 using namespace chitta;
 using json = nlohmann::json;
+
+// Capture fd 2, rather than only cerr: Rust eprintln! and native C libraries
+// also write daemon diagnostics. One reader prefixes complete lines in UTC.
+// Start after daemonize() (fork), drain on normal shutdown, restore before exec.
+class DaemonStderr {
+    int output_ = -1;
+    int input_ = -1;
+    std::atomic<bool> stopping_{false};
+    std::thread reader_;
+
+    void emit(const std::string& line) {
+        const auto now = std::chrono::system_clock::now();
+        const auto seconds = std::chrono::system_clock::to_time_t(now);
+        std::tm utc{};
+        gmtime_r(&seconds, &utc);
+        char stamp[32];
+        std::strftime(stamp, sizeof(stamp), "%Y-%m-%dT%H:%M:%SZ ", &utc);
+        const std::string record = std::string(stamp) + line + '\n';
+        size_t offset = 0;
+        while (offset < record.size()) {
+            const auto n = ::write(output_, record.data() + offset, record.size() - offset);
+            if (n > 0) offset += static_cast<size_t>(n);
+            else if (n < 0 && errno == EINTR) continue;
+            else break;
+        }
+    }
+
+    void read_lines() {
+        std::string pending;
+        char bytes[4096];
+        for (;;) {
+            const auto n = ::read(input_, bytes, sizeof(bytes));
+            if (n > 0) {
+                pending.append(bytes, static_cast<size_t>(n));
+                size_t begin = 0, end;
+                while ((end = pending.find('\n', begin)) != std::string::npos) {
+                    emit(pending.substr(begin, end - begin));
+                    begin = end + 1;
+                }
+                pending.erase(0, begin);
+                continue;
+            }
+            if (n == 0) break;
+            if (errno == EINTR) continue;
+            if (errno != EAGAIN && errno != EWOULDBLOCK) break;
+            // Descendants may inherit stderr; do not wait for their lifetime.
+            if (stopping_) break;
+            pollfd event{input_, POLLIN, 0};
+            ::poll(&event, 1, 100);
+        }
+        if (!pending.empty()) emit(pending);
+    }
+
+public:
+    bool start() {
+        std::cerr.flush();
+        std::fflush(stderr);
+        output_ = ::fcntl(STDERR_FILENO, F_DUPFD_CLOEXEC, 3);
+        if (output_ < 0) return false;
+        int pipe_fds[2];
+        if (::pipe(pipe_fds) != 0) { ::close(output_); output_ = -1; return false; }
+        input_ = pipe_fds[0];
+        ::fcntl(input_, F_SETFD, FD_CLOEXEC);
+        ::fcntl(pipe_fds[1], F_SETFD, FD_CLOEXEC);
+        ::fcntl(input_, F_SETFL, O_NONBLOCK);
+        try { reader_ = std::thread([this] { read_lines(); }); }
+        catch (...) {
+            ::close(pipe_fds[1]); ::close(input_); ::close(output_);
+            input_ = output_ = -1;
+            return false;
+        }
+        const bool ok = ::dup2(pipe_fds[1], STDERR_FILENO) >= 0;
+        ::close(pipe_fds[1]);
+        if (!ok) stop();
+        return ok;
+    }
+
+    void stop() {
+        if (output_ < 0) return;
+        std::cerr.flush();
+        std::fflush(stderr);
+        ::dup2(output_, STDERR_FILENO);
+        stopping_ = true;
+        if (reader_.joinable()) reader_.join();
+        ::close(input_); ::close(output_);
+        input_ = output_ = -1;
+    }
+    ~DaemonStderr() { stop(); }
+};
+static DaemonStderr daemon_stderr;
 
 // Global flags
 // Verify lock-free for async-signal-safety in daemon_signal_handler
@@ -482,7 +574,7 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
                             // passing NULL is UB, so the self-restart path was
                             // unreliable exactly when systemctl was absent.
                             char* const self_argv[] = {self_path, nullptr};
-                            if (len > 0) { ::execv(self_path, self_argv); }
+                            if (len > 0) { daemon_stderr.stop(); ::execv(self_path, self_argv); }
                             ::exit(0);
                         } else {
                             // Ack the new mtime so we don't re-probe (and re-warn) every tick.
@@ -1641,6 +1733,10 @@ int main(int argc, char* argv[]) {
                 std::cerr << "Failed to daemonize\n";
                 return 1;
             }
+        }
+        if (!daemon_stderr.start()) {
+            std::cerr << "[daemon] Failed to initialize timestamped stderr\n";
+            return 1;
         }
         // Recall-starvation ceiling: cap in-process embed inference threads so the
         // background embed_loop / backfill / distill precompute can never monopolize

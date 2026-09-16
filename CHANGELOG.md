@@ -11,6 +11,10 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 ## [Unreleased]
 
 ### Added
+- 2026-09-16: UTC timestamps on daemon stderr, including Rust and native C
+  diagnostics; incident reporting identifies foreign-host lock holders and
+  accepts an explicit originating host. Scratch verification found all 5,528
+  daemon log lines dated; this does not establish the fortnight soak gate.
 - 2026-09-16: installer writes the primary-host `.daemon-node` marker and
   `primary-node.conf` guard (exit 75 elsewhere), including custom mind paths.
   Automatic secondary-host RPC fallback is documented as the next step;

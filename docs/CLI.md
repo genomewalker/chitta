@@ -172,6 +172,14 @@ schemas, and all non-CLI contracts remain unchanged.
 
 ---
 
+Daemon stderr lines carry `YYYY-MM-DDTHH:MM:SSZ` UTC prefixes, including Rust
+store-lock and native-library diagnostics. Run
+`python3 scripts/report-runtime-incidents.py --host PRIMARY chittad.log` to
+count dated incidents and flag recorded lock holders on a different host.
+`--host` identifies the log's originating host when inspecting it elsewhere;
+short and fully qualified forms of the same hostname compare equal. Old,
+undated lines remain explicitly undated and cannot establish a clean soak.
+
 ## chittad — Commands
 
 ### daemon
