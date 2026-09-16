@@ -1,7 +1,9 @@
 # Autonomous evolution — 2026-09-14
 
-Status 2026-09-14: history-aware selection, bounded candidate survey, and mandatory
-committed SELF_CHECK verification are implemented; deployment remains human-owned.
+Status as of 2026-09-16: history-aware selection, bounded candidate survey, mandatory
+committed SELF_CHECK verification and opt-in `--candidates N` fan-out are implemented;
+deployment remains human-owned. The automatic-learning cohort cut was recorded at
+2026-09-15 23:15 CEST; the prospective 20-task panel remains pending (see [EVALS.md](EVALS.md)).
 
 The loop is **propose → rank → survey in an isolated worktree → choose →
 preregister a bet → implement → SELF_CHECK → gates → frozen replica measurements → verdict memory → optional branch/PR →

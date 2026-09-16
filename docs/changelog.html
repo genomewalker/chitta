@@ -450,6 +450,7 @@ body::before {
   <div class="container">
     <div class="page-header-badge reveal">Release History</div>
     <h1 class="reveal reveal-delay-1">Changelog</h1>
+    <p class="status-line">Status as of 2026-09-16. Unreleased and 5.72.0 below mirror <a href="https://github.com/genomewalker/chitta/blob/main/CHANGELOG.md">CHANGELOG.md</a>; dated entries describe behavior at release time.</p>
     <p class="page-header-sub reveal reveal-delay-2">Track the evolution of chitta. New features, improvements, and breaking changes across versions.</p>
   </div>
 </header>
@@ -458,12 +459,69 @@ body::before {
 <section class="changelog-section">
   <div class="container">
 
+    <!-- Current entries transcribed from CHANGELOG.md; preserve release history. -->
+    <article class="changelog-version reveal" id="unreleased">
+      <div class="version-header"><span class="version-number">Unreleased</span><span class="version-date">Status September 16, 2026</span></div>
+      <div class="version-body">
+        <h4>Added</h4>
+        <ul>
+          <li>Replication-weighted recall factor (<code>replication_max</code>, <code>CHITTA_REPLICATION_MAX</code>), landed default-off: distinct-session replications per memory are cached on load; the live store has 0 memories with ≥2 independent replications and the golden delta was 0, so the card carries <code>prior_effort: some</code> (<a href="EVALS.md">docs/EVALS.md</a>).</li>
+          <li>Snapshot load decodes sections in parallel from an mmap and overlaps triplet reconstruction with the rest of startup: snapshot phase 7.8–9.2 s → 3.6–4.3 s on the replica; startup sidecars are keyed to the snapshot so LSH/turbo hit with a WAL delta (live restart 27–33 s → 12.6 s); fused recall is deterministic across restarts (total-order sorts, hydration without touches).</li>
+          <li>The per-Bash-call saddle check runs in bash/jq (81-fixture byte parity with <code>saddle_detector.py</code>): added PreToolUse overhead 97 → 24 ms median.</li>
+          <li>Opt-in isolated evolve implementation streams (<code>--candidates N</code>, default 1): concurrent worktrees with private agent state, shared deadline and budget fallback, gate-passing selection by measured bet delta then patch size, all candidate outcomes in verdict/bet memories, and <code>python3 -m evolve.report</code>.</li>
+          <li>Automatic-learning experiment harness: provenance-based cohort classification, prospective task/grader freezes, isolated paired replica trials (strict bwrap mode or <code>home-audit</code> with post-hoc voiding), exposure checks, deterministic grading and fixture-only dry runs (<a href="https://github.com/genomewalker/chitta/blob/main/benchmarks/learning/protocol.md">benchmarks/learning/protocol.md</a>).</li>
+          <li>Daemon startup caches derived search state across restarts (normalized embeddings, event-tape organs, quantized index): clean start 27 s → 13 s, optional sidecars, rollback-safe.</li>
+          <li>Stigmergic artifact traces, after SwarmWorld (arXiv:2608.26081) measured ~95% of first reuse through observing an artifact rather than being told: <code>pre-tool-hook</code> adds <code>[traces]</code> on the first Read of a file per session (memories whose text names that file; <code>CHITTA_FILE_TRACES=0</code> disables) and <code>artifact-trace.sh</code> (PostToolUse Write) registers newly written scripts as <code>[artifact] &lt;path&gt; sha:&lt;8&gt; purpose:…</code> signals so later sessions fork them.</li>
+          <li>Two hypothesis cards for the evolve loop from the same reading: isolated best-of-2 implementation streams (SwarmWorld: isolated search kept the best single artifact) and replication-weighted recall (Buehler's repeated runs reached model-dependent conclusions). The learning-experiment protocol gains two pre-registered secondary metrics: best-of-three per arm and artifact reuse rate.</li>
+        </ul>
+        <h4>Changed</h4>
+        <ul>
+          <li><code>recall_analogy</code> is explicit relation transfer only (a:b :: c:?): the predicate(s) linking a→b come from indexed triplet lookups and the answers are c's actual neighbours over those predicates, with supporting edges and a <code>reason</code> on abstention. Structural mode and VSA ranking are gone from the endpoint. Frozen-replica benchmark: hit@1 14/14, hit@3 14/14, 14/14 negative abstentions, 0 unsupported answers (<a href="EVALS.md">docs/EVALS.md</a>).</li>
+          <li>Prompt, SessionStart and Stop hooks no longer start Python on the hot path: query cleaning, RPC-stats parsing, the heartbeat, session registration and the ledger render run in bash/jq against the daemon's CLI. Prompt hook median 822→635 ms, SessionStart 693→599 ms on a loaded node (<a href="HOOKS.md">docs/HOOKS.md</a>).</li>
+          <li>Linked git worktrees resolve to the main checkout's realm in the hooks, the session registry and the CLI, so Codex and evolve streams recall project memory.</li>
+          <li>Recall ranks <code>operational</code> distiller fragments below curated kinds (<code>kind_operational</code> 0.8) so a correction outranks verbatim transcript notes of equal similarity.</li>
+          <li>The daemon's binary-update probe uses <code>posix_spawn</code> instead of <code>popen</code>; the <code>fork()</code> ran OpenBLAS's atfork barrier and stalled the main loop under embedding load.</li>
+          <li>Chained <code>git add … &amp;&amp; git commit</code> commands are captured as milestones.</li>
+        </ul>
+        <h4>Fixed</h4>
+        <ul><li>Nightly literature cards were rejected by the proposal loader (source URL instead of a kind, prose <code>blast_radius</code>, zero effort) and silently skipped by the selector; the watch now writes the loader's contract.</li></ul>
+        <h4>Removed</h4>
+        <ul><li>Retired MDL admission compression on 2026-09-15: native and Bash shadow taps, same-chunk pooling, corpus dictionaries/bootstrap, Python mirror, test targets, environment knobs and evolve coverage telemetry. Distilled learning storage, deduplication and recall ranking remain unchanged; no utility-posterior hard gate replaces it. Historical shadow logs remain untouched and inert. The paired 20-task automatic-learning experiment remains pending (see <a href="EVOLVE.md">docs/EVOLVE.md</a>).</li></ul>
+      </div>
+    </article>
+    <article class="changelog-version reveal" id="v5-72-0">
+      <div class="version-header"><span class="version-number">v5.72.0</span><span class="version-date">September 14, 2026</span><span class="version-latest">Latest release</span></div>
+      <div class="version-body">
+        <h4>Daemon / store</h4>
+        <ul>
+          <li>Recall read path no longer writes: access touches accumulate and drain every 5 s; WAL fsync is timer-based (200 ms) with durable ops explicit; TurboQuant index rebuilds on the maintenance thread. Twelve concurrent <code>recall_lanes</code>: 1.7–3.6 s → 0.23–0.54 s.</li>
+          <li>Embedding context pool (<code>CHITTA_EMBED_CONTEXTS</code>, default 4) and query-embedding LRU cache.</li>
+          <li>Task ledger (threads, inbox, artifacts, session bindings, leases) moved from <code>~/.claude/task-ledger.db</code> (NFS sqlite) into the daemon (<code>ledger_op</code> RPC) with an idempotent <code>task_ledger.py migrate</code>.</li>
+          <li>Queue lives at <code>&lt;mind&gt;/queue.jsonl</code>; tag recall is a hard filter with realm applied after; correction lane realm-scoped; MDL small-evidence pooling (shadow).</li>
+          <li>Daemon output kept in <code>~/.claude/mind/chittad.log</code> (user journal unreadable on the cluster).</li>
+        </ul>
+        <h4>Hooks</h4>
+        <ul>
+          <li>SessionStart lanes run concurrently (5.7–7.2 s → ~0.7–1.5 s) with a fallback line when every lane times out; SessionEnd fits its 5 s budget.</li>
+          <li>Prompt hook: in-process realm detection; zero-distinctive-token turns skip topic lanes; UNKNOWN-band candidates need a distinctive turn token; keyword rows need two distinctive tokens or BM25 ≥ 60; pre-tool "BEFORE RUNNING" needs 0.6 similarity; hard guard against killing the <code>--http</code> MCP process.</li>
+          <li>Hooks honour <code>CHITTA_SOCKET_PATH</code>; failed commands recorded via <code>PostToolUseFailure</code>; Codex exit-less shape recorded as unknown.</li>
+        </ul>
+        <h4>MCP</h4>
+        <ul><li>Cold recall 10.8 s → 1.1 s (no Transformers import); streamable-HTTP sessions expire idle (30 min) and are capped (64); evolve runner reaps Codex.</li></ul>
+        <h4>Evolve</h4>
+        <ul><li>Proposal cards carry <code>verifiability</code>, <code>prior_effort</code>, <code>internal_evidence</code>; selector weights them; every cycle requires a <code>SELF_CHECK</code> test and runs a bounded survey phase first; nightly/weekly timers; <code>select.py</code> renamed <code>selector.py</code>.</li></ul>
+        <h4>Eval</h4>
+        <ul><li>Frozen replica copies loader markers, records its own pid, retries copies that race a save; real-agent noise calibration in <code>benchmarks/noise.json</code>; <code>hook_total_ms</code> metric.</li></ul>
+      </div>
+    </article>
+    <p class="section-intro">For the backfilled 5.42.0–5.70.4 releases and the 5.71.0 rename release, see the <a href="https://github.com/genomewalker/chitta/blob/main/CHANGELOG.md">complete canonical release history</a>. Earlier site entries follow unchanged. Current startup measurements are in <a href="chitta-field.html">the store reference</a>.</p>
+
     <!-- 5.41.0 -->
     <article class="changelog-version reveal">
       <div class="version-header">
         <span class="version-number">v5.39.0&ndash;5.41.0</span>
         <span class="version-date">May 19, 2026</span>
-        <span class="version-latest">Latest</span>
+        <span class="version-latest">Archive</span>
       </div>
       <div class="version-body">
         <h4>Added &mdash; Causal Episode Compiler: Phases 15&ndash;17</h4>
@@ -1128,7 +1186,7 @@ body::before {
       <div class="change-category">
         <h3 class="change-category-title fixed">Fixed</h3>
         <ul class="change-list">
-          <li>Restored missing <code>cc-soul-mcp</code> skill (referenced in marketplace.json but absent from repo)</li>
+          <li>Restored missing <code title="Historical skill name retained after the chitta rename">cc-soul-mcp</code> skill (referenced in marketplace.json but absent from repo)</li>
           <li><code>Input validation error: '19' is not of type integer</code> &mdash; 100 integer schema params now accept string-typed values from LLM tool calls</li>
         </ul>
       </div>
@@ -1174,7 +1232,7 @@ body::before {
           <li><strong>soul-repl</strong> &mdash; RLM-style programmatic memory exploration: explore &rarr; peek &rarr; expand &rarr; neighbors</li>
           <li><strong>Priority tiers and memory index</strong> &mdash; ClawVault-inspired tiered memory access (critical / high / normal / archive) with <code>set_priority_tier</code> and <code>recall_by_priority</code></li>
           <li><strong>Goal, habit, and curiosity CLI commands</strong> &mdash; <code>chitta goal</code>, <code>chitta habit</code>, <code>chitta curiosity</code> for managing long-term objectives from the terminal</li>
-          <li><strong>Auto-configure MCP via plugin</strong> &mdash; Plugin installer now configures <code>mcpServers.chitta</code> automatically; <code>/cc-soul-mcp</code> skill deprecated for most users</li>
+          <li><strong>Auto-configure MCP via plugin</strong> &mdash; Plugin installer now configures <code>mcpServers.chitta</code> automatically; <code title="Historical skill name retained after the chitta rename">/cc-soul-mcp</code> skill deprecated for most users</li>
           <li><strong>Brain visualization</strong> &mdash; Animated data-flow visualization on the landing page showing live memory graph activity</li>
           <li><strong>Improved correction learning compliance</strong> &mdash; Hooks more reliably detect and persist correction patterns</li>
         </ul>

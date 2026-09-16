@@ -118,7 +118,7 @@
     <div class="page-header-badge reveal">Technical Architecture</div>
     <h1 class="reveal reveal-delay-1">How chitta thinks.</h1>
     <p class="page-header-sub reveal reveal-delay-2">chitta-field Rust memory substrate, 8-phase resonance, Bayesian self-tuning, and tree-sitter code intelligence&thinsp;&mdash;&thinsp;in a single C++ daemon.</p>
-    <p class="reveal reveal-delay-2" style="font-family: var(--font-mono); font-size: var(--text-xs); color: #565f89; margin-top: var(--space-3);">Status as of 2026-09-02.</p>
+    <p class="reveal reveal-delay-2" style="font-family: var(--font-mono); font-size: var(--text-xs); color: #565f89; margin-top: var(--space-3);">Status as of 2026-09-16. <a href="ARCHITECTURE.md">Canonical architecture</a>.</p>
   </div>
 </header>
 
@@ -173,8 +173,8 @@
       <div class="diagram-layer layer-daemon">
         <span class="diagram-layer-label">chittad Daemon</span>
         <div class="diagram-boxes">
-          <div class="diagram-box highlight-sandal">Thread Pool (2-16)</div>
-          <div class="diagram-box highlight-sandal">RPC Handler (319 tools)</div>
+          <div class="diagram-box highlight-sandal">Thread Pool (8-16)</div>
+          <div class="diagram-box highlight-sandal">FieldRpcHandler</div>
           <div class="diagram-box highlight-sandal">Subconscious (background)</div>
         </div>
       </div>
@@ -207,9 +207,9 @@
       <pre><span class="cm">// chitta-field: organic Rust memory substrate</span>
 <span class="kw">FieldStore</span>     <span class="cm">WAL-backed in-memory field, sparse codes, cortical index</span>
 <span class="kw">Sparse</span>         <span class="cm">64 of 16,384 features active per memory — 0.4% sparsity</span>
-<span class="kw">MultiWriter</span>    <span class="cm">Each daemon instance owns its own segment file, no locking</span>
+<span class="kw">Ownership</span>      <span class="cm">One daemon holds the instance lock; sessions share it over RPC</span>
 <span class="kw">Socket</span>         <span class="cm">Unix domain socket IPC between Claude Code and daemon</span>
-<span class="kw">Scaling</span>        <span class="cm">Auto-scaling thread pool (2-16) with watchdog for slow requests</span></pre>
+<span class="kw">Scaling</span>        <span class="cm">Auto-scaling thread pool (8-16) with watchdog for slow requests</span></pre>
     </div>
   </div>
 </section>
@@ -236,12 +236,12 @@
       </thead>
       <tbody>
         <tr><td class="class-name">FieldStore</td><td class="file-name">chitta-field/src/field.rs</td><td class="role-desc">Central memory substrate: WAL, sparse codes, cortical index, decay</td></tr>
-        <tr><td class="class-name">FieldRpcHandler</td><td class="file-name">rpc/field_handler.hpp</td><td class="role-desc">JSON-RPC 2.0 handler, 319 registered tools, backed by FieldStore</td></tr>
+        <tr><td class="class-name">FieldRpcHandler</td><td class="file-name">rpc/field_handler.hpp</td><td class="role-desc">JSON-RPC dispatch, budgets and lock discipline; see <a href="tools.html">generated tools</a></td></tr>
         <tr><td class="class-name">Embedder</td><td class="file-name">mind/embedder.hpp</td><td class="role-desc">Embedding with LRU cache and circuit breaker</td></tr>
         <tr><td class="class-name">LlamaYantra</td><td class="file-name">vak_llama.hpp</td><td class="role-desc">In-process GGUF embedding through llama.cpp. The default backend</td></tr>
         <tr><td class="class-name">OllamaYantra</td><td class="file-name">vak_ollama.hpp</td><td class="role-desc">HTTP embedding backend, used when no local GGUF is found</td></tr>
         <tr><td class="class-name">Subconscious</td><td class="file-name">mind/subconscious.hpp</td><td class="role-desc">Background thread: patterns, hygiene, demotion, embedding</td></tr>
-        <tr><td class="class-name">NativeDistiller</td><td class="file-name">native_distiller.hpp</td><td class="role-desc">In-daemon transcript distillation, no external model call</td></tr>
+        <tr><td class="class-name">NativeDistiller</td><td class="file-name">native_distiller.hpp</td><td class="role-desc">In-daemon transcript distillation using the configured model endpoint</td></tr>
         <tr><td class="class-name">CodeIntel</td><td class="file-name">code_intel.hpp</td><td class="role-desc">Tree-sitter symbol extraction (9 languages)</td></tr>
         <tr><td class="class-name">QueueProcessor</td><td class="file-name">queue_processor.hpp</td><td class="role-desc">Background embedding and maintenance queue</td></tr>
         <tr><td class="class-name">ThreadPool</td><td class="file-name">rpc/thread_pool.hpp</td><td class="role-desc">Auto-scaling worker pool with watchdog</td></tr>
@@ -397,7 +397,7 @@
 
     <!-- ScoringPipeline -->
     <h3 style="font-family: var(--font-display); font-size: var(--text-xl); color: var(--lotus-200); font-weight: 500; margin-top: var(--space-7); margin-bottom: var(--space-3);" class="reveal">ScoringPipeline <span style="font-size: var(--text-xs); color: var(--ash-400); font-weight: 400;">v5.11+</span></h3>
-    <p style="font-size: var(--text-sm); color: var(--ash-300); line-height: 1.7; max-width: 720px; margin-bottom: var(--space-4);" class="reveal reveal-delay-1">Post-resonance scoring uses a neuroplastic trait-based pipeline of 18 composable factors. Each factor has independent weight, bias, and type-specific parameters. All configuration lives in <code>scoring.json</code> with hot-reload &mdash; no rebuild required to tune scoring behavior.</p>
+    <p style="font-size: var(--text-sm); color: var(--ash-300); line-height: 1.7; max-width: 720px; margin-bottom: var(--space-4);" class="reveal reveal-delay-1">Rust scoring combines similarity with bounded factors configured in <code>scoring.json</code>. The <code>kind_operational</code> prior is 0.8 for verbatim distiller fragments. Independent-session replication weighting defaults to 0 (off); <code>CHITTA_REPLICATION_MAX</code> overrides its cap. See <a href="recall.html">current knobs and admission rules</a>.</p>
 
     <table class="comp-table reveal reveal-delay-2">
       <thead>
@@ -442,11 +442,11 @@
       <div class="section-divider"></div>
       <h2 class="heading-section">Storage Layer</h2>
     </div>
-    <p class="section-intro reveal reveal-delay-1">chitta-field is a pure Rust organic memory substrate, statically linked into the daemon. No external process. No NFS file handles. Each operation is appended to a write-ahead log before applying in-memory, giving crash-safe durability with millisecond recovery on restart.</p>
+    <p class="section-intro reveal reveal-delay-1">chitta-field is an embedded Rust store linked into the daemon. An exclusive instance lock protects each store. Snapshot families and uncovered WAL recover state; ordinary WAL syncs run on a 200 ms timer and explicit durable operations force persistence. Parallel decode and matching sidecars reduce measured warm startup to about 9.5 s, with about 20 s on a first start after deployment. See <a href="chitta-field.html">storage phases and recovery</a>.</p>
 
     <!-- Field paths -->
     <div class="db-paths reveal reveal-delay-2">
-      <span class="path">~/.claude/mind/chitta/chitta-field/</span><br>
+      <span class="path">~/.claude/mind/chitta-field/</span><br>
       &ensp;&ensp;<span class="path">segments/</span> &ensp;<span class="comment">// WAL segment files ({instance_id}_{seqno}.seg)</span><br>
       &ensp;&ensp;<span class="path">manifest.json</span> &ensp;<span class="comment">// Instance registry and seqno tracking</span>
     </div>

@@ -81,7 +81,7 @@
     <div class="page-header-badge reveal">Retrieval</div>
     <h1 class="reveal reveal-delay-1">How recall works.</h1>
     <p class="page-header-sub reveal reveal-delay-2">Retrieval runs in two places. The daemon answers a <code style="color: var(--aura-300);">recall</code> call by widening a candidate pool, over-selecting it with cheap scalar rules, and optionally reranking. The hook that runs on every prompt fans out across several lanes, fuses them, and then decides what is actually allowed into the context window.</p>
-    <p class="status-line">Status as of 2026-09-02.</p>
+    <p class="status-line">Status as of 2026-09-16. Sources: <a href="HOOKS.md">hook contract</a> and <a href="https://github.com/genomewalker/chitta-field/blob/f3176e587dced64dd3a6a663a40a58e3802b0a10/src/scoring/config.rs">pinned scoring defaults</a>.</p>
   </div>
 </header>
 
@@ -188,11 +188,11 @@
             <tr><td><code>smart</code></td><td><code>smart_recall</code></td><td>Multi-lane reciprocal-rank fusion across semantic, typed, spreading-activation and session lanes.</td></tr>
             <tr><td><code>priority</code></td><td><code>recall_by_priority</code></td><td>Priority-tier ordering rather than similarity ordering.</td></tr>
             <tr><td><code>temporal</code></td><td><code>recall_temporal</code></td><td>Time-scoped questions.</td></tr>
-            <tr><td><code>field</code></td><td><code>recall_field</code></td><td>The Hopfield/DAM associative path.</td></tr>
+            <tr><td><code>fused</code></td><td><code>recall</code></td><td>Explicit mapping to the native fused recall tool. The old <code>field</code> value is unrecognized and falls back to native recall.</td></tr>
           </tbody>
         </table>
         <p class="section-intro">Multi-lane fusion uses reciprocal-rank fusion with <em>k</em> = 60. Passing <code>disable_hdc: true</code> skips the hyperdimensional-computing lane; it exists for ablation and benchmarking, not for normal use.</p>
-        <p class="section-intro">Separately, <code>recall_analogy</code> answers structural queries rather than similarity queries &mdash; proportional (<code>a:b::c:?</code>) and relation-shape matching over the triplet lane, using vector-symbolic binding. No model call, no GPU.</p>
+        <p class="section-intro"><code>recall_analogy</code> performs explicit proportional relation transfer (<code>a:b :: c:?</code>) only. Indexed triplets identify the predicates from a to b and return actual outgoing neighbors of c, with supporting edges. Missing relations produce an abstention with a <code>reason</code>. No model call or vector ranking is used. The frozen benchmark returned hit@1 and hit@3 of 14/14, 14/14 negative abstentions and zero unsupported answers; see <a href="EVALS.md#explicit-relation-transfer--2026-09-15">the evidence</a>.</p>
       </div>
     </div>
 
@@ -248,7 +248,7 @@
             <tr><td><code>cap</code></td><td>Over the per-turn budget. The summary line and the confidence tag are reserved space before memories are appended.</td></tr>
           </tbody>
         </table>
-        <p class="section-intro">Two more rules shape what is even considered. A terse negation &mdash; eight words or fewer containing &ldquo;is not&rdquo;, &ldquo;no&rdquo; and similar &mdash; silences every fuzzy lane, because such a turn is almost always correcting the previous turn rather than asking for a topic search, and broad recall there reinforces the negated noun. And a shadow-mode entity check logs, without yet enforcing, whether each semantic candidate shares a distinctive token with the turn.</p>
+        <p class="section-intro">Terse negations and turns with no distinctive tokens skip topic recall lanes. Under UNKNOWN, surviving hybrid, keyword and cross-realm rows must share a distinctive turn token; semantic/context rows require the small-realm exception as well. Keyword rows from a turn with fewer than two distinctive tokens need BM25 at least 60 (<code>CHITTA_KW_SINGLE_TOKEN_MIN</code>). Deterministic correction checks remain separate. The broader semantic entity check still records shadow evidence.</p>
       </div>
     </div>
 
@@ -289,7 +289,7 @@
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
       <div class="tools-content">
-        <p class="section-intro">When a cross-encoder is available, the recall gateway fetches four times the requested limit, scores every query-document pair with <code>cross-encoder/ms-marco-MiniLM-L-6-v2</code>, and returns the top <code>limit</code> by that score. It only engages when the retriever returned more candidates than the caller asked for; otherwise there is nothing to reorder and the call passes straight through.</p>
+        <p class="section-intro">When a cross-encoder is available, the MCP recall gateway fetches four times the requested limit and scores query/document pairs with <code>cross-encoder/ms-marco-MiniLM-L-6-v2</code>. Ranking uses sigmoid(logit) multiplied by the kind envelope <code>0.7 + 0.3 × kind_prior</code>, preserving the distinction between curated corrections and operational fragments. Missing, insufficient or malformed candidate/score output falls back to the daemon's ordering. This gateway stage is separate from native candidate pooling.</p>
         <p class="section-intro">An ONNX int8 export is preferred when <code>CHITTA_RERANK_ONNX_DIR</code> points at one. Thread count and maximum sequence length are set by <code>CHITTA_RERANK_THREADS</code> (8) and <code>CHITTA_RERANK_MAX_LEN</code> (128). If no reranker can be loaded the pipeline runs without it &mdash; the stage is an improvement, not a dependency.</p>
       </div>
     </div>
@@ -301,11 +301,11 @@
           <svg viewBox="0 0 20 20" fill="none"><circle cx="7" cy="7" r="2.5" stroke="#9DB2D9" stroke-width="1"/><circle cx="13" cy="13" r="2.5" stroke="#CBAF86" stroke-width="1"/><path d="M7 9.5 V16 M13 10.5 V4" stroke="#9DB2D9" stroke-width="0.8" opacity="0.5"/></svg>
         </div>
         <span class="tools-category-name">Knobs</span>
-        <span class="tools-category-count">10 variables</span>
+        <span class="tools-category-count">recall and scoring</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
       <div class="tools-content">
-        <p class="section-intro">Every variable below also answers to its historical <code>CC_SOUL_*</code> name; see <a href="https://github.com/genomewalker/chitta/blob/main/docs/RENAME.md" target="_blank" rel="noopener">the rename note</a> for the full alias table.</p>
+        <p class="section-intro">The project was renamed from cc-soul on 2026-09-02; legacy <code>CC_SOUL_*</code> aliases are documented in <a href="RENAME.md">the rename note</a>.</p>
         <table class="comp-table">
           <thead><tr><th>Variable</th><th>Default</th><th>Effect</th></tr></thead>
           <tbody>
@@ -322,6 +322,8 @@
           </tbody>
         </table>
         <p class="section-intro">Set <code>CHITTA_ADMIT_DEBUG=1</code> to get one line on stderr per candidate, showing its lane, confidence, the confidence band, and whether the small-realm relaxation applied.</p>
+        <p class="section-intro">Store scoring reads <code>scoring.json</code>. Kind priors are correction/preference 1.3, wisdom 1.1, insight 1.05, operational 0.8 and episode 0.7. The operational prior ranks verbatim distiller fragments below curated conclusions at equal similarity. These are inputs to the bounded scoring pipeline, not calibrated probabilities.</p>
+        <p class="section-intro"><code>replication_max</code> defaults to 0 (disabled); <code>CHITTA_REPLICATION_MAX</code> overrides it. The opt-in 1.15 cap weights distinct identifiable source sessions, not repeated reads. The measured store had no memories with two independent replications, and the golden delta was zero; no benefit has been established. <code>CHITTA_RECALL_PROFILE=1</code> writes phase timers to stderr.</p>
       </div>
     </div>
 

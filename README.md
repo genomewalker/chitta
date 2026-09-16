@@ -1,8 +1,7 @@
 # Chitta
 
-> Status as of 2026-09-02: project renamed cc-soul → chitta; repo
-> github.com/genomewalker/chitta (old URL redirects); CC_SOUL_* env vars
-> still honored via alias shim — see [docs/RENAME.md](docs/RENAME.md).
+> Status as of 2026-09-16.
+> Renamed from cc-soul on 2026-09-02; legacy CC_SOUL_* aliases remain supported — see [docs/RENAME.md](docs/RENAME.md).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-Plugin-blue.svg)](https://claude.ai/code)
@@ -142,7 +141,7 @@ Persistent agents that work toward goals through continuous **sense-think-act** 
 
 ```bash
 /shepherd snakemake --cores 8 --rerun-incomplete   # pipeline monitoring
-chitta sadhana_start --goal "Monitor until done" --interval 300
+printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"sadhana_start","arguments":{"goal":"Monitor until done","interval_seconds":300}}}' | chitta mcp
 sadhana-tui                                         # real-time TUI
 ```
 
@@ -260,6 +259,25 @@ cd chitta-field && ./build.sh build --release && cd ..
 cd chitta && cmake -B build -DCMAKE_BUILD_TYPE=Release -DCHITTA_WITH_LLAMA_CPP=ON
 cmake --build build --parallel
 ```
+
+## Current behavior
+
+Prompt, SessionStart and Stop use native CLI calls and bash/jq for routine
+recall, session registration, heartbeats and ledger rendering. Task threads,
+inbox, bindings and leases are daemon-owned through `ledger_op`; the Python
+clients remain compatibility and migration interfaces. File reads can surface
+`[traces]`, and script writes produce `[artifact]` signals.
+
+`recall_analogy` transfers an explicit relation (`a:b :: c:?`) using indexed
+triplets and returns a `reason` when it abstains. Recall gives verbatim
+`operational` fragments a 0.8 kind prior; replication weighting is available
+but default-off. See [recall](docs/recall.html) and [hooks](docs/HOOKS.md).
+
+Evolve supports isolated `--candidates N` streams (default 1), selecting among
+passing candidates using measured bet delta, then patch size. The
+[automatic-learning experiment](benchmarks/learning/protocol.md) has an official
+cohort cut at 2026-09-15 23:15 CEST; the prospective 20-task panel and causal
+verdict remain pending. See [evaluation status](docs/EVALS.md).
 
 ## Measurement
 

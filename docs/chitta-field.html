@@ -374,8 +374,8 @@
   <div class="container">
     <div class="page-header-badge reveal">Memory Substrate</div>
     <h1 class="reveal reveal-delay-1"><span style="font-style:italic">chitta-field</span></h1>
-    <p class="page-header-sub reveal reveal-delay-2">A pure Rust organic memory substrate&thinsp;&mdash;&thinsp;sparse associative codes, write-ahead log, multi-writer, sub-millisecond recall. No external database. No NFS locks.</p>
-    <p class="reveal reveal-delay-2" style="font-family: var(--font-mono); font-size: var(--text-xs); color: #565f89; margin-top: var(--space-3);">Status as of 2026-09-02.</p>
+    <p class="page-header-sub reveal reveal-delay-2">A Rust memory substrate with sparse and dense indexes, a write-ahead log and snapshot families. One daemon owns each store; many agent sessions share it.</p>
+    <p class="reveal reveal-delay-2" style="font-family: var(--font-mono); font-size: var(--text-xs); color: #565f89; margin-top: var(--space-3);">Status as of 2026-09-16. <a href="FIELD_PERF.md">Performance evidence</a> · <a href="CLI.md#startup-sidecars-and-instance-lock">Startup and lock recovery</a>.</p>
   </div>
 </header>
 
@@ -386,7 +386,7 @@
     <a href="#sparse"     class="submenu-toc-link" data-section="sparse">Sparse Codes</a>
     <a href="#wal"        class="submenu-toc-link" data-section="wal">Write-Ahead Log</a>
     <a href="#cortical"   class="submenu-toc-link" data-section="cortical">Cortical Index</a>
-    <a href="#multiwrite" class="submenu-toc-link" data-section="multiwrite">Multi-Writer</a>
+    <a href="#multiwrite" class="submenu-toc-link" data-section="multiwrite">Store Ownership</a>
     <a href="#decay"      class="submenu-toc-link" data-section="decay">Organic Decay</a>
     <a href="#fep"        class="submenu-toc-link" data-section="fep">FEP Attractors</a>
     <a href="#why-not-flat-files" class="submenu-toc-link" data-section="why-not-flat-files">Why Not Flat Files</a>
@@ -478,7 +478,7 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
 <section class="cf-page-section" id="wal">
   <div class="container">
     <div class="reveal"><div class="section-divider"></div><h2 class="heading-section">Write-ahead log</h2></div>
-    <p class="section-intro reveal reveal-delay-1">Every state change is an <code>Op</code> — a typed, serializable operation. Ops are appended to a segment file before they are applied in-memory. On restart, the daemon replays all segments in order and the field rebuilds in milliseconds from the WAL alone. No snapshots. No checkpoints. Just the log.</p>
+    <p class="section-intro reveal reveal-delay-1">State changes are typed operations appended to the WAL. Startup loads a committed snapshot family and replays uncovered WAL records, rebuilding or loading derived indexes. Snapshot decode runs in parallel; recovery time depends on the store and cache state.</p>
 
     <!-- WAL entry format -->
     <div class="wal-entry reveal reveal-delay-2">
@@ -511,12 +511,12 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
 
     <div class="two-col">
       <div class="cf-prose reveal reveal-delay-3">
-        <p><strong>Durability</strong>: the write buffer is flushed to the OS after every append. An Op that returned a seqno is guaranteed to survive a crash.</p>
+        <p><strong>Durability</strong>: ordinary WAL syncs run on a timer (200 ms by default, <code>CHITTA_WAL_SYNC_MS</code>). Explicit durable operations force persistence. A returned sequence number alone is not a guarantee against power loss before the next sync.</p>
         <p><strong>Integrity</strong>: each entry carries a CRC32 over <code>[seqno][op_type][payload]</code>. On replay, a mismatch aborts with a <code>CrcMismatch</code> error rather than silently accepting corrupted state.</p>
         <p><strong>Segment rotation</strong>: segments rotate at 256 MB. Segment filenames encode instance ID and first seqno: <code>{instance_id:08x}_{first_seqno:012}.seg</code>. This makes ordering unambiguous across multiple writers.</p>
       </div>
       <div class="cf-code reveal reveal-delay-4">
-<span class="cm">~/.claude/mind/chitta/chitta-field/segments/</span>
+<span class="cm">~/.claude/mind/chitta-field/segments/</span>
 <span class="str">00000001_000000000000.seg</span>  <span class="cm">// instance 1, starts at seqno 0</span>
 <span class="str">00000001_000000012847.seg</span>  <span class="cm">// instance 1, rotated at 12847</span>
 <span class="str">00000002_000000000000.seg</span>  <span class="cm">// instance 2, separate writer</span>
@@ -536,28 +536,28 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
 <section class="cf-page-section alt-bg" id="ann-sidecars">
   <div class="container">
     <div class="reveal"><div class="section-divider"></div><h2 class="heading-section">Semantic ANN sidecars</h2></div>
-    <p class="section-intro reveal reveal-delay-1">Dense semantic search is handled by HNSW graphs and binary codes stored in flat binary sidecars alongside the snapshot. This separates fast-path ANN data from the main bincode payload, shrinking checkpoint I/O and opening the door to mmap-based loading at 1M-memory scale.</p>
+    <p class="section-intro reveal reveal-delay-1">Snapshot families separate payloads and embeddings from derived search caches. Matching sidecars avoid rebuilding normalized search state and event organs. A missing or incompatible derived cache is rebuilt; it is not authoritative memory data.</p>
 
     <div class="cf-table-wrap reveal reveal-delay-2">
       <table class="cf-table">
-        <thead><tr><th>Sidecar</th><th>Format</th><th>Size at 1M</th><th>Purpose</th></tr></thead>
+        <thead><tr><th>Sidecar</th><th>Contents</th><th>Identity</th><th>Purpose</th></tr></thead>
         <tbody>
-          <tr><td><code>.emb</code></td><td>magic(8) + count(8) + {id:u64, f32×256}×N</td><td>~1 GB</td><td>Raw dense embeddings for ANN + rescore</td></tr>
-          <tr><td><code>.bin</code></td><td>magic(8) + count(8) + {id:u64, u64×4}×N</td><td>~40 MB</td><td>Binary sparse codes for Hamming pre-filter</td></tr>
-          <tr><td><code>.hnsw</code></td><td>bincode-serialized HnswGraph</td><td>~200 MB</td><td>Base HNSW graph (up to HNSW_TIER2_THRESHOLD)</td></tr>
-          <tr><td><code>.delta.hnsw</code></td><td>bincode-serialized HnswGraph</td><td>&lt;20 MB</td><td>Delta tier — new inserts above 100K, merged at checkpoint</td></tr>
+          <tr><td><code>.emb</code></td><td>Dense embeddings</td><td>Compiled model dimension</td><td>Vectors for search and rescoring</td></tr>
+          <tr><td><code>.lsh</code></td><td>Normalized search state</td><td>Snapshot family</td><td>Reuse derived semantic state at startup</td></tr>
+          <tr><td><code>.turbo</code></td><td>Quantized index cache</td><td>Snapshot family</td><td>Avoid a full synchronous index rebuild</td></tr>
+          <tr><td><code>.organs</code></td><td>Derived event organs</td><td>Snapshot family</td><td>Reuse reconstructed event-tape structures</td></tr>
         </tbody>
       </table>
     </div>
 
     <div class="cf-subsections reveal reveal-delay-3">
       <div class="cf-subsection">
-        <h3>Two-tier HNSW</h3>
-        <p>Below 100&thinsp;K memories, all inserts go to the single base graph. Above that threshold (<code>HNSW_TIER2_THRESHOLD</code>), new inserts route to a small <em>delta graph</em> — O(log N<sub>delta</sub>) insert cost instead of O(log N<sub>total</sub>). At checkpoint, when the delta exceeds 10% of base size (<code>HNSW_DELTA_MERGE_RATIO</code>), it is merged back into the base. Search queries both tiers and merges results via reciprocal rank fusion.</p>
+        <h3>Startup phases</h3>
+        <p>Parallel snapshot decode overlaps triplet reconstruction; keyword reconstruction overlaps semantic-index startup. Logs expose <code>load phase=&lt;name&gt; ms=</code> and <code>cache hit=</code>. Overlapping phases cannot be summed into wall time. See <a href="FIELD_PERF.md">measured phases and unresolved targets</a>.</p>
       </div>
       <div class="cf-subsection">
-        <h3>Hamming pre-filter</h3>
-        <p>Every memory's embedding is binarized (sign bit per dimension) into 4 × u64 words. A Hamming scan over the full <code>.bin</code> sidecar selects the top 400 candidates; only those candidates are rescored with full float cosine. At 54K memories this is a 0.74% scan — strong recall at minimal CPU cost.</p>
+        <h3>Readiness and maintenance</h3>
+        <p>The quantized index can finish rebuilding on the maintenance thread a few seconds after <code>ready</code>. Wait 30 s after restart before measuring recall. Warm startup around 9.5 s and first-start time around 20 s describe the measured deployment, not a guarantee for every store.</p>
       </div>
     </div>
   </div>
@@ -621,14 +621,14 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
 <!-- ═══ MULTI-WRITER ═══ -->
 <section class="cf-page-section" id="multiwrite">
   <div class="container">
-    <div class="reveal"><div class="section-divider"></div><h2 class="heading-section">Multi-writer design</h2></div>
-    <p class="section-intro reveal reveal-delay-1">Multiple Claude Code windows can write to the same chitta-field simultaneously. Each daemon instance gets a unique 32-bit instance ID and writes exclusively to its own segment files. There is no shared write lock. No WAL contention. Readers replay all segments sorted alphabetically — the interleaving is always deterministic.</p>
+    <div class="reveal"><div class="section-divider"></div><h2 class="heading-section">Store ownership and recovery</h2></div>
+    <p class="section-intro reveal reveal-delay-1">Multiple agent sessions send requests to one daemon. The store holds an exclusive <code>.instance.lock</code>; a second daemon must use a private copy. Instance-prefixed segment names support WAL provenance and replay, not concurrent daemons opening the same mind directory.</p>
 
     <div class="two-col">
       <div class="cf-prose reveal reveal-delay-2">
-        <p>This model is called <strong>Upanishads-style concurrency</strong>: one source, many windows onto it. Each writer is authoritative for its own segment range; no writer can corrupt another's data. Readers see a merged view by replaying all segment files in order.</p>
+        <p>A stale lock is replaced automatically only when its recorded PID belongs to this host and is dead. A live or other-host owner must not be removed. Open failures log their reason. Operator recovery requires establishing that no daemon owns the store before moving a stale lock aside.</p>
         <p>On startup, <code>OpLog::open()</code> scans the segments directory, finds the last segment for this instance ID, and continues appending there. If the last segment is at or above 256 MB, a new segment is created.</p>
-        <p>The manifest tracks the maximum seqno seen per instance, so a new instance knows where to start its own sequence without colliding with others.</p>
+        <p>The service allows <code>TimeoutStopSec=300</code> for a clean snapshot on shutdown. Startup on the measured live store is about 9.5 s with sidecar hits and about 20 s on the first start after deployment or a format change.</p>
       </div>
       <div class="cf-code reveal reveal-delay-3">
 <span class="cm">// Each instance owns its own segment files</span>
@@ -636,7 +636,7 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
 <span class="str">00000001_000000000000.seg</span>
 <span class="str">00000001_000000018432.seg</span>  <span class="cm">// rotated</span>
 
-<span class="cm">// Writer 2 (different Claude window):</span>
+<span class="cm">// A previous daemon instance's retained segment:</span>
 <span class="str">00000002_000000000000.seg</span>
 
 <span class="cm">// Reader sees all, sorted:</span>
@@ -644,8 +644,8 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
 <span class="str">00000001_000000018432.seg</span>
 <span class="str">00000002_000000000000.seg</span>  <span class="cm">// interleaved</span>
 
-<span class="cm">// No locks. No contention.</span>
-<span class="cm">// Each instance_id prefix is globally unique.</span>
+<span class="cm">// One exclusive .instance.lock per store.</span>
+<span class="cm">// Agent sessions share the owning daemon via RPC.</span>
       </div>
     </div>
   </div>
@@ -769,7 +769,7 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
       </div>
       <div class="cf-card">
         <h4 class="cf-card-title">Multi-writer without merge conflicts</h4>
-        <p class="cf-card-desc">Multiple Claude windows sharing one <code>MEMORY.md</code> produce merge conflicts. chitta-field gives each process its own <code>{instance_id}.seg</code> segment file. Readers replay all segments in sequence-number order. No locking, no conflicts, no D-state on NFS.</p>
+        <p class="cf-card-desc">Claude Code and Codex sessions share the daemon over RPC. Its instance lock excludes a second owner of the same store; frozen evaluation runs use separate copied stores. Storage can reside on NFS, so filesystem stalls remain possible.</p>
       </div>
       <div class="cf-card">
         <h4 class="cf-card-title">Flat files still matter</h4>
@@ -989,19 +989,19 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
       </div>
       <div class="cf-card">
         <h4 class="cf-card-title">FieldRpcHandler</h4>
-        <p class="cf-card-desc">The RPC handler that registers all 319 daemon tools wraps <code>FieldStore</code> via the FFI. <code>FieldRpcHandler</code> in <code>rpc/field_handler.hpp</code> is the sole RPC handler for all memory operations.</p>
+        <p class="cf-card-desc"><code>FieldRpcHandler</code> in <code>rpc/field_handler.hpp</code> wraps the Rust store through FFI. See the generated <a href="tools.html">tool reference</a> for MCP and native CLI discovery.</p>
       </div>
     </div>
 
     <div class="cf-code reveal reveal-delay-3" style="margin-top:var(--space-6)">
 <span class="cm">// Build from source (git clone with submodule)</span>
 git clone --recurse-submodules https://github.com/genomewalker/chitta.git
+cd chitta
 <span class="cm">// Build chitta-field (Rust, requires 1.92+)</span>
 cd chitta-field &amp;&amp; ./build.sh build --release &amp;&amp; cd ..
-<span class="cm">// Build the daemon (C++17 + ONNX Runtime)</span>
-cd chitta &amp;&amp; mkdir build &amp;&amp; cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-make -j$(nproc)
+<span class="cm">// Build the daemon (C++20 + llama.cpp)</span>
+cmake -S chitta -B chitta/build -DCMAKE_BUILD_TYPE=Release -DCHITTA_WITH_LLAMA_CPP=ON
+cmake --build chitta/build --parallel
 <span class="cm">// Or use the all-in-one installer:</span>
 ./scripts/smart-install.sh
     </div>
@@ -1033,7 +1033,7 @@ make -j$(nproc)
 <section class="closing">
   <div class="container">
     <h2 class="closing-title heading-display reveal">Memory that behaves like memory.</h2>
-    <p class="closing-body reveal reveal-delay-1">No external database. No NFS handles. No D-state. Just a field of patterns, each memory a sparse activation, decaying and strengthening over time.</p>
+    <p class="closing-body reveal reveal-delay-1">An embedded Rust store with durable snapshots and WAL, derived search indexes and explicit ownership. Memories can decay and strengthen over time while sessions share one daemon.</p>
     <div class="reveal reveal-delay-2">
       <a href="https://github.com/genomewalker/chitta-field" target="_blank" rel="noopener" class="btn btn-primary">Explore the source</a>
     </div>

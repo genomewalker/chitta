@@ -86,14 +86,15 @@
   <div class="container">
     <div class="reveal whats-new-card">
       <div class="whats-new-header">
-        <span class="whats-new-badge">New in v5.72.0</span>
+        <span class="whats-new-badge">Status as of 2026-09-16 · Unreleased + v5.72.0</span>
       </div>
-      <p class="whats-new-title">Renamed to chitta, and a measurably better recall path</p>
+      <p class="whats-new-title">Native hooks, faster startup, explicit relation transfer</p>
       <p class="whats-new-desc">
         <strong>The project is now chitta.</strong> Plugin, marketplace and repository moved to the name the binaries always had. Every <code>CC_SOUL_*</code> variable, stored realm and existing store keeps working through an alias shim &mdash; see the <a href="https://github.com/genomewalker/chitta/blob/main/docs/RENAME.md" class="link-sandal" target="_blank" rel="noopener">rename note</a> for the three migration commands.
         <strong>Recall-biased pre-filter.</strong> Recall now widens the candidate pool and over-selects it with cheap scalar rules instead of cutting at the top of the ranking. On the 30-query golden set, mean nDCG@20 went from 0.435 to 0.487. <a href="recall.html" class="link-sandal">How recall works &rarr;</a>
         <strong>SMRITI-Bench.</strong> A benchmark that asks whether memory changes an objective pass/fail check and its token cost, rather than scoring conversational recall. First matrix: 23/27 tasks passed without memory, 27/27 with, at roughly half the tokens. <a href="benchmarks.html" class="link-sandal">Protocol and caveats &rarr;</a>
-        <strong>An analogy lane</strong> answers <code>a:b::c:?</code> and relation-shape queries over the triplet graph, with no model call and no GPU.
+        <strong>Relation transfer</strong> answers <code>a:b::c:?</code> through actual indexed graph edges and explains abstentions: 14/14 positive hits and 14/14 negative abstentions on the frozen benchmark.
+        <strong>Native hooks and startup.</strong> Routine lifecycle paths use bash/jq and the CLI; task ledgers are daemon-owned. Snapshot sidecars and parallel decode bring measured warm startup to about 9.5 s. Replication weighting remains default-off. Evolve offers opt-in <code>--candidates N</code> streams; the automatic-learning experiment's prospective panel is still pending.
         <a href="changelog.html" class="link-sandal">See the changelog &rarr;</a>
       </p>
     </div>
@@ -329,9 +330,9 @@
 
     <div class="chitta-field-body">
       <div class="chitta-field-prose reveal reveal-delay-1">
-        <p>Under the hood, chitta stores nothing in a database. Memory lives in <strong>chitta-field</strong> &mdash; a pure Rust substrate compiled directly into the daemon. No external server. No network socket. No NFS file handles.</p>
+        <p>Memory lives in <strong>chitta-field</strong>, an embedded Rust store linked into the daemon. Claude Code and Codex sessions share the daemon over RPC; one daemon owns each store through an instance lock.</p>
         <p>Each memory is encoded as a <em>sparse code</em>: exactly 64 of 16,384 feature dimensions activate. Recall is driven by overlap between patterns, not keyword matching. Related memories find each other because they share activated neurons &mdash; the same way biological associative memory works.</p>
-        <p>Every write is durable before it applies in memory. A write-ahead log captures every operation. Restart the daemon at any point; the field rebuilds from the log in milliseconds.</p>
+        <p>Snapshots and uncovered write-ahead log records recover the store. Ordinary WAL syncs are batched on a 200 ms timer; explicit durable operations force persistence. Warm sidecar startup measured about 9.5 s on the current live store, with about 20 s for the first start after deployment.</p>
       </div>
 
       <div class="chitta-field-stats reveal reveal-delay-2">
@@ -368,7 +369,7 @@
     <div class="cf-details reveal reveal-delay-2">
       <div class="cf-detail-card">
         <h4 class="cf-detail-title">Write-Ahead Log</h4>
-        <p class="cf-detail-desc">Every operation is appended to a segment file before applying in-memory. CRC-validated. Segment rotation at 256 MB. Multi-writer safe: each Claude instance owns its own segment.</p>
+        <p class="cf-detail-desc">Operations are logged in CRC-validated segments. Snapshot families plus uncovered WAL recover the store. Multiple agent sessions share one owning daemon; ordinary syncs are batched.</p>
       </div>
       <div class="cf-detail-card">
         <h4 class="cf-detail-title">Cortical Posting Index</h4>

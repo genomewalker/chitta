@@ -1,6 +1,6 @@
 # chitta Philosophy
 
-Status as of 2026-09-02.
+Status as of 2026-09-16.
 
 chitta draws from Vedantic philosophy to create a coherent model of artificial memory and identity. This document explores the philosophical foundations and how they map to technical implementation.
 
@@ -82,21 +82,18 @@ Each Claude session is an Ātman — assigned a unique `InstanceId` at startup. 
 
 ### chitta-field as Shared Field
 
-chitta-field implements the Brahman/Ātman model through per-instance segment files and a shared data directory — no cross-process locking required:
+The shared-field metaphor maps to many sessions using one daemon. An exclusive instance lock protects each store directory:
 
 ```rust
-// Each process owns its segment file exclusively:
-//   ~/.claude/mind/chitta-field/{instance_id}_{first_seqno}.seg
-//
-// On open, all segments are replayed in seqno order → shared in-RAM state.
-// New writers append to their own segment; no fencing, no lock manager.
+// One daemon owns ~/.claude/mind/chitta-field/.instance.lock.
+// Sessions share that daemon through RPC.
+// Startup restores a snapshot family plus uncovered WAL records.
 
 let field = ChittaField::open("/path/to/field-dir")?;
-// Full in-RAM state reconstructed from all segment files on disk.
-// field.put_memory(...) appends to this instance's segment only.
+// A second daemon must use a separate directory, such as an eval copy.
 ```
 
-The shared field directory is the mechanism by which individual experiences (Ātman) become universal knowledge (Brahman). Each instance's append-only segment ensures that concurrent writers never corrupt each other's observations.
+The daemon's shared state is how individual experiences (Ātman) can become reusable knowledge (Brahman). Realm scoping controls visibility; the metaphor does not waive ownership or persistence constraints. See [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ### Realms
 
@@ -179,23 +176,22 @@ chitta-field/           ← Rust organic memory substrate (the substrate of Chit
 
 chitta/                 ← C++ daemon that links libchitta_field.a
 ├── include/chitta/
+│   ├── field_store.hpp       # Rust FFI wrapper
 │   ├── mind/
-│   │   ├── duckdb_mind.hpp    # Orchestrator: remember, recall, resonate, self-tune
 │   │   ├── embedder.hpp       # Embedding pipeline (LRU cache, circuit breaker)
 │   │   └── subconscious.hpp   # Background processor
 │   ├── rpc/
-│   │   ├── duckdb_handler.hpp # 100+ RPC tools (calls chitta-field via FFI)
+│   │   ├── field_handler.hpp # RPC dispatch over chitta-field
 │   │   ├── protocol.hpp       # JSON-RPC 2.0 protocol
 │   │   └── thread_pool.hpp    # Auto-scaling worker pool
 │   ├── vak.hpp                # Embedding abstractions (Vāk = speech)
-│   ├── vak_onnx.hpp           # ONNX Runtime embedder
+│   ├── vak_llama.hpp          # GGUF embeddings through llama.cpp
 │   ├── code_intel.hpp         # Tree-sitter code intelligence
-│   ├── theme_manager.hpp      # xMemory hierarchical themes
 │   ├── provenance.hpp         # Knowledge provenance tracking
 │   └── quantized.hpp          # Vector quantization (int8, binary)
 ```
 
-The name isn't arbitrary — it reflects the system's purpose as a **substrate for persistent patterns**, where every memory is a 768-dimensional embedding anchored in latent semantic space.
+The name reflects the system's purpose as a **substrate for persistent patterns**. Dense vectors follow the compiled embedding identity: 768 dimensions on the measured deployment and 1024 in public defaults. Sparse codes, graph edges and metadata complement those vectors.
 
 ---
 

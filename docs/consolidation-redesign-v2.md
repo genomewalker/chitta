@@ -1,6 +1,7 @@
 # Consolidation/recall stall — corrected analysis (v2, supersedes v1 premise)
 
-> **Status as of 2026-09-02.** Current analysis. Supersedes
+> **Deprecated in place. Status as of 2026-09-16.** Historical lock analysis; current read-path and startup fixes are in [FIELD_PERF.md](FIELD_PERF.md).
+> At the time this superseded
 > [consolidation-redesign.md](consolidation-redesign.md), which targets the wrong
 > layer. Line references below point at the tree as of 2026-06-02 and may have
 > drifted; the argument has not been re-verified against the current tree.

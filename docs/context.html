@@ -210,7 +210,7 @@
     <div class="page-header-badge reveal">Context Management</div>
     <h1 class="reveal reveal-delay-1">The soul knows what it already knows.</h1>
     <p class="page-header-sub reveal reveal-delay-2">Generic compaction drops tokens. Chitta drops turns whose knowledge is already in memory — keeping what&rsquo;s novel, releasing what&rsquo;s learned.</p>
-    <p class="reveal reveal-delay-2" style="font-family: var(--font-mono); font-size: var(--text-xs); color: #565f89; margin-top: var(--space-3);">Status as of 2026-09-02.</p>
+    <p class="reveal reveal-delay-2" style="font-family: var(--font-mono); font-size: var(--text-xs); color: #565f89; margin-top: var(--space-3);">Status as of 2026-09-16. <a href="HOOKS.md">Hook lifecycle</a> · <a href="API.md">Tool contract</a>.</p>
   </div>
 </header>
 
@@ -298,7 +298,7 @@
           <div class="pipeline-num">2</div>
           <div class="pipeline-body">
             <div class="pipeline-title">Pre-embed all messages once</div>
-            <div class="pipeline-desc">VakYantra ONNX embedder runs locally (~1ms/message). Embeddings cached per message — used for both semantic_sim and memory_coverage without re-computing.</div>
+            <div class="pipeline-desc">The configured daemon embedder produces vectors, normally through an in-process GGUF model and llama.cpp. Per-message embeddings are reused for semantic similarity and memory coverage. Dimensions follow the compiled model identity; there is no fixed one-millisecond guarantee.</div>
           </div>
         </div>
         <div class="pipeline-step">
@@ -354,7 +354,7 @@
             <tr><td>messages</td><td>array</td><td>yes</td><td>Conversation turns <code>[{role, content}]</code> — OpenAI/Claude format</td></tr>
             <tr><td>query</td><td>string</td><td>no</td><td>Upcoming task hint — biases semantic scoring toward what&rsquo;s needed next</td></tr>
             <tr><td>target_ratio</td><td>float</td><td>no</td><td>Fraction of tokens to <strong>keep</strong> (default: 0.4, range: 0.05–1.0)</td></tr>
-            <tr><td>distill_novel</td><td>boolean</td><td>no</td><td>Distil messages that are about to be dropped and whose content is not already covered by memory, into soul memories first. The pass is implemented in <code>compact.cpp</code> and needs an embedder; the published schema still labels the parameter reserved, so treat it as unsupported until that label is removed</td></tr>
+            <tr><td>distill_novel</td><td>boolean</td><td>no</td><td>Optional daemon pass, default false; requires an embedder and store. Records a capped excerpt of qualifying dropped turns. The advertised schema still calls it reserved; the PreCompact hook does not enable it.</td></tr>
           </tbody>
         </table>
       </div>
@@ -388,7 +388,7 @@
     <!-- HOOK INTEGRATION -->
     <section class="content-section reveal">
       <h2 class="heading-2">Hook integration</h2>
-      <p>Chitta wires <code>compact_context</code> into the <strong>PreCompact</strong> hook automatically. When Claude Code is about to compact the conversation, chitta:</p>
+      <p>The <strong>PreCompact</strong> hook calls <code>compact_context</code> for memory-aware scoring and records statistics. It does not replace the harness transcript with returned messages or control the harness's own compaction. Its current flow:</p>
 
       <div class="pipeline">
         <div class="pipeline-step">
@@ -415,8 +415,8 @@
         <div class="pipeline-step">
           <div class="pipeline-num">4</div>
           <div class="pipeline-body">
-            <div class="pipeline-title">Continues with distillation</div>
-            <div class="pipeline-desc">The existing <code>distill_trigger</code> pipeline then extracts wisdom from the surviving turns before the window closes.</div>
+            <div class="pipeline-title">Returns to the harness</div>
+            <div class="pipeline-desc">The hook finishes after recording valid statistics. Transcript distillation is a separate lifecycle path; this response does not rewrite the active conversation.</div>
           </div>
         </div>
       </div>
@@ -430,9 +430,9 @@ echo "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name
 
     <!-- COMING SOON -->
     <section class="content-section reveal">
-      <h2 class="heading-2">Coming: distill_novel</h2>
-      <p>When <code>distill_novel: true</code> is enabled, turns that score low AND have low memory coverage (novel content not yet in chitta) will be distilled into memories <em>before</em> being dropped. This means <strong>nothing is lost</strong> — novel knowledge is compressed into the memory graph rather than discarded.</p>
-      <p>The pipeline becomes: <em>score → detect novel drops → distill to memory → then drop verbatim text</em>. The context shrinks; the soul grows.</p>
+      <h2 class="heading-2">Optional recording of novel drops</h2>
+      <p>The daemon implements <code>distill_novel: true</code> in <code>compact.cpp</code>, default false. With an embedder and store, it classifies dropped turns by a substring heuristic, skips turns shorter than 40 characters or already covered by memory, and records at most the first 600 characters with a provenance prefix.</p>
+      <p>This is a bounded excerpt, not lossless preservation or LLM summarization. The hook does not enable the option. Retain the source transcript when exact evidence matters.</p>
     </section>
 
   </div>

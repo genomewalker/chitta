@@ -118,7 +118,7 @@
     <div class="page-header-badge reveal">Hook System</div>
     <h1 class="reveal reveal-delay-1">Lifecycle-aware memory.</h1>
     <p class="page-header-sub reveal reveal-delay-2">Hooks inject memories at the right moment. Individual scripts in <code style="color: var(--aura-300);">hooks/</code> handle each lifecycle event, configured via <code style="color: var(--aura-300);">hooks.json</code> (plugin) or <code style="color: var(--aura-300);">~/.claude/settings.json</code> (standalone).</p>
-    <p class="reveal reveal-delay-2" style="font-family: var(--font-mono); font-size: var(--text-xs); color: #565f89; margin-top: var(--space-3);">Status as of 2026-09-02.</p>
+    <p class="reveal reveal-delay-2" style="font-family: var(--font-mono); font-size: var(--text-xs); color: #565f89; margin-top: var(--space-3);">Status as of 2026-09-16. <a href="HOOKS.md">Canonical hook contract and measurements</a>.</p>
   </div>
 </header>
 
@@ -159,7 +159,7 @@
             </div>
             <div class="mapping-actions">
               <ul>
-                <li>Realm detection from environment, <code>.cc-soul-realm</code>, or git repo</li>
+                <li>Realm detection from environment, the realm marker, or git repo; linked worktrees use the main checkout's realm. The marker keeps its pre-rename spelling; see <a href="RENAME.md">migration notes</a>.</li>
                 <li>Incremental codebase re-indexing (only changed files)</li>
                 <li>Transcript registration for distillation tracking</li>
                 <li>Soul context + user profile injection into system prompt</li>
@@ -225,7 +225,7 @@
             <div class="mapping-actions">
               <ul>
                 <li>Surface relevant file memories for the file being read or edited</li>
-                <li>Past decisions and gotchas associated with the target file</li>
+                <li>Past decisions and gotchas associated with the target file; the first Read per session can add <code>[traces]</code> from memories naming that file (<code>CHITTA_FILE_TRACES=0</code> disables).</li>
                 <li>Command corrections for Bash &mdash; warn about known failure patterns</li>
               </ul>
             </div>
@@ -239,7 +239,7 @@
             <div class="mapping-actions">
               <ul>
                 <li>Log the command that ran, and append its outcome to the outcome ledger</li>
-                <li>Record memory-shaped written content as signals in memory</li>
+                <li><code>artifact-trace.sh</code> records newly written scripts as <code>[artifact] path sha:… purpose:…</code> signals for later reuse.</li>
               </ul>
             </div>
           </div>
@@ -415,7 +415,7 @@
           <svg viewBox="0 0 20 20" fill="none"><path d="M4 4 L10 4 L10 8 L16 8 L16 16 L4 16 Z" stroke="#9DB2D9" stroke-width="1.2"/><line x1="7" y1="11" x2="13" y2="11" stroke="#9DB2D9" stroke-width="0.75" opacity="0.5"/><line x1="7" y1="13" x2="11" y2="13" stroke="#9DB2D9" stroke-width="0.75" opacity="0.5"/></svg>
         </div>
         <span class="tools-category-name">Key Scripts</span>
-        <span class="tools-category-count">10 scripts</span>
+        <span class="tools-category-count">11 scripts</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
       <div class="tools-list">
@@ -424,7 +424,8 @@
         <div class="tool-row reveal"><span class="tool-name">stop-hook.sh</span><span class="tool-desc">Stop handler &mdash; auto-learning extraction, correction/preference/milestone detection, anticipation recording, ledger save, auto-checkpoint.</span></div>
         <div class="tool-row reveal"><span class="tool-name">pre-compact-hook.sh</span><span class="tool-desc">PreCompact handler &mdash; saves ledger checkpoint before context compaction.</span></div>
         <div class="tool-row reveal"><span class="tool-name">pre-tool-hook.sh</span><span class="tool-desc">PreToolUse handler &mdash; blocks destructive commands (exit 2), rewrites and executes compact alternatives for large files, injects pattern-based corrections from memory.</span></div>
-        <div class="tool-row reveal"><span class="tool-name">post-bash-hook.sh</span><span class="tool-desc">PostToolUse handler &mdash; records significant file changes as signals.</span></div>
+        <div class="tool-row reveal"><span class="tool-name">post-bash-hook.sh</span><span class="tool-desc">PostToolUse:Bash handler &mdash; records command outcomes. Codex supplies no exit code: record null plus a likely_fail text heuristic, never infer success.</span></div>
+        <div class="tool-row reveal"><span class="tool-name">artifact-trace.sh</span><span class="tool-desc">PostToolUse:Write &mdash; records reusable script artifacts with path, hash and purpose.</span></div>
         <div class="tool-row reveal"><span class="tool-name">log-bash-history.sh</span><span class="tool-desc">PostToolUse async handler &mdash; appends every Bash command to history for pattern learning.</span></div>
         <div class="tool-row reveal"><span class="tool-name">memory-intercept.sh</span><span class="tool-desc">PostToolUse:Write async handler &mdash; captures Write operations to learn what you build.</span></div>
         <div class="tool-row reveal"><span class="tool-name">subconscious.sh</span><span class="tool-desc">Daemon lifecycle management &mdash; start, stop, restart, status, and health checks for the <code style="color: var(--aura-300);">chittad</code> background process.</span></div>
@@ -506,6 +507,14 @@
 </section>
 
 <!-- BACK -->
+<section class="tools-section" id="native-lifecycle">
+  <div class="container">
+    <h2>Native lifecycle and daemon ledger</h2>
+    <p>Since September 15, ordinary prompt, SessionStart and Stop paths use bash/jq and native <code>chitta</code> calls for query cleanup, RPC parsing, registration, heartbeats and task cards. Explicit RLM or opt-in background features can still use Python. Measured prompt median fell from 822 to 635 ms and SessionStart from 693 to 599 ms on the loaded test node; these are measurements, not fixed budgets.</p>
+    <p><code>ledger_op</code> owns task threads, inbox, artifacts, bindings and leases in the daemon WAL and snapshots. Hooks call <code>session_register</code>, <code>session_heartbeat</code> and <code>ledger_op</code> directly. Python registry and ledger modules remain compatibility clients. Failed heartbeats are queued in the private mind's <code>queue.jsonl</code>.</p>
+    <p><code>CHITTA_SOCKET_PATH</code> selects the daemon. The default socket is derived from the mind path and runtime directory. Test runs must isolate HOME, runtime, mind, queue and socket together. See <a href="HOOKS.md">HOOKS.md</a> for routing, enforcement, environment variables and full latency evidence.</p>
+  </div>
+</section>
 <section class="back-section">
   <div class="container">
     <a href="index.html" class="back-link">&larr; Back to chitta</a>

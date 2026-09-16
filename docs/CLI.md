@@ -1,7 +1,20 @@
 # chitta CLI Reference
 
+Status as of 2026-09-16.
+
 `chittad` is the daemon binary (memory server, background processing, Unix socket listener).
-The `chitta` client binary is a separate tool not covered by `simple_cli.cpp`; this document covers `chittad` commands only.
+The `chitta` client is implemented in `chitta/src/rpc_server.cpp`. Run
+`chitta --help` for categories and `chitta <tool> --help` for parameters.
+Global client options include `--socket-path PATH`, `--json`, `--toon`,
+`--text-only` and `--help`. `CHITTA_SOCKET_PATH` selects a private daemon.
+The [API reference](API.md) covers MCP tools and the additional native CLI surface.
+
+```bash
+chitta recall --query "snapshot sidecars" --limit 5
+chitta recall_analogy --a "source" --b "target" --c "related entity"
+chitta health_check --json
+chitta ledger_op --help
+```
 
 ---
 
@@ -48,21 +61,21 @@ chittad daemon [options]
 | `--interval SECS` | Maintenance cycle interval | `60` |
 | `-f, --foreground` | Run in foreground (no daemonize) | Off |
 | `--verbose` | Verbose logging | Off |
-| `--distill-interval SECS` | Distillation check interval (seconds) | `900` (15 min) |
-| `--distill-min-turns N` | Minimum turns before distillation fires | — |
-| `--distill-script PATH` | Custom distillation script | — |
+| `--distill-interval MINS` | Distillation check interval (minutes) | `15` |
+| `--distill-min-turns N` | Minimum turns before distillation fires | `4` |
+| `--distill-script PATH` | Accepted and ignored; distillation is native C++ | — |
 | `--distill-model MODEL` | Model for distillation | `gemma4:26b` |
-| `--distill-token-trigger N` | Char count to trigger distillation (0=off) | `0` |
+| `--distill-token-trigger N` | Char count to trigger distillation (0=off) | `120000` |
 | `--distill-cooldown SECS` | Minimum seconds between distillations | `180` |
 | `--distill-max-tokens N` | Max tokens for distillation context | `8192` |
 | `--distill-context-chars N` | Max chars of context fed to distiller (0=unlimited) | `0` |
 | `--no-distill` | Disable automatic distillation | Off |
 | `--embed-model MODEL` | GGUF embed model name | Auto (see below) |
-| `--no-enrich` | Disable enrichment | Off |
+| `--no-enrich` | Disable code-enrichment configuration; the code worker is currently inert. Does not disable the separate hint worker | Off |
 | `--no-hygiene` | Disable hygiene and sleep consolidation | Off |
 | `--no-autonomous` | Disable dream/think/belief-maintenance callbacks | Off |
-| `--merge-policy POLICY` | Memory merge policy (`off` or `merge_aware`) | — |
-| `--embed-interval SECS` | Enable background embedding with this interval | Off |
+| `--merge-policy POLICY` | Memory merge policy (`off` or `merge_aware`) | `off` |
+| `--embed-interval SECS` | Background embedding interval; `--no-embed-interval` disables | `30` |
 | `--rpc-port PORT` | HTTP JSON-RPC server port (also `CHITTA_RPC_PORT` env) | `0` (disabled) |
 | `--http-port PORT` | HTTP visualization server port | `0` (disabled) |
 | `--http-static-dir DIR` | Static files directory for HTTP viz server | — |
@@ -76,7 +89,7 @@ chittad daemon [options]
 - Starts thread pool (hard-coded 8 min / 16 max workers); queue depth cap via `CHITTA_MAX_QUEUE_DEPTH` (default 256)
 - Sets `OMP_NUM_THREADS`, `MKL_NUM_THREADS`, `OPENBLAS_NUM_THREADS`, `ORT_NUM_THREADS` to 4
 - Runs queue processor: reads `{mind}/queue.jsonl` (`CHITTA_QUEUE` overrides); failed ops written to `{mind}/queue.jsonl.failed`
-- Runs hint enrichment thread (trigger: 3 new memories; cooldown: 600s; batch: 50); binary via `CHITTA_HINT_ENRICHER` env or smart-install default
+- Runs hint enrichment thread (trigger: 3 new memories; cooldown: 600s; batch: 50); script via `CHITTA_HINT_ENRICHER` env or smart-install default
 - Runs inotify watcher on `segments/` for same-host peer writes (Linux only); 5s fallback for foreign sync
 - Detects binary self-updates every 60s via `/proc/self/exe` mtime; checks vector-space id compatibility before restart (Linux only)
 - Autonomous callbacks (unless `--no-autonomous`): `dream_wander` (idle 10+ min), `think_wander` (idle 5+ min, hourly), belief maintenance
@@ -318,9 +331,11 @@ Variables `CHITTA_DB_PATH` and `SUBCONSCIOUS_INTERVAL` are not used by `chittad`
 
 The daemon prefers in-process GGUF embedding via LlamaYantra. Model filename is determined by `cf_embed_model_id()` (build-time constant). Resolution order:
 
-1. `~/.claude/models/{cf_embed_model_id()}.gguf`
-2. `~/.claude/bin/{model}.gguf`
-3. OllamaYantra HTTP (fallback if no GGUF found)
+1. `--embed-model PATH` / `CHITTA_EMBED_MODEL` (an existing file)
+2. `~/.claude/models/{cf_embed_model_id()}.gguf`
+3. `~/.claude/bin/{cf_embed_model_id()}.gguf`
+4. `<mind>/../../models/{cf_embed_model_id()}.gguf`
+5. OllamaYantra HTTP fallback if no usable local backend is available; it must match the compiled embedding identity.
 
 There is no `--model` / `--vocab` flag and no ONNX model. The embed model is not fixed at `bge-base-en-v1.5` / 768 dimensions; the actual model and dimension are determined at build time via `cf_embed_model_id()`.
 
@@ -347,6 +362,23 @@ There is no `--model` / `--vocab` flag and no ONNX model. The embed model is not
 - ThreadPool (8-16 workers)
 
 ---
+
+## Startup, sidecars and instance lock
+
+On the measured live store, startup is about **9.5 s** with matching derived-state
+sidecars (`.lsh`, `.turbo`, `.organs`) and parallel snapshot decode, and about
+**20 s** on the first start after deployment or a format change. These are
+host/store measurements, not latency guarantees. The quantized index completes
+on the maintenance thread after `ready`; allow 30 s before benchmarking recall.
+Inspect `load phase=<name> ms=` and `cache hit=` in `chittad.log`. Overlapping
+phase durations cannot be summed to obtain startup wall time.
+
+The store holds `<mind>/chitta-field/.instance.lock`. A lock recording a dead
+PID on this host can be replaced automatically. A live or other-host holder
+must not be removed. If recovery still loops, the operator must establish that
+no daemon owns the store before moving a stale lock aside. The service uses
+`TimeoutStopSec=300` to let shutdown finish its snapshot. See the operational
+reference in [CLAUDE.md](../CLAUDE.md).
 
 ## Troubleshooting
 

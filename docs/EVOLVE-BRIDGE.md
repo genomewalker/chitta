@@ -2,7 +2,7 @@
 
 Date: **2026-09-13**. Branch: `evolve/bridge`.
 
-**Status as of 2026-09-13**: the three live-integration blockers recorded below
+**Status as of 2026-09-16**: the three live-integration blockers recorded below
 (fetch 403s, the recall schema mismatch, and the Codex `--full-auto` failure)
 are fixed and verified live: fetch now routes through the Jina reader proxy,
 recall dedupe is tolerant of response-schema drift, and Codex review runs
@@ -13,7 +13,7 @@ now-fixed prior failure, kept for context.
 
 The sibling modules in `chitta-mcp/evolve/` use only the Python standard library
 and import under PyPy 3.9. They do not import or change the parallel stream's
-`proposals.py`, `select.py`, `bets.py`, or `cycle.py`.
+`proposals.py`, `evolve/selector.py`, `bets.py`, or `cycle.py`.
 
 ## Commands
 

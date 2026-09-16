@@ -1,8 +1,8 @@
 # Evaluation trust layer
 
-Status as of 2026-09-13
+Status as of 2026-09-16
 
-2026-09-15: Automatic-learning harness built; official cohort and prospective panel remain unfrozen — [protocol](../benchmarks/learning/protocol.md).
+Automatic-learning harness built; the prospective 20-task panel remains pending — [protocol](../benchmarks/learning/protocol.md).
 2026-09-15 23:15 CEST: **official cohort cut recorded** in `benchmarks/learning/cohort.json`
 (`cut_timestamp_ms` 1789506106539, family `da86decb`, realm `project:cc-soul`).
 The immutable source copy lives at
@@ -244,10 +244,10 @@ These correlated forward/reverse smoke tasks do not establish broad accuracy.
 ## Explicit relation transfer — 2026-09-15
 
 **Decision: keep `recall_analogy` as explicit directed relation transfer.**
-The [decision memo, section 2](DECISION-2026-09-15-mdl-analogy.md#2-analogy-choose-re-scope-to-explicit-relation-transfer)
+The [retirement record and decision reference](EVOLVE.md)
 requires hit@3 ≥12/14, 14/14 negative abstentions, and zero unsupported
 answers. The final run meets all three thresholds; `query_graph` remains available.
-Structural mode and the endpoint's VSA cache/ranking are removed. Exact a→b
+The endpoint supports proportional relation transfer only; shape matching and VSA ranking are removed. Exact a→b
 predicates transfer as a union to actual outgoing neighbors of c; results carry
 supporting edges and rank by edge weight, then recency. Missing source/target
 relations produce explicit abstention reasons. No reverse/fuzzy relation is inferred.

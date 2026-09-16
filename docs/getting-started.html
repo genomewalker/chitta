@@ -54,7 +54,7 @@
     <div class="page-header-badge reveal">Getting Started</div>
     <h1 class="reveal reveal-delay-1">Two commands. That's it.</h1>
     <p class="page-header-sub reveal reveal-delay-2">Register the marketplace, add the plugin. Everything else is automatic.</p>
-    <p class="reveal reveal-delay-2" style="font-family: var(--font-mono); font-size: var(--text-xs); color: #565f89; margin-top: var(--space-3);">Status as of 2026-09-02.</p>
+    <p class="reveal reveal-delay-2" style="font-family: var(--font-mono); font-size: var(--text-xs); color: #565f89; margin-top: var(--space-3);">Status as of 2026-09-16. <a href="CLI.md">CLI and startup reference</a>.</p>
   </div>
 </header>
 
@@ -117,7 +117,7 @@
             <p class="step-desc">Gives Claude direct access to the chitta tools via <code style="color: var(--aura-300);">mcp__chitta__*</code> &mdash; a small default list, with the rest reachable through the <code style="color: var(--aura-300);">advanced</code> gateway. Without this, hooks still provide memory; MCP adds the toolkit. See <a href="tools.html">Tools</a>.</p>
           </div>
         </div>
-        <div class="code-block"><span class="command">/chitta:cc-soul-mcp</span></div>
+        <div class="code-block"><span class="command">/chitta:cc-soul-mcp</span> <span class="comment"># Skill suffix retained after the chitta rename</span></div>
       </div>
 
     </div>
@@ -237,15 +237,15 @@
         </thead>
         <tbody>
           <tr>
-            <td><span class="env-var-name">/chitta:cc-soul-setup</span></td>
+            <td><span class="env-var-name">/chitta:cc-soul-setup</span> (suffix retained after rename)</td>
             <td><span class="env-var-desc">Manual build from source (if you need to rebuild)</span></td>
           </tr>
           <tr>
-            <td><span class="env-var-name">/chitta:cc-soul-update</span></td>
+            <td><span class="env-var-name">/chitta:cc-soul-update</span> (suffix retained after rename)</td>
             <td><span class="env-var-desc">Update binaries (downloads pre-built or builds from source)</span></td>
           </tr>
           <tr>
-            <td><span class="env-var-name">/chitta:cc-soul-mcp</span></td>
+            <td><span class="env-var-name">/chitta:cc-soul-mcp</span> (suffix retained after rename)</td>
             <td><span class="env-var-desc">Configure the MCP server for direct tool access</span></td>
           </tr>
           <tr>
@@ -546,6 +546,13 @@
 </section>
 
 <!-- BACK -->
+<section class="tools-section" id="readiness">
+  <div class="container">
+    <h2>Verify readiness</h2>
+    <p>Run <code>chitta health_check --json</code> against the intended daemon. A measured warm start takes about 9.5 s with sidecars; first start after deployment or a format change takes about 20 s. Allow 30 s before benchmarking recall because index maintenance may continue after readiness.</p>
+    <p>Claude Code and Codex share one daemon and store. Use <code>CHITTA_SOCKET_PATH</code> for an alternate endpoint; do not start a second daemon on the same mind directory. <a href="CLI.md#startup-sidecars-and-instance-lock">Startup and instance-lock recovery</a> explains ownership and stale-lock handling.</p>
+  </div>
+</section>
 <section class="back-section">
   <div class="container">
     <a href="index.html" class="back-link">&larr; Back to chitta</a>

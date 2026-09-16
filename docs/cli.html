@@ -118,7 +118,7 @@
     <div class="page-header-badge reveal">CLI Reference</div>
     <h1 class="reveal reveal-delay-1">Two binaries. One soul.</h1>
     <p class="page-header-sub reveal reveal-delay-2" style="margin-top:var(--space-3);">A third, <code style="color: var(--aura-300);">chitta_hintd</code>, is built only when the build enables llama.cpp and is optional at runtime.</p>
-    <p class="reveal reveal-delay-2" style="font-family: var(--font-mono); font-size: var(--text-xs); color: #565f89; margin-top: var(--space-3);">Status as of 2026-09-02.</p>
+    <p class="reveal reveal-delay-2" style="font-family: var(--font-mono); font-size: var(--text-xs); color: #565f89; margin-top: var(--space-3);">Status as of 2026-09-16. <a href="CLI.md">Canonical command reference</a>.</p>
     <p class="page-header-sub reveal reveal-delay-2"><code style="color: var(--aura-300);">chittad</code> runs the daemon. <code style="color: var(--aura-300);">chitta</code> talks to it. Both compiled from C++, communicating over Unix domain socket.</p>
   </div>
 </header>
@@ -147,7 +147,7 @@
           <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="#CBAF86" stroke-width="1" opacity="0.4" stroke-dasharray="3 3"/><circle cx="10" cy="10" r="3" fill="#CBAF86" opacity="0.2"/><circle cx="10" cy="10" r="1.5" fill="#CBAF86" opacity="0.5"/></svg>
         </div>
         <span class="tools-category-name">chittad &mdash; Daemon</span>
-        <span class="tools-category-count">4 commands</span>
+        <span class="tools-category-count">6 commands</span>
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
       <div class="category-body">
@@ -204,7 +204,7 @@
         <div class="code-block">
           <span class="cmd">chitta</span> <span class="flag">&lt;tool-name&gt;</span> [<span class="flag">--param</span> <span class="string">value</span> ...]
         </div>
-        <p class="section-intro" style="margin-top: var(--space-4);">Global options: <code>--socket-path</code>, <code>--json</code>, <code>--toon</code>, <code>--version</code>, <code>--help</code></p>
+        <p class="section-intro" style="margin-top: var(--space-4);">Global options: <code>--socket-path</code>, <code>--json</code>, <code>--toon</code>, <code>--text-only</code>, <code>--help</code></p>
         <div class="tools-list">
           <div class="tool-row">
             <span class="tool-name">chitta soul_context</span>
@@ -401,7 +401,7 @@
           <li>Opens chitta-field at <code>{path}/chitta-field/</code></li>
           <li>Loads the GGUF embedding model through llama.cpp (<code>bge-large-en-v1.5</code>, 1024 dimensions, on a public build)</li>
           <li>Creates Unix socket at <code>/tmp/chitta-{hash}.sock</code></li>
-          <li>Starts thread pool (2&ndash;16 workers)</li>
+          <li>Starts thread pool (8&ndash;16 workers)</li>
           <li>Begins subconscious processing loop</li>
         </ul>
 
@@ -423,6 +423,15 @@
 </section>
 
 <!-- BACK -->
+<section class="tools-section" id="current-runtime">
+  <div class="container">
+    <h2>Runtime and lifecycle</h2>
+    <p><code>chitta --help</code> lists client categories; <code>chitta &lt;tool&gt; --help</code> shows parameters. <code>--text-only</code> emits tool text for hooks, and <code>CHITTA_SOCKET_PATH</code> selects the daemon. Native help includes <code>ledger_op</code>, <code>session_register</code>, <code>session_heartbeat</code> and <code>session_deregister</code>; these entries are shown separately in the <a href="tools.html#native-cli">tool reference</a>.</p>
+    <p>The queue defaults to <code>&lt;mind&gt;/queue.jsonl</code>. The store holds <code>&lt;mind&gt;/chitta-field/.instance.lock</code>; only a dead same-host owner is automatically replaced. The service allows <code>TimeoutStopSec=300</code> for clean shutdown. Do not remove a live or other-host lock.</p>
+    <p>Matching <code>.lsh</code>, <code>.turbo</code> and <code>.organs</code> sidecars and parallel snapshot decode bring measured warm startup to about 9.5 s. First start after deployment or a format change is about 20 s. Index maintenance can continue after readiness; allow 30 s before recall benchmarking.</p>
+    <p><code>--no-enrich</code> is still accepted for code enrichment, whose worker is currently inert. It does not disable the separate hint worker: that script path comes from <code>CHITTA_HINT_ENRICHER</code> or discovery, with a three-new-memory trigger, 600-second cooldown and batch of 50. Native transcript distillation remains separate.</p>
+  </div>
+</section>
 <section class="back-section">
   <div class="container">
     <a href="index.html" class="back-link">&larr; Back to chitta</a>

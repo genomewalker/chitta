@@ -1,8 +1,10 @@
 # chitta MCP API reference
 
-Generated from a live daemon on 2026-09-02, 343 tools — regenerate with `python3 scripts/gen-tools-docs.py`.
+Status as of 2026-09-16.
 
-91 tools are listed in `tools/list` by default. The other 252 are hidden to keep the model's tool list small, and stay callable through the `advanced` gateway:
+Generated from a live daemon on 2026-09-16, 344 tools — regenerate with `python3 scripts/gen-tools-docs.py`.
+
+89 tools are listed in `tools/list` by default. The other 255 are hidden to keep the model's tool list small, and stay callable through the `advanced` gateway:
 
 ```json
 {"tool": "pin_memory", "arguments": {"id": 123}}
@@ -15,7 +17,7 @@ Tools marked **gateway** are composed in `chitta-mcp/server.py` rather than serv
 ## Contents
 
 - [Core Memory](#core) — 53
-- [Recall & Search](#recall) — 26
+- [Recall & Search](#recall) — 27
 - [Graph & Triplets](#graph) — 15
 - [Code Intelligence](#code) — 10
 - [Context & Status](#context) — 16
@@ -697,7 +699,20 @@ BM25 keyword search
 | `query` | string | yes | — | Search query |
 | `realm` | string | no | — | Filter by realm (empty = all visible) |
 
-### `recall_last_action`
+### `recall_lanes`
+
+Fan-in prompt recall lanes over one daemon RPC
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `budget_ms` | integer | no | — | Per-lane wall-clock budget override; capped by CHITTA_RPC_BUDGET_MS |
+| `ctx_query` | string | no | — | Optional context query; defaults to query |
+| `lanes` | array<string> | no | — | Subset of sem, ctx, hyb, kw, corr, corrk (default all) |
+| `limits` | object | no | — | Per-lane result limits (sem, ctx, hyb, kw, corr) |
+| `query` | string | yes | — | Prompt query shared by sem, hyb, kw, corr, and corrk |
+| `realm` | string | no | — | Realm for sem, ctx, hyb, and kw |
+
+### `recall_last_action` *(via advanced)*
 
 Return last k occurrences of (tool, entity) from the CEC event tape
 
@@ -3120,7 +3135,7 @@ Identify recurring surprise patterns — domains/actions where predictions consi
 | `limit` | integer | no | — | Max blind spots (default 10) |
 | `realm` | string | no | — | Filter by realm |
 
-### `get_fragile_decisions`
+### `get_fragile_decisions` *(via advanced)*
 
 List open epistemic debts sorted by fragility — decisions most likely to be wrong
 
@@ -3262,7 +3277,7 @@ List Inflamed lineages whose re-derivation TTL has expired — these should be d
 
 No parameters.
 
-### `query_wisdom_candidates`
+### `query_wisdom_candidates` *(via advanced)*
 
 Query wisdom candidates by lifecycle stage and/or domain
 
@@ -3396,7 +3411,7 @@ Show Sequitur rules that are being falsified: rules whose antecedent appears but
 
 ### `advanced` *(gateway)*
 
-Gateway to hidden/advanced tools. Use action='list' to see all 100+ hidden tools, or call directly with tool='<name>' and arguments={...}. Example: {"tool": "pin_memory", "arguments": {"id": 123}}
+Gateway to hidden/advanced tools. Use action='list' to see every hidden tool (about 250), or call directly with tool='<name>' and arguments={...}. Example: {"tool": "pin_memory", "arguments": {"id": 123}}
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
@@ -3483,3 +3498,346 @@ Export memories as Obsidian-compatible .md wiki with backlinks. Groups by realm 
 | `output_dir` | string | no | — | Output directory (default: ~/.claude/wiki/) |
 | `realm` | string | no | — | Filter to specific realm (default: all) |
 
+
+## Additional native CLI tools
+
+These native CLI help entries are in rpc_server.cpp TOOL_SPECS / KNOWN_TOOLS but absent from the MCP listing used above. They are not included in its visibility counts. Use chitta <tool> --help; an empty help schema does not prove that the handler takes no arguments.
+
+### `background_schedule`
+
+Schedule background task
+
+- `--task_type`: Task type to schedule (required)
+- `--params`: JSON params for task
+
+### `background_status`
+
+Get background processing and embedding scheduler status
+
+
+### `cleanup`
+
+Remove weak/garbage nodes
+
+- `--dry_run`: Preview only
+
+### `cleanup_code_wisdom`
+
+Migration: delete [code] wisdom memories and clear orphaned symbol.memory_id
+
+- `--dry-run`: Preview only without changes (default: true)
+
+### `cycle`
+
+Run maintenance cycle (decay, cleanup)
+
+- `--force`: Force full cycle
+
+### `dedupe_symbols`
+
+GC the symbol index: stale-line duplicates, excluded paths, dead files
+
+- `--dry_run`: Count only, remove nothing (default true)
+- `--check_fs`: Treat symbols whose file no longer exists as dead
+- `--exclude`: Comma-separated path substrings to purge
+
+### `describe_symbol`
+
+Set description for a code symbol (stores directly in symbol table)
+
+- `--symbol-id`: Symbol ID to describe (required)
+- `--description`: Semantic description of the symbol (required)
+
+### `distill_status`
+
+Get distillation system status: transcripts, realms, pending work
+
+
+### `epiplexity_check`
+
+Compute epiplexity (ε) score for a seed - measures reconstruction quality
+
+- `--original`: Original full text (required)
+- `--seed`: Compressed SSL seed (required)
+- `--reconstructed`: Text reconstructed from seed (required)
+
+### `export_soul`
+
+Export memories to SSL format
+
+- `--file`: Output file path
+- `--tag`: Filter by tag
+- `--limit`: Max nodes to export
+
+### `extract_symbols`
+
+Extract symbols from source file using tree-sitter
+
+- `--path`: File path to analyze (required)
+
+### `fep_status`
+
+CEC Phase 15 FEP prior organ: obs_count, states_modeled, ewma_drift (context_drift if >0.5), ewma_shock (emission_shock if >0.3). Context drift = world-model silently degrading; emission shock = known context, novel outcome.
+
+
+### `file_dependents`
+
+Get all files that import/include the given module
+
+- `--name`: Module/file name to find dependents for (required)
+
+### `file_imports`
+
+Get all imports/includes for a source file
+
+- `--path`: File path to get imports for (required)
+
+### `harvest_scope`
+
+CEC Phase 17 open-weight harvest targeting: derive scope from current Turīya anomalies + router miss patterns. Output JSON used by scripts/harvest_ow.py for demand-driven extraction.
+
+
+### `hygiene_run`
+
+Run memory hygiene: decay, prune, consolidate
+
+- `--prune-threshold`: Confidence below which to prune
+- `--min-age-days`: Minimum age for pruning
+- `--consolidation-threshold`: Similarity threshold for consolidation
+- `--max-consolidations`: Max consolidations per run
+
+### `import_soul`
+
+Import .soul file (SSL format)
+
+- `--file`: Path to .soul file
+- `--content`: SSL content (alternative to file)
+
+### `ledger_append`
+
+v6.0 Interaction Ledger: record a retrieve/inject/outcome/override event. Pass full InteractionEvent JSON.
+
+- `--kind`: Event kind: Retrieve | Inject | Outcome | Override (required)
+- `--session_id`: Session UUID (required)
+- `--payload`: Typed payload JSON matching EventPayload variant (required)
+- `--thread_id`: Optional thread ID
+- `--causal_parent`: Optional parent event_id
+
+### `ledger_compile`
+
+v6.0 Interaction Ledger: compile Override events into versioned VersionedAssertions.
+
+
+### `ledger_contradictions`
+
+v6.0 Interaction Ledger: list contested (subject, predicate) pairs with >1 active assertion.
+
+
+### `ledger_op`
+
+Daemon-owned task ledger operation
+
+- `--op`: Operation name (required)
+- `--args`: Operation arguments JSON
+
+### `ledger_query`
+
+v6.0 Interaction Ledger: query events by kind/session/time.
+
+- `--kind`: Filter by kind: Retrieve | Inject | Outcome | Override
+- `--session_id`: Filter by session UUID
+- `--since_ms`: Only events at or after this epoch ms
+- `--limit`: Max events to return
+
+### `migrate_vss`
+
+Migrate embeddings from main DB VARCHAR to VSS DB FLOAT[768]
+
+
+### `msg_ack`
+
+Acknowledge a cross-session message
+
+- `--message_id`: Message ID (required)
+- `--session_id`: Session ID (default: current)
+
+### `predicate_attach`
+
+v7.0 Falsifiable memories: attach an executable shell predicate to a memory. check_cmd is run to verify the memory is still true.
+
+
+### `predicate_list`
+
+v7.0 Falsifiable memories: list all predicates attached to a memory and their current status.
+
+
+### `predicate_run`
+
+v7.0 Falsifiable memories: run all predicates for a memory; returns passed/failed counts and epistemic_status. Decays confidence on failure.
+
+
+### `queue_experiments`
+
+CEC Phase 14 Self-directed experimentation: file OpenTask interventions for the k most uncertain Sequitur rules (probe_value > 0.4). Skips rules with refutation_ratio >= 0.3 (adversarial gate). Also triggered automatically by consolidation_pass when turiya_status reports high_uncertainty.
+
+- `--k`: Max experiments to queue
+
+### `recall_temporal_events`
+
+Bridge query: find entities active in a time window via EventTape, then recall their memories. Use when you don't know the realm — EventTape discovers which realms had activity.
+
+- `--start`: Start date (ISO8601 or YYYY-MM-DD)
+- `--end`: End date (ISO8601 or YYYY-MM-DD)
+- `--limit`: Max results
+
+### `reconcile_pass`
+
+CEC Phase 17 R0 reconcile operator: scan all assoc_edges for MemoryKind legality violations and content contradictions. Model-free and deterministic. Reports illegal_edges, contradictions, unresolved counts.
+
+
+### `reembed_memories`
+
+Re-embed memories with missing/zero embeddings
+
+- `--all`: Re-embed ALL memories with NULL embeddings
+- `--limit`: Max memories to process
+- `--kind`: Filter by kind: belief, wisdom, episode, correction, preference
+- `--min_confidence`: Min confidence threshold
+- `--dry_run`: Preview without updating
+
+### `resolve_callsites`
+
+Resolve callsites to symbols and populate call_edge table
+
+- `--project`: Filter to specific project path
+
+### `routed_recall`
+
+CEC Phase 16 CPU-native query router: dispatches to cheapest lane (exact/fuzzy/temporal/causal/hybrid) without an LLM call. Returns needs_disambiguation with named unbound slots when the typed grammar cannot fully bind the request.
+
+- `--subject`: Exact triplet subject — compiles to relational lookup
+- `--predicate`: Exact triplet predicate
+- `--freetext`: Free-text query — fuzzy ANN+BM25 lane
+- `--realm`: Filter by realm
+- `--causal_tool`: CEC causal query: tool name
+- `--causal_entity`: CEC causal query: entity name (required with causal_tool)
+- `--time_from_ms`: Temporal lower bound (epoch ms)
+- `--time_to_ms`: Temporal upper bound (epoch ms)
+- `--k`: Max hits to return
+
+### `seed_hdc_geometry`
+
+CEC Phase 17 Part D: seed HDC codebook from vocab_geometry harvest JSON. Binarizes f32 PCA directions from open-weight embedding matrix into HdcVec entries, replacing random hash projections for harvested tokens.
+
+- `--json_path`: Path to qwen2.5-7b_vocab_geometry.json produced by harvest_ow.py --mode vocab_geometry (required)
+
+### `session_deregister`
+
+Remove session from registry
+
+- `--session_id`: Session ID (required)
+
+### `session_heartbeat`
+
+Update session heartbeat
+
+- `--session_id`: Session ID (required)
+- `--metadata`: Updated JSON metadata
+
+### `session_register`
+
+Register session for cross-session messaging
+
+- `--session_id`: Session ID (required)
+- `--realm`: Realm
+- `--pid`: Process ID
+- `--transcript_path`: Path to transcript .jsonl file (stable ID)
+- `--project_dir`: Working directory
+- `--metadata`: JSON metadata
+
+### `tape_stats`
+
+CEC Phase 12 EventTape statistics: event count, tombstoned events (temporal compression), unique sessions, tools, entities, and failure events.
+
+
+### `theme_assign_orphans`
+
+Assign orphan memories to themes in batches
+
+- `--batch_size`: Memories per batch
+- `--realm`: Filter by realm
+
+### `theme_maintain`
+
+Force theme maintenance: split, merge, reassign
+
+- `--realm`: Filter by realm
+
+### `transcript_get`
+
+Get transcript state for a session
+
+- `--session_id`: Session ID to look up (required)
+
+### `transcript_list`
+
+List all registered transcripts
+
+
+### `transcript_parse`
+
+Parse new turns from a transcript JSONL file
+
+- `--session_id`: Session ID to parse (required)
+- `--min_turns`: Minimum turns to return
+
+### `transcript_register`
+
+Register a transcript file for distillation tracking
+
+- `--session_id`: Claude session ID (required)
+- `--transcript_path`: Path to .jsonl transcript file (required)
+- `--realm`: Project/realm isolation
+
+### `transcript_remove`
+
+Remove transcript from tracking
+
+- `--session_id`: Session ID to remove (required)
+
+### `transcript_update`
+
+Update transcript processing progress
+
+- `--session_id`: Session ID (required)
+- `--last_line`: Last processed line number (required)
+
+### `turiya_status`
+
+CEC Phase 11 Turīya witness: read-only health vector across all CEC organs. Reports CDAWG growth, Sequitur rule churn, Q-value variance, refutation pressure, and hypothesis uncertainty. Diagnoses: healthy|stale|q_collapse|refutation_flood|high_uncertainty|fep_context_drift|fep_emission_shock.
+
+
+### `type_hierarchy`
+
+Get type hierarchy (base classes, implemented interfaces) for a type
+
+- `--name`: Type name to query (required)
+- `--direction`: ancestors, descendants, or both (default: both)
+
+### `verbalize_rules`
+
+CEC Phase 13 Verbalization: convert top-k Sequitur rules to natural language using a deterministic template. No LLM. Shows what the agent has learned as readable heuristics.
+
+- `--k`: Max rules to return
+
+### `version_check`
+
+Get version information
+
+
+### `witness_memory`
+
+CEC Phase 17 candidate promotion: provide an outcome-witness to promote a candidate-band memory to established. Witnesses: correction|outcome|hit_rate_delta. Open-weight-generated writes start in candidate band until witnessed.
+
+- `--memory_id`: Memory ID to promote (required)
+- `--witness_kind`: Type: correction|outcome|hit_rate_delta (required)
