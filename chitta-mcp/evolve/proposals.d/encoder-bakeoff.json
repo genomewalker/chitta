@@ -1,0 +1,34 @@
+{
+  "id": "encoder-bakeoff",
+  "title": "Encoder bake-off: embedding and reranker models measured on the frozen replica",
+  "mechanism": "On one frozen replica family, re-embed and rebuild indexes for each candidate embedding model (current nomic-embed-text-v1.5 768-d; bge-large-en-v1.5 1024-d, the CMake default; one code-aware model such as nomic-embed-code or Qwen3-Embedding-0.6B) and, separately, swap the MCP reranker (current cross-encoder/ms-marco-MiniLM-L-6-v2; jina-reranker-v1-tiny already in the models directory; bge-reranker-v2-m3), then score golden nDCG@20, benchmarks/current_truth precision@3 and abstention, the SMRITI visible panel, and prompt-hook and MCP latency; adopt a combination only if it beats the current one beyond the noise bands on the recall panels without breaking the latency gates. The embedding dimension is a compile-time identity, so an embedding change is a fresh build plus a full re-embed of ~135k memories, done on the replica first",
+  "expected_gain": {
+    "metric": "golden nDCG@20",
+    "delta": 0.03,
+    "confidence": 0.25,
+    "rationale": "The store's text is telegraphic SSL lines, paths, env vars and identifiers; neither the 2024 general-purpose embedding model nor the 2021 web-passage reranker was trained on that shape. The reranker already moves golden nDCG from 0.435 to 0.487, so a reranker trained on code and technical text is the most likely single gain; the embedding swap is the expensive half and may not pay"
+  },
+  "cost": {
+    "effort_h": 16,
+    "blast_radius": 3,
+    "scope": "chitta/CMakeLists.txt (CHITTA_EMBED_DIM), chitta/include/chitta/vak_llama.hpp (prefixes per model), chitta-mcp/recall_gateway.py (reranker selection), scripts/eval-replica.sh (re-embed on a copy)"
+  },
+  "evidence": [
+    {
+      "source": "memory",
+      "claim": "golden nDCG@20 with the MiniLM reranker on 0.487 versus 0.435 off (recall-biased pre-filter A/B, 2026-09-02)"
+    },
+    {
+      "source": "memory",
+      "claim": "current-truth panel baseline 20/50 with precision@3 0.25 on both splits (2026-09-16); five-probe useful hits 6/15 in Astra's evaluation; misses were freshness and coverage, so the encoder's share of the gap is unknown until measured"
+    },
+    {
+      "source": "memory",
+      "claim": "an earlier fine-tuned jina-v2-base embedding GGUF and a jina-reranker-v1-tiny GGUF sit unused in the models directory without a recorded comparison"
+    }
+  ],
+  "source": "hypothesis",
+  "already_have": false,
+  "verifiability": "metric_only",
+  "prior_effort": "none"
+}

@@ -44,6 +44,19 @@
 - Acknowledged-write durability defined and tested: which RPCs return after fsync, which after WAL append.
 - Exit gate: restart ≤ 5 s cached (`benchmarks/field-perf/run.sh` extended); a fortnight without a runtime lock incident, measured by `scripts/report-runtime-incidents.py` over `chittad.log`; the stress target above.
 
+> Phase 6 status 2026-09-16 (evening): merged and deployed — bounded embedding
+> workers (recall p95 during 200 concurrent writes 625 → 114–163 ms; the 150 ms
+> gate is borderline and re-measured by the canary), runtime-dir placement of
+> hook markers and the queue behind `CHITTA_RUNTIME_LOCAL=1` (default off),
+> acknowledged-write durability test, timestamped daemon log, incident report
+> flags other-host lock holders, store-lock wait for a live holder
+> (`CHITTA_STORE_LOCK_WAIT_S`), and the primary-node gate now enforced by the
+> daemon itself (exit 75) with the installer writing the marker and drop-in.
+> Not met: cached restart 16 s on the replica against the 5 s gate (snapshot
+> decode is the floor); deferred: cross-node RPC fallback for hooks and MCP on
+> non-primary nodes (zero transport changes landed), atomic ack replay as one
+> store transaction. The fortnight soak starts today.
+
 ### Phase 1 — One locking authority (highest risk)
 - This is a concurrency redesign. Inventory (Astra): the global lock today protects the C++ task-ledger tables and revision transactions (`task_ledger.hpp`, `field_task_ledger.cpp`); the query LRU, health/soul caches, distill settings, subconscious queues, sadhana state, queue counters, the embed queue and budget counters already have local protection; registrations, pointers and callbacks need publication and lifetime discipline.
 - Sequence: (a) a ledger transaction mutex; (b) audit maintenance, queue and subconscious callers for multi-FFI atomicity and durable sync; (c) instrument Rust lock waits and holds so `[lockprof]` silence is not vacuous once the dispatcher lock goes; (d) migrate one handler class at a time behind `CHITTA_GLOBAL_LOCK=1` (a real switch covering background callers too, tested, not the current allow-lists); (e) `scripts/stress-rpc.py` with 12 writers + 12 readers, invariant and deadlock detection, run per class migrated.

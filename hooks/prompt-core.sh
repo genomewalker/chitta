@@ -28,6 +28,10 @@ HYB_LANE_LIMIT=5
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib.sh"
 
+# Ephemeral hook state; persistent policy and cross-hook shared files stay in mind.
+HOOK_STATE_DIR=$(runtime_state_dir "${CHITTA_DB_PATH:-${HOME}/.claude/mind}")
+mkdir -p "$HOOK_STATE_DIR" 2>/dev/null || true
+
 METRICS_FILE="${MIND_PATH}/.hook_metrics.json"
 ALERT_FILE="${MIND_PATH}/.hook_alerts.log"
 mkdir -p "$MIND_PATH" 2>/dev/null || true
@@ -251,7 +255,7 @@ trap '_recall_telemetry_finish; rm -rf "$_ld"' EXIT
 # liveness TTL is 900s, so skip while the last successful heartbeat is
 # still under 120s old.
 if [[ "$SESSION_ID" != "unknown" ]]; then
-    _HB_MARKER="${MIND_PATH}/.hb_${SESSION_ID}"
+    _HB_MARKER="${HOOK_STATE_DIR}/.hb_${SESSION_ID}"
     _HB_AGE=999999
     [[ -f "$_HB_MARKER" ]] && _HB_AGE=$(( $(date +%s) - $(stat -c %Y "$_HB_MARKER" 2>/dev/null || echo 0) ))
     if [[ "$_HB_AGE" -ge 120 ]]; then
@@ -297,8 +301,8 @@ fi
 
 # Save cleaned message for Stop hook compliance detection (no system markup pollution)
 mkdir -p "$MIND_PATH"
-_prev_turn=$(cat "$MIND_PATH/.last_user_message" 2>/dev/null || true)
-echo "$CLEAN_QUERY" > "$MIND_PATH/.last_user_message"
+_prev_turn=$(cat "${HOOK_STATE_DIR}/.last_user_message" 2>/dev/null || true)
+echo "$CLEAN_QUERY" > "${HOOK_STATE_DIR}/.last_user_message"
 
 # Get turn index (locked read+increment via lib.sh)
 TURN_INDEX=$(get_next_turn "$SESSION_ID")
@@ -339,7 +343,7 @@ fi
 # query cannot inflate shares>0 (fable's definitional-inflation guard).
 CTX_QUERY=""; _CTXTOK=""
 if [[ "${CHITTA_CTX_LANE:-${CC_SOUL_CTX_LANE:-1}}" == "1" && "$SESSION_ID" != "unknown" ]]; then
-    _ctx_ring="${MIND_PATH}/.ctx_window_${SESSION_ID}"
+    _ctx_ring="${HOOK_STATE_DIR}/.ctx_window_${SESSION_ID}"
     _cur_tok=$(printf '%s' "$CLEAN_QUERY" | tr '[:upper:]' '[:lower:]' \
                | grep -oE '[a-z0-9][a-z0-9_>/-]{3,}' | sort -u | tr '\n' ' ')
     _prev1=""; _prev2=""
@@ -359,7 +363,7 @@ fi
 # ===========================================
 CACHE_WARN=""
 SESSION_WARN=""
-LAST_STOP_FILE_SESSION="${MIND_PATH}/.last_stop_time_${SESSION_ID}"
+LAST_STOP_FILE_SESSION="${HOOK_STATE_DIR}/.last_stop_time_${SESSION_ID}"
 LAST_STOP_FILE=""
 
 # Use session-scoped idle tracking only.
@@ -393,9 +397,9 @@ if [[ -n "$TRANSCRIPT_PATH" && -f "$TRANSCRIPT_PATH" ]]; then
     if [[ $TRANSCRIPT_MB -gt 50 ]]; then
         SESSION_WARN="[context-bloat: ${TRANSCRIPT_MB}MB transcript — consider /compact or start fresh with /recap to reduce cache-write costs]"
     # >20MB = getting large, warn once
-    elif [[ $TRANSCRIPT_MB -gt 20 && ! -f "$MIND_PATH/.size_warned_${SESSION_ID}" ]]; then
+    elif [[ $TRANSCRIPT_MB -gt 20 && ! -f "${HOOK_STATE_DIR}/.size_warned_${SESSION_ID}" ]]; then
         SESSION_WARN="[context-growing: ${TRANSCRIPT_MB}MB — /compact saves cache-write tokens; /recap starts lean]"
-        touch "$MIND_PATH/.size_warned_${SESSION_ID}" 2>/dev/null || true
+        touch "${HOOK_STATE_DIR}/.size_warned_${SESSION_ID}" 2>/dev/null || true
     fi
 fi
 
@@ -748,7 +752,7 @@ OUTPUT=""
 COUNT=0
 _adm_sem=0; _adm_ctx=0; _adm_hyb=0; _adm_kw=0; _adm_corr=0; _adm_xr=0
 _drop_conf=0; _drop_dup=0; _drop_meta=0; _drop_cap=0; _drop_unk=0
-_INJECTED_FILE="${MIND_PATH}/.injected_hashes_${SESSION_ID}"
+_INJECTED_FILE="${HOOK_STATE_DIR}/.injected_hashes_${SESSION_ID}"
 # Phase 1: filter each candidate, collect survivors in merge order (sem first).
 _cand_reason=(); _cand_line=()
 # M0 turn-entity anchor (SHADOW): distinctive tokens of the cleaned user turn,
@@ -1167,7 +1171,7 @@ if [[ -n "${_corrk_out:-}" && "$_corrk_out" =~ FIRED\ \(#([0-9]+) ]]; then
 fi
 _sus_corr_ids+="]"
 if [[ "$_sus_corr_ids" != "[]" && -n "${SESSION_ID:-}" && -n "${MIND_PATH:-}" ]]; then
-    printf '%s' "$_sus_corr_ids" > "${MIND_PATH}/.exposed_corrections_${SESSION_ID}"
+    printf '%s' "$_sus_corr_ids" > "${HOOK_STATE_DIR}/.exposed_corrections_${SESSION_ID}"
 fi
 
 # ===========================================
@@ -1241,7 +1245,7 @@ if [[ $_intent_correction -eq 1 ]]; then
     correction_ctx=$(echo "$_INTENT_QUERY" | head -c 200 | tr '\n' ' ')
     LEARNING_HINTS="[LEARN] ⚠️ CORRECTION detected - call learn_correction NOW
   User said: \"${correction_ctx}\""
-    echo "$_INTENT_QUERY" > "$MIND_PATH/.last_correction_context"
+    echo "$_INTENT_QUERY" > "${HOOK_STATE_DIR}/.last_correction_context"
     _corr_payload=$(jq -n --arg c "[correction] $correction_ctx" --arg r "$REALM" \
         '{content: $c, category: "correction", realm: $r, tags: ["correction","auto"], visibility: 2}')
     queue_write "observe" "$_corr_payload" 2>/dev/null || true
@@ -1277,7 +1281,7 @@ fi  # end _skip_intent guard
 # Inspired by SAGE's 7-call enforcement. We warn, not block.
 # ===========================================
 STORE_INTERVAL="${CHITTA_STORE_INTERVAL:-${CC_SOUL_STORE_INTERVAL:-7}}"
-LAST_STORE_FILE="${MIND_PATH}/.last_store_turn_${SESSION_ID}"
+LAST_STORE_FILE="${HOOK_STATE_DIR}/.last_store_turn_${SESSION_ID}"
 # Initialize on first prompt of a session (state file absent = fresh or resumed session)
 if [[ ! -f "$LAST_STORE_FILE" ]]; then
     echo "$TURN_INDEX" > "$LAST_STORE_FILE"
@@ -1285,7 +1289,7 @@ fi
 last_store_turn=$(cat "$LAST_STORE_FILE" 2>/dev/null || echo "$TURN_INDEX")
 
 # If post-bash-hook auto-stored a milestone recently, credit it as a store
-AUTO_STORE_TS_FILE="${MIND_PATH}/.last_auto_store_ts"
+AUTO_STORE_TS_FILE="${HOOK_STATE_DIR}/.last_auto_store_ts"
 if [[ -f "$AUTO_STORE_TS_FILE" ]]; then
     _auto_ts=$(cat "$AUTO_STORE_TS_FILE" 2>/dev/null || echo 0)
     _age=$(( $(date +%s) - _auto_ts ))
@@ -1350,7 +1354,7 @@ fi
 # ANTICIPATION: Predict likely next actions (periodic — token diet)
 # ===========================================
 ANTICIPATIONS=""
-PREDICTIONS_FILE="$MIND_PATH/.last_predictions.json"
+PREDICTIONS_FILE="${HOOK_STATE_DIR}/.last_predictions.json"
 
 # Clear old predictions
 rm -f "$PREDICTIONS_FILE" 2>/dev/null
@@ -1591,7 +1595,7 @@ fi
 # 3. Memories (core value)
 # Save full exposed memory content for implicit resonance detection (stop-hook)
 if [[ ${COUNT:-0} -gt 0 && -n "${memories:-}" && -n "${MIND_PATH:-}" && -n "${SESSION_ID:-}" ]]; then
-    printf '%s\n' "$memories" > "${MIND_PATH}/.exposed_memories_${SESSION_ID}"
+    printf '%s\n' "$memories" > "${HOOK_STATE_DIR}/.exposed_memories_${SESSION_ID}"
     # hint_recall_hit value signal (PR1): how often hint-origin memories surface in recall.
     # The denominator (this line fires per recall) gates whether PR2 is worth building.
     _hint_surf=$(printf '%s\n' "$memories" | grep -cF '[hint:realtime]' 2>/dev/null || true)

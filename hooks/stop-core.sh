@@ -17,6 +17,10 @@ MIND_PATH="${CHITTA_DB_PATH:-${HOME}/.claude/mind}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib.sh"
 
+# Ephemeral hook state; persistent policy and cross-hook shared files stay in mind.
+HOOK_STATE_DIR=$(runtime_state_dir "${CHITTA_DB_PATH:-${HOME}/.claude/mind}")
+mkdir -p "$HOOK_STATE_DIR" 2>/dev/null || true
+
 METRICS_FILE="${MIND_PATH}/.hook_metrics.json"
 ALERT_FILE="${MIND_PATH}/.hook_alerts.log"
 mkdir -p "$MIND_PATH" 2>/dev/null || true
@@ -58,7 +62,7 @@ if [[ "$STOP_HOOK_ACTIVE" != "true" && "$SESSION_ID" != "unknown" && "$SESSION_I
 fi
 
 if [[ "$SESSION_ID" != "unknown" ]]; then
-    _HB_MARKER="${MIND_PATH}/.hb_${SESSION_ID}"
+    _HB_MARKER="${HOOK_STATE_DIR}/.hb_${SESSION_ID}"
     _HB_AGE=999999
     [[ -f "$_HB_MARKER" ]] && _HB_AGE=$(( $(date +%s) - $(stat -c %Y "$_HB_MARKER" 2>/dev/null || echo 0) ))
     if [[ "$_HB_AGE" -ge 120 ]]; then
@@ -435,7 +439,7 @@ STOP_ENRICH_TURN=$(( TURN_INDEX % STOP_ENRICH_INTERVAL == 0 || TURN_INDEX <= 1 ?
 # ===========================================
 # IMPLICIT RESONANCE: Detect memory usage without [USED] markers (periodic)
 # ===========================================
-_ir_mem_file="${MIND_PATH}/.exposed_memories_${SESSION_ID}"
+_ir_mem_file="${HOOK_STATE_DIR}/.exposed_memories_${SESSION_ID}"
 if [[ -f "$_ir_mem_file" && $STOP_ENRICH_TURN -eq 1 ]]; then
     # Get last assistant response from transcript for comparison
     _ir_response=$(transcript_role_text "assistant" | tail -n 3 | tr -d '\n' | head -c 2000 || true)
@@ -502,8 +506,8 @@ done <<< "$RESPONSE"
 # Prefer the session-scoped transcript snapshot.  The legacy global marker is
 # only a compatibility fallback and is unsafe when Claude and Codex overlap.
 LAST_USER_MSG=$(transcript_role_text "user")
-if [[ -z "$LAST_USER_MSG" && -f "$MIND_PATH/.last_user_message" ]]; then
-    LAST_USER_MSG=$(cat "$MIND_PATH/.last_user_message" 2>/dev/null)
+if [[ -z "$LAST_USER_MSG" && -f "${HOOK_STATE_DIR}/.last_user_message" ]]; then
+    LAST_USER_MSG=$(cat "${HOOK_STATE_DIR}/.last_user_message" 2>/dev/null)
 fi
 
 # Check if Claude used a learn_* tool (indicated by tool output patterns)
@@ -514,13 +518,13 @@ fi
 
 # Update last-store turn counter whenever something was stored this turn
 if [[ "$CLAUDE_LEARNED" == "true" ]]; then
-    echo "$TURN_INDEX" > "${MIND_PATH}/.last_store_turn_${SESSION_ID}"
+    echo "$TURN_INDEX" > "${HOOK_STATE_DIR}/.last_store_turn_${SESSION_ID}"
 fi
 
 # AUTO-STORE: When discipline threshold crossed and model didn't store, do it
 # automatically from the stop hook — no model intervention needed.
 STORE_INTERVAL="${CHITTA_STORE_INTERVAL:-${CC_SOUL_STORE_INTERVAL:-7}}"
-LAST_STORE_FILE="${MIND_PATH}/.last_store_turn_${SESSION_ID}"
+LAST_STORE_FILE="${HOOK_STATE_DIR}/.last_store_turn_${SESSION_ID}"
 _last_store=$(cat "$LAST_STORE_FILE" 2>/dev/null || echo 0)
 _turns_since_store=$(( TURN_INDEX - _last_store ))
 if [[ "$CLAUDE_LEARNED" == "false" && $_turns_since_store -ge $STORE_INTERVAL && ${TURN_INDEX:-0} -gt 0 ]]; then
@@ -550,7 +554,7 @@ if [[ "$CLAUDE_LEARNED" == "false" && -n "$LAST_USER_MSG" ]]; then
     CORRECTION_TEXT=""
 
     # 1. Authoritative signal: prompt-hook wrote .last_correction_context
-    CORRECTION_CTX_FILE="$MIND_PATH/.last_correction_context"
+    CORRECTION_CTX_FILE="${HOOK_STATE_DIR}/.last_correction_context"
     if [[ -f "$CORRECTION_CTX_FILE" ]]; then
         CORRECTION_DETECTED=true
         CORRECTION_TEXT=$(cat "$CORRECTION_CTX_FILE" 2>/dev/null)
@@ -585,7 +589,7 @@ if [[ "$CLAUDE_LEARNED" == "false" && -n "$LAST_USER_MSG" ]]; then
     # ===========================================
     # SUS M METRIC: Correction outcome evaluation
     # ===========================================
-    _m_exposed_file="${MIND_PATH}/.exposed_corrections_${SESSION_ID}"
+    _m_exposed_file="${HOOK_STATE_DIR}/.exposed_corrections_${SESSION_ID}"
     if [[ -f "$_m_exposed_file" ]]; then
         _m_corr_ids=$(cat "$_m_exposed_file" 2>/dev/null)
         if [[ -n "$_m_corr_ids" && "$_m_corr_ids" != "[]" ]]; then
@@ -680,7 +684,7 @@ fi
 # ===========================================
 # ANTICIPATION OUTCOME: Track prediction correctness (periodic)
 # ===========================================
-PREDICTIONS_FILE="$MIND_PATH/.last_predictions.json"
+PREDICTIONS_FILE="${HOOK_STATE_DIR}/.last_predictions.json"
 
 if [[ -f "$PREDICTIONS_FILE" && $STOP_ENRICH_TURN -eq 1 ]]; then
     # Extract tool usage from transcript (tool names from assistant's actions)
@@ -808,7 +812,7 @@ if [[ -x "$SCRIPT_DIR/span-capture.sh" ]]; then
 fi
 
 # Clean up temp files
-rm -f "$MIND_PATH/.last_user_message" "$MIND_PATH/.last_correction_context" "$PREDICTIONS_FILE" "$MIND_PATH/.exposed_corrections_${SESSION_ID}" "$MIND_PATH/.exposed_memories_${SESSION_ID}" 2>/dev/null
+rm -f "${HOOK_STATE_DIR}/.last_user_message" "${HOOK_STATE_DIR}/.last_correction_context" "$PREDICTIONS_FILE" "${HOOK_STATE_DIR}/.exposed_corrections_${SESSION_ID}" "${HOOK_STATE_DIR}/.exposed_memories_${SESSION_ID}" 2>/dev/null
 
 # ===========================================
 # LEDGER: Rich session checkpoint for continuity
@@ -881,7 +885,7 @@ if [[ -n "$SESSION_ID" && "$SESSION_ID" != "default" && -n "$TRANSCRIPT_PATH" &&
     queue_write "transcript_register" "{\"session_id\":\"$SESSION_ID\",\"transcript_path\":$(printf '%s' "$TRANSCRIPT_PATH" | jq -Rs .),\"realm\":\"$REALM\"}"
 
     # Mid-session distillation every 20 turns so knowledge is available within the session
-    DISTILL_MARKER="$MIND_PATH/.last_distill_turn_${SESSION_ID}"
+    DISTILL_MARKER="${HOOK_STATE_DIR}/.last_distill_turn_${SESSION_ID}"
     LAST_DISTILL=$(cat "$DISTILL_MARKER" 2>/dev/null || echo 0)
     DISTILL_INTERVAL=20
     if (( TURN_INDEX - LAST_DISTILL >= DISTILL_INTERVAL )); then
@@ -999,9 +1003,9 @@ fi
 # Record stop timestamp for both session-specific and legacy global paths.
 # Session-specific tracking prevents false cache-expired warnings across fresh sessions.
 STOP_TS="$(date +%s)"
-echo "$STOP_TS" > "${MIND_PATH}/.last_stop_time"
+echo "$STOP_TS" > "${HOOK_STATE_DIR}/.last_stop_time"
 if [[ -n "${SESSION_ID:-}" ]]; then
-    echo "$STOP_TS" > "${MIND_PATH}/.last_stop_time_${SESSION_ID}"
+    echo "$STOP_TS" > "${HOOK_STATE_DIR}/.last_stop_time_${SESSION_ID}"
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1014,7 +1018,7 @@ if [[ -n "${SESSION_ID:-}" ]]; then
     [[ -n "${TRANSCRIPT_PATH:-}" && -f "$TRANSCRIPT_PATH" ]] && \
         TRANSCRIPT_SIZE=$(stat -c%s "$TRANSCRIPT_PATH" 2>/dev/null || echo 0)
     TRANSCRIPT_MB=$(( TRANSCRIPT_SIZE / 1048576 ))
-    TURN_INDEX=$(cat "$MIND_PATH/.turn_index_${SESSION_ID}" 2>/dev/null || echo 0)
+    TURN_INDEX=$(cat "${HOOK_STATE_DIR}/.turn_index_${SESSION_ID}" 2>/dev/null || echo 0)
 
     if [[ $AGENT_COUNT -gt 0 || $TRANSCRIPT_MB -gt 10 ]]; then
         queue_write "remember" "{\"content\":\"[session-cost] ${SESSION_ID:0:8}: ${TURN_INDEX} turns, ${AGENT_COUNT} subagents, ${TRANSCRIPT_MB}MB transcript @realm:${REALM:-brahman}\",\"kind\":\"episode\",\"tags\":[\"session-cost\"]}"
@@ -1027,7 +1031,7 @@ fi
 # Extract all [DECISION]/[SOLUTION]/[CORRECTION] markers from this session's
 # transcript and store a consolidated summary. Fires once per session on the
 # final turn (guarded by summary-written marker file).
-SESSION_SUMMARY_FILE="${MIND_PATH}/.session_summary_written_${SESSION_ID}"
+SESSION_SUMMARY_FILE="${HOOK_STATE_DIR}/.session_summary_written_${SESSION_ID}"
 if [[ -n "${SESSION_ID:-}" && -n "${TRANSCRIPT_PATH:-}" && -f "$TRANSCRIPT_PATH" \
       && ! -f "$SESSION_SUMMARY_FILE" && "${TURN_INDEX:-0}" -ge 5 ]]; then
     _decisions=$(jq -r '.markers[]? | select(test("^\\[(DECISION|SOLUTION|CORRECTION|MILESTONE)\\]"))' \
