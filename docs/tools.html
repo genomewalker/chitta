@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>chitta — 339 MCP tools</title>
-<meta name="description" content="Generated reference for every MCP tool served by the chitta daemon: 54 listed by default, 285 more reachable through the advanced gateway.">
+<title>chitta — 340 MCP tools</title>
+<meta name="description" content="Generated reference for every MCP tool served by the chitta daemon: 54 listed by default, 286 more reachable through the advanced gateway.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<meta property="og:title" content="339 MCP tools — chitta">
-<meta property="og:description" content="Generated reference for every MCP tool served by the chitta daemon: 54 listed by default, 285 more reachable through the advanced gateway.">
+<meta property="og:title" content="340 MCP tools — chitta">
+<meta property="og:description" content="Generated reference for every MCP tool served by the chitta daemon: 54 listed by default, 286 more reachable through the advanced gateway.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="favicon.svg">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="339 MCP tools — chitta">
-<meta name="twitter:description" content="Generated reference for every MCP tool served by the chitta daemon: 54 listed by default, 285 more reachable through the advanced gateway.">
+<meta name="twitter:title" content="340 MCP tools — chitta">
+<meta name="twitter:description" content="Generated reference for every MCP tool served by the chitta daemon: 54 listed by default, 286 more reachable through the advanced gateway.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -88,9 +88,9 @@
 <header class="page-header">
   <div class="container">
     <div class="page-header-badge reveal">MCP tool reference</div>
-    <h1 class="reveal reveal-delay-1">339 tools. One daemon.</h1>
-    <p class="page-header-sub reveal reveal-delay-2">Native tools are served by <code class="style-18fae4fbe7">chittad</code>, a C++ daemon reached over a Unix socket. 54 are listed to the model by default; the remaining 285 stay callable through the <code class="style-18fae4fbe7">advanced</code> gateway, which keeps the default tool list small. Composed gateways run in chitta-mcp. Click a row for its parameters; additional native CLI entries appear below.</p>
-    <p class="gen-note">Status as of 2026-09-16 · Generated from frozen contracts on 2026-09-16, 339 tools &mdash; regenerate with <code>python3 scripts/gen-tools-static.py --docs</code></p>
+    <h1 class="reveal reveal-delay-1">340 tools. One daemon.</h1>
+    <p class="page-header-sub reveal reveal-delay-2">Native tools are served by <code class="style-18fae4fbe7">chittad</code>, a C++ daemon reached over a Unix socket. 54 are listed to the model by default; the remaining 286 stay callable through the <code class="style-18fae4fbe7">advanced</code> gateway, which keeps the default tool list small. Composed gateways run in chitta-mcp. Click a row for its parameters; additional native CLI entries appear below.</p>
+    <p class="gen-note">Status as of 2026-09-16 · Generated from frozen contracts on 2026-09-16, 340 tools &mdash; regenerate with <code>python3 scripts/gen-tools-static.py --docs</code></p>
   </div>
 </header>
 
@@ -130,6 +130,7 @@
     <a href="#cat-wisdom" class="submenu-toc-link" data-section="cat-wisdom">Wisdom Lifecycle</a>
     <a href="#cat-cec" class="submenu-toc-link" data-section="cat-cec">Causal Episode Compiler</a>
     <a href="#cat-io" class="submenu-toc-link" data-section="cat-io">Import / Export &amp; Files</a>
+    <a href="#cat-other" class="submenu-toc-link" data-section="cat-other">Other</a>
   </div>
 </nav>
 
@@ -747,6 +748,18 @@
         <div class="tool-row"><span class="tool-name">file_restore</span><span class="tool-desc">Restore file version (stub)<span class="tool-flag">via advanced</span></span><div class="tool-params"><div class="table-scroll" role="region" aria-label="Parameters of file_restore" tabindex="0"><table class="tool-params-table"><thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr></thead><tbody><tr><td><span class="param-name">file_path</span></td><td><span class="param-type">string</span></td><td><span class="param-required">Yes</span></td><td><span class="param-type">&mdash;</span></td><td><span class="param-desc"></span></td></tr><tr><td><span class="param-name">preview</span></td><td><span class="param-type">boolean</span></td><td><span class="param-optional">No</span></td><td><span class="param-type">&mdash;</span></td><td><span class="param-desc"></span></td></tr><tr><td><span class="param-name">version_id</span></td><td><span class="param-type">any</span></td><td><span class="param-optional">No</span></td><td><span class="param-type">&mdash;</span></td><td><span class="param-desc"></span></td></tr></tbody></table></div></div></div>
         <div class="tool-row"><span class="tool-name">file_timeline</span><span class="tool-desc">Show files modified in time range<span class="tool-flag">via advanced</span></span><div class="tool-params"><div class="table-scroll" role="region" aria-label="Parameters of file_timeline" tabindex="0"><table class="tool-params-table"><thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr></thead><tbody><tr><td><span class="param-name">cross_session</span></td><td><span class="param-type">boolean</span></td><td><span class="param-optional">No</span></td><td><span class="param-type">&mdash;</span></td><td><span class="param-desc"></span></td></tr><tr><td><span class="param-name">file_pattern</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">No</span></td><td><span class="param-type">&mdash;</span></td><td><span class="param-desc"></span></td></tr><tr><td><span class="param-name">limit</span></td><td><span class="param-type">any</span></td><td><span class="param-optional">No</span></td><td><span class="param-type">&mdash;</span></td><td><span class="param-desc"></span></td></tr><tr><td><span class="param-name">path</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">No</span></td><td><span class="param-type">&mdash;</span></td><td><span class="param-desc"></span></td></tr><tr><td><span class="param-name">query</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">No</span></td><td><span class="param-type">&mdash;</span></td><td><span class="param-desc"></span></td></tr><tr><td><span class="param-name">session_id</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">No</span></td><td><span class="param-type">&mdash;</span></td><td><span class="param-desc"></span></td></tr></tbody></table></div></div></div>
         <div class="tool-row"><span class="tool-name">run_hint_enricher</span><span class="tool-desc">Generate retrieval hints for unprocessed memories using chitta-hint-tuned. Reads memories without a retrieval_hint tag, calls the local hint model, stores each hint as a derived memory (kind=hint, tags=retrieval_hint), and marks the source memory with hint:done. Run after a session to enrich new memories for better recall.<span class="tool-flag">gateway</span></span><div class="tool-params"><div class="table-scroll" role="region" aria-label="Parameters of run_hint_enricher" tabindex="0"><table class="tool-params-table"><thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr></thead><tbody><tr><td><span class="param-name">dry_run</span></td><td><span class="param-type">boolean</span></td><td><span class="param-optional">No</span></td><td><span class="param-type">false</span></td><td><span class="param-desc">Preview hints without writing to memory (default: false)</span></td></tr><tr><td><span class="param-name">limit</span></td><td><span class="param-type">integer</span></td><td><span class="param-optional">No</span></td><td><span class="param-type">100</span></td><td><span class="param-desc">Max memories to enrich per run (default: 100)</span></td></tr><tr><td><span class="param-name">model</span></td><td><span class="param-type">string</span></td><td><span class="param-optional">No</span></td><td><span class="param-type">&quot;chitta-hint-tuned&quot;</span></td><td><span class="param-desc">Ollama model to use (default: chitta-hint-tuned)</span></td></tr></tbody></table></div></div></div>
+      </div>
+    </div>
+
+    <div class="tools-category" id="cat-other">
+      <div class="tools-category-header" onclick="this.parentElement.classList.toggle('collapsed')">
+        <div class="tools-category-icon"><svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="#9DB2D9" stroke-width="1" opacity="0.4"/><circle cx="10" cy="10" r="3" stroke="#CBAF86" stroke-width="1" opacity="0.5"/></svg></div>
+        <h2 class="tools-category-name">Other</h2>
+        <span class="tools-category-count">1 tool</span>
+        <span class="tools-category-toggle">&#x25BE;</span>
+      </div>
+      <div class="tools-list">
+        <div class="tool-row"><span class="tool-name">prompt_context</span><span class="tool-desc">Apply shared prompt admission and render its budget metadata<span class="tool-flag">via advanced</span></span><div class="tool-params"><div class="table-scroll" role="region" aria-label="Parameters of prompt_context" tabindex="0"><table class="tool-params-table"><thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr></thead><tbody><tr><td><span class="param-name">local</span></td><td><span class="param-type">boolean</span></td><td><span class="param-optional">No</span></td><td><span class="param-type">&mdash;</span></td><td><span class="param-desc">CLI only: run the same pure policy locally for timeout fallback</span></td></tr><tr><td><span class="param-name">state</span></td><td><span class="param-type">object</span></td><td><span class="param-required">Yes</span></td><td><span class="param-type">&mdash;</span></td><td><span class="param-desc">Lane text, session hashes, query tokens and policy settings</span></td></tr></tbody></table></div></div></div>
       </div>
     </div>
 

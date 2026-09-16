@@ -9,6 +9,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 root = Path(sys.argv[1])
@@ -73,6 +74,10 @@ for placement in ("0", "1"):
             # Stop's heartbeat runs even without a transcript.
             (state / ".hb_placement").unlink()
             hook("stop-core.sh", {"session_id": "placement"})
+            # Stop deliberately detaches its heartbeat; process exit is not an ack.
+            deadline = time.monotonic() + 2
+            while not (state / ".hb_placement").exists() and time.monotonic() < deadline:
+                time.sleep(0.01)
             assert (state / ".hb_placement").exists()
         if placement == "1":
             for marker in (".hb_placement", ".turn_index_placement", ".last_user_message",

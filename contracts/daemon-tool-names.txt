@@ -180,6 +180,7 @@ profile_get
 profile_observe
 profile_update
 promote_memory
+prompt_context
 propose_change
 provenance_check
 prune_episodes

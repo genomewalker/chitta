@@ -10,6 +10,13 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 ## [Unreleased]
 
+- Add advanced `prompt_context` RPC for shared Claude Code/Codex prompt admission,
+  C2 labels, hash deduplication and lane accounting. Its CLI-local timeout fallback
+  uses the same native policy; older clients retain shell compatibility. Synthetic
+  legacy/native and timeout outputs match byte for byte; seven replica hook
+  fixtures pass three paired repetitions against unchanged hooks on one daemon.
+  Regenerate RPC contracts, MCP schemas and tool documentation.
+
 - Preserve calibrated recall confidence when repository sources are merged.
   Source BM25 ranks have no similarity calibration, so `max_relevance` and
   abstention retain their memory values; `source_hits` reports source coverage.

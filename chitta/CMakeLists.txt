@@ -254,6 +254,8 @@ target_include_directories(chitta INTERFACE
 
 # Find threads
 find_package(Threads REQUIRED)
+find_package(OpenSSL REQUIRED)
+target_link_libraries(chitta INTERFACE OpenSSL::Crypto)
 target_link_libraries(chitta INTERFACE Threads::Threads roaring tree-sitter-parsers)
 
 # nlohmann/json for RPC server
@@ -396,6 +398,7 @@ add_executable(chittad
     src/handlers/field_operator.cpp
     src/handlers/field_session.cpp
     src/handlers/field_task_ledger.cpp
+    src/handlers/field_prompt_context.cpp
     src/handlers/field_system.cpp
     src/handlers/intervention.cpp
     src/handlers/learning.cpp
@@ -471,6 +474,9 @@ install(TARGETS chitta_migrate DESTINATION bin)
 # below re-enables assertions per test target so a green ctest means something.
 # Add new test targets to that list, or their checks silently evaporate.
 if(CHITTA_BUILD_TESTS)
+    add_executable(prompt_policy_test src/prompt_policy_test.cpp)
+    target_link_libraries(prompt_policy_test PRIVATE chitta)
+    add_test(NAME prompt_policy_test COMMAND prompt_policy_test)
     enable_testing()
     if(CHITTA_BUILD_RPC)
         add_test(NAME daemon_isolation_test
@@ -597,6 +603,7 @@ if(CHITTA_BUILD_TESTS)
     endif()
 
     set(CHITTA_TEST_TARGETS
+        prompt_policy_test
         task_ledger_test
         thread_pool_test llm_probe_test callsite_extract_test
         value_fact_extract_test prefilter_keep_test

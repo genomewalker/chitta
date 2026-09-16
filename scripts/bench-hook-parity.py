@@ -167,6 +167,7 @@ def main():
     parser.add_argument("mode", choices=("record", "check", "measure"))
     parser.add_argument("--replica", type=Path, required=True)
     parser.add_argument("--cli", type=Path, required=True)
+    parser.add_argument("--hooks", type=Path, default=ROOT / "hooks")
     parser.add_argument("--work", type=Path, required=True)
     parser.add_argument("--baseline", type=Path, default=FIXTURES / "baseline")
     parser.add_argument("--results", type=Path, required=True)
@@ -174,6 +175,7 @@ def main():
     parser.add_argument("--warmup", type=int, default=4)
     parser.add_argument("--only", action="append")
     args = parser.parse_args()
+    args.hooks = args.hooks.resolve(strict=True)
     config = load(FIXTURES / "suite.json")
     now = config["now_ms"]
     replica = args.replica.resolve()
@@ -208,7 +210,7 @@ def main():
             (work / "transcript.jsonl").write_text(transcript)
             payload = (FIXTURES / case["input"]).read_bytes().replace(b"@WORK@", os.fsencode(work))
             stdout, stderr, result = run_hook(
-                ["bash", str(ROOT / "hooks" / case["hook"])],
+                ["bash", str(args.hooks / case["hook"])],
                 payload,
                 env,
                 work / "project",
@@ -248,6 +250,11 @@ def main():
         "rows": rows,
         "failures": failures,
         "cli_sha256": hashlib.sha256(cli.read_bytes()).hexdigest(),
+        "hook_root": str(args.hooks.resolve()),
+        "hook_sha256": {
+            p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+            for p in sorted(args.hooks.glob("*.sh"))
+        },
     }
     (args.results / "report.json").write_text(json.dumps(report, indent=2) + "\n")
     if failures:

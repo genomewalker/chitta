@@ -1,4 +1,5 @@
 #include <chitta/queue_path.hpp>
+#include <chitta/prompt_policy.hpp>
 // Chitta CLI - Multi-mode memory operations
 // Command-line interface for soul integration
 //
@@ -703,6 +704,27 @@ int main(int argc, char* argv[]) {
                 break;
         }
         return 0;
+    }
+
+    // Offline fallback shares the daemon's pure policy and never opens a socket.
+    if (tool == "prompt_context") {
+        bool local = false;
+        std::string state;
+        for (int i = tool_arg_index + 1; i < argc; ++i) {
+            if (std::strcmp(argv[i], "--local") == 0) local = true;
+            else if (std::strcmp(argv[i], "--state") == 0 && i + 1 < argc) state = argv[++i];
+        }
+        if (local) {
+            try {
+                const auto result = chitta::prompt_policy::admit(nlohmann::json::parse(state));
+                if (output_format == OutputFormat::Json) std::cout << result.dump() << "\n";
+                else std::cout << result.at("fused_block").get<std::string>();
+                return 0;
+            } catch (const std::exception& error) {
+                std::cerr << "prompt_context: " << error.what() << "\n";
+                return 1;
+            }
+        }
     }
 
     // Handle status command (daemon health check)

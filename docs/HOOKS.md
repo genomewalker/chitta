@@ -48,6 +48,21 @@ before changing the default. A hook environment alone cannot change an already
 running daemon's policy. See [FIELD_PERF.md](FIELD_PERF.md) for inventory and
 measurements. Stream tests use private copies from `scripts/eval-replica.sh`.
 
+### Phase 5 prompt admission (2026-09-16)
+
+`prompt_context(state=...)` applies the shared admission policy and returns the
+fused block, admitted/dropped counts, C2 tag and display calibration, lane timing
+text, debug lines, and session hash/anchor updates. The hook validates the reply
+before applying those local updates. Both frontend adapters use the same core.
+The daemon and `chitta prompt_context --local` compile the same pure C++ policy;
+retrieval, score values and result ordering remain unchanged.
+
+The compatibility C2 bands are KNOWN at raw maxrel >= 81 and UNKNOWN below.
+THIN remains merged into KNOWN, as in the existing hook calibration. Display
+calibration, lane fairness, per-session deduplication and output truncation are
+preserved. The hook retains its real deadline, timeout fallback, and final
+end-to-end elapsed value because a daemon cannot measure hook setup/rendering.
+
 ### Phase 6 runtime placement and embedding workers (2026-09-16)
 
 | Environment | Default | Meaning |
@@ -57,6 +72,7 @@ measurements. Stream tests use private copies from `scripts/eval-replica.sh`.
 | `CHITTA_EMBED_WRITE_WORKERS` | `0` | `0` preserves the existing embedding lane. Positive values enable dedicated document workers and a separate two-worker Unix write-RPC pool. Clamped to leave one of `CHITTA_EMBED_CONTEXTS` free when possible. |
 | `CHITTA_EMBED_WRITE_DEPTH` | `64` | Maximum queued document jobs, excluding active workers; 1–65536. |
 | `CHITTA_EMBED_WRITE_WAIT_MS` | `1000` | Actual document-inference callers wait for admission at most this long; 1–60000 ms. Cache-warming calls remain nonblocking because legacy callers can hold the global write lock. |
+| `CHITTA_PROMPT_CONTEXT` | `1` | Use daemon admission for both frontends. A 150 ms RPC wait falls back to the same native CLI policy (250 ms); older CLIs retain the shell compatibility path. `0` selects the previous shell implementation for migration comparisons. Lane retrieval/scoring is unchanged. |
 | `CHITTA_HOOK_NOW` | unset | Parity evaluation only: 13-digit positive Unix milliseconds. Pins shell wall timestamps and displayed lane/total durations to zero; explicit date parsing, real timeout flags and prompt budget enforcement remain unpinned. Use with `CHITTA_RECALL_NOW` on a private replica and `scripts/bench-hook-parity.py`. Invalid values are ignored. |
 | `CHITTA_RECALL_NOW` | unset | Evaluation only: positive Unix milliseconds, fixed once per daemon for Rust recall scoring. Write/WAL clocks remain real. Unset or invalid uses the wall clock. The restart gate records and reuses one value across processes. |
 | `CHITTA_RECALL_EMBED_WAIT_MS` | `50` | Query and variant embedding wait, 1–60000 ms; invalid values retain 50 ms. Replica identity evaluation uses 10000 ms and rejects missing embeddings, preventing load-dependent semantic-lane loss. Production fallback remains 50 ms unless explicitly overridden. |

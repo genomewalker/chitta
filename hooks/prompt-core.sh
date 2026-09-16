@@ -129,22 +129,24 @@ _read_lane() {
 
 _render_lane_telemetry() {
     local _lane _sep="" _bad
-    _LANE_TIMING_FIELD=""
-    _LANE_MS_JSON="{"
-    _LANE_TIMEOUT_JSON="{"
-    for _lane in "${_LANE_ORDER[@]}"; do
-        [[ -n "${_LANE_MS[$_lane]+set}" ]] || continue
-        # Pin presentation only; retain the daemon's real timeout/degraded flag.
-        [[ "${CHITTA_HOOK_NOW:-}" =~ ^[1-9][0-9]{12}$ ]] && _LANE_MS["$_lane"]=0
-        _bad=""
-        [[ "${_LANE_TIMEOUT[$_lane]}" == "true" ]] && _bad="!"
-        _LANE_TIMING_FIELD+="${_sep}${_lane}=${_LANE_MS[$_lane]}${_bad}"
-        _LANE_MS_JSON+="${_sep}\"${_lane}\":${_LANE_MS[$_lane]}"
-        _LANE_TIMEOUT_JSON+="${_sep}\"${_lane}\":${_LANE_TIMEOUT[$_lane]}"
-        _sep=","
-    done
-    _LANE_MS_JSON+="}"
-    _LANE_TIMEOUT_JSON+="}"
+    if [[ "${_POLICY_READY:-0}" -ne 1 ]]; then
+        _LANE_TIMING_FIELD=""
+        _LANE_MS_JSON="{"
+        _LANE_TIMEOUT_JSON="{"
+        for _lane in "${_LANE_ORDER[@]}"; do
+            [[ -n "${_LANE_MS[$_lane]+set}" ]] || continue
+            # Pin presentation only; retain the daemon's real timeout/degraded flag.
+            [[ "${CHITTA_HOOK_NOW:-}" =~ ^[1-9][0-9]{12}$ ]] && _LANE_MS["$_lane"]=0
+            _bad=""
+            [[ "${_LANE_TIMEOUT[$_lane]}" == "true" ]] && _bad="!"
+            _LANE_TIMING_FIELD+="${_sep}${_lane}=${_LANE_MS[$_lane]}${_bad}"
+            _LANE_MS_JSON+="${_sep}\"${_lane}\":${_LANE_MS[$_lane]}"
+            _LANE_TIMEOUT_JSON+="${_sep}\"${_lane}\":${_LANE_TIMEOUT[$_lane]}"
+            _sep=","
+        done
+        _LANE_MS_JSON+="}"
+        _LANE_TIMEOUT_JSON+="}"
+    fi
     _clock_ms
     _HOOK_ELAPSED_MS=$(( _NOW_MS - _HOOK_T0 ))
 }
@@ -751,6 +753,72 @@ if [[ -z "$memories" ]]; then
     [[ -z "$CACHE_WARN" && -z "$SESSION_WARN" ]] && exit 0
 fi
 
+# Admission policy is daemon-owned. The new CLI carries the same pure policy
+# for a short local fallback; older CLIs retain the shell compatibility path.
+_INJECTED_FILE="${HOOK_STATE_DIR}/.injected_hashes_${SESSION_ID}"
+_POLICY_READY=0
+if [[ "${CHITTA_PROMPT_CONTEXT:-1}" == "1" ]]; then
+    _render_lane_telemetry
+    _policy_seen=""
+    [[ -f "$_INJECTED_FILE" ]] && _policy_seen=$(<"$_INJECTED_FILE")
+    _policy_state=$(jq -nc --arg query "$CLEAN_QUERY" --arg memories "$memories" \
+        --arg qt "$_QTOK" --arg distinct "${_QTOK_DISTINCT:-}" --arg ctx "$_CTXTOK" \
+        --arg seen "$_policy_seen" --arg sid "$SESSION_ID" --arg c2 "${_c2_pct:-}" \
+        --arg small "${_c2_small_realm_relax:-0}" --arg ablated "$_ABLATE_LANES_RAW" \
+        --arg unknown "${CHITTA_UNKNOWN_SILENCE:-${CC_SOUL_UNKNOWN_SILENCE:-1}}" \
+        --arg anchor "${CHITTA_ANCHOR_ENFORCE:-${CC_SOUL_ANCHOR_ENFORCE:-0}}" \
+        --arg debug "${CHITTA_ADMIT_DEBUG:-${CC_SOUL_ADMIT_DEBUG:-}}" \
+        --argjson kwmin "${CHITTA_KW_SINGLE_TOKEN_MIN:-60}" \
+        --argjson ms "$_LANE_MS_JSON" --argjson timeouts "$_LANE_TIMEOUT_JSON" \
+        '{query:$query,memories:$memories,query_tokens:$qt,distinct_tokens:$distinct,
+          context_tokens:$ctx,seen_hashes:$seen,session_id:$sid,c2_pct:$c2,
+          small_realm:($small=="1"),ablated:$ablated,unknown_silence:($unknown=="1"),
+          anchor_enforce:($anchor=="1"),debug:($debug!=""),kw_single_token_min:$kwmin,
+          lane_ms:$ms,lane_timeout:$timeouts}' 2>/dev/null)
+    if [[ -n "$_policy_state" ]]; then
+        # Never spend the remaining enrichment budget waiting for admission.
+        if ! budget_left || ! timeout 0.15 "$CHITTA_BIN" prompt_context \
+            --state "$_policy_state" --json >"$_ld/policy.json" 2>/dev/null; then
+            timeout 0.25 "$CHITTA_BIN" prompt_context --local \
+                --state "$_policy_state" --json >"$_ld/policy.json" 2>/dev/null || true
+        fi
+        if jq -sjer '
+            if length==1 then .[0] else error("expected one policy response") end |
+            select((.fused_block|type)=="string" and
+                (.count|type=="number" and .>=0 and .<=3 and .==floor) and
+                (.admit_line|type)=="string" and (.c2_tag|type)=="string" and
+                (.c2_phrase|type)=="string" and (.timing_field|type)=="string" and
+                (.admit_tail|type)=="string" and
+                (.hashes|type=="array" and all(.[]; type=="string" and test("^[0-9a-f]{16}$"))) and
+                (.shadow|type)=="array" and (.debug_text|type)=="string" and
+                (.terse_negation|type)=="boolean") |
+            .fused_block,"\u0000",(.count|tostring),"\u0000",.admit_line,"\u0000",
+            .c2_tag,"\u0000",.c2_phrase,"\u0000",.timing_field,"\u0000",
+            .admit_tail,"\u0000",.debug_text,"\u0000",(.terse_negation|tostring),"\u0000"
+        ' "$_ld/policy.json" >"$_ld/policy.records" 2>/dev/null; then
+            {
+                IFS= read -r -d '' OUTPUT
+                IFS= read -r -d '' COUNT
+                IFS= read -r -d '' ADMIT_LINE
+                IFS= read -r -d '' _c2_tag
+                IFS= read -r -d '' _c2_phrase
+                IFS= read -r -d '' _LANE_TIMING_FIELD
+                IFS= read -r -d '' _POLICY_ADMIT_TAIL
+                IFS= read -r -d '' _policy_debug
+                IFS= read -r -d '' _policy_negation
+            } <"$_ld/policy.records"
+            printf '%s' "$_policy_debug" >&2
+            [[ "$_policy_negation" == true ]] && _corr_out=""
+            if [[ "$SESSION_ID" != unknown && -n "$SESSION_ID" && "$COUNT" -gt 0 ]]; then
+                jq -r '.hashes[]' "$_ld/policy.json" >>"$_INJECTED_FILE"
+            fi
+            jq -c '.shadow[]' "$_ld/policy.json" >>"${MIND_PATH}/.inj_anchor_shadow.jsonl"
+            _LEDGER_OUTPUT="$OUTPUT"
+            _POLICY_READY=1
+        fi
+    fi
+fi
+if [[ "$_POLICY_READY" -ne 1 ]]; then
 # Filter and format results
 # Workspace inspector: every candidate carries an admission reason (its recall
 # lane), and every rejection is counted by cause. Rendered as per-item [lane]
@@ -1066,6 +1134,8 @@ if [[ $COUNT -gt 0 || $((_drop_conf + _drop_dup + _drop_meta + _drop_cap + _drop
     [[ $_drop_unk  -gt 0 ]] && _out="$_out unk:$_drop_unk"
     _sr_tag=""; [[ "${_c2_small_realm_relax:-0}" -eq 1 ]] && _sr_tag=" sr:on"
     ADMIT_LINE="[admit]${_ABLATE_LANES_RAW:+ abl:$_ABLATE_LANES_RAW}${_c2_tag:+ C2:$_c2_tag($_c2_cal%)}${_sr_tag}${_in:- none} | drop${_out:- none}"
+fi
+
 fi
 
 # ===========================================
@@ -1619,7 +1689,11 @@ if [[ -n "$ADMIT_LINE" ]]; then
         _HOOK_ELAPSED_MS=$(( _NOW_MS - _HOOK_T0 ))
         _LANE_TIMING_FIELD=""
     fi
+    if [[ "${_POLICY_READY:-0}" -eq 1 ]]; then
+        ADMIT_LINE+="${_POLICY_ADMIT_TAIL//@HOOK_MS@/$_HOOK_ELAPSED_MS}"
+    else
     ADMIT_LINE+=" | t:${_LANE_TIMING_FIELD}${_LANE_TIMING_FIELD:+,}total=${_HOOK_ELAPSED_MS}${_c2_phrase}"
+    fi
 fi
 if [[ -n "$OUTPUT" && $COUNT -gt 0 ]]; then
     # #5: sqz intra-turn dedup — collapse repeated memory text seen earlier this session.

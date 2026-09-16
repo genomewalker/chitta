@@ -2,9 +2,9 @@
 
 Status as of 2026-09-16.
 
-Generated from frozen contracts on 2026-09-16, 339 tools — regenerate with `python3 scripts/gen-tools-static.py --docs`.
+Generated from frozen contracts on 2026-09-16, 340 tools — regenerate with `python3 scripts/gen-tools-static.py --docs`.
 
-54 tools are listed in `tools/list` by default. The other 285 are hidden to keep the model's tool list small, and stay callable through the `advanced` gateway:
+54 tools are listed in `tools/list` by default. The other 286 are hidden to keep the model's tool list small, and stay callable through the `advanced` gateway:
 
 ```json
 {"tool": "pin_memory", "arguments": {"id": 123}}
@@ -41,6 +41,7 @@ Tools marked **gateway** are composed in `chitta-mcp/server.py` rather than serv
 - [Wisdom Lifecycle](#wisdom) — 14
 - [Causal Episode Compiler](#cec) — 5
 - [Import / Export & Files](#io) — 5
+- [Other](#other) — 1
 
 <a id="core"></a>
 
@@ -3445,6 +3446,19 @@ Generate retrieval hints for unprocessed memories using chitta-hint-tuned. Reads
 | `dry_run` | boolean | no | `false` | Preview hints without writing to memory (default: false) |
 | `limit` | integer | no | `100` | Max memories to enrich per run (default: 100) |
 | `model` | string | no | `"chitta-hint-tuned"` | Ollama model to use (default: chitta-hint-tuned) |
+
+<a id="other"></a>
+
+## Other
+
+### `prompt_context` *(via advanced)*
+
+Apply shared prompt admission and render its budget metadata
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `local` | boolean | no | — | CLI only: run the same pure policy locally for timeout fallback |
+| `state` | object | yes | — | Lane text, session hashes, query tokens and policy settings |
 
 
 ## Unadvertised native handlers

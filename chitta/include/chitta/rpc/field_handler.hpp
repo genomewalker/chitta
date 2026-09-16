@@ -469,7 +469,7 @@ public:
             "graph_traverse", "graph_pagerank", "get", "get_embeddings",
             "expand_memory", "query", "list_by_status", "list_memories_brief",
             "recall_by_priority", "memory_type_stats", "smart_recall", "hybrid_recall",
-            "recall_lanes",
+            "recall_lanes", "prompt_context",
             "recall_session", "recall_spreading", "structured_recall",
             "ask", "expand_query", "recall_last_action", "recall_failure_pattern",
             "recall_causal_antecedent", "recall_hdcbind", "recall_counterfactual",
@@ -583,7 +583,7 @@ public:
             // RwLocks. Under the shared lock they queued behind every `remember`
             // (lockprof 2026-09-15: held 450-1100 ms) and the hook timed out
             // while a direct `recall` stayed at 50 ms.
-            "recall_lanes", "recall_keyword", "correction_check",
+            "recall_lanes", "prompt_context", "recall_keyword", "correction_check",
         };
         return kLockFreeReads.count(name) > 0;
     }
@@ -741,6 +741,7 @@ private:
     TaskLedger task_ledger_;
     void load_task_ledger();
     ToolResult tool_ledger_op(const json& params);
+    ToolResult tool_prompt_context(const json& params);
     FieldStore* field_store_;
     VakYantra* yantra_;
     Subconscious* subconscious_ = nullptr;

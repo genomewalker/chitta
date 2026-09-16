@@ -43,3 +43,13 @@ The initial unconstrained natural-language probe changed lane admission counts
 on repeated calls; the committed repository-path query fixes the routing input.
 Existing lane/admission tests cover synthetic semantic and UNKNOWN cases. The
 runner retains exact failures when replica recall or load remains nondeterministic.
+
+When a new daemon build changes retrieval order, retain the committed historical
+baseline and run an unchanged-hook control against that same daemon. Extract the
+last verified hooks with `git archive <commit> hooks`, use `record --hooks
+/path/to/extracted/hooks --baseline /tmp/control-baseline`, then `check
+--baseline /tmp/control-baseline` for the candidate. Both runs use the same CLI,
+replica and pinned inputs. Reports include CLI and hook digests. A control failure
+is a retrieval stability failure; do not normalize rows or rewrite the historical
+baseline to hide it. Step 2 observed two SessionStart correction rows exchanging
+positions across a daemon restart, reproduced by the unchanged Step 1 hooks.
