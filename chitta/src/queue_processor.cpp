@@ -9,6 +9,10 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
+#include <unordered_set>
+#include <stdexcept>
+#include <fcntl.h>
+#include <unistd.h>
 
 extern std::atomic<bool> daemon_running;
 extern std::atomic<bool> verbose_mode;
@@ -107,11 +111,88 @@ void QueueProcessor::clear_distill_attempt(const std::string& session_id) {
     std::rename(tmp.c_str(), attempts_path_.c_str());
 }
 
+namespace {
+// One ledger per lane, owned by its single consumer. Retain the completed
+// batch until the next claim so a stale .processing replay after snapshot/WAL
+// compaction is still recognized. Rotation retains only IDs in the new batch.
+struct QueueAckError : std::runtime_error { using std::runtime_error::runtime_error; };
+
+void ack_sync_path(const std::string& path) {
+    int fd = ::open(path.c_str(), O_RDONLY | O_CLOEXEC);
+    if (fd < 0) throw QueueAckError("open for sync: " + path);
+    int rc = ::fsync(fd);
+    ::close(fd);
+    if (rc != 0) throw QueueAckError("fsync: " + path);
+}
+
+void ack_replace(const std::string& path, const std::string& contents) {
+    const auto tmp = path + ".tmp";
+    {
+        std::ofstream out(tmp, std::ios::trunc);
+        out << contents;
+        out.flush();
+        if (!out) throw QueueAckError("write: " + tmp);
+    }
+    ack_sync_path(tmp);
+    if (std::rename(tmp.c_str(), path.c_str()) != 0)
+        throw QueueAckError("rename: " + path);
+    auto parent = std::filesystem::path(path).parent_path();
+    ack_sync_path(parent.empty() ? "." : parent.string());
+}
+
+std::string queue_ack_id(const std::string& line) {
+    const auto item = json::parse(line, nullptr, false);
+    if (!item.is_object()) return {};
+    auto it = item.find("ack_id");
+    return it != item.end() && it->is_string() ? it->get<std::string>() : "";
+}
+
+class AppliedAcks {
+    std::string path_;
+    std::unordered_set<std::string> ids_;
+public:
+    explicit AppliedAcks(const std::string& queue) : path_(queue + ".applied-acks") {
+        std::error_code ec;
+        const bool exists = std::filesystem::exists(path_, ec);
+        if (ec) throw QueueAckError("stat applied ack ledger " + path_ + ": " + ec.message());
+        if (!exists) return;
+        std::ifstream in(path_);
+        try {
+            json ids;
+            in >> ids;
+            for (const auto& id : ids.get<std::vector<std::string>>()) ids_.insert(id);
+        } catch (const std::exception& e) {
+            throw QueueAckError("unreadable applied ack ledger " + path_ + ": " + e.what());
+        }
+    }
+    bool contains(const std::string& id) const { return !id.empty() && ids_.count(id); }
+    void persist() { ack_replace(path_, json(ids_).dump() + "\n"); }
+    void rotate(const std::vector<std::string>& lines) {
+        std::unordered_set<std::string> retained;
+        for (const auto& line : lines) {
+            auto id = queue_ack_id(line);
+            if (contains(id)) retained.insert(id);
+        }
+        if (ids_ == retained) return;
+        ids_ = std::move(retained);
+        persist();
+    }
+    void record(const std::string& id, FieldStore& store) {
+        if (id.empty() || contains(id)) return;
+        // The C++ convenience sync() discards the FFI status. Never publish a
+        // durable ack for a failed WAL sync. Failure leaves .processing intact.
+        if (cf_sync(store.handle()) != 0) throw QueueAckError("store sync before ack " + id);
+        ids_.insert(id);
+        persist();
+    }
+};
+} // namespace
+
 // Crash recovery for one queue file: if its .processing sidecar exists,
 // re-queue only the UNPROCESSED suffix. The batch loops checkpoint their
 // progress to a .ckpt sidecar after each field_store_.sync(), so every line
 // before the watermark is durably applied — re-appending it would duplicate
-// data. No/unreadable .ckpt → watermark 0 → full re-queue (old behavior).
+// data. With no checkpoint, durable ack IDs still filter the replay.
 void QueueProcessor::recover_processing(const std::string& queue_file) {
     std::string processing_path = queue_file + ".processing";
     if (!std::ifstream(processing_path).good()) return;
@@ -124,7 +205,8 @@ void QueueProcessor::recover_processing(const std::string& queue_file) {
     // Append the unprocessed suffix to any existing queue file. Count
     // non-empty lines only — the batch loop's watermark indexes the same
     // filtered sequence.
-    size_t requeued = 0;
+    AppliedAcks applied(queue_file);
+    size_t requeued = 0, acknowledged = 0;
     {
         std::ifstream src(processing_path);
         std::ofstream dst(queue_file, std::ios::app);
@@ -132,14 +214,22 @@ void QueueProcessor::recover_processing(const std::string& queue_file) {
         size_t idx = 0;
         while (std::getline(src, line)) {
             if (line.empty()) continue;
-            if (idx++ >= skip) { dst << line << "\n"; ++requeued; }
+            if (idx++ < skip) continue;
+            if (applied.contains(queue_ack_id(line))) { ++acknowledged; continue; }
+            dst << line << "\n";
+            ++requeued;
         }
+        dst.flush();
+        if (!src.eof() || !dst) throw QueueAckError("requeue failed: " + processing_path);
     }
+    ack_sync_path(queue_file);
+    auto parent = std::filesystem::path(queue_file).parent_path();
+    ack_sync_path(parent.empty() ? "." : parent.string());
     std::remove(processing_path.c_str());
     std::remove(ckpt_path.c_str());
     std::cerr << "[queue] crash recovery: re-queued " << requeued
               << " items from " << processing_path
-              << " (skipped " << skip << " already processed)\n";
+              << " (skipped " << skip << " checkpointed, " << acknowledged << " applied ack_ids)\n";
 }
 
 void QueueProcessor::start() {
@@ -666,7 +756,7 @@ struct QueueToolDispatch {
 };
 } // namespace
 
-void QueueProcessor::run() {
+void QueueProcessor::run() try {
     // Span-lane flush cadence: live-path ingest links in RAM only; persist here,
     // off the memory-write hot path (also flushed on daemon close via cf_close).
     auto last_span_flush = std::chrono::steady_clock::now();
@@ -700,10 +790,12 @@ void QueueProcessor::run() {
             }
         }
 
+        AppliedAcks applied(queue_path_);
         if (lines.empty()) {
             std::remove(processing_path.c_str());
             continue;
         }
+        applied.rotate(lines);
         batch_remaining_ = lines.size();
 
         // Checkpoint cadence: sync + watermark every N items so a crash (or
@@ -747,11 +839,17 @@ void QueueProcessor::run() {
         // transcript_register event a distill resolves against is durable
         // before the slow lane can claim the item.
         std::vector<std::string> pending_slow;
-        auto flush_slow = [&]() {
+        auto flush_slow = [&](bool durable = false) {
             if (pending_slow.empty()) return;
             std::lock_guard<std::mutex> g(slow_mu_);
             for (const auto& sl : pending_slow)
-                sandbox::append_line_atomic(slow_path_, sl);
+                if (!sandbox::append_line_atomic(slow_path_, sl))
+                    throw QueueAckError("slow handoff append failed");
+            if (durable) {
+                ack_sync_path(slow_path_);
+                auto parent = std::filesystem::path(slow_path_).parent_path();
+                ack_sync_path(parent.empty() ? "." : parent.string());
+            }
             pending_slow.clear();
         };
 
@@ -760,12 +858,22 @@ void QueueProcessor::run() {
             const auto& line = lines[li];
             if (!daemon_running) break;
             if (coalesce_skip[li]) {
+                // This is a terminal supersession decision. Retain its ack so
+                // recovery cannot resurrect an older save after filtering the
+                // already-applied replacement out of the same batch.
+                applied.record(queue_ack_id(line), field_store_);
                 batch_remaining_--;
                 ++processed;
                 continue;  // superseded ledger_save; nothing to sync
             }
 
             try {
+                const auto ack_id = queue_ack_id(line);
+                if (applied.contains(ack_id)) {
+                    batch_remaining_--;
+                    ++processed;
+                    continue;
+                }
                 auto j = json::parse(line);
                 std::string tool = j.value("tool", "");
                 auto args = j.value("args", json::object());
@@ -836,10 +944,11 @@ void QueueProcessor::run() {
                     const std::string& tool;
                     std::chrono::steady_clock::time_point t0;
                     bool held;
+                    long held_ms = -1;
                     ~LockProfGuard() {
                         long thr = FieldRpcHandler::lockprof_threshold_ms();
                         if (!held || thr <= 0) return;
-                        long ms = FieldRpcHandler::ms_since(t0);
+                        long ms = held_ms >= 0 ? held_ms : FieldRpcHandler::ms_since(t0);
                         if (ms >= thr)
                             std::cerr << "[lockprof] EXCLUSIVE queue:" << tool << " held=" << ms
                                       << "ms (blocks all readers/recall while held)\n";
@@ -850,7 +959,22 @@ void QueueProcessor::run() {
                     field_store_, handler_, queue_count_, queue_fail_count_, args,
                     tool, line, correction_emb, file_syms, file_sym_embs, pending_slow,
                     &QueueProcessor::category_to_confidence, &QueueProcessor::category_to_kind};
-                if (dispatch.dispatch()) continue;
+                if (dispatch.dispatch() && ack_id.empty()) continue;
+                if (_lk.owns_lock()) {
+                    _lp_guard.held_ms = FieldRpcHandler::ms_since(_lp_guard.t0);
+                    _lk.unlock();
+                }
+                if (!ack_id.empty()) {
+                    // A fast-lane distill ack means durable handoff, not completion.
+                    if (tool == "distill_trigger") {
+                        if (cf_sync(field_store_.handle()) != 0)
+                            throw QueueAckError("store sync before slow handoff");
+                        flush_slow(true);
+                    }
+                    applied.record(ack_id, field_store_);
+                }
+            } catch (const QueueAckError&) {
+                throw;
             } catch (const std::exception& e) {
                 // Always log — never silently drop a learning event
                 std::cerr << "[queue] FAILED: " << e.what() << "\n";
@@ -889,6 +1013,8 @@ void QueueProcessor::run() {
             std::cerr << "[queue] Processed " << lines.size() << " items, total=" << queue_count_ << "\n";
         }
     }
+} catch (const QueueAckError& e) {
+    std::cerr << "[queue] paused with processing file retained: " << e.what() << "\n";
 }
 
 // Execute one distill_trigger. Resolves the transcript via the durable event
@@ -949,7 +1075,7 @@ void QueueProcessor::process_distill(const json& args, const std::string& endpoi
 // after EVERY item — losing a watermark here costs a whole re-distill.
 // Shares no mutable state with the fast lane; the only coupling is the
 // slow queue file (fast appends, this claims) and FieldStore's own locking.
-void QueueProcessor::run_slow() {
+void QueueProcessor::run_slow() try {
     // Cached LLM endpoint, re-verified with one cheap curl before each distill.
     // Full re-discovery only on a probe miss; never `chitta-gpu start` from here.
     std::string endpoint;
@@ -970,10 +1096,12 @@ void QueueProcessor::run_slow() {
                 if (!line.empty()) lines.push_back(line);
             }
         }
+        AppliedAcks applied(slow_path_);
         if (lines.empty()) {
             std::remove(processing_path.c_str());
             continue;
         }
+        applied.rotate(lines);
 
         std::string ckpt_path = processing_path + ".ckpt";
         size_t processed = 0;
@@ -981,6 +1109,8 @@ void QueueProcessor::run_slow() {
         for (const auto& line : lines) {
             if (!daemon_running) break;
             try {
+                const auto ack_id = queue_ack_id(line);
+                if (applied.contains(ack_id)) { ++processed; continue; }
                 auto j = json::parse(line);
                 if (j.value("tool", "") == "distill_trigger") {
                     // POISON-PILL: bump the durable attempt count BEFORE distilling.
@@ -1011,6 +1141,9 @@ void QueueProcessor::run_slow() {
                     // Reached here without crashing → reset the attempt count.
                     if (!sid.empty()) clear_distill_attempt(sid);
                 }
+                applied.record(ack_id, field_store_);
+            } catch (const QueueAckError&) {
+                throw;
             } catch (const std::exception& e) {
                 std::cerr << "[queue] slow-lane FAILED: " << e.what() << "\n";
                 write_failed_item(line, e);
@@ -1047,6 +1180,8 @@ void QueueProcessor::run_slow() {
         std::remove(processing_path.c_str());
         std::remove(ckpt_path.c_str());
     }
+} catch (const QueueAckError& e) {
+    std::cerr << "[queue] slow lane paused with processing file retained: " << e.what() << "\n";
 }
 
 } // namespace chitta
