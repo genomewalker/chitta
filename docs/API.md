@@ -384,6 +384,7 @@ Search memory by semantic similarity with realm filtering Routed by the chitta-m
 | `query` | string | yes | — | Search query |
 | `realm` | string | no | — | Filter by realm |
 | `separation_mode` | boolean | no | — | Diverse results via MMR (default: False) |
+| `sources` | boolean | no | `true` | Include indexed repository sources; false returns memory ranking only (default: True) |
 | `tag` | string | no | — | Filter by tag |
 
 ### `reject_memory` *(via advanced)*

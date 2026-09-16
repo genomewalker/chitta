@@ -10,6 +10,10 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 ## [Unreleased]
 
+- Add recall `sources` (boolean, default true). `sources=false` preserves the
+  memory-only ranking for ID-based evaluations; regenerate the recall input
+  contract, MCP static schema and generated tool documentation.
+
 - Index repository Markdown headings and code with source identities, SHA-256
   validation on startup/query, deletion-aware FileChanged refresh and cited
   `[doc]`/`[code]` recall rows. Frozen-family current-truth improves 20/50 to

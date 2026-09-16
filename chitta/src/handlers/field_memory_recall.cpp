@@ -1269,7 +1269,7 @@ ToolResult FieldRpcHandler::RecallPipeline::format() {
     bool explain = params.value("explain", false);
     profile.next("result_metadata");
     json results_json = handler.hits_to_results_json(hits, explain);
-    auto sources = tag.empty() && !windowed
+    auto sources = params.value("sources", true) && tag.empty() && !windowed
         ? handler.repository_index_.search(query, realm, std::min<size_t>(3, limit)) : json::array();
     if (!sources.empty() && tag.empty()) {
         for (const auto& memory : results_json) {

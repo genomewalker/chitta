@@ -51,6 +51,7 @@ void FieldRpcHandler::register_memory_core_tools() {
                     {"tag", {{"type", "string"}, {"description", "Filter by tag"}}},
                     {"realm", {{"type", "string"}, {"description", "Filter by realm"}}},
                     {"include_global", {{"type", "boolean"}, {"description", "Include global memories (default: true)"}}},
+                    {"sources", {{"type", "boolean"}, {"default", true}, {"description", "Include indexed repository sources; false returns memory ranking only (default: true)"}}},
                     {"separation_mode", {{"type", "boolean"}, {"description", "Diverse results via MMR (default: false)"}}},
                     {"strategy", {{"type", "string"}, {"description", "Retrieval lane: fused (default), keyword (BM25 only, realm-scoped), field (Hopfield/DAM)"}}},
                     {"pool", {{"type", "integer"}, {"description", "Candidate pool depth before the recall-biased pre-filter (default 60, max 160; env CHITTA_RECALL_POOL)"}}},
