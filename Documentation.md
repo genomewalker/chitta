@@ -270,3 +270,21 @@ regression keeps `library(a)` unresolved beside `a.py`, while an explicit
 `source("a.py")` resolves. The quick gate passes, including unchanged contracts.
 Named callback arguments remain anonymous; the R6 method fixture still extracts
 its method. The final extraction and graph-scope regression suites pass.
+
+### Julia
+
+Julia now extracts both function forms, macros, modules, structs, abstract types,
+subtype relationships, calls, `using`/`import` and literal `include` edges. Module
+imports can resolve to an unambiguous module definition in the same repository
+and language. Function signatures are not mistaken for callsites. The pinned
+grammar builds offline with the existing tree-sitter runtime.
+
+The fixture has 5 definitions, 4 calls, 3 imports, 1 inheritance edge and 22
+identifier references. Fresh parsing averages 431.54 microseconds/KiB. The
+daemon is 59,932,208 bytes (+6,246,880). Bash, R, Julia and graph-scope regression
+checks pass; contracts are unchanged and recall scoring is unchanged.
+
+Julia's quick gate passes. Extraction is now one shared static library rather
+than seven repeated compilations; all native CodeIntel users link it explicitly.
+The older callsite regression now runs with assertions enabled. Callsite,
+repository-index, code-index and graph CTests pass (4/4).

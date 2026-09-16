@@ -174,6 +174,13 @@ struct CodeNavigation::Impl {
                                 candidates.push_back(entry.second.back());
                         }
                     }
+                    if (candidates.empty() && names.count(target)) {
+                        for (auto id : names[target]) {
+                            const auto& candidate = nodes[id];
+                            if (candidate.root == nodes[from].root && candidate.lang == nodes[from].lang &&
+                                candidate.data.value("kind", "") == "module") candidates.push_back(id);
+                        }
+                    }
                 } else if (names.count(target)) {
                     const auto caller_parent = nodes[from].data.value("parent", "");
                     const auto receiver = raw.value("receiver", "");

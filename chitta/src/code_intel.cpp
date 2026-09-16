@@ -14,15 +14,17 @@ extern char** environ;
 
 extern "C" const TSLanguage* tree_sitter_bash();
 extern "C" const TSLanguage* tree_sitter_r();
+extern "C" const TSLanguage* tree_sitter_julia();
 
 namespace chitta {
 const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
     if (language == "bash") return tree_sitter_bash();
     if (language == "r") return tree_sitter_r();
+    if (language == "julia") return tree_sitter_julia();
     return nullptr;
 }
 void CodeIntel::initialize_extended_parsers() {
-    for (const auto* language : {"bash", "r"}) {
+    for (const auto* language : {"bash", "r", "julia"}) {
         auto* parser = ts_parser_new();
         if (!ts_parser_set_language(parser, extended_grammar(language))) {
             ts_parser_delete(parser);
@@ -34,6 +36,7 @@ void CodeIntel::initialize_extended_parsers() {
 std::string CodeIntel::detect_extended_language(const std::string& path) {
     auto ext = std::filesystem::path(path).extension().string();
     if (ext == ".sh" || ext == ".bash") return "bash";
+    if (ext == ".jl") return "julia";
     if (ext == ".R" || ext == ".r" || std::filesystem::path(path).filename() == ".Rprofile") return "r";
     return {};
 }
@@ -74,6 +77,15 @@ void CodeIntel::extract_extended(TSNode root, const std::string& source,
         if (!scope.empty()) site.kind = CallKind::Qualified;
         if (!receiver.empty()) site.kind = CallKind::MemberCall;
         result.callsites.push_back(std::move(site));
+    };
+    std::function<std::string(TSNode)> leaf_name = [&](TSNode node) -> std::string {
+        if (ts_node_is_null(node)) return {};
+        std::string type = ts_node_type(node);
+        if (type == "identifier" || type == "type_identifier" || type == "name") return text(node);
+        auto count = ts_node_named_child_count(node);
+        if (!count) return {};
+        if (type == "field_expression" || type == "dot_expression") return leaf_name(ts_node_named_child(node, count - 1));
+        return leaf_name(ts_node_named_child(node, 0));
     };
     std::function<void(TSNode, std::string)> visit = [&](TSNode node, std::string parent) {
         std::string type = ts_node_type(node);
@@ -152,6 +164,57 @@ void CodeIntel::extract_extended(TSNode root, const std::string& source,
             }
             if (type == "namespace_operator")
                 result.imports.push_back({path, text(field(node, "lhs")), "", {}, uint32_t(node_line(node))});
+        }
+        if (language == "julia") {
+            auto first = ts_node_named_child(node, 0);
+            if (type == "module_definition" || type == "struct_definition" || type == "abstract_definition") {
+                auto name = type == "module_definition" ? text(field(node, "name")) : leaf_name(first);
+                define(node, name, type == "module_definition" ? "module" : type == "struct_definition" ? "struct" : "class", parent);
+                if (type != "module_definition") {
+                    auto head = ts_node_named_child(first, 0);
+                    if (!ts_node_is_null(head) && std::strcmp(ts_node_type(head), "binary_expression") == 0 &&
+                        text(ts_node_named_child(head, 1)) == "<:")
+                        result.type_relationships.push_back({name, leaf_name(ts_node_named_child(head, 2)), "extends", path, uint32_t(node_line(node))});
+                }
+                parent = name;
+            }
+            if (type == "function_definition" || type == "macro_definition" ||
+                (type == "assignment" && !ts_node_is_null(first) && std::strcmp(ts_node_type(first), "call_expression") == 0)) {
+                auto name = leaf_name(first);
+                define(node, name, type == "macro_definition" ? "macro" : "function", parent);
+                if (!name.empty()) result.symbols.back().signature = text(first);
+                for (uint32_t i = 1; i < ts_node_named_child_count(node); ++i) visit(ts_node_named_child(node, i), name);
+                return; // The declaration's call-shaped signature is not a call.
+            }
+            if (type == "using_statement" || type == "import_statement") {
+                for (uint32_t i = 0; i < ts_node_named_child_count(node); ++i) {
+                    auto module = ts_node_named_child(node, i);
+                    std::vector<std::string> imported;
+                    if (std::strcmp(ts_node_type(module), "selected_import") == 0) {
+                        for (uint32_t j = 1; j < ts_node_named_child_count(module); ++j) imported.push_back(text(ts_node_named_child(module, j)));
+                        module = ts_node_named_child(module, 0);
+                    }
+                    result.imports.push_back({path, text(module), "", imported, uint32_t(node_line(node))});
+                }
+            }
+            if (type == "call_expression") {
+                auto name = leaf_name(first);
+                auto surface = text(first);
+                std::string scope, receiver;
+                auto dot = surface.rfind('.');
+                if (dot != std::string::npos) {
+                    receiver = surface.substr(0, dot);
+                    const bool module = std::any_of(result.imports.begin(), result.imports.end(), [&](const auto& i) { return i.import_path == receiver; }) ||
+                        std::any_of(result.symbols.begin(), result.symbols.end(), [&](const auto& s) { return s.kind == "module" && s.name == receiver; });
+                    if (module) { scope = receiver; receiver.clear(); }
+                }
+                call(node, name, parent, scope, receiver);
+                if (name == "include") {
+                    auto arg = ts_node_named_child(ts_node_named_child(node, 1), 0);
+                    if (!ts_node_is_null(arg) && std::strcmp(ts_node_type(arg), "string_literal") == 0)
+                        result.imports.push_back({path, literal(arg), "", {}, uint32_t(node_line(node))});
+                }
+            }
         }
         for (uint32_t i = 0; i < ts_node_named_child_count(node); ++i) visit(ts_node_named_child(node, i), parent);
     };

@@ -77,6 +77,19 @@ int main() {
         if (edge["surface"] == "a.py") { assert(edge["confidence"] == "INFERRED"); literal = true; }
     }
     assert(package && literal);
+    auto jl = root / "reads.jl", consumer = root / "consumer.jl";
+    std::ofstream(jl) << "module Reads\nscore(x) = x\nend\n";
+    std::ofstream(consumer) << "using Reads\n";
+    paths.push_back(jl.string()); paths.push_back(consumer.string());
+    changed = {jl.string(), consumer.string()};
+    nav.update(root.string(), "fixture", paths, changed, intel.extract_files(changed), false);
+    auto modules = nav.query({{"question", "using Reads"}, {"realm", "fixture"}, {"limit", 40}});
+    bool module_import = false;
+    for (const auto& edge : modules["edges"])
+        if (edge["kind"] == "imports" && edge["surface"] == "Reads") {
+            assert(edge["confidence"] == "INFERRED"); module_import = true;
+        }
+    assert(module_import);
     fs::remove_all(root);
     std::cout << "navigation: confidence, ambiguity, scope, paths, restart identity, stale reads and deletion passed\n";
 }

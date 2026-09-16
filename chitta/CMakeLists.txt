@@ -242,6 +242,7 @@ function(chitta_grammar name repository revision)
 endfunction()
 chitta_grammar(bash tree-sitter/tree-sitter-bash 487734f87fd87118028a65a4599352fa99c9cde8)
 chitta_grammar(r r-lib/tree-sitter-r 58a22794466c0fc15b0d3b40531db751593721e8)
+chitta_grammar(julia tree-sitter/tree-sitter-julia a8e1262997d5a45520a06cbe1b86c0737d507054)
 
 # Extract version from plugin.json
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../.claude-plugin/plugin.json" PLUGIN_JSON)
@@ -369,10 +370,15 @@ message(STATUS "chitta-field: ${CHITTA_FIELD_LIB}")
 # tree-sitter trees are not ours to fix and would bury first-party diagnostics.
 set(CHITTA_WARN_FLAGS -Wall -Wextra)
 
+# One implementation for every CodeIntel user. New grammar dispatch lives in
+# the .cpp; sharing it also avoids recompiling all extractors for each test.
+add_library(chitta-code-intel STATIC src/code_intel.cpp)
+target_link_libraries(chitta-code-intel PUBLIC chitta)
+target_compile_options(chitta-code-intel PRIVATE ${CHITTA_WARN_FLAGS})
+
 # Daemon/admin tool
 add_executable(chittad
     src/simple_cli.cpp
-    src/code_intel.cpp
     src/code_navigation.cpp
     src/queue_processor.cpp
     src/daemon_lifecycle.cpp
@@ -444,7 +450,7 @@ add_executable(chittad
 target_include_directories(chittad PRIVATE "${CHITTA_FIELD_INCLUDE}")
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 find_package(BLAS REQUIRED)
-target_link_libraries(chittad PRIVATE chitta "${CHITTA_FIELD_LIB}" dl pthread Python3::Python ${BLAS_LIBRARIES})
+target_link_libraries(chittad PRIVATE chitta-code-intel chitta "${CHITTA_FIELD_LIB}" dl pthread Python3::Python ${BLAS_LIBRARIES})
 find_package(OpenSSL REQUIRED)
 target_link_libraries(chittad PRIVATE OpenSSL::Crypto)
 if(CHITTA_WITH_LLAMA_CPP)
@@ -560,17 +566,17 @@ if(CHITTA_BUILD_TESTS)
     add_executable(task_ledger_test src/task_ledger_test.cpp)
     target_link_libraries(task_ledger_test PRIVATE chitta)
     add_test(NAME task_ledger_test COMMAND task_ledger_test)
-    add_executable(rpc_publication_test src/rpc_publication_test.cpp src/code_navigation.cpp src/code_intel.cpp)
+    add_executable(rpc_publication_test src/rpc_publication_test.cpp src/code_navigation.cpp)
     target_include_directories(rpc_publication_test PRIVATE "${CHITTA_FIELD_INCLUDE}")
-    target_link_libraries(rpc_publication_test PRIVATE chitta OpenSSL::Crypto)
+    target_link_libraries(rpc_publication_test PRIVATE chitta-code-intel chitta OpenSSL::Crypto)
     target_compile_options(rpc_publication_test PRIVATE -UNDEBUG ${CHITTA_WARN_FLAGS})
     add_test(NAME rpc_publication_test COMMAND rpc_publication_test)
     set_tests_properties(rpc_publication_test PROPERTIES TIMEOUT 15)
     if(UNIX AND NOT APPLE)
-        add_executable(global_lock_test src/global_lock_test.cpp src/code_navigation.cpp src/code_intel.cpp)
+        add_executable(global_lock_test src/global_lock_test.cpp src/code_navigation.cpp)
         target_include_directories(global_lock_test PRIVATE "${CHITTA_FIELD_INCLUDE}")
         target_compile_options(global_lock_test PRIVATE -UNDEBUG ${CHITTA_WARN_FLAGS})
-        target_link_libraries(global_lock_test PRIVATE chitta OpenSSL::Crypto "${CHITTA_FIELD_LIB}" dl pthread Python3::Python ${BLAS_LIBRARIES})
+        target_link_libraries(global_lock_test PRIVATE chitta-code-intel chitta OpenSSL::Crypto "${CHITTA_FIELD_LIB}" dl pthread Python3::Python ${BLAS_LIBRARIES})
         target_link_options(global_lock_test PRIVATE "-Wl,--wrap=cf_sync")
         add_test(NAME global_lock_on_test COMMAND global_lock_test 1)
         set_tests_properties(global_lock_on_test PROPERTIES ENVIRONMENT "CHITTA_GLOBAL_LOCK=1" TIMEOUT 15)
@@ -588,24 +594,25 @@ if(CHITTA_BUILD_TESTS)
     target_link_libraries(llm_probe_test PRIVATE chitta)
     add_test(NAME llm_probe_test COMMAND llm_probe_test)
     add_executable(callsite_extract_test src/callsite_extract_test.cpp)
-    target_link_libraries(callsite_extract_test PRIVATE chitta)
+    target_compile_options(callsite_extract_test PRIVATE -UNDEBUG)
+    target_link_libraries(callsite_extract_test PRIVATE chitta-code-intel chitta)
     add_test(NAME callsite_extract_test COMMAND callsite_extract_test)
-    add_executable(repository_index_test ../hooks/tests/repository_index_test.cpp src/code_intel.cpp)
+    add_executable(repository_index_test ../hooks/tests/repository_index_test.cpp)
     target_compile_options(repository_index_test PRIVATE -UNDEBUG)
-    target_link_libraries(repository_index_test PRIVATE chitta OpenSSL::Crypto)
+    target_link_libraries(repository_index_test PRIVATE chitta-code-intel chitta OpenSSL::Crypto)
     add_test(NAME repository_index_test COMMAND repository_index_test)
-    add_executable(code_languages_test src/code_languages_test.cpp src/code_intel.cpp)
+    add_executable(code_languages_test src/code_languages_test.cpp)
     target_compile_options(code_languages_test PRIVATE -UNDEBUG)
-    target_link_libraries(code_languages_test PRIVATE chitta OpenSSL::Crypto)
+    target_link_libraries(code_languages_test PRIVATE chitta-code-intel chitta OpenSSL::Crypto)
     add_test(NAME code_languages_test COMMAND code_languages_test
         "${CMAKE_CURRENT_SOURCE_DIR}/../hooks/tests/fixtures/codenav")
-    add_executable(code_index_test src/code_index_test.cpp src/code_intel.cpp)
+    add_executable(code_index_test src/code_index_test.cpp)
     target_compile_options(code_index_test PRIVATE -UNDEBUG)
-    target_link_libraries(code_index_test PRIVATE chitta OpenSSL::Crypto)
+    target_link_libraries(code_index_test PRIVATE chitta-code-intel chitta OpenSSL::Crypto)
     add_test(NAME code_index_test COMMAND code_index_test)
-    add_executable(code_navigation_test src/code_navigation_test.cpp src/code_navigation.cpp src/code_intel.cpp)
+    add_executable(code_navigation_test src/code_navigation_test.cpp src/code_navigation.cpp)
     target_compile_options(code_navigation_test PRIVATE -UNDEBUG)
-    target_link_libraries(code_navigation_test PRIVATE chitta OpenSSL::Crypto)
+    target_link_libraries(code_navigation_test PRIVATE chitta-code-intel chitta OpenSSL::Crypto)
     add_test(NAME code_navigation_test COMMAND code_navigation_test)
     add_test(NAME code_index_integration_test
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/code_index_integration_test.py
