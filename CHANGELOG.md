@@ -11,6 +11,17 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 ## [Unreleased]
 
 ### Added
+- Replication-weighted recall factor (`replication_max`, `CHITTA_REPLICATION_MAX`),
+  landed default-off: distinct-session replications per memory are cached on
+  load; the live store has 0 memories with ≥2 independent replications and the
+  golden delta was 0, so the card carries `prior_effort: some` (docs/EVALS.md).
+- Snapshot load decodes sections in parallel from an mmap and overlaps triplet
+  reconstruction with the rest of startup: snapshot phase 7.8–9.2 s → 3.6–4.3 s
+  on the replica; startup sidecars are keyed to the snapshot so LSH/turbo hit
+  with a WAL delta (live restart 27–33 s → 12.6 s); fused recall is
+  deterministic across restarts (total-order sorts, hydration without touches).
+- The per-Bash-call saddle check runs in bash/jq (81-fixture byte parity with
+  `saddle_detector.py`): added PreToolUse overhead 97 → 24 ms median.
 - Opt-in isolated evolve implementation streams (`--candidates N`, default 1):
   concurrent worktrees with private agent state, shared deadline and budget
   fallback, gate-passing selection by measured bet delta then patch size, all
