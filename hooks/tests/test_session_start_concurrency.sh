@@ -2,6 +2,9 @@
 # Frozen output, concurrent 300 ms CLI calls, and a whole-process-tree deadline.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+T=$(mktemp -d)
+trap 'rm -rf "$T"' EXIT
+source "$ROOT/hooks/tests/ledger-fixture.inc"
 PYTHONDONTWRITEBYTECODE=1 python3 - "$ROOT" <<'PY'
 import json
 import os
@@ -27,9 +30,6 @@ if [[ "${STUB_HANG:-}" == cli || ( "${STUB_HANG:-}" == registration && "$1" == s
     trap '' TERM
     sleep 10
 fi
-# This fixture exercises an older daemon: unknown operations fail at dispatch,
-# before the artificial delay applied to supported retrieval operations.
-case "$*" in *'--op hook_'*) exit 1 ;; esac
 sleep "${STUB_DELAY:-0}"
 case "$1" in
 realm_detect) echo project:latency ;;
@@ -39,11 +39,13 @@ session_register)
 ledger_op)
     case "$*" in
     *'--op session_get'*) echo '{"value":{}}' ;;
-    *'--op inbox_list'*)
-        [[ -z "${STUB_INBOX_FAIL:-}" ]] || exit 1
-        echo '{"value":{"rows":[{"digest":"inbox task"}]}}' ;;
-    *'--op thread_list'*)
-        echo '{"value":{"rows":[{"title":"active task","thread_id":"12345678-long"}]}}' ;;
+    *'--op hook_'*)
+        jq -nc --arg op "$3" --argjson args "$5" --slurpfile ledger "$STUB_LEDGER" \
+            --arg fail "${STUB_INBOX_FAIL:-}" \
+            '{op:$op,args:$args,ledger:$ledger[0],
+              inbox:(if $fail=="" then [{digest:"inbox task"}] else [] end),
+              threads:[{title:"active task",thread_id:"12345678-long"}]}' | "$LEDGER_TEST_BIN" ;;
+
     esac ;;
 ledger_load) cat "$STUB_LEDGER" ;;
 soul_context) echo 'Memory: 10, 20 triplets' ;;
@@ -141,8 +143,8 @@ cache warning
     assert output == expected, repr(output)
     assert elapsed < 1.5, f"300 ms calls serialized: {elapsed:.3f}s"
     calls = (base / "calls").read_text().splitlines()
-    assert sum("--op inbox_list" in call for call in calls) == 1, calls
-    assert sum("--op thread_list" in call for call in calls) == 1, calls
+    assert sum("--op hook_task_context" in call for call in calls) == 1, calls
+    assert not any("--op inbox_list" in call or "--op thread_list" in call for call in calls), calls
     assert (base / "registered").read_text() == "registered"
     print(f"ok: 300 ms CLI calls, exact ordered output, native task cards and registration ({elapsed:.3f}s)")
 

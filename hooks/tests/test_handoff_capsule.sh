@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
+source "$ROOT/hooks/tests/ledger-fixture.inc"
 mkdir -p "$T/repo with spaces"
 git -c init.templateDir= init -q -b capsule-test "$T/repo with spaces"
 # Source only the production function definitions; no hook side effects.
@@ -15,12 +16,18 @@ export STUB_HANDOFF_DIR="$T"
 CHITTA_BIN="$T/cli"
 cat > "$CHITTA_BIN" <<'STUB'
 #!/usr/bin/env bash
-case "$3" in
-    session_get) printf '{"value":{"thread_id":"real-thread-id"}}' ;;
-    thread_get) cat "$STUB_HANDOFF_DIR/thread.json" ;;
-    session_list) jq -n --slurpfile op "$STUB_HANDOFF_DIR/queued.json" \
-        '{value:{rows:[{metadata_json:($op[0].args.metadata|tojson)}]}}' ;;
-esac
+op="$3"; args="$5"
+[[ "${STUB_TIMEOUT:-0}" != 1 ]] || exit 124
+case "$op" in
+    hook_handoff_prepare)
+        jq -nc --arg op "$op" --argjson args "$args" --slurpfile thread "$STUB_HANDOFF_DIR/thread.json" \
+          '{op:$op,args:$args,session:{thread_id:"real-thread-id"},thread:$thread[0].value}' ;;
+    hook_handoff_context)
+        jq -nc --arg op "$op" --argjson args "$args" --slurpfile row "$STUB_HANDOFF_DIR/queued.json" \
+          '{op:$op,args:$args,rows:[{metadata_json:($row[0].args.metadata|tojson)}]}' ;;
+    *) exit 1 ;;
+esac | "$LEDGER_TEST_BIN"
+
 STUB
 chmod +x "$CHITTA_BIN"
 queue_write() { [[ "$1" == ledger_op ]]; printf '%s\n' "$2" > "$T/queued.json"; }
@@ -55,3 +62,9 @@ echo 'ok: explicit ledger next action retains its source thread'
 git -C "$PROJECT_DIR" symbolic-ref HEAD refs/heads/another-branch
 [[ -z $(_load_handoff_capsule) ]]
 echo 'ok: branch mismatch does not inject a continuation'
+
+# Timeout must not reconstruct a capsule or issue legacy ledger reads.
+cp "$T/queued.json" "$T/before.json"
+if STUB_TIMEOUT=1 _save_handoff_capsule; then exit 1; fi
+cmp "$T/before.json" "$T/queued.json"
+echo 'ok: timeout leaves the acknowledged local queue unchanged'

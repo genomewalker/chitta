@@ -29,7 +29,7 @@ _CHITTA_ALIAS_VARS=(
     CHECKPOINT_INTERVAL CTX_LANE DEEP_SEARCH DISCIPLINE_ENFORCE
     EDIT_REINDEX_RATE ENRICH_INTERVAL HEADLESS HOOK_BUDGET_MS HOOK_ENFORCE
     HOOK_STATE_DIR INDEX_INTERVAL LEAN LEGACY_MARKERS LOOP_LIMIT LOOP_WARN
-    LEDGER_POLICY MAX_INDEX_FILES MAX_OUTPUT_CHARS MAX_WAIT MCP_DIR MODEL PLUGIN_DIR
+    MAX_INDEX_FILES MAX_OUTPUT_CHARS MAX_WAIT MCP_DIR MODEL PLUGIN_DIR
     REINDEX_RATE_LIMIT RETAG_INTERVAL SADHANA_MAX
     SADHANA_TIMEOUT SNAPSHOT_TIMEOUT STOP_BOOTSTRAP_BYTES
     STOP_ENRICH_INTERVAL STOP_GRACE STOP_MAX_INCREMENT_BYTES STORE_INTERVAL
@@ -495,7 +495,7 @@ queue_write() {
     # "multi-line jq output truncates the JSONL entry" class of parse errors.
     # CHITTA_QUEUE_PATH lets the binary honor non-default queue locations
     # (test fixtures, isolated checkouts).
-    mkdir -p "$(dirname "$queue_file")"
+    [[ -d "${queue_file%/*}" ]] || mkdir -p "${queue_file%/*}"
     local chitta_bin="${CHITTA_BIN:-$HOME/.claude/bin/chitta}"
     if [[ -x "$chitta_bin" ]]; then
         CHITTA_QUEUE_PATH="$queue_file" "$chitta_bin" queue_write "$tool" "$args" >/dev/null 2>&1 && return

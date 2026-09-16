@@ -61,6 +61,10 @@ ToolResult FieldRpcHandler::tool_ledger_op(const json& params) {
             return ok({{"op", "session_bind"}, {"args", {{"session_id", args.at("session_id")},
                 {"project_dir", args.at("project_dir")}, {"metadata", {{"handoff", capsule}}}}}});
         }
+        if (op == "hook_stop_progress") return ok(hook_ledger::stop_progress(args));
+        if (op == "hook_stop_checkpoint") {
+            return ok(hook_ledger::stop_checkpoint(args));
+        }
         if (op == "hook_turn") {
             // Preserve the existing queue event payload exactly. Durable queue
             // acknowledgement still follows the store sync in QueueProcessor.

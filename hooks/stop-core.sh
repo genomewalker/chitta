@@ -28,9 +28,13 @@ mkdir -p "$MIND_PATH" 2>/dev/null || true
 # Parse JSON input (gracefully handle malformed input)
 INPUT=$(cat)
 exec </dev/null  # stdin consumed; children must not inherit the still-open hook pipe (chitta CLI blocks on it)
-TRANSCRIPT_PATH=$(echo "$INPUT" | jq -r '.transcript_path // empty' 2>/dev/null || echo "")
-STOP_HOOK_ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active // false' 2>/dev/null || echo "false")
-SESSION_ID_INPUT=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null || echo "")
+{
+    IFS= read -r -d '' TRANSCRIPT_PATH
+    IFS= read -r -d '' STOP_HOOK_ACTIVE
+    IFS= read -r -d '' SESSION_ID_INPUT
+} < <(jq -j '(.transcript_path // ""),"\u0000",
+    ((.stop_hook_active // false)|tostring),"\u0000",(.session_id // ""),"\u0000"' \
+    <<< "$INPUT" 2>/dev/null)
 
 # Set SESSION_ID once (used throughout this hook).
 # Prefer explicit session_id, then transcript basename for Codex rollouts.
@@ -213,46 +217,42 @@ if ! jq -e '.format == "cc-soul-stop-snapshot-v1"' "$_SNAPSHOT_FILE" >/dev/null 
       }' > "$_SNAPSHOT_FILE"
 fi
 
+# Decode the shared snapshot once; shell consumers reuse these local fields.
+jq -j '.response,"\u0000",.last_user,"\u0000",((.tools // []) | join("\n")),"\u0000",
+    ((.files // [])|tojson),"\u0000",((.counts.assistant // 0)|tostring),"\u0000",
+    ((.counts.user // 0)|tostring),"\u0000",((.tools // [])|tojson),"\u0000",((.tool_spans // []|length)|tostring),"\u0000"' \
+    "$_SNAPSHOT_FILE" > "$_TCACHE/fields"
+{
+    IFS= read -r -d '' _SNAP_RESPONSE
+    IFS= read -r -d '' _SNAP_USER
+    IFS= read -r -d '' _SNAP_TOOLS
+    IFS= read -r -d '' FILES_JSON
+    IFS= read -r -d '' _SNAP_ASSISTANT_COUNT
+    IFS= read -r -d '' _SNAP_USER_COUNT
+    IFS= read -r -d '' TOOLS_JSON
+    IFS= read -r -d '' _SNAP_SPAN_COUNT
+} < "$_TCACHE/fields"
 transcript_role_text() {
     case "$1" in
-        assistant) jq -r '.response // ""' "$_SNAPSHOT_FILE" ;;
-        user) jq -r '.last_user // ""' "$_SNAPSHOT_FILE" ;;
-        *) return 0 ;;
+        assistant) printf '%s\n' "$_SNAP_RESPONSE" ;;
+        user) printf '%s\n' "$_SNAP_USER" ;;
     esac
 }
-
-transcript_tool_names() {
-    jq -r '.tools[]?' "$_SNAPSHOT_FILE"
-}
-
-transcript_tool_files_json() {
-    jq -c '.files // []' "$_SNAPSHOT_FILE"
-}
-
+transcript_tool_names() { [[ -z "$_SNAP_TOOLS" ]] || printf '%s\n' "$_SNAP_TOOLS"; }
+transcript_tool_files_json() { printf '%s\n' "$FILES_JSON"; }
 transcript_role_count() {
-    jq -r --arg role "$1" '.counts[$role] // 0' "$_SNAPSHOT_FILE"
+    case "$1" in
+        assistant) printf '%s\n' "$_SNAP_ASSISTANT_COUNT" ;;
+        user) printf '%s\n' "$_SNAP_USER_COUNT" ;;
+    esac
 }
-
-# Extract last assistant message
-RESPONSE=$(transcript_role_text "assistant" | tail -n 1 | head -c 50000)
-
-# ===========================================
-# LOSSLESS STORAGE: Store assistant turn
-# ===========================================
-
-# Extract tools used from transcript for this turn
-TOOLS_JSON=$(transcript_tool_names | jq -R . | jq -s . 2>/dev/null || echo "[]")
-[[ "$TOOLS_JSON" == "null" ]] && TOOLS_JSON="[]"
-
-# Extract files touched
-FILES_JSON=$(transcript_tool_files_json 2>/dev/null || echo "[]")
-[[ "$FILES_JSON" == "null" ]] && FILES_JSON="[]"
+RESPONSE=$(transcript_role_text assistant | tail -n 1 | head -c 50000)
 
 # BEGIN handoff capsule
 # Store in the task ledger's session metadata: session_bind merges metadata
 # atomically, so concurrent thread inference cannot erase unrelated fields.
 _save_handoff_capsule() {
-    local project branch action blocker source_kind thread_id row args capsule visible paths response
+    local project branch action blocker args visible paths response
     project=$(jq -r '.cwd // .project_dir // empty' <<< "$INPUT")
     [[ -d "$project" && "$SESSION_ID" != unknown ]] || return 0
     project=$(cd "$project" && pwd -P) || return 0
@@ -275,55 +275,30 @@ _save_handoff_capsule() {
         /^[[:space:]]*(```|~~~)/ { fenced = !fenced; next }
         !fenced && /^[[:space:]]*([-*][[:space:]]*)?([Bb]locker|[Bb]locked):[[:space:]]*[^[:space:]]/ { line = $0 }
         END { print line }' | head -c 400)
-    if [[ "${CHITTA_LEDGER_POLICY:-1}" == 1 ]]; then
-        args=$(jq -nc --arg sid "$SESSION_ID" --arg project "$project" --arg branch "$branch" \
-            --arg action "$action" --arg blocker "$blocker" --argjson paths "$paths" \
-            --argjson saved "$(date +%s.%N)" \
-            '{session_id:$sid,project_dir:$project,branch:$branch,next_action:$action,
-              blocker:$blocker,artifact_paths:$paths,saved_at:$saved}')
-        response=$(timeout 0.15 "$CHITTA_BIN" ledger_op --op hook_handoff_prepare \
-            --args "$args" --json 2>/dev/null) || response='{}'
-        if jq -se --arg sid "$SESSION_ID" --arg project "$project" \
-            'length==1 and (.[0] | .value.op=="session_bind" and
-              .value.args.session_id==$sid and .value.args.project_dir==$project and
-              (.value.args.metadata.handoff|type)=="object")' <<< "$response" >/dev/null 2>&1; then
-            _LEDGER_POLICY_SUPPORTED=1
-            if [[ -n "${CHITTA_LEDGER_PROFILE:-}" ]]; then
-                printf '%s\n' "$response" > "$CHITTA_LEDGER_PROFILE"
-            fi
-            queue_write ledger_op "$(jq -c '.value' <<< "$response")"
-            return $?
+    args=$(jq -nc --arg sid "$SESSION_ID" --arg project "$project" --arg branch "$branch" \
+        --arg action "$action" --arg blocker "$blocker" --argjson paths "$paths" \
+        --argjson saved "$(date +%s.%N)" \
+        '{session_id:$sid,project_dir:$project,branch:$branch,next_action:$action,
+          blocker:$blocker,artifact_paths:$paths,saved_at:$saved}')
+    response=$(timeout "$MAX_WAIT" "$CHITTA_BIN" ledger_op --op hook_handoff_prepare \
+        --args "$args" --json 2>/dev/null) || response='{}'
+    if jq -se --arg sid "$SESSION_ID" --arg project "$project" \
+        'length==1 and (.[0] | .value.op=="session_bind" and
+          .value.args.session_id==$sid and .value.args.project_dir==$project and
+          (.value.args.metadata.handoff|type)=="object")' <<< "$response" >/dev/null 2>&1; then
+        if [[ -n "${CHITTA_LEDGER_PROFILE:-}" ]]; then
+            printf '%s\n' "$response" > "$CHITTA_LEDGER_PROFILE"
         fi
+        queue_write ledger_op "$(jq -c '.value' <<< "$response")"
+        return $?
     fi
-    source_kind=visible_plan
-    thread_id=""
-    if [[ -z "$action" ]]; then
-        args=$(jq -nc --arg sid "$SESSION_ID" '{session_id:$sid}')
-        row=$(timeout "$MAX_WAIT" "$CHITTA_BIN" ledger_op --op session_get --args "$args" --json 2>/dev/null) || row='{}'
-        thread_id=$(jq -r '.value.thread_id // empty' <<< "$row" 2>/dev/null)
-        if [[ -n "$thread_id" ]]; then
-            args=$(jq -nc --arg tid "$thread_id" '{thread_id:$tid}')
-            row=$(timeout "$MAX_WAIT" "$CHITTA_BIN" ledger_op --op thread_get --args "$args" --json 2>/dev/null) || row='{}'
-            action=$(jq -r '(.value.metadata_json // "{}" | fromjson? // {}) |
-                (.next_action // .next_steps[0] // "") | select(type == "string")' <<< "$row" 2>/dev/null | head -c 400)
-            source_kind=ledger_thread
-        fi
-    fi
-    # An empty capsule invalidates this session's previous next action. Absence
-    # of evidence must not silently resurrect a plan completed on a later turn.
-    capsule=$(jq -nc --arg action "$action" --arg branch "$branch" --arg project "$project" \
-        --arg blocker "$blocker" --arg source "$source_kind" --arg tid "$thread_id" \
-        --arg sid "$SESSION_ID" --argjson paths "$paths" \
-        '{version:1, next_action:$action, verified:($action != ""), branch:$branch,
-          project_dir:$project, artifact_paths:($paths | unique | .[:20]), blocker:$blocker,
-          source:{kind:$source,session_id:$sid,thread_id:$tid},
-          saved_at:(if (env.CHITTA_HOOK_NOW // "" | test("^[1-9][0-9]{12}$"))
-            then (env.CHITTA_HOOK_NOW|tonumber)/1000 else now end)}') || return 0
-    args=$(jq -nc --arg sid "$SESSION_ID" --arg project "$project" --argjson capsule "$capsule" \
-        '{op:"session_bind",args:{session_id:$sid,project_dir:$project,metadata:{handoff:$capsule}}}') || return 0
-    queue_write ledger_op "$args"
+    return 1
+
 }
-_save_handoff_capsule || true
+_save_handoff_capsule || {
+    printf '[chitta] daemon unavailable; context not loaded.\n'
+    exit 0
+}
 # END handoff capsule
 
 # Even a short "Done." turn must invalidate this session's old capsule.
@@ -337,13 +312,12 @@ echo "$RESPONSE" | grep -qiE '(error|failed|exception|traceback)' && HAS_ERROR=t
 
 # Store assistant turn, then advance the transcript cursor.  If durable queueing
 # fails, leave the cursor untouched so the next Stop event retries this slice.
-_turn_tool=store_turn
-_turn_args="{\"session_id\":\"$SESSION_ID\",\"role\":\"assistant\",\"content\":$(echo "$RESPONSE" | jq -Rs .),\"turn_index\":$TURN_INDEX,\"tools_used\":$TOOLS_JSON,\"files_touched\":$FILES_JSON,\"has_error\":$HAS_ERROR}"
-if [[ "${_LEDGER_POLICY_SUPPORTED:-0}" == 1 ]]; then
-    _turn_tool=ledger_op
-    _turn_args=$(jq -nc --argjson args "$_turn_args" '{op:"hook_turn",args:$args}')
-fi
-if safe_queue_write "$_turn_tool" "$_turn_args"; then
+_turn_args=$(jq -nc --arg sid "$SESSION_ID" --arg content "$RESPONSE" \
+    --argjson turn "$TURN_INDEX" --argjson tools "$TOOLS_JSON" --argjson files "$FILES_JSON" \
+    --argjson error "$HAS_ERROR" \
+    '{op:"hook_turn",args:{session_id:$sid,role:"assistant",content:($content+"\n"),
+      turn_index:$turn,tools_used:$tools,files_touched:$files,has_error:$error}}')
+if safe_queue_write ledger_op "$_turn_args"; then
     timeout 3 python3 "$_SNAPSHOT_HELPER" commit \
         --snapshot "$_SNAPSHOT_FILE" --cursor "$_CURSOR_FILE" \
         >/dev/null 2>&1 || true
@@ -379,31 +353,23 @@ _cec_resp_outcome=$([ "${HAS_ERROR:-false}" = "true" ] && echo 2 || echo 0)
 timeout 0.5 "$CHITTA_BIN" log_event --tool "assistant_response" \
     --entity "$REALM" --outcome "$_cec_resp_outcome" --ts_ms "$(date +%s%3N)" >/dev/null 2>&1 &
 
-# ===========================================
-# EVENT-BASED CHECKPOINT: Save on errors or milestones
-# ===========================================
-EVENT_CHECKPOINT=false
-EVENT_MOOD=""
-EVENT_SNAPSHOT=""
-
-# ── Per-turn lightweight ledger save (mood=in_progress) ──────────────────
-# Runs every turn so /clear can find a recent ledger even without a pre-compact.
-# Extract user's last message from the shared incremental snapshot.
-_last_user=$(transcript_role_text "user" | head -c 300)
-_next_line=$(echo "$RESPONSE" | grep -iEm1 'next[: ].{10,}|TODO[: ].{10,}' | head -c 150 || true)
-_snap_text=""
-[[ -n "$_last_user" ]] && _snap_text="Goal: ${_last_user}"
-[[ -n "$_next_line" ]] && _snap_text="${_snap_text}\nNext: ${_next_line}"
-[[ -n "$_SADDLE_SUMMARY" ]] && _snap_text="${_snap_text}"$'\n'"$_SADDLE_SUMMARY"
-_updated=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-
-queue_write "ledger_save" "$(jq -n \
-    --arg session_id "$SESSION_ID" \
-    --arg project "$REALM" \
-    --arg mood "in_progress" \
-    --arg snapshot "$_snap_text" \
-    --arg updated_at "$_updated" \
-    '{session_id: $session_id, project: $project, mood: $mood, snapshot: $snapshot, updated_at: $updated_at}')" 2>/dev/null || true
+# The daemon builds lightweight/event checkpoints; the client queues them durably.
+_progress_args=$(jq -nc --arg sid "$SESSION_ID" --arg realm "$REALM" \
+    --arg path "$TRANSCRIPT_PATH" --arg response "$RESPONSE" --arg user "$_SNAP_USER" \
+    --arg saddle "$_SADDLE_SUMMARY" --arg updated "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    --argjson error "$HAS_ERROR" \
+    '{session_id:$sid,realm:$realm,transcript_path:$path,response:$response,
+      last_user:$user,saddle:$saddle,updated_at:$updated,has_error:$error}')
+_progress=$(timeout "$MAX_WAIT" "$CHITTA_BIN" ledger_op --op hook_stop_progress \
+    --args "$_progress_args" --json 2>/dev/null) || _progress='{}'
+if ! jq -e '(.value.writes|type)=="array" and (.value.diagnostics|type)=="string"' \
+    <<< "$_progress" >/dev/null 2>&1; then
+    printf '[chitta] daemon unavailable; context not loaded.\n'
+    exit 0
+fi
+while IFS= read -r _write; do queue_write ledger_save "$_write"; done \
+    < <(jq -c '.value.writes[]' <<< "$_progress")
+jq -jr '.value.diagnostics' <<< "$_progress" >&2
 
 # Infer/update the task thread every completed turn, then bind this exact
 # session to it. A session-scoped marker replaces the old global
@@ -439,33 +405,6 @@ if [[ -n "$TRANSCRIPT_PATH" && -f "$TRANSCRIPT_PATH" && -f "$_MCP_DIR/thread_inf
     disown
 fi
 # ─────────────────────────────────────────────────────────────────────────
-
-# Error checkpoint
-if [[ "$HAS_ERROR" == "true" ]]; then
-    EVENT_CHECKPOINT=true
-    EVENT_MOOD="debugging"
-    EVENT_SNAPSHOT=$(echo "$RESPONSE" | grep -iE '(error|failed|exception)' | head -3 | head -c 500)
-    echo "[ledger] error checkpoint triggered" >&2
-fi
-
-# Milestone checkpoint (success patterns)
-if echo "$RESPONSE" | grep -qiE '(✓|✅|success|complete|done|shipped|released|merged|tests pass|build succeed)'; then
-    EVENT_CHECKPOINT=true
-    EVENT_MOOD="confident"
-    EVENT_SNAPSHOT=$(echo "$RESPONSE" | grep -iE '(success|complete|done|shipped|released|merged|tests pass|build)' | head -3 | head -c 500)
-    echo "[ledger] milestone checkpoint triggered" >&2
-fi
-
-if [[ "$EVENT_CHECKPOINT" == "true" ]]; then
-    EVENT_ARGS=$(jq -n \
-        --arg session_id "$SESSION_ID" \
-        --arg project "$REALM" \
-        --arg transcript_path "$TRANSCRIPT_PATH" \
-        --arg mood "$EVENT_MOOD" \
-        --arg snapshot "$EVENT_SNAPSHOT" \
-        '{session_id: $session_id, project: $project, transcript_path: $transcript_path, mood: $mood, snapshot: $snapshot}')
-    queue_write "ledger_save" "$EVENT_ARGS"
-fi
 
 # Quality gate: dedup file for this session
 DEDUP_FILE="$MIND_PATH/.stop_dedup_${SESSION_ID}"
@@ -892,7 +831,7 @@ fi
 # STRUCTURED SPANS: Capture tool uses with outcomes
 # ===========================================
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [[ -x "$SCRIPT_DIR/span-capture.sh" ]]; then
+if [[ "$_SNAP_SPAN_COUNT" -gt 0 && -x "$SCRIPT_DIR/span-capture.sh" ]]; then
     "$SCRIPT_DIR/span-capture.sh" "$_SNAPSHOT_FILE" "$LAST_USER_MSG" 2>&1 || true
 fi
 
@@ -902,66 +841,38 @@ rm -f "${HOOK_STATE_DIR}/.last_user_message" "${HOOK_STATE_DIR}/.last_correction
 # ===========================================
 # LEDGER: Rich session checkpoint for continuity
 # ===========================================
-SESSION_ID="${SESSION_ID:-unknown}"
-TURNS=$(transcript_role_count "assistant")
-if ! [[ "$TURNS" =~ ^[0-9]+$ ]] || [[ "$TURNS" -le 0 ]]; then
-    TURNS=$(( (TURN_INDEX + 1) / 2 ))
+jq -nc --arg sid "$SESSION_ID" --arg realm "$REALM" \
+    --arg path "$TRANSCRIPT_PATH" --arg response "$RESPONSE" --arg saddle "$_SADDLE_SUMMARY" \
+    --argjson turn "$TURN_INDEX" --argjson learned "$LEARNED" --slurpfile snapshot "$_SNAPSHOT_FILE" \
+    '{jsonrpc:"2.0",id:1,method:"tools/call",params:{name:"ledger_op",arguments:{
+      op:"hook_stop_checkpoint",args:{session_id:$sid,realm:$realm,transcript_path:$path,
+      response:$response,saddle:$saddle,turn_index:$turn,learned:$learned,
+      snapshot:($snapshot[0]|{files,tools,counts})}}}}' > "$_TCACHE/checkpoint.request"
+# Stream the bounded snapshot; do not exceed the OS per-argument size limit.
+if ! timeout "$MAX_WAIT" "$CHITTA_BIN" < "$_TCACHE/checkpoint.request" \
+    > "$_TCACHE/checkpoint.json" 2>/dev/null ||
+    ! jq -sje 'map(.result.structured // .result // .) |
+      select(length==1 and (.[0].value.ledger|type)=="object" and
+      (.[0].value.summary|type)=="string" and (.[0].value.summary_log|type)=="string" and
+      (.[0].value.ledger_log|type)=="string") | .[0].value |
+      (.ledger|tojson),"\u0000",.summary,"\u0000",.summary_log,"\u0000",.ledger_log,"\u0000"' \
+      "$_TCACHE/checkpoint.json" > "$_TCACHE/checkpoint.records" 2>/dev/null; then
+    printf '[chitta] daemon unavailable; context not loaded.\n'
+    exit 0
 fi
-
-# Extract active files from tool calls
-ACTIVE_FILES=$(transcript_tool_files_json 2>/dev/null || echo "[]")
-[[ -z "$ACTIVE_FILES" || "$ACTIVE_FILES" == "null" ]] && ACTIVE_FILES="[]"
-
-# Extract tools used
-TOOLS_USED=$(transcript_tool_names | paste -sd ', ' - | head -c 200)
-
-# Marker detection is turn-scoped. Historical markers are accumulated by the
-# snapshot helper instead of rematerializing all assistant messages here.
-ASSISTANT_TEXT="$RESPONSE"
-
-# Extract typed markers
-DECISIONS="[]"
-DECISIONS_RAW=$(echo "$ASSISTANT_TEXT" | grep -oE '\[DECISION\].*$' | sed 's/\[DECISION\]\s*//' | head -10)
-[[ -n "$DECISIONS_RAW" ]] && DECISIONS=$(echo "$DECISIONS_RAW" | jq -R . | jq -s .)
-
-BLOCKERS="[]"
-BLOCKERS_RAW=$(echo "$ASSISTANT_TEXT" | grep -oE '\[BLOCKER\].*$' | sed 's/\[BLOCKER\]\s*//' | head -5)
-[[ -n "$BLOCKERS_RAW" ]] && BLOCKERS=$(echo "$BLOCKERS_RAW" | jq -R . | jq -s .)
-
-DISCOVERIES="[]"
-DISCOVERIES_RAW=$(echo "$ASSISTANT_TEXT" | grep -oE '\[(SOLUTION|GOTCHA)\].*$' | head -10)
-[[ -n "$DISCOVERIES_RAW" ]] && DISCOVERIES=$(echo "$DISCOVERIES_RAW" | jq -R . | jq -s .)
-
-# The transcript is not a task database. Task/thread state is already owned by
-# task_ledger, so the old regex over every historical JSON line was both costly
-# and structurally unreliable.
-TODOS="[]"
-
-# Detect mood from session content
-if echo "$RESPONSE" | grep -qiE '(error|failed|bug|stuck)'; then
-    mood="debugging"
-elif echo "$RESPONSE" | grep -qiE '(complete|done|finished|shipped|success)'; then
-    mood="confident"
-elif [[ $LEARNED -gt 0 ]]; then
-    mood="learning"
-else
-    mood="working"
+{
+    IFS= read -r -d '' LEDGER_ARGS
+    IFS= read -r -d '' SUMMARY
+    IFS= read -r -d '' _SUMMARY_LOG
+    IFS= read -r -d '' _LEDGER_LOG
+} < "$_TCACHE/checkpoint.records"
+if [[ -n "${CHITTA_LEDGER_PROFILE:-}" ]]; then
+    cp "$_TCACHE/checkpoint.json" "${CHITTA_LEDGER_PROFILE}.checkpoint" 2>/dev/null || true
 fi
-
-# Build snapshot: last meaningful assistant text (not just first line)
-snapshot=$(echo "$ASSISTANT_TEXT" | grep -v '^$' | tail -20 | head -c 1000)
-[[ -z "$snapshot" ]] && snapshot=$(echo "$RESPONSE" | head -3 | head -c 300)
-
-# Quality gate: minimum 3 turns for session summary
-if [[ "$TURNS" =~ ^[0-9]+$ && "$TURNS" -ge 3 ]]; then
-    SUMMARY="[session:$SESSION_ID] ${mood}→${TURNS} turns"
-    [[ -n "$TOOLS_USED" ]] && SUMMARY="$SUMMARY | tools: ${TOOLS_USED:0:100}"
-    [[ -n "$_SADDLE_SUMMARY" ]] && SUMMARY="${SUMMARY}"$'\n'"$_SADDLE_SUMMARY"
+if [[ -n "$SUMMARY" ]]; then
     emit_event "" "session_summary" "hook_regex" "$SUMMARY" "0.5" "end-of-session summary" "$REALM"
-    echo "[soul] +session-summary: ${SUMMARY:0:60}" >&2
-else
-    echo "[soul] skip session-summary: too few turns ($TURNS<3)" >&2
 fi
+printf '%s\n' "$_SUMMARY_LOG" >&2
 
 # ===========================================
 # AUTO-DISTILLATION: Periodic mid-session + end-of-session
@@ -982,36 +893,8 @@ if [[ -n "$SESSION_ID" && "$SESSION_ID" != "default" && -n "$TRANSCRIPT_PATH" &&
     queue_write "distill_trigger" "{\"session_id\":\"$SESSION_ID\"}"
 fi
 
-# Build rich ledger entry
-LEDGER_ARGS=$(jq -n \
-    --arg session_id "$SESSION_ID" \
-    --arg project "$REALM" \
-    --arg transcript_path "$TRANSCRIPT_PATH" \
-    --arg mood "$mood" \
-    --argjson active_files "$ACTIVE_FILES" \
-    --argjson decisions "$DECISIONS" \
-    --argjson todos "$TODOS" \
-    --argjson blockers "$BLOCKERS" \
-    --argjson discoveries "$DISCOVERIES" \
-    --arg snapshot "$snapshot" \
-    '{
-        session_id: $session_id,
-        project: $project,
-        transcript_path: $transcript_path,
-        mood: $mood,
-        active_files: $active_files,
-        decisions: $decisions,
-        todos: $todos,
-        blockers: $blockers,
-        discoveries: $discoveries,
-        snapshot: $snapshot
-    }')
-
-queue_write "ledger_save" "$LEDGER_ARGS"
-file_count=$(echo "$ACTIVE_FILES" | jq 'length')
-decision_count=$(echo "$DECISIONS" | jq 'length')
-todo_count=$(echo "$TODOS" | jq 'length')
-echo "[ledger] queued: $SESSION_ID ($mood, files=$file_count decisions=$decision_count todos=$todo_count)" >&2
+queue_write ledger_save "$LEDGER_ARGS"
+printf '%s\n' "$_LEDGER_LOG" >&2
 
 # ===========================================
 # GOAL DETECTION: Detect goal setting and progress patterns

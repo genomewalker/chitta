@@ -2,6 +2,9 @@
 # Native lifecycle arguments and byte-for-byte parity with the Python cards.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+T=$(mktemp -d)
+trap 'rm -rf "$T"' EXIT
+source "$ROOT/hooks/tests/ledger-fixture.inc"
 PYTHONDONTWRITEBYTECODE=1 python3 - "$ROOT" <<'PY'
 import json
 import os
@@ -27,8 +30,10 @@ with tempfile.TemporaryDirectory(prefix='native-session-test-') as tmp:
 jq -nc --args '$ARGS.positional' -- "$@" >> "$CALLS"
 case "$1 $*" in
 *'--op session_get'*) echo '{"value":{"thread_id":"prior-thread"}}' ;;
-*'--op inbox_list'*) cat "$INBOX" ;;
-*'--op thread_list'*) cat "$THREADS" ;;
+*'--op hook_task_context'*)
+    jq -nc --arg realm "$REALM" --slurpfile inbox "$INBOX" --slurpfile threads "$THREADS" \
+      '{op:"hook_task_context",args:{realm:$realm},inbox:($inbox[0].value.rows // []),threads:($threads[0].value.rows // [])}' \
+      | "$LEDGER_TEST_BIN" ;;
 transcript_register*) exit "${TRANSCRIPT_FAIL:-0}" ;;
 queue_write*) exit 1 ;;
 esac

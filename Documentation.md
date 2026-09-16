@@ -108,3 +108,33 @@ passed. Before controls preserved a first warm-up difference and intermittent
 Step 2 must eliminate that probe fallback and require native ledger execution.
 Evidence is untracked under `/tmp/chitta-p5b-retire/evidence`. Prompt shell:
 1,937 → 1,274 lines; all top-level hooks: 8,988 → 8,325. No daemon changes yet.
+
+Step 2 retires Stop/SessionStart compatibility assembly and the 150 ms native
+probe. Cards, handoff payloads and lightweight/event/rich checkpoints now come
+from `ledger_op`; new private operations are `hook_stop_progress` and
+`hook_stop_checkpoint`, within the unchanged open `op`/`args` schema. Transcript
+slicing, git inspection, durable local queues and cursor acknowledgement remain
+client-side. Invalid/late assembly replies use the one-line unavailable output.
+The chaos fixture now expects that line and proves recovery via `prompt_context`;
+synthetic ledger fixtures execute production C++ policy. A detached heartbeat
+assertion now waits for the existing handshake instead of racing its completion.
+
+Regression attribution: pure hook ledger operations were absent from the read
+classification, causing unconditional store sync after non-mutating assembly.
+Explicit read classification removes it; real-dispatch tests count sync calls
+with global locking both enabled and disabled, preserving sync for `hook_turn`
+and unknown operations. The isolated capsule assembly comparison was only
+73.46 → 76.66 ms across Phase 5, so it does not explain the whole historical
+130 ms rise. Full-wall measurements varied substantially; all failed attempts
+are retained outside git. Stop also decodes input/snapshot fields once, avoids
+empty span capture, and avoids redundant queue-directory creation.
+
+Verification: 70 byte-identical adjacent pairs with native prompt/ledger required;
+28 hook shell tests, 159 MCP, 46 SMRITI, eight hook Python, CI Ruff, shell syntax
+and ShellCheck, and 33 CTests passed. Five measured repetitions after four
+warmups, pinned private replica: Stop 664.518 ms; Codex Stop 719.875 ms. The
+additional handoff variant measured 939.137 ms and remains a performance concern
+for the broader retirement in step 3. No timings are inferred from internal
+assembly spans. Top-level shell lines: 8,325 → 8,033; Stop 1,143 → 1,026;
+SessionStart 833 → 658. Contracts remain unchanged. Evidence:
+`/tmp/chitta-p5b-retire/evidence/step2-sync-{parity,timing,ctest}*`.

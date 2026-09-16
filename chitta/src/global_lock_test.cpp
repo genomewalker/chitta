@@ -55,11 +55,16 @@ int main(int argc, char** argv) {
     check([&] { handler.handle({{"method", "tools/list"}, {"id", 1}}); }, enabled);
     for (const auto* name : {"get", "recall", "remember", "observe", "ledger_op",
                              "log_event", "predicate_run", "distill_set_model"}) {
-        for (const auto* op : {"counts", "thread_create"}) {
+        for (const auto* op : {"counts", "thread_create", "hook_turn", "unknown_hook",
+                               "hook_handoff_prepare", "hook_handoff_context",
+                               "hook_task_context", "hook_session_context",
+                               "hook_stop_checkpoint", "hook_stop_progress"}) {
             const auto prior_syncs = sync_calls.load();
             const bool must_sync = std::string(name) == "remember"
                 || std::string(name) == "observe" || std::string(name) == "distill_set_model"
-                || (std::string(name) == "ledger_op" && std::string(op) == "thread_create");
+                || (std::string(name) == "ledger_op"
+                    && (std::string(op) == "thread_create" || std::string(op) == "hook_turn"
+                        || std::string(op) == "unknown_hook"));
             bool legacy_bypass = FieldRpcHandler::is_lockfree_read(name)
                 || FieldRpcHandler::is_lockfree_write(name)
                 || FieldRpcHandler::is_subprocess_tool(name);

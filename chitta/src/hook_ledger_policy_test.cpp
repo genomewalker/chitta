@@ -41,5 +41,27 @@ int main() {
     ledger["updated_at"] = "1970-01-01T00:00:00Z";
     assert(ledger_card(ledger, "clear", 100)["post_clear"]);
     assert(!ledger_card(ledger, "clear", 15000)["post_clear"].get<bool>());
+    const auto progress = stop_progress({{"session_id", "s"}, {"last_user", "Fix it"},
+        {"response", "Error fixed; tests passed.\nNext: verify the checkpoint"}, {"has_error", true}});
+    assert(progress["writes"].size() == 2);
+    assert(progress["writes"][0]["snapshot"] == "Goal: Fix it\\nNext: Next: verify the checkpoint");
+    assert(progress["writes"][1]["mood"] == "confident");
+    assert(progress["diagnostics"] == "[ledger] error checkpoint triggered\n[ledger] milestone checkpoint triggered\n");
+    const auto checkpoint = stop_checkpoint({{"session_id", "s"}, {"realm", "project:test"},
+        {"response", "Visible text. [DECISION] Preserve queue acknowledgement.\n[BLOCKER] Waiting\n[GOTCHA] Keep this"},
+        {"turn_index", 1}, {"snapshot", {{"files", {"a.cpp"}}, {"tools", {"Read", "Bash", "Edit"}},
+            {"counts", {{"assistant", 1}}}}}});
+    assert(checkpoint["ledger"]["decisions"] == json::array({"Preserve queue acknowledgement."}));
+    assert(checkpoint["ledger"]["blockers"] == json::array({"Waiting"}));
+    assert(checkpoint["ledger"]["discoveries"] == json::array({"[GOTCHA] Keep this"}));
+    assert(checkpoint["summary"] == "");
+    assert(checkpoint["summary_log"] == "[soul] skip session-summary: too few turns (1<3)");
+    assert(checkpoint["ledger_log"] == "[ledger] queued: s (working, files=1 decisions=1 todos=0)");
+    const auto summary = stop_checkpoint({{"session_id", "s"}, {"response", "Done."},
+        {"turn_index", 7}, {"snapshot", {{"tools", {"Read", "Bash", "Edit"}}}}});
+    assert(summary["summary"] == "[session:s] confident→4 turns | tools: Read,Bash Edit");
+    assert(stop_checkpoint({{"response", "[DECISION] \n[BLOCKER]"}})["ledger"]["decisions"].empty());
+    assert(stop_checkpoint({{"response", std::string(999, 'x') + "αβ"}})["ledger"]["snapshot"]
+        == std::string(999, 'x') + "�");
     std::cout << "hook_ledger_policy_test: passed\n";
 }

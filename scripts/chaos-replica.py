@@ -532,7 +532,7 @@ class Harness:
         marker = self.local / "hook-entered"
         success = self.local / "hook-success"
         wrapper.write_text(
-            '#!/bin/bash\nrecall=0\ncase " $* " in *recall*) recall=1; touch '
+            '#!/bin/bash\nrecall=0\ncase "$1" in prompt_context) recall=1; touch '
             + shlex.quote(str(marker))
             + ";; esac\n"
             + shlex.quote(str(self.args.cli))
@@ -563,8 +563,7 @@ class Harness:
             out, err = hook.communicate(timeout=max(0.1, 8 - (time.monotonic() - begin)))
             elapsed = time.monotonic() - begin
             assert hook.returncode == 0 and elapsed < 8, (elapsed, err[-500:])
-            if out.strip():
-                json.loads(out)
+            assert out.strip() == "[chitta] daemon unavailable; context not loaded.", out
             self.start()
             marker.unlink()
             success.unlink(missing_ok=True)
@@ -574,8 +573,8 @@ class Harness:
                 input=payload.replace("chaos-hook-1", "chaos-hook-2"),
                 timeout=8,
             )
-            assert marker.exists(), "next hook bypassed recall"
-            assert success.exists(), "next hook never completed a successful recall CLI call"
+            assert marker.exists(), "next hook bypassed prompt_context"
+            assert success.exists(), "next hook never completed a successful prompt_context call"
             if next_call.stdout.strip():
                 json.loads(next_call.stdout)
             self.verify()

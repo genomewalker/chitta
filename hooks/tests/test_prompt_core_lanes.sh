@@ -31,7 +31,14 @@ fi
 get() { local flag="$1" a p; shift; for a in "$@"; do [[ "$p" == "$flag" ]] && { echo "$a"; return; }; p="$a"; done; }
 case "$sub" in
     prompt_context)
-        [[ -n "${STUB_OVERLAP_DIR:-}" ]] && touch "$STUB_OVERLAP_DIR/rpc-started"
+        if [[ -n "${STUB_OVERLAP_DIR:-}" ]]; then
+            touch "$STUB_OVERLAP_DIR/rpc-started"
+            # Join the handshake before returning; the real heartbeat is detached.
+            for ((attempt=0; attempt<80; attempt++)); do
+                [[ -f "$STUB_OVERLAP_DIR/heartbeat-overlapped" && -f "$STUB_OVERLAP_DIR/session-started" ]] && break
+                sleep 0.01
+            done
+        fi
         [[ "${STUB_PIPELINE_TIMEOUT:-0}" == 1 ]] && exit 124
         [[ "${STUB_RPC_MODE:-ok}" == fail ]] && exit 1
         state=$(get --state "$@")

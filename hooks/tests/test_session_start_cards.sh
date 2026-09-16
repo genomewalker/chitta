@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
+source "$ROOT/hooks/tests/ledger-fixture.inc"
 unset CHITTA_HEADLESS CC_SOUL_HEADLESS
 export HOME="$T/home" XDG_RUNTIME_DIR="$T/runtime" CHITTA_DB_PATH="$T/mind"
 export CHITTA_QUEUE="$T/queue" CHITTA_TASK_LEDGER="$T/tasks.sqlite"
@@ -14,6 +15,9 @@ cat > "$CHITTA_BIN" <<'STUB'
 #!/bin/bash
 case "$1" in
     realm_detect) echo project:cards ;;
+    ledger_op)
+        jq -nc --arg op "$3" --argjson args "$5" '{op:$op,args:$args}' | "$LEDGER_TEST_BIN" ;;
+
     recall)
         if [[ " $* " == *' --text-only '* ]]; then
             if [[ " $* " == *' --realm '* ]]; then cat "$STUB_CARD_DIR/scoped"

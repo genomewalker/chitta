@@ -15,7 +15,9 @@ if [[ "${1:-}" != --session-start-worker ]]; then
     [[ $- == *x* ]] && _trace=(-x)
     timeout --signal=KILL "$_budget" bash "${_trace[@]}" "${BASH_SOURCE[0]}" --session-start-worker "$_ld" "$PPID" > "$_ld/out"
     _rc=$?
-    if [[ -s "$_ld/out" ]]; then
+    if [[ -f "$_ld/unavailable" ]]; then
+        printf '[chitta] daemon unavailable; context not loaded.\n'
+    elif [[ -s "$_ld/out" ]]; then
         cat "$_ld/out"
     elif [[ "$_rc" -ne 0 ]]; then
         # Every lane timed out (daemon busy or node saturated): say so instead of
@@ -169,29 +171,13 @@ _load_handoff_capsule() {
     branch=$(git -C "$project" symbolic-ref --quiet --short HEAD 2>/dev/null ||
         git -C "$project" rev-parse --short HEAD 2>/dev/null || true)
     tid=$(jq -r '.thread_id // empty' <<< "$INPUT")
-    args=$(jq -nc --arg project "$project" --arg tid "$tid" \
-        '{project_dir:$project,limit:100} + (if $tid == "" then {} else {thread_id:$tid} end)')
-    if [[ "${CHITTA_LEDGER_POLICY:-1}" == 1 ]]; then
-        response=$(timeout 0.15 "$CHITTA_BIN" ledger_op --op hook_handoff_context \
-            --args "$(jq -c --arg branch "$branch" '. + {branch:$branch}' <<< "$args")" --json 2>/dev/null) || response='{}'
-        if jq -se 'length==1 and (.[0].value.text|type)=="string"' <<< "$response" >/dev/null 2>&1; then
-            jq -r '.value.text' <<< "$response"
-            return 0
-        fi
-    fi
-    timeout "$MAX_WAIT" "$CHITTA_BIN" ledger_op --op session_list --args "$args" --json |
-        jq -r --arg branch "$branch" --arg project "$project" '
-        [.value.rows[]? | (.metadata_json | fromjson? // {}) | .handoff // empty |
-         select(.version == 1 and .project_dir == $project and .branch == $branch)] |
-        sort_by(.saved_at) | last |
-        select(.verified == true and (.next_action | type == "string" and length > 0)) |
-        "[handoff]",
-        "Next action: \(.next_action)",
-        "Branch: \(.branch)",
-        "Artifacts: \((.artifact_paths // []) | join(", "))",
-        "Blocker: \(if .blocker == "" then "none recorded" else .blocker end)",
-        "Source: \(.source.kind) (session \(.source.session_id))",
-        "[/handoff]"'
+    args=$(jq -nc --arg project "$project" --arg tid "$tid" --arg branch "$branch" \
+        '{project_dir:$project,limit:100,branch:$branch} +
+         (if $tid == "" then {} else {thread_id:$tid} end)')
+    response=$(timeout "$MAX_WAIT" "$CHITTA_BIN" ledger_op --op hook_handoff_context \
+        --args "$args" --json 2>/dev/null) || return 1
+    jq -sr 'if length==1 and (.[0].value.text|type)=="string" then .[0].value.text | select(length>0) else error("invalid policy response") end' <<< "$response"
+
 }
 if [[ "$IS_SUBAGENT" != true ]]; then
     _launch_lane handoff _load_handoff_capsule
@@ -246,20 +232,10 @@ fi
 # ═══════════════════════════════════════════════════════════════════════════
 
 _load_ledger() {
-    local args response
-    if [[ "${CHITTA_LEDGER_POLICY:-1}" == 1 ]]; then
-        args=$(jq -nc --arg project "$REALM" --arg source "$HOOK_SOURCE" \
-            --argjson now "$(date +%s)" '{project:$project,source:$source,now:$now}')
-        response=$(timeout 0.15 "$CHITTA_BIN" ledger_op --op hook_session_context \
-            --args "$args" --json 2>/dev/null) || response='{}'
-        if jq -se 'length==1 and (.[0] | (.value.ledger|type)=="object" and (.value.card|type)=="string" and
-            (.value.post_compact|type)=="boolean" and (.value.post_clear|type)=="boolean")' \
-            <<< "$response" >/dev/null 2>&1; then
-            printf '%s\n' "$response"
-            return 0
-        fi
-    fi
-    timeout "$MAX_WAIT" "$CHITTA_BIN" ledger_load --project "$REALM" --json || echo '{}'
+    local args
+    args=$(jq -nc --arg project "$REALM" --arg source "$HOOK_SOURCE" \
+        --argjson now "$(date +%s)" '{project:$project,source:$source,now:$now}')
+    timeout "$MAX_WAIT" "$CHITTA_BIN" ledger_op --op hook_session_context --args "$args" --json
 }
 _launch_lane ledger _load_ledger
 if [[ -n "${REALM:-}" && "$REALM" != brahman ]]; then
@@ -268,42 +244,10 @@ if [[ -n "${REALM:-}" && "$REALM" != brahman ]]; then
 fi
 
 _render_tasks() {
-    local inbox_args thread_args inbox_pid thread_pid response
-    if [[ "${CHITTA_LEDGER_POLICY:-1}" == 1 ]]; then
-        response=$(timeout 0.15 "$CHITTA_BIN" ledger_op --op hook_task_context \
-            --args "$(jq -nc --arg realm "$REALM" '{realm:$realm}')" --json 2>/dev/null) || response='{}'
-        if jq -se 'length==1 and (.[0].value.text|type)=="string"' <<< "$response" >/dev/null 2>&1; then
-            jq -r '.value.text' <<< "$response"
-            return 0
-        fi
-    fi
-    inbox_args=$(jq -nc --arg realm "$REALM" '{target_realm:$realm,state:"pending",limit:5}')
-    thread_args=$(jq -nc --arg realm "$REALM" '{realm:$realm,status:"active",limit:3}')
-    # ledger_op exposes separate list operations. Dispatch concurrently, then
-    # format both replies with one jq process in the original card order.
-    (timeout "$MAX_WAIT" "$CHITTA_BIN" ledger_op --op inbox_list --args "$inbox_args" --json |
-        jq -c '.value.rows // []') >"$_ld/inbox.json" &
-    inbox_pid=$!
-    (timeout "$MAX_WAIT" "$CHITTA_BIN" ledger_op --op thread_list --args "$thread_args" --json |
-        jq -c '.value.rows // []') >"$_ld/threads.json" &
-    thread_pid=$!
-    wait "$inbox_pid" 2>/dev/null || true
-    wait "$thread_pid" 2>/dev/null || true
-    jq -nr --arg realm "$REALM" --slurpfile inbox "$_ld/inbox.json" \
-        --slurpfile threads "$_ld/threads.json" '
-        ($inbox[0] // []) as $items | ($threads[0] // []) as $active |
-        (if ($items | length) > 0 then
-            ["━━━ inbox (\(if $realm == "" then "all" else $realm end)) ━━━",
-             ($items[:5][] | (if .event_type == "completed" then "✓"
-                elif (.event_type == "failed" or .event_type == "failure") then "✗"
-                else "•" end) + " " + (.digest // "")[:110])] |
-            "\n" + (join("\n") | sub("\n+$"; ""))
-         else empty end),
-        (if ($active | length) > 0 then
-            ["━━━ active threads ━━━",
-             ($active[:3][] | "  ⟳  \(.title // "?") [\((.thread_id // "")[:8])]")] |
-            "\n" + (join("\n") | sub("\n+$"; ""))
-         else empty end)'
+    local response
+    response=$(timeout "$MAX_WAIT" "$CHITTA_BIN" ledger_op --op hook_task_context \
+        --args "$(jq -nc --arg realm "$REALM" '{realm:$realm}')" --json 2>/dev/null) || return 1
+    jq -sr 'if length==1 and (.[0].value.text|type)=="string" then .[0].value.text | select(length>0) else error("invalid policy response") end' <<< "$response"
 }
 _launch_lane tasks _render_tasks
 
@@ -387,15 +331,16 @@ _read_lane handoff HANDOFF_CAPSULE
 # Get full ledger entry (not just summary)
 # ledger_load returns the most recent entry for the project
 _read_lane ledger LEDGER_JSON
-_LEDGER_POLICY=0
 _LEDGER_CONTEXT_JSON="$LEDGER_JSON"
-if jq -se 'length==1 and (.[0] | (.value.ledger|type)=="object" and (.value.card|type)=="string")' \
-    <<< "$LEDGER_JSON" >/dev/null 2>&1; then
-    LEDGER_JSON=$(jq -c '.value.ledger' <<< "$LEDGER_JSON")
-    _LEDGER_POLICY=1
-    if [[ -n "${CHITTA_LEDGER_PROFILE:-}" ]]; then
-        printf '%s\n' "$_LEDGER_CONTEXT_JSON" > "$CHITTA_LEDGER_PROFILE"
-    fi
+if ! jq -se 'length==1 and (.[0] | (.value.ledger|type)=="object" and
+    (.value.card|type)=="string" and (.value.post_compact|type)=="boolean" and
+    (.value.post_clear|type)=="boolean")' <<< "$LEDGER_JSON" >/dev/null 2>&1; then
+    touch "$_ld/unavailable"
+    exit 0
+fi
+LEDGER_JSON=$(jq -c '.value.ledger' <<< "$LEDGER_JSON")
+if [[ -n "${CHITTA_LEDGER_PROFILE:-}" ]]; then
+    printf '%s\n' "$_LEDGER_CONTEXT_JSON" > "$CHITTA_LEDGER_PROFILE"
 fi
 
 # The query depends on the ledger. Speculate the fallback concurrently, but
@@ -411,36 +356,8 @@ if [[ -n "${REALM:-}" && "$REALM" != brahman ]]; then
     _launch_lane fallback timeout "$MAX_WAIT" "$CHITTA_BIN" recall --query "${_project_kw} ${_recall_query}" --limit 6 --text-only
 fi
 
-# Check if this is a post-compaction session
-# Primary signal: Claude Code passes source="compact" in hook input (authoritative)
-# Fallback: ledger mood="pre-compact" (requires daemon to have saved checkpoint before compact)
-if [[ "$_LEDGER_POLICY" == 1 ]]; then
-    IFS=$'\t' read -r IS_POST_COMPACT IS_POST_CLEAR < <(
-        jq -r '[.value.post_compact,.value.post_clear]|@tsv' <<< "$_LEDGER_CONTEXT_JSON")
-else
-MOOD=$(echo "$LEDGER_JSON" | jq -r '.mood // empty')
-IS_POST_COMPACT=false
-[[ "$HOOK_SOURCE" == "compact" ]] && IS_POST_COMPACT=true
-[[ "$MOOD" == "pre-compact" ]] && IS_POST_COMPACT=true
-
-# /clear: new session_id but same project — inject a bounded resume card
-# so the chain of work isn't lost. Only fires when ledger is fresh (<4h).
-IS_POST_CLEAR=false
-if [[ "$HOOK_SOURCE" == "clear" ]]; then
-    _ledger_ts=$(echo "$LEDGER_JSON" | jq -r '.updated_at // empty' 2>/dev/null)
-    _now_s=$(date +%s)
-    _age_s=99999
-    if [[ -n "$_ledger_ts" ]]; then
-        _ledger_s=$(date -d "$_ledger_ts" +%s 2>/dev/null || echo 0)
-        _age_s=$(( _now_s - _ledger_s ))
-    fi
-    # Treat as resumable if mood is in_progress/pre-compact and age < 4h
-    if [[ "$MOOD" == "in_progress" || "$MOOD" == "pre-compact" ]] && [[ "$_age_s" -lt 14400 ]]; then
-        IS_POST_CLEAR=true
-    fi
-fi
-
-fi
+IFS=$'\t' read -r IS_POST_COMPACT IS_POST_CLEAR < <(
+    jq -r '[.value.post_compact,.value.post_clear]|@tsv' <<< "$_LEDGER_CONTEXT_JSON")
 
 _collect_corrections() {
     local surface_file="${MIND_PATH}/.correction_surfaces"
@@ -493,94 +410,8 @@ _collect_corrections() {
     fi
 }
 
-if [[ "$IS_POST_COMPACT" == "true" ]]; then
-    if [[ "$_LEDGER_POLICY" == 1 ]]; then
-        jq -j '.value.card' <<< "$_LEDGER_CONTEXT_JSON"
-    else
-    # This is a continuation after compaction - inject full state
-    echo ""
-    echo "[session-restored]"
-
-    # Active files
-    ACTIVE_FILES=$(echo "$LEDGER_JSON" | jq -r '.active_files // [] | .[]' 2>/dev/null)
-    if [[ -n "$ACTIVE_FILES" ]]; then
-        echo "Files in context:"
-        echo "$ACTIVE_FILES" | while read -r f; do
-            [[ -n "$f" ]] && echo "  - $f"
-        done
-    fi
-
-    # Decisions made
-    DECISIONS=$(echo "$LEDGER_JSON" | jq -r '.decisions // [] | .[]' 2>/dev/null)
-    if [[ -n "$DECISIONS" ]]; then
-        echo ""
-        echo "Decisions made:"
-        echo "$DECISIONS" | while read -r d; do
-            [[ -n "$d" ]] && echo "  - $d"
-        done
-    fi
-
-    # Pending tasks
-    TODOS=$(echo "$LEDGER_JSON" | jq -r '.todos // [] | .[] | "[\(.status)] \(.content)"' 2>/dev/null)
-    if [[ -n "$TODOS" ]]; then
-        echo ""
-        echo "Tasks:"
-        echo "$TODOS" | while read -r t; do
-            [[ -n "$t" ]] && echo "  $t"
-        done
-    fi
-
-    # Blockers
-    BLOCKERS=$(echo "$LEDGER_JSON" | jq -r '.blockers // [] | .[]' 2>/dev/null)
-    if [[ -n "$BLOCKERS" ]]; then
-        echo ""
-        echo "Blockers:"
-        echo "$BLOCKERS" | while read -r b; do
-            [[ -n "$b" ]] && echo "  ! $b"
-        done
-    fi
-
-    # Discoveries
-    DISCOVERIES=$(echo "$LEDGER_JSON" | jq -r '.discoveries // [] | .[]' 2>/dev/null)
-    if [[ -n "$DISCOVERIES" ]]; then
-        echo ""
-        echo "Discoveries:"
-        echo "$DISCOVERIES" | while read -r d; do
-            [[ -n "$d" ]] && echo "  * $d"
-        done
-    fi
-
-    # Snapshot (what we were doing)
-    SNAPSHOT=$(echo "$LEDGER_JSON" | jq -r '.snapshot // empty')
-    if [[ -n "$SNAPSHOT" && ${#SNAPSHOT} -gt 20 ]]; then
-        echo ""
-        echo "Last context:"
-        echo "$SNAPSHOT" | head -c 500
-        echo ""
-    fi
-
-    echo "[/session-restored]"
-    echo ""
-    fi
-elif [[ "$IS_POST_CLEAR" == "true" ]]; then
-    if [[ "$_LEDGER_POLICY" == 1 ]]; then
-        jq -j '.value.card' <<< "$_LEDGER_CONTEXT_JSON"
-    else
-    # /clear with a recent in-progress ledger — inject bounded resume hint
-    _clear_goal=$(echo "$LEDGER_JSON" | jq -r '.snapshot // empty' | grep -m1 '^Goal:' | sed 's/^Goal:[[:space:]]*//' | head -c 200)
-    [[ -z "$_clear_goal" ]] && _clear_goal=$(echo "$LEDGER_JSON" | jq -r '.snapshot // empty' | head -1 | head -c 200)
-    _clear_next=$(echo "$LEDGER_JSON" | jq -r '.next_steps // [] | .[0] // empty' 2>/dev/null | head -c 150)
-    _clear_files=$(echo "$LEDGER_JSON" | jq -r '.active_files // [] | .[:5] | join(", ")' 2>/dev/null)
-    _clear_updated=$(echo "$LEDGER_JSON" | jq -r '.updated_at // empty' 2>/dev/null)
-
-    _card="[last-session]"
-    [[ -n "$_clear_goal" ]] && _card="${_card}\nPrevious task: ${_clear_goal}"
-    [[ -n "$_clear_next" ]] && _card="${_card}\nNext step: ${_clear_next}"
-    [[ -n "$_clear_files" ]] && _card="${_card}\nActive files: ${_clear_files}"
-    [[ -n "$_clear_updated" ]] && _card="${_card}\nSaved: ${_clear_updated}"
-    _card="${_card}\nRun /recap for full context. [/last-session]"
-    echo -e "$_card"
-    fi
+if [[ "$IS_POST_COMPACT" == true || "$IS_POST_CLEAR" == true ]]; then
+    jq -j '.value.card' <<< "$_LEDGER_CONTEXT_JSON"
 else
     # Normal session start - just show minimal info
     # Dependent correction tags start as soon as their recall has completed.
@@ -597,13 +428,7 @@ else
     fi
 
     # The daemon returns the same normal/clear/compact ledger card.
-    if [[ "$_LEDGER_POLICY" == 1 ]]; then
-        jq -j '.value.card' <<< "$_LEDGER_CONTEXT_JSON"
-    elif [[ -n "$LEDGER_JSON" && "$LEDGER_JSON" != "{}" ]]; then
-        session=$(echo "$LEDGER_JSON" | jq -r '.session_id // empty')
-        mood=$(echo "$LEDGER_JSON" | jq -r '.mood // empty')
-        [[ -n "$session" ]] && echo "[ledger] $session ($mood)"
-    fi
+    jq -j '.value.card' <<< "$_LEDGER_CONTEXT_JSON"
 
     # ═══════════════════════════════════════════
     # TOPOLOGY: Structural map of memory state
