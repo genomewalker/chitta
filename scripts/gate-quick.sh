@@ -11,7 +11,7 @@
 # budget, contract snapshot (needs the CLI; skipped without it), docs gates.
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$ROOT"
+cd "$ROOT" || exit 1
 PY="${CHITTA_PY:-$(command -v python3)}"
 RUFF="${RUFF:-$(dirname "$PY")/ruff}"; command -v "$RUFF" >/dev/null 2>&1 || RUFF=ruff
 export OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 RAYON_NUM_THREADS=1

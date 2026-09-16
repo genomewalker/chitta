@@ -12,7 +12,7 @@
 # and build dirs), so the second run is minutes, not tens of minutes.
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$ROOT"
+cd "$ROOT" || exit 1
 PY="${CHITTA_PY:-$(command -v python3)}"
 ON="$ROOT/scripts/on-compute.sh"
 replica=0 recall=0
