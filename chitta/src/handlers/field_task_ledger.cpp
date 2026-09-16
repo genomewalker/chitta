@@ -3,6 +3,7 @@
 
 namespace chitta {
 void FieldRpcHandler::load_task_ledger() {
+    // Constructor-only replay completes before the handler is published to workers.
     auto events = json::parse(field_store_->task_ledger_events());
     std::sort(events.begin(), events.end(), [](const json& x, const json& y) {
         return x.at("payload").at("revision") < y.at("payload").at("revision");
@@ -18,6 +19,7 @@ ToolResult FieldRpcHandler::tool_ledger_op(const json& params) {
         if (args.is_string()) args = json::parse(args.get<std::string>());
         if (!args.is_object()) return ToolResult::error("args must be an object");
         args        = rpc::clamp_read_arguments("ledger_op." + op, std::move(args));
+        // The ledger holds its own transaction lock through WAL append and publish.
         auto result = task_ledger_.run(op, args, [&](const json& batch) {
             if (!field_store_->emit_event("ledger", "task_records", "task-ledger", batch.dump()))
                 throw std::runtime_error("ledger WAL append failed");
