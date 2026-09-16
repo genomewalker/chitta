@@ -12,6 +12,8 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 - SQL code navigation exposes tables, views, functions and object references.
 
+- PHP code navigation adds definitions, imports and inheritance; optional Graphify-parity grammars default ON with `CHITTA_EXTRA_GRAMMARS`.
+
 ## [Unreleased]
 
 - Add Make target/macro navigation, prerequisite links, calls and includes.

@@ -22,6 +22,7 @@ extern "C" const TSLanguage* tree_sitter_perl();
 extern "C" const TSLanguage* tree_sitter_make();
 extern "C" const TSLanguage* tree_sitter_cmake();
 extern "C" const TSLanguage* tree_sitter_sql();
+extern "C" const TSLanguage* tree_sitter_php();
 
 namespace chitta {
 const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
@@ -35,10 +36,14 @@ const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
     if (language == "make") return tree_sitter_make();
     if (language == "cmake") return tree_sitter_cmake();
     if (language == "sql") return tree_sitter_sql();
+#ifdef CHITTA_EXTRA_GRAMMARS
+    if (language == "php") return tree_sitter_php();
+#endif
     return nullptr;
 }
 void CodeIntel::initialize_extended_parsers() {
-    for (const auto* language : {"bash", "r", "julia", "fortran", "nextflow", "snakemake", "perl", "make", "cmake", "sql"}) {
+    for (const auto* language : {"bash", "r", "julia", "fortran", "nextflow", "snakemake", "perl", "make", "cmake", "sql", "php"}) {
+        if (!extended_grammar(language)) continue; // Optional grammar group disabled.
         auto* parser = ts_parser_new();
         if (!ts_parser_set_language(parser, extended_grammar(language))) {
             ts_parser_delete(parser);
@@ -51,6 +56,7 @@ std::string CodeIntel::detect_extended_language(const std::string& path) {
     auto ext = std::filesystem::path(path).extension().string();
     if (ext == ".sh" || ext == ".bash") return "bash";
     auto filename = std::filesystem::path(path).filename().string();
+    if ((ext == ".php" || ext == ".phtml") && extended_grammar("php")) return "php";
     if (ext == ".sql" || ext == ".ddl") return "sql";
     if (ext == ".cmake" || filename == "CMakeLists.txt") return "cmake";
     if (ext == ".mk" || ext == ".mak" || filename == "Makefile" || filename == "makefile" || filename == "GNUmakefile" || filename.rfind("Makefile.", 0) == 0) return "make";
@@ -526,6 +532,35 @@ void CodeIntel::extract_extended(TSNode root, const std::string& source,
                 auto owner_type = std::string(ast_type(owner));
                 bool declaration = owner_type.starts_with("create_") && ts_node_eq(ast_find(owner, "object_reference"), node);
                 if (!declaration && !name.empty()) result.references.push_back({path, name, uint32_t(node_line(node))});
+            }
+        }
+        if (language == "php") {
+            if (type == "function_definition" || type == "method_declaration" || type == "class_declaration" || type == "interface_declaration" || type == "trait_declaration" || type == "enum_declaration") {
+                auto name = text(field(node, "name"));
+                auto kind = type == "function_definition" ? "function" : type == "method_declaration" ? "method" : type.substr(0, type.find('_'));
+                define(node, name, kind, parent, field(node, "body"));
+                for (const auto* clause : {"base_clause", "class_interface_clause"}) {
+                    auto bases = ast_find(node, clause);
+                    for (uint32_t i = 0; i < ast_named_count(bases); ++i)
+                        result.type_relationships.push_back({name, text(ast_named_child(bases, i)), "inherits", path, uint32_t(node_line(bases))});
+                }
+                parent = name;
+            }
+            if (type == "function_call_expression") call(node, text(field(node, "function")), parent);
+            if (type == "member_call_expression" || type == "nullsafe_member_call_expression") {
+                auto receiver = text(field(node, "object"));
+                if (receiver == "$this") receiver = "this";
+                call(node, text(field(node, "name")), parent, "", receiver);
+            }
+            if (type == "scoped_call_expression") call(node, text(field(node, "name")), parent, text(field(node, "scope")));
+            if (type == "include_expression" || type == "include_once_expression" || type == "require_expression" || type == "require_once_expression") {
+                auto argument = ast_named_child(node, 0);
+                if (std::string(ast_type(argument)) == "string")
+                    result.imports.push_back({path, literal(argument), "", {}, uint32_t(node_line(node))});
+            }
+            if (type == "namespace_use_declaration") {
+                auto declaration = text(node);
+                result.imports.push_back({path, declaration.substr(4, declaration.size() - 5), "", {}, uint32_t(node_line(node))});
             }
         }
         for (uint32_t i = 0; i < ast_named_count(node); ++i) visit(ast_named_child(node, i), parent);

@@ -1461,6 +1461,7 @@ connections. Runtime dispatch and dynamic import paths are not evaluated.
 | Nextflow | `.nf` | Processes, named/entry workflows and functions; includes, calls and channel routing through process outputs or pipes. Shell script bodies remain data. |
 | Snakemake | `.smk`, `Snakefile`, `snakefile` | Rules, checkpoints, modules, named input/output/params sections and Python definitions; calls, includes/module files and explicit `rules.NAME.output` dependencies. |
 | Perl | `.pl`, `.pm`, `.t`, `.perl` | Packages and subroutines with package scope; calls, `use`/`require`, and literal `use parent`/`use base` inheritance. |
+| PHP | `.php`, `.phtml` | Functions, methods, classes/interfaces/traits/enums, calls, literal includes/requires, namespace imports, inheritance |
 | SQL | `.sql`, `.ddl` | Tables, views, functions/procedures, calls and object references, including parsed SQL function bodies |
 | CMake | `.cmake`, `CMakeLists.txt` | Functions, macros, targets, command calls, includes/subdirectories, target dependencies |
 | Make | `.mk`, `.mak`, `Makefile`, `makefile`, `GNUmakefile`, `Makefile.*` | Literal targets, `define` macros, prerequisite links, built-in/macro calls and includes. Special targets such as `.PHONY` remain annotations. |
@@ -1480,3 +1481,8 @@ process/workflow producers; their evidence points to the routing expression.
 
 CMake navigation extracts functions, macros and build targets; `include` and
 `add_subdirectory` resolve to files, and explicit target dependencies form calls.
+
+`CHITTA_EXTRA_GRAMMARS=ON` (the release/default setting) builds the additional
+Graphify-parity grammars, starting with PHP. Set it to `OFF` for a smaller
+binary with the priority bioinformatics/build languages retained. Disabled
+grammars do not claim indexed coverage. Both settings use pinned source caches.

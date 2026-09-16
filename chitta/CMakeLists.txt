@@ -230,6 +230,9 @@ function(chitta_grammar name repository revision)
         FetchContent_Populate(tree-sitter-${name})
     endif()
     set(source "${tree-sitter-${name}_SOURCE_DIR}/src")
+    if(ARGC GREATER 3)
+        set(source "${tree-sitter-${name}_SOURCE_DIR}/${ARGV3}/src")
+    endif()
     add_library(grammar-${name} STATIC "${source}/parser.c")
     foreach(scanner scanner.c scanner.cc)
         if(EXISTS "${source}/${scanner}")
@@ -249,6 +252,12 @@ chitta_grammar(perl tree-sitter-perl/tree-sitter-perl aa5600c8df1eb9ed111db72e20
 chitta_grammar(make alemuller/tree-sitter-make a4b9187417d6be349ee5fd4b6e77b4172c6827dd)
 chitta_grammar(cmake uyha/tree-sitter-cmake 58993af75218bc99a1f5a04c832a5937e7c422cb)
 chitta_grammar(sql DerekStride/tree-sitter-sql 593a5ecc5dc3889890d8b24ba8fa7487ee01bfe5)
+option(CHITTA_EXTRA_GRAMMARS "Build the additional Graphify-parity language grammars" ON)
+if(CHITTA_EXTRA_GRAMMARS)
+    target_compile_definitions(tree-sitter-parsers PUBLIC CHITTA_EXTRA_GRAMMARS=1)
+    chitta_grammar(php tree-sitter/tree-sitter-php 3fda2fb9577166c6399834917f9844f30370beea php)
+endif()
+
 
 # Extract version from plugin.json
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../.claude-plugin/plugin.json" PLUGIN_JSON)

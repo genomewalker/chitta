@@ -144,6 +144,7 @@ int main() {
     std::sort(language_specs.begin(), language_specs.end());
     for (const auto& spec : language_specs) {
         std::ifstream input(spec); nlohmann::json expected; input >> expected;
+        if (expected.value("extra", false) && !intel.extended_grammar(expected["language"].get<std::string>())) continue;
         auto source = fs::weakly_canonical(spec.parent_path() / expected["file"].get<std::string>());
         std::vector<std::string> sources{source.string()};
         std::unordered_set<std::string> dirty{source.string()};
@@ -158,6 +159,12 @@ int main() {
                 if (!found) std::cerr << expected["language"] << " missing query edge " << kind << ':' << surface << '\n';
                 assert(found);
             }
+        nlohmann::json edge_counts = nlohmann::json::object();
+        for (const auto& edge : answer["edges"]) {
+            auto kind = edge["kind"].get<std::string>();
+            edge_counts[kind] = edge_counts.value(kind, 0) + 1;
+        }
+        std::cout << nlohmann::json{{"language", expected["language"]}, {"query_edges", edge_counts}}.dump() << '\n';
         for (const auto& pair : expected.value("channels", nlohmann::json::array())) {
             bool found = false;
             for (const auto& edge : answer["edges"])

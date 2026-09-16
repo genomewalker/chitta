@@ -381,3 +381,20 @@ so their table references remain AST-backed. The fixture has 4 definitions,
 table references. Fresh parsing averages 323.00 microseconds/KiB.
 Daemon size is 81,139,352 bytes (+11,082,760). Offline builds and all language
 fixtures pass; contracts and recall scoring are unchanged.
+
+### PHP and optional grammars
+
+PHP navigation extracts functions/methods, classes/interfaces/traits/enums,
+calls, literal include/require paths, namespace imports and inheritance.
+The fixture has 4 definitions and 4 query edges (2 calls, 1 import, 1 inheritance).
+Fresh parsing averages 287.26 microseconds/KiB; daemon size is 82,239,112 bytes
+(+1,099,760). Offline extraction/query fixtures pass. Contracts and recall
+scoring are unchanged.
+
+`CHITTA_EXTRA_GRAMMARS` defaults ON and controls the Graphify-parity group;
+OFF retains all priority bioinformatics/build grammars. The shared FetchContent
+helper supports grammar repositories with generated parsers in subdirectories.
+
+The source-filter performance fix qualifies on a fresh private daemon:
+855/865 tracked supported files (98.84%) in 37.374 seconds, 80,953,087 index
+bytes, including 208 Bash symbols. Ten deliberately ignored files remain out.

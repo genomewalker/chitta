@@ -19,6 +19,10 @@ int main(int argc, char** argv) {
         nlohmann::json expected; input >> expected;
         const auto path = fixture.parent_path() / expected["file"].get<std::string>();
         const auto language = expected["language"].get<std::string>();
+        if (expected.value("extra", false) && !intel.extended_grammar(language)) {
+            assert(intel.detect_language(path.string()).empty());
+            continue;
+        }
         assert(intel.detect_language(path.string()) == language);
         for (const auto& alias : expected.value("aliases", nlohmann::json::array()))
             assert(intel.detect_language(alias.get<std::string>()) == language);
