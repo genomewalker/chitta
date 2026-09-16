@@ -207,7 +207,7 @@ class Harness:
                         return (proc / "stat").read_text().split()[2] == "Z" and len(
                             list((proc / "task").iterdir())
                         ) == 1
-                    except FileNotFoundError:
+                    except (FileNotFoundError, ProcessLookupError):
                         return True
 
                 until(terminated, 10)

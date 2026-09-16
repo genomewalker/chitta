@@ -29,3 +29,15 @@ An added WAL-only restart control changes observe confidence from 0.8 to 1.0 wit
 ## Validation
 
 Rust library suite: 289 passed, 2 ignored (53.26 s). CTest: 25/25 passed (100.33 s), using the real local embedding model for the format probe. MCP: 149 passed. SMRITI: 46 passed. All 21 hook scripts and touched-Python Ruff passed. The final full-copy harness passed all nine cases. WAL recovery: 11.868 s, 19,622 bytes restored; queue replay: 11.472 / 12.354 s with exact identity/state and ledger pruning verified. See `docs/FIELD_PERF.md` and `docs/chaos-2026-09-16.json` for the complete table and retained failures. Production commit: `b4c06294`; Rust submodule commit: `765b68e`. No service changes, installation, push, live daemon fault, or external worktree changes.
+
+## Merge onto the split store (2026-09-16)
+
+Fetched submodule main `0e24c7d` and resolved the single `src/store.rs` conflict by retaining main's `mod tests;` declaration and moving `chaos_unlinked_wal_preserves_n_plus_m_memories` beside `put_test_memory` in `src/store/tests.rs`. The test is identical to `765b68e` except for removal of one indentation level.
+
+The remaining hunks merge without conflict: descriptor recovery, readable WAL opens, recovery diagnostics and WAL regressions remain in `src/log.rs`; the preserved-prefix assertion remains in `src/read_path_tests.rs`; lock fencing and partial-snapshot tests remain in `src/field.rs::chaos_tests`. The two whole WAL/read-path files and the field test block were checked byte-for-byte against `765b68e`. Main's `src/field/opening.rs` phases, `src/ffi/` modules and production `src/store/` modules remain exactly as supplied by main.
+
+The rerun exposed a harness teardown race: after the MCP invariant passed, reading `/proc/<owned-pid>/stat` could raise `ProcessLookupError` as the killed process disappeared. The termination predicate now accepts that alongside `FileNotFoundError`; fault injection and recovery assertions are unchanged. The first CTest run also skipped the embedding pool because its model environment variable was absent. With the cleanup fix and explicit real-model path, CTest passes all 25 tests without skips (96.73 s).
+
+Merged validation: `./build.sh build --release` passed (5m40s), and the full `./build.sh test --release` command passed with 289 library tests, 2 ignored, no failures (53.64 s for the library suite). Native rebuild passed. Generated identity remains `nomic-embed-text-v1.5` / 768 / text format 1, and the rebuilt daemon's format ID remains `9230643459983636874`. Scratch-daemon contract snapshots are unchanged before and after the native rebuild. MCP 149/149, SMRITI 46/46, all 21 hook scripts, harness Ruff and canary shell syntax passed.
+
+The full frozen-copy chaos harness passed 9/9. WAL restored 19,615 bytes and reopened in 11.282 s; queue replay reopened in 11.691 / 11.051 s with exact identity/state and pruning verified. Format probe maximum was 0.023 s. Full rerun report: `/tmp/p7-merge-full-final.json`; native rerun log: `/tmp/p7-merge-ctest-final.log`; Rust log: `/tmp/p7-merge-rust-test.log`. Harness scratch copies were removed on exit.
