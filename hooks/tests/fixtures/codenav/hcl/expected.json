@@ -1,0 +1,23 @@
+{
+  "symbols": {
+    "terraform": "terraform",
+    "var.sample": "variable",
+    "local_file.reads": "resource",
+    "module.counts": "module",
+    "output.result": "output"
+  },
+  "imports": [
+    "./counts"
+  ],
+  "references": [
+    "var.sample",
+    "local_file.reads",
+    "module.counts"
+  ],
+  "calls": [
+    "trimspace"
+  ],
+  "file": "navigation.tf",
+  "language": "hcl",
+  "extra": true
+}

@@ -429,3 +429,16 @@ has 4 definitions and 7 query edges (3 calls, 1 import, 3 references). Fresh
 parsing averages 405.45 microseconds/KiB; daemon size is 92,735,512 bytes
 (+709,360). Offline extraction/query fixtures pass. Contracts and recall
 scoring are unchanged.
+
+### HCL / Terraform
+
+HCL navigation names resource, data, variable, module, output and configuration
+blocks, extracts module sources and function calls, and resolves attribute
+chains to their resource/module/variable definitions. Terraform variables
+retain reference edges through a language-specific exception to local-variable
+noise filtering.
+
+The fixture has 5 definitions and 5 query edges (1 call, 1 import, 3 references).
+Fresh parsing averages 277.36 microseconds/KiB; daemon size is 92,876,520 bytes
+(+141,008). The C++ scanner links offline, and all extraction/query fixtures
+pass. Contracts and recall scoring are unchanged.

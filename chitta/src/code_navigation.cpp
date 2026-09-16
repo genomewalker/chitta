@@ -222,7 +222,7 @@ struct CodeNavigation::Impl {
                         if (kind == "references") {
                             if (target.size() <= 3) continue;
                             auto candidate_kind = candidate.data.value("kind", "");
-                            if (candidate_kind == "variable" || candidate_kind == "file") continue;
+                            if ((candidate_kind == "variable" && candidate.lang != "hcl") || candidate_kind == "file") continue;
                             if (!parent.empty() && parent != caller_parent && candidate_kind != "class" && candidate_kind != "struct") continue;
                         }
                         candidates.push_back(id);

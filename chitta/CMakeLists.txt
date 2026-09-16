@@ -255,6 +255,7 @@ chitta_grammar(sql DerekStride/tree-sitter-sql 593a5ecc5dc3889890d8b24ba8fa7487e
 option(CHITTA_EXTRA_GRAMMARS "Build the additional Graphify-parity language grammars" ON)
 if(CHITTA_EXTRA_GRAMMARS)
     target_compile_definitions(tree-sitter-parsers PUBLIC CHITTA_EXTRA_GRAMMARS=1)
+    chitta_grammar(hcl mitchellh/tree-sitter-hcl bdc2ee0cbd19d22f8a1529e5c9d099029573c931)
     chitta_grammar(zig tree-sitter-grammars/tree-sitter-zig 6479aa13f32f701c383083d8b28360ebd682fb7d)
     chitta_grammar(scala tree-sitter/tree-sitter-scala db390f312a54b04b13790e1767bfac32665c17ac)
     chitta_grammar(kotlin fwcd/tree-sitter-kotlin 1852ea17b7f60fb3f9d84e0b1555d56b46b39fb1)

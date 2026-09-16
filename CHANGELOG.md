@@ -20,6 +20,8 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 - Zig code navigation: Functions, named structs/enums/unions/opaque types, calls and literal imports/C includes.
 
+- HCL / Terraform code navigation: Resource, data, variable, module and output blocks; module sources, function calls and attribute references.
+
 ## [Unreleased]
 
 - Add Make target/macro navigation, prerequisite links, calls and includes.

@@ -30,6 +30,8 @@ extern "C" const TSLanguage* tree_sitter_scala();
 
 extern "C" const TSLanguage* tree_sitter_zig();
 
+extern "C" const TSLanguage* tree_sitter_hcl();
+
 namespace chitta {
 const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
     if (language == "bash") return tree_sitter_bash();
@@ -47,11 +49,12 @@ const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
     if (language == "kotlin") return tree_sitter_kotlin();
     if (language == "scala") return tree_sitter_scala();
     if (language == "zig") return tree_sitter_zig();
+    if (language == "hcl") return tree_sitter_hcl();
 #endif
     return nullptr;
 }
 void CodeIntel::initialize_extended_parsers() {
-    for (const auto* language : {"bash", "r", "julia", "fortran", "nextflow", "snakemake", "perl", "make", "cmake", "sql", "kotlin", "scala", "zig", "php"}) {
+    for (const auto* language : {"bash", "r", "julia", "fortran", "nextflow", "snakemake", "perl", "make", "cmake", "sql", "kotlin", "scala", "zig", "hcl", "php"}) {
         if (!extended_grammar(language)) continue; // Optional grammar group disabled.
         auto* parser = ts_parser_new();
         if (!ts_parser_set_language(parser, extended_grammar(language))) {
@@ -68,6 +71,7 @@ std::string CodeIntel::detect_extended_language(const std::string& path) {
     if ((ext == ".kt" || ext == ".kts") && extended_grammar("kotlin")) return "kotlin";
     if ((ext == ".scala" || ext == ".sc") && extended_grammar("scala")) return "scala";
     if ((ext == ".zig") && extended_grammar("zig")) return "zig";
+    if ((ext == ".tf" || ext == ".tfvars" || ext == ".hcl") && extended_grammar("hcl")) return "hcl";
     if ((ext == ".php" || ext == ".phtml") && extended_grammar("php")) return "php";
     if (ext == ".sql" || ext == ".ddl") return "sql";
     if (ext == ".cmake" || filename == "CMakeLists.txt") return "cmake";
@@ -651,6 +655,38 @@ void CodeIntel::extract_extended(TSNode root, const std::string& source,
                     auto arg = ast_named_child(ast_find(node, "arguments"), 0);
                     if (std::string(ast_type(arg)) == "string") result.imports.push_back({path, literal(arg), "", {}, uint32_t(node_line(node))});
                 }
+            }
+        }
+        if (language == "hcl") {
+            if (type == "block" || type == "one_line_block") {
+                auto kind = text(ast_named_child(node, 0));
+                std::vector<std::string> labels;
+                for (uint32_t i = 1; i < ast_named_count(node); ++i) {
+                    auto child = ast_named_child(node, i);
+                    if (std::string(ast_type(child)) != "string_literal") break;
+                    labels.push_back(literal(child));
+                }
+                auto name = kind;
+                if (kind == "variable" && !labels.empty()) name = "var." + labels[0];
+                else if (kind == "resource" && labels.size() == 2) name = labels[0] + "." + labels[1];
+                else for (const auto& label : labels) name += "." + label;
+                if (kind == "variable" || kind == "resource" || kind == "data" || kind == "module" || kind == "output" || kind == "terraform" || kind == "locals") {
+                    define(node, name, kind, parent, ast_find(node, "body")); parent = name;
+                }
+            }
+            if (type == "attribute" && parent.starts_with("module.") && text(ast_find(node, "identifier")) == "source") {
+                auto target = literal(ast_find(node, "expression"));
+                if (!target.empty() && target.find('$') == std::string::npos) result.imports.push_back({path, target, "", {}, uint32_t(node_line(node))});
+            }
+            if (type == "function_call") call(node, text(ast_find(node, "identifier")), parent);
+            if (type == "expr_term" && !ts_node_is_null(ast_find(node, "get_attr"))) {
+                auto target = text(node);
+                target.erase(std::remove_if(target.begin(), target.end(), [](unsigned char c) { return std::isspace(c); }), target.end());
+                auto first = target.find('.');
+                auto end = first == std::string::npos ? first : target.find('.', first + 1);
+                if (target.starts_with("data.") && end != std::string::npos) end = target.find('.', end + 1);
+                target = target.substr(0, end);
+                if (!target.empty()) result.references.push_back({path, target, uint32_t(node_line(node))});
             }
         }
         for (uint32_t i = 0; i < ast_named_count(node); ++i) visit(ast_named_child(node, i), parent);
