@@ -206,15 +206,23 @@ def margins(noise, required=REQUIRED):
 
 def compare(control, treatment, declared, missing):
     """Every repetition must fit; never turn a failed/missing panel into zero."""
-    deltas, moved = {}, []
+    deltas, moved, unstable = {}, [], []
     for key in dict.fromkeys([*declared, *missing]):
         margin = declared.get(key)
         baseline = [r.get("metrics", {}).get(key) for r in control]
         values = [r.get("metrics", {}).get(key) for r in treatment]
-        if any(v is None or not math.isfinite(v) for v in baseline + values):
+        if (
+            not baseline
+            or not values
+            or any(
+                not isinstance(v, (int, float)) or not math.isfinite(v) for v in baseline + values
+            )
+        ):
             missing = [*missing, key]
             continue
         center = statistics.mean(baseline)
+        if margin is not None and any(abs(value - center) > margin for value in baseline):
+            unstable.append(key)
         deltas[key] = {
             "control": center,
             "samples": values,
@@ -224,6 +232,8 @@ def compare(control, treatment, declared, missing):
         if margin is not None and any(abs(value - center) > margin for value in values):
             moved.append(key)
     failures = [r.get("error") for r in control + treatment if r.get("error")]
+    if unstable:
+        failures.append("control repetitions exceed declared margins: " + ", ".join(unstable))
     if len(control) != 3 or len(treatment) != 3:
         failures.append("requires three complete repetitions in each arm")
     if any(not r.get("invariants", {}).get("passed") for r in control + treatment):
@@ -233,6 +243,7 @@ def compare(control, treatment, declared, missing):
         "verdict": verdict,
         "deltas": deltas,
         "moved": moved,
+        "unstable_controls": unstable,
         "missing_margins": sorted(set(missing)),
         "failures": failures,
     }
@@ -457,7 +468,7 @@ def write_table(report, destination):
         "| Organ | Dependency class | Panels moved (Δ; margin) | Verdict |",
         "|---|---|---|---|",
     ]
-    for organ in ORGANS:
+    for organ in (*ORGANS, *GROUPS):
         row = report.get("comparisons", {}).get(organ, {})
         numbers = (
             "; ".join(
@@ -466,7 +477,13 @@ def write_table(report, destination):
             )
             or "not measured"
         )
-        dependency = "recall-adjacent" if organ in RECALL else "event/API"
+        dependency = (
+            "group (" + str(len(GROUPS[organ])) + " organs)"
+            if organ in GROUPS
+            else "recall-adjacent"
+            if organ in RECALL
+            else "event/API"
+        )
         if organ in WRITE:
             dependency += "; write path (retain)"
         if organ in SNAPSHOT:
@@ -474,7 +491,46 @@ def write_table(report, destination):
         verdict = row.get("verdict", "unqualified")
         if row.get("missing_margins"):
             verdict += ": missing " + ", ".join(row["missing_margins"])
+        if row.get("unstable_controls"):
+            verdict += "; unstable control: " + ", ".join(row["unstable_controls"])
+        if row.get("moved"):
+            verdict += "; observed beyond band: " + ", ".join(row["moved"])
         lines.append(f"| `{organ}` | {dependency} | {numbers} | {verdict} |")
+    lines += [
+        "",
+        "### Paired prompt-hook latency",
+        "",
+        "Each trial runs `bench-recall-lanes.sh 5`: 15 samples per arm. Cells list",
+        "each repetition's median/p95 in milliseconds; these are descriptive and",
+        "separate from the calibrated `hook_total_ms` statistic above.",
+        "",
+        "| Ablation | Off median/p95 | On median/p95 | Empty outputs | Write/restart invariants |",
+        "|---|---|---|---|---|",
+    ]
+    for name in ("control", *ORGANS, *GROUPS):
+        runs = report.get("runs", {}).get(name, [])
+        if not runs:
+            continue
+        arms = []
+        for arm in ("off", "on"):
+            arms.append(
+                ", ".join(
+                    f"{r['hooks'][arm]['median_ms']:g}/{r['hooks'][arm]['p95_ms']:g}"
+                    if arm in r.get("hooks", {})
+                    else "incomplete"
+                    for r in runs
+                )
+            )
+        empties = sum(h["empties"] for r in runs for h in r.get("hooks", {}).values())
+        passed = sum(bool(r.get("invariants", {}).get("passed")) for r in runs)
+        identities = ", ".join(
+            r.get("invariants", {}).get("restart", {}).get("ordered_recall_identity", "incomplete")
+            for r in runs
+        )
+        lines.append(
+            f"| `{name}` | {arms[0]} | {arms[1]} | {empties} | "
+            f"{passed}/{len(runs)} passed; recall identity {identities} |"
+        )
     marker = "<!-- ORGAN-ABLATION-TABLE -->"
     text = destination.read_text() if destination.exists() else ""
     block = marker + "\n" + "\n".join(lines) + "\n" + marker
@@ -498,6 +554,10 @@ def self_test():
     changed = {"metrics": {"golden.ndcg": 0.7}, "invariants": {"passed": True}}
     assert compare([row] * 3, [changed] * 3, declared, [])["verdict"] == "moved"
     assert compare([row] * 3, [row] * 2, declared, [])["verdict"] == "unqualified"
+    unstable = compare([row, row, changed], [row] * 3, declared, [])
+    assert unstable["verdict"] == "unqualified"
+    assert unstable["unstable_controls"] == ["golden.ndcg"]
+    assert compare([], [], declared, [])["verdict"] == "unqualified"
     print("ablation runner self-tests passed")
 
 
