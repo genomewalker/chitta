@@ -16,6 +16,9 @@ assert() { if ! eval "$2"; then echo "FAIL: $1"; FAIL=1; else echo "ok: $1"; fi;
 T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
 
+export STUB_POLICY_BIN="$T/prompt-response"
+"${CXX:-g++}" -std=c++17 -O2 -I"$SCRIPT_DIR/../chitta/include" \
+    "$SCRIPT_DIR/tests/prompt-response.cpp" -lcrypto -o "$STUB_POLICY_BIN" || exit 1
 STUB="$T/chitta"
 cat > "$STUB" <<'STUBEOF'
 #!/bin/bash
@@ -28,17 +31,18 @@ fi
 get() { local flag="$1" a p; shift; for a in "$@"; do [[ "$p" == "$flag" ]] && { echo "$a"; return; }; p="$a"; done; }
 case "$sub" in
     prompt_context)
+        [[ -n "${STUB_OVERLAP_DIR:-}" ]] && touch "$STUB_OVERLAP_DIR/rpc-started"
+        [[ "${STUB_PIPELINE_TIMEOUT:-0}" == 1 ]] && exit 124
+        [[ "${STUB_RPC_MODE:-ok}" == fail ]] && exit 1
         state=$(get --state "$@")
-        if [[ "$state" == *'"retrieval":'* ]]; then
-            [[ -n "${STUB_OVERLAP_DIR:-}" ]] && touch "$STUB_OVERLAP_DIR/rpc-started"
-            [[ "${STUB_PIPELINE_TIMEOUT:-0}" == 1 ]] && exit 124
-        fi
-        [[ -n "${STUB_POLICY_BIN:-}" ]] || exit 1
-        if [[ "${1:-}" != --local && "${STUB_POLICY_MODE:-}" == timeout ]]; then
-            sleep 1
-            exit 1
-        fi
-        printf '%s' "$(get --state "$@")" | "$STUB_POLICY_BIN" --stdin
+        jq -nc --argjson state "$state" \
+            --rawfile sem "${STUB_SEM_FILE:-/dev/null}" \
+            --rawfile hyb "${STUB_HYB_FILE:-/dev/null}" \
+            --rawfile kw "${STUB_KW_FILE:-/dev/null}" \
+            --rawfile corr "${STUB_CORR_FILE:-/dev/null}" \
+            --rawfile corrk "${STUB_CORRK_FILE:-/dev/null}" \
+            '$state + {fixture_lanes:{sem:$sem,hyb:$hyb,kw:$kw,corr:$corr,corrk:$corrk}}' \
+            | "$STUB_POLICY_BIN"
         ;;
     session_heartbeat)
         [[ "${STUB_HEARTBEAT_FAIL:-0}" == 0 ]] || exit 1
@@ -54,26 +58,8 @@ case "$sub" in
         fi
         ;;
     queue_write) exit 1 ;; # Exercise the durable file fallback.
-    recall_lanes)
-        if [[ -n "${STUB_OVERLAP_DIR:-}" ]]; then
-            touch "$STUB_OVERLAP_DIR/rpc-started"
-            for ((attempt=0; attempt<80; attempt++)); do
-                if [[ -f "$STUB_OVERLAP_DIR/session-started" && -f "$STUB_OVERLAP_DIR/heartbeat-started" ]]; then
-                    touch "$STUB_OVERLAP_DIR/overlapped"
-                    break
-                fi
-                sleep 0.01
-            done
-        fi
-        [[ "${STUB_RPC_MODE:-ok}" == "fail" ]] && exit 1
-        cat "${STUB_RPC_FILE:-/dev/null}"
-        ;;
-    smart_recall)
-        limit=$(get --limit "$@")
-        if [[ "$limit" == "6" ]]; then cat "${STUB_SEM_FILE:-/dev/null}"
-        elif [[ "$limit" == "4" ]]; then cat "${STUB_CTX_FILE:-/dev/null}"
-        fi
-        ;;
+    recall_lanes|smart_recall|correction_check)
+        echo 'retired prompt call' >&2; exit 1 ;;
     recall)
         strategy=$(get --strategy "$@")
         tag=$(get --tag "$@")
@@ -92,7 +78,6 @@ case "$sub" in
         elif [[ -n "$tag" ]]; then cat "${STUB_CORR_FILE:-/dev/null}"
         fi
         ;;
-    correction_check) cat "${STUB_CORRK_FILE:-/dev/null}" ;;
     *) : ;;  # queue_write, log_event, predicate_list, predicate_run, realm_detect (unused: CHITTA_REALM set)
 esac
 exit 0
@@ -263,75 +248,23 @@ assert "recall_empty carries total hook milliseconds" \
     "printf '%s' '$EMPTY_EVENT' | jq -e '.hook_ms >= 0' >/dev/null"
 
 # ============================================================
-# Item 6: CHITTA_RECALL_LANES_RPC=1 makes one fan-in call, consumes
-# its verbatim lane text, and carries daemon lane timings unchanged.
+# Item 6: one prompt_context call; retired selectors cannot enable shell policy.
 # ============================================================
-STUB_SEM_FILE="$T/sem-rpc"; STUB_HYB_FILE="$T/hyb-rpc"; STUB_KW_FILE="$T/kw-rpc"
-STUB_CORR_FILE="$T/corr-rpc"; STUB_RPC_FILE="$T/recall-lanes.json"
-cat > "$STUB_SEM_FILE" <<'EOF'
-Smart recall (semantic, ep=17): 1 results
-#31 [91%] [wisdom] persimmon fan-in fixture line
-EOF
-cat > "$STUB_HYB_FILE" <<'EOF'
-Found 1 results in realm 'project:stubrealm' (maxrel 90%):
-#32 [89%] [wisdom] persimmon hybrid fixture line
-EOF
-cat > "$STUB_KW_FILE" <<'EOF'
-Found 1 results in realm 'project:stubrealm' (maxrel 90%):
-#33 [80%] [wisdom] persimmon keyword fixture line
-EOF
-: > "$STUB_CORR_FILE"
-jq -n --rawfile sem "$STUB_SEM_FILE" --rawfile hyb "$STUB_HYB_FILE" \
-      --rawfile kw "$STUB_KW_FILE" --rawfile corr "$STUB_CORR_FILE" '
-  {lanes: {
-    sem:   {text:$sem,  results:[], ms:12, timed_out:false},
-    hyb:   {text:$hyb,  results:[], ms:34, timed_out:false},
-    kw:    {text:$kw,   results:[], ms:5,  timed_out:false},
-    corr:  {text:$corr, results:[], ms:3,  timed_out:false},
-    corrk: {text:"NO CORRECTION — no stored [correction] trigger matches this turn", results:[], ms:2, timed_out:false}
-  }, total_ms:35}' > "$STUB_RPC_FILE"
+STUB_SEM_FILE="$T/sem-rpc"; STUB_HYB_FILE="$T/hyb-rpc"
+printf 'Smart recall (semantic, ep=17): 1 results\n#31 [91%%] [wisdom] persimmon fan-in fixture line\n' > "$STUB_SEM_FILE"
+printf "Found 1 results in realm 'project:stubrealm' (maxrel 90%%):\n#32 [89%%] [wisdom] persimmon hybrid fixture line\n" > "$STUB_HYB_FILE"
+export STUB_SEM_FILE STUB_HYB_FILE
 STUB_CALL_LOG="$T/calls-rpc"; : > "$STUB_CALL_LOG"
-export STUB_SEM_FILE STUB_HYB_FILE STUB_KW_FILE STUB_CORR_FILE STUB_RPC_FILE STUB_CALL_LOG
-STUB_RPC_MODE=ok CHITTA_RECALL_LANES_RPC=1 run_hook "rpc-on" "what does the persimmon fixture show"
-assert "fan-in switch makes exactly one recall_lanes CLI call" \
-    "[[ \$(grep -c '^recall_lanes ' '$STUB_CALL_LOG') -eq 1 ]]"
-assert "fan-in success skips standalone recall processes" \
-    "! grep -Eq '^(smart_recall|recall|correction_check) ' '$STUB_CALL_LOG'"
-assert "fan-in lane text reaches normal admission" "grep -q '\[sem\]#31' '$T/stdout.rpc-on'"
-_rpc_timing='t:sem=12,hyb=34,kw=5,corr=3,corrk=2,total='
-_rpc_ablated_timing='t:sem=12,corr=3,corrk=2,total='
-if [[ "${CHITTA_HOOK_NOW:-}" =~ ^[1-9][0-9]{12}$ ]]; then
-    _rpc_timing='t:sem=0,hyb=0,kw=0,corr=0,corrk=0,total='
-    _rpc_ablated_timing='t:sem=0,corr=0,corrk=0,total='
-fi
-assert "fan-in lane timings come from RPC response" \
-    "grep -Eq '$_rpc_timing' '$T/stdout.rpc-on'"
-
-STUB_RPC_FILE="$T/recall-lanes-ablated.json"
-jq 'del(.lanes.hyb, .lanes.kw)' "$T/recall-lanes.json" > "$STUB_RPC_FILE"
-export STUB_RPC_FILE
+export STUB_CALL_LOG
+CHITTA_PROMPT_CONTEXT=0 CHITTA_RECALL_LANES_RPC=0 run_hook "rpc-on" "what does the persimmon fixture show"
+assert "exactly one daemon policy request" "[[ \$(grep -c '^prompt_context ' '$STUB_CALL_LOG') -eq 1 ]]"
+assert "no legacy recall or local policy request" "! grep -Eq '^(smart_recall|recall_lanes|correction_check) |prompt_context --local' '$STUB_CALL_LOG'"
+assert "native lane text reaches admission" "grep -q '\[sem\]#31' '$T/stdout.rpc-on'"
 : > "$STUB_CALL_LOG"
-STUB_RPC_MODE=ok CHITTA_RECALL_LANES_RPC=1 CHITTA_ABLATE_LANES=hyb,kw \
-    run_hook "rpc-ablated" "what does the persimmon fixture show"
-assert "fan-in request omits ablated lanes" \
-    "grep -Fq -- '--lanes [\"sem\",\"corr\",\"corrk\"]' '$STUB_CALL_LOG'"
-assert "fan-in ablation omits their timing entries" \
-    "grep -Eq '$_rpc_ablated_timing' '$T/stdout.rpc-ablated'"
-
-# ============================================================
-# Item 7: a failed fan-in call falls back, for that same prompt, to
-# the original standalone process fan-out.
-# ============================================================
-STUB_RPC_FILE="$T/recall-lanes.json"
-export STUB_RPC_FILE
-: > "$STUB_CALL_LOG"
-STUB_RPC_MODE=fail CHITTA_RECALL_LANES_RPC=1 run_hook "rpc-fallback" "what does the persimmon fixture show"
-assert "failed fan-in was attempted once" \
-    "[[ \$(grep -c '^recall_lanes ' '$STUB_CALL_LOG') -eq 1 ]]"
-assert "failed fan-in falls back to smart_recall" "grep -q '^smart_recall ' '$STUB_CALL_LOG'"
-assert "failed fan-in falls back to recall lanes" "grep -q '^recall ' '$STUB_CALL_LOG'"
-assert "failed fan-in falls back to correction_check" "grep -q '^correction_check ' '$STUB_CALL_LOG'"
-assert "fallback lane output reaches normal admission" "grep -q '\[sem\]#31' '$T/stdout.rpc-fallback'"
+STUB_RPC_MODE=fail run_hook "rpc-fallback" "what does the persimmon fixture show"
+assert "failed RPC emits only minimal unavailable line" "[[ \$(cat '$T/stdout.rpc-fallback') == '[chitta] daemon unavailable; context not loaded.' ]]"
+assert "failed RPC has no policy retry" "[[ \$(grep -c '^prompt_context ' '$STUB_CALL_LOG') -eq 1 ]]"
+assert "failed RPC has no standalone fan-out" "! grep -Eq '^(smart_recall|recall_lanes|correction_check) ' '$STUB_CALL_LOG'"
 
 # Session continuity must select a result line, never a recall summary or warning.
 # Use a large output budget so truncation cannot hide a broken last-session block.
@@ -370,7 +303,6 @@ export STUB_OVERLAP_DIR="$T/overlap"
 rm -f "$MIND/.session_active"
 CHITTA_RECALL_LANES_RPC=1 CHITTA_MAX_OUTPUT_CHARS=10000 \
     run_hook "rpc-concurrent" "what does the persimmon fixture show"
-assert "RPC overlaps session recall and heartbeat" "[[ -f '$T/overlap/overlapped' ]]"
 assert "heartbeat proceeds alongside RPC" "[[ -f '$T/overlap/heartbeat-overlapped' ]]"
 assert "concurrent continuity is joined before rendering" \
     "grep -q '\\[last-session\\] #99' '$T/stdout.rpc-concurrent'"
@@ -381,8 +313,8 @@ unset STUB_OVERLAP_DIR
 STUB_PIPELINE_TIMEOUT=1 CHITTA_PROMPT_CONTEXT=1 CHITTA_RECALL_LANES_RPC=1 \
     run_hook "pipeline-timeout" "what does the persimmon fixture show"
 assert "pipeline timeout skips a second batch wait" "! grep -q '^recall_lanes ' '$STUB_CALL_LOG'"
-assert "pipeline timeout retains standalone lane fallback" "grep -q '^smart_recall ' '$STUB_CALL_LOG'"
-assert "pipeline timeout preserves admission" "grep -q '\\[sem\\]#31' '$T/stdout.pipeline-timeout'"
+assert "pipeline timeout skips standalone fallback" "! grep -q '^smart_recall ' '$STUB_CALL_LOG'"
+assert "pipeline timeout emits minimal output" "[[ \$(cat '$T/stdout.pipeline-timeout') == '[chitta] daemon unavailable; context not loaded.' ]]"
 
 # Even with a model installed, ordinary turns must not start Python. Matching
 # regex evidence still requests a model verdict before emitting a learning hint.

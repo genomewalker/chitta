@@ -89,3 +89,22 @@ to refresh citation usage locations, then rerun the read-only citations gate.
 The generated References blocks must remain intact inside the main landmark.
 
 Superproject main merge: retained both sides of the add/add `Documentation.md` conflict and both the chaos and current-truth additions in `docs/EVALS.md`. `docs/FIELD_PERF.md` merged automatically with References last. Refreshed only citation usage line numbers in `docs/CITATIONS.md` after the merge shifted documentation lines. The merged link gate passed (102 pages, 3,110 links), citation gate passed, and site structure passed (79 pages). Main introduced no further native, harness or public-contract changes relative to the tested pointer-update commit.
+
+# Phase 5b shell policy retirement — 2026-09-16
+
+Step 1 makes `prompt_context` the only prompt retrieval/admission implementation.
+Failed, invalid or late replies emit one unavailable line and exit successfully;
+there is no batch/per-lane retry, shell fusion/admission or local CLI policy path.
+Native-policy synthetic integration retains ablation, small-realm and query-gate
+coverage. The failed-RPC and pipeline-timeout fixtures now expect the unavailable
+line instead of legacy admission. Other shared lib helpers still have callers.
+
+Verification: 70 adjacent unchanged/candidate output/status pairs passed on the
+private frozen replica, including 40 warm-up pairs; native prompt execution and
+lane accounting were required. All 28 shell tests, 159 MCP, 46 SMRITI, eight hook
+Python tests, CI Ruff check/format, touched-shell syntax/ShellCheck and contracts
+passed. Before controls preserved a first warm-up difference and intermittent
+150 ms Stop compatibility-probe timeouts; the final control matched all bytes.
+Step 2 must eliminate that probe fallback and require native ledger execution.
+Evidence is untracked under `/tmp/chitta-p5b-retire/evidence`. Prompt shell:
+1,937 → 1,274 lines; all top-level hooks: 8,988 → 8,325. No daemon changes yet.
