@@ -1,10 +1,8 @@
 # STRUCTURED_EXTRACTOR_DESIGN.md
 
-> **Design document, not a description of shipped behaviour. Status as of
-> 2026-09-02.** Distillation does now run natively inside the daemon rather than
-> through a hook-invoked script, which is the direction this design argued for.
-> Whether the in-hook regex scan it proposes retiring has actually been retired
-> has not been re-verified; treat the file references below as of their writing.
+> **Deprecated in place. Status as of 2026-09-16.** Unshipped migration proposal; [HOOKS.md](HOOKS.md#automatic-learning-admission) describes the current contract.
+> Native daemon distillation is shipped; Stop still extracts typed markers.
+> The per-turn Python extractor and proposed migration below are historical design, not installation instructions.
 
 ## Context
 

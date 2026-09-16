@@ -1,6 +1,7 @@
 # Consolidation Redesign — stall-free memory consolidation
 
-> **Superseded. Status as of 2026-09-02.** The premise of this document is wrong.
+> **Deprecated in place. Status as of 2026-09-16.** Historical rejected proposal; current implementation and measurements: [FIELD_PERF.md](FIELD_PERF.md).
+> The premise of this document is wrong.
 > It assumed recall stalls because consolidation holds Rust locks that recall
 > needs. Reading the actual code disproved that; the contention is at the C++ RPC
 > layer, not in the Rust store. Read

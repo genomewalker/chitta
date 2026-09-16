@@ -1,0 +1,167 @@
+# Documentation audit — 2026-09-16
+
+Status as of 2026-09-16.
+
+Scope: every top-level `docs/*.md`, all 16 top-level HTML pages, and README.
+Nested research posts and visualization data are outside this cleanup. The
+Pages workflow publishes `docs/`; repository-only source links on HTML pages
+must therefore use repository URLs. Styles, CNAME, favicon, visualization data,
+ledger migration evidence, hooks and existing tests are unchanged.
+
+The source baseline is superproject `de60e940` and pinned chitta-field
+`f3176e587dced64dd3a6a663a40a58e3802b0a10`. The uninitialized submodule was
+read from its existing Git objects into scratch space; its worktree was not
+changed. Live CLI inspection was read-only. Published tool discovery returned
+320 native tools; merging MCP gateways yields 344 entries (89 default-visible,
+255 behind `advanced`), plus 51 native CLI help entries absent from that merged
+list. The updated generator preserves this distinction and checks static names.
+
+**Verdicts: 6 current, 27 updated, 3 deprecated-in-place, 0 deleted (36 pages,
+including this audit).** “Current” includes explicitly historical documents
+whose existing status remains accurate. No historical result is promoted to a
+current implementation guarantee. Previous stamps refer to the top-level status;
+dated measurements within a document retain their own dates.
+
+| Page | Previous status stamp | Resulting status stamp | Verdict | Source of truth checked / action |
+|---|---|---|---|---|
+| [README.md](../README.md) | 2026-09-02 | 2026-09-16 | updated | CLI help, hook source, current eval protocol and evolve selector; add current behavior and correct Sadhana invocation. |
+| [API.md](API.md) | None; generated 2026-09-02 | 2026-09-16 | updated | Read-only daemon discovery, `rpc_server.cpp` TOOL_SPECS / KNOWN_TOOLS, `tools_static.py`, `server.py` visibility; regenerated with native CLI appendix. |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 2026-09-02 | 2026-09-16 | updated | `simple_cli.cpp`, `field_handler.hpp`, pinned Rust field/store/scoring, native hook calls; replace stale architecture and counts. |
+| [CLI.md](CLI.md) | None | 2026-09-16 | updated | `chitta --help`, per-tool help, `simple_cli.cpp` parser and startup, CLAUDE operational notes; fix flags, defaults, sidecars and ownership. |
+| [DECISION-2026-09-15-learning-experiment.md](DECISION-2026-09-15-learning-experiment.md) | 2026-09-15 | 2026-09-15 | current | Protected dated decision; compared to `benchmarks/learning/protocol.md` and cohort cut. Historical text and citations unchanged. |
+| [DECISION-2026-09-15-mdl-analogy.md](DECISION-2026-09-15-mdl-analogy.md) | 2026-09-15 | 2026-09-15 | current | Protected dated consultation; later implementation is recorded in EVOLVE and EVALS. Text unchanged. This row indexes history, not an active policy. |
+| [EVALS.md](EVALS.md) | 2026-09-13 | 2026-09-16 | updated | Learning protocol/cohort, committed analogy and replication evidence; remove conflicting pre-cut status, retain pending prospective panel. |
+| [EVAL_REPLICA.md](EVAL_REPLICA.md) | 2026-09-13 | 2026-09-16 | updated | `scripts/eval-replica.sh` selection/copy/start; uncovered WAL and loader markers are copied; hooks already honor the socket. |
+| [EVOLVE-BRIDGE.md](EVOLVE-BRIDGE.md) | 2026-09-13 | 2026-09-16 | updated | `chitta-mcp/evolve/selector.py`, bridge modules and current loader contract; correct selector reference. Dated failure records preserved. |
+| [EVOLVE.md](EVOLVE.md) | 2026-09-14 | 2026-09-16 | updated | Evolve cycle/selector/report, candidate fan-out and learning cohort; update overall status, retain retirement block and historical observations. |
+| [FIELD_PERF.md](FIELD_PERF.md) | 2026-09-14 | 2026-09-16 | updated | Committed field-perf tables, pinned startup source, CLAUDE startup notes; label missing JSON artifacts and link surviving evidence. Measurements unchanged. |
+| [HOOKS.md](HOOKS.md) | 2026-09-13 | 2026-09-16 | updated | `prompt-core.sh`, `lib.sh`, SessionStart/Stop, artifact hooks and RPC handlers; native CLI is the routine hook path, Python remains a compatibility client. |
+| [PHILOSOPHY.md](PHILOSOPHY.md) | 2026-09-02 | 2026-09-16 | updated | Pinned instance-lock implementation, C++ FFI and GGUF embedding source; correct shared-field mechanism and dimensions. |
+| [RENAME.md](RENAME.md) | 2026-09-02 | 2026-09-02 | current | Protected rename history, package identities, alias shim and existing skill directories. No edits. |
+| [SADHANA.md](SADHANA.md) | 2026-09-02 | 2026-09-16 | updated | `sadhana_manager.hpp/.cpp`, `field_misc_sadhana.cpp`, gateway and live schemas; replace obsolete SQL/defaults and unsupported CLI examples. |
+| [STRUCTURED_EXTRACTOR_DESIGN.md](STRUCTURED_EXTRACTOR_DESIGN.md) | 2026-09-02 (wrapped stamp) | 2026-09-16 | deprecated-in-place | Stop still extracts markers; native distillation shipped without this proposed Python per-turn migration. Point to HOOKS; preserve proposal body. |
+| [consolidation-redesign.md](consolidation-redesign.md) | 2026-09-02, superseded | 2026-09-16 | deprecated-in-place | Rejected locking premise; v2 and FIELD_PERF document the correction. Keep linked design history; point to current performance record. |
+| [consolidation-redesign-v2.md](consolidation-redesign-v2.md) | 2026-09-02 | 2026-09-16 | deprecated-in-place | `field_handler.hpp` read-path changes and FIELD_PERF supersede the old fix plan. Preserve historical analysis and link successor. |
+| [recall-rerank-eval-results.md](recall-rerank-eval-results.md) | 2026-09-02, historical | 2026-09-02 | current | `scripts/recall_rerank_eval.py`, existing historical warning and recorded no-go result; not a claim about current retrieval. No edits. |
+| [404.html](404.html) | None | None | current | Pages workflow and internal navigation; no stale runtime or product claims. |
+| [architecture.html](architecture.html) | 2026-09-02 | 2026-09-16 | updated | ARCHITECTURE, Rust ownership/WAL, worker pool and model source; correct storage, distiller and scoring claims. |
+| [benchmarks.html](benchmarks.html) | 2026-09-02 | 2026-09-16 | updated | EVALS, SMRITI evidence, analogy results, replication experiment, learning protocol/cohort; distinguish historical scores from pending causal evidence. |
+| [changelog.html](changelog.html) | None | 2026-09-16 | updated | CHANGELOG Unreleased and 5.72.0 transcribed; older rendered entry text preserved, rename tooltips added, full intervening history linked. |
+| [chitta-field.html](chitta-field.html) | 2026-09-02 | 2026-09-16 | updated | Pinned Rust field/log/index implementation, FIELD_PERF and CLAUDE; replace zero-lock/durability/startup claims and obsolete build example. |
+| [cli.html](cli.html) | 2026-09-02 | 2026-09-16 | updated | CLI help, daemon parser, CLI.md; native ledger, queue, startup/lock and enrichment distinctions. |
+| [constellation.html](constellation.html) | 2026-09-02 | 2026-09-02 | current | Page navigation and referenced visualization assets; illustrative graph and data unchanged. |
+| [context.html](context.html) | 2026-09-02 | 2026-09-16 | updated | `compact.cpp`, PreCompact hook and API schema; correct embedding backend and distinguish compaction output from harness control. |
+| [getting-started.html](getting-started.html) | 2026-09-02 | 2026-09-16 | updated | README, installer and actual maintenance skill directories; explain retained skill suffixes and startup readiness. |
+| [hooks.html](hooks.html) | 2026-09-02 | 2026-09-16 | updated | HOOKS and hook source; native lifecycle, task ledger, artifact traces and Codex unknown outcomes. |
+| [index.html](index.html) | None | 2026-09-16 | updated | README, current release notes, recall/eval evidence and Rust ownership/WAL; replace stale highlights and persistence claims. |
+| [philosophy.html](philosophy.html) | None | 2026-09-16 | updated | PHILOSOPHY, compiled embedding identity and worker pool; correct dimension and separate-database claims. |
+| [recall.html](recall.html) | 2026-09-02 | 2026-09-16 | updated | HOOKS, `prompt-core.sh`, recall handler, gateway and pinned `scoring/config.rs`; relation transfer, priors, admission and default-off replication. |
+| [sadhana.html](sadhana.html) | None | 2026-09-16 | updated | SADHANA and handler/manager source; correct invocation, defaults and persistence; retain illustrative historical agents. |
+| [skills.html](skills.html) | 2026-09-02 | 2026-09-16 | updated | Repository skill directory names and RENAME; explain unchanged maintenance suffixes instead of inventing commands. |
+| [tools.html](tools.html) | None; generated 2026-09-02 | 2026-09-16 | updated | Same three tool surfaces as API; regenerated in existing layout with native CLI appendix. |
+| [DOCS-AUDIT-2026-09-16.md](DOCS-AUDIT-2026-09-16.md) | New | 2026-09-16 | updated | This inventory, source review and the Evidence section below. |
+
+## Dispositions and gate boundaries
+
+No design memo is deleted: the consolidation pair records a linked correction
+of a mistaken premise; the extractor proposal records an unshipped migration.
+The frozen-replica guide still describes a shipped tool and was updated. The
+rerank no-go memo remains an explicitly dated result, not active implementation
+guidance. Decision memos, rename history and CHANGELOG.md are byte-unchanged.
+
+The initial stale-name lead overstates the remaining site hits in this baseline.
+The retained hits identify rename aliases, actual maintenance skill suffixes and
+two historical release references with explanatory tooltips. Neither environment
+aliases nor real command names were mechanically renamed. `--no-enrich` and the
+hint worker still exist in source: the former configures an inert code worker
+and does not disable the separate script-based hint worker.
+
+`scripts/check-docs-links.sh` checks local files, assets and anchors in Markdown
+and HTML, plus README, ignoring code examples and remote URLs. It explicitly
+reports 35 editor-style `path:line` citations in the two immutable decision
+memos as historical, nonportable citations. They include removed code and private
+evidence and are not silently counted as resolving hyperlinks. Use
+`--verbose-history` to list each exemption. This preserves the owner's immutable
+history rule; it is not a claim that those old citations work in a browser.
+
+The stale-term search necessarily also finds this inventory's link to the
+protected September 15 admission/analogy memo. That row is an archive reference,
+not a revived behavior. All other retained matches belong to protected decision
+history, EVOLVE's retirement block or rendered CHANGELOG history. The Evidence
+section below preserves the exact pre-fold search results and regression outcomes.
+
+## Evidence
+
+These exact search results were captured before folding the evidence into this
+audit. Their file and line references are preserved verbatim; searches of the
+completed audit also match the quoted evidence itself.
+
+### Link-check output
+
+```text
+Checked 36 pages, 642 local links: 0 errors.
+Preserved 35 historical path:line citations in immutable decision memos (not portable hyperlinks).
+```
+
+The 35 exemptions are editor-style path:line citations inside the two immutable dated decision memos. Some point to private evidence or code since removed. They are explicitly reported rather than claimed as working browser links. Run `bash scripts/check-docs-links.sh --verbose-history` to enumerate them. This is a documented boundary imposed by the instruction to preserve those memos.
+
+### Rename search — exact result list
+
+All hits are rename explanations, real maintenance skill suffixes explicitly marked as retained after the rename, or two historical release identifiers with rename tooltips.
+
+```text
+docs/changelog.html:1189:          <li>Restored missing <code title="Historical skill name retained after the chitta rename">cc-soul-mcp</code> skill (referenced in marketplace.json but absent from repo)</li>
+docs/changelog.html:1235:          <li><strong>Auto-configure MCP via plugin</strong> &mdash; Plugin installer now configures <code>mcpServers.chitta</code> automatically; <code title="Historical skill name retained after the chitta rename">/cc-soul-mcp</code> skill deprecated for most users</li>
+docs/getting-started.html:120:        <div class="code-block"><span class="command">/chitta:cc-soul-mcp</span> <span class="comment"># Skill suffix retained after the chitta rename</span></div>
+docs/getting-started.html:128:      <p style="font-size: var(--text-sm); color: var(--ash-300); line-height: 1.8; margin-top: var(--space-3);">Upgrading from the old <code style="color: var(--aura-300);">cc-soul</code> marketplace? Nothing you have breaks &mdash; every <code style="color: var(--aura-300);">CC_SOUL_*</code> variable, your stored realms and your existing store all keep working. The three commands to move to the renamed marketplace are in <a href="https://github.com/genomewalker/chitta/blob/main/docs/RENAME.md" target="_blank" rel="noopener">the rename note</a>.</p>
+docs/getting-started.html:240:            <td><span class="env-var-name">/chitta:cc-soul-setup</span> (suffix retained after rename)</td>
+docs/getting-started.html:244:            <td><span class="env-var-name">/chitta:cc-soul-update</span> (suffix retained after rename)</td>
+docs/getting-started.html:248:            <td><span class="env-var-name">/chitta:cc-soul-mcp</span> (suffix retained after rename)</td>
+docs/index.html:93:        <strong>The project is now chitta.</strong> Plugin, marketplace and repository moved to the name the binaries always had. Every <code>CC_SOUL_*</code> variable, stored realm and existing store keeps working through an alias shim &mdash; see the <a href="https://github.com/genomewalker/chitta/blob/main/docs/RENAME.md" class="link-sandal" target="_blank" rel="noopener">rename note</a> for the three migration commands.
+docs/recall.html:308:        <p class="section-intro">The project was renamed from cc-soul on 2026-09-02; legacy <code>CC_SOUL_*</code> aliases are documented in <a href="RENAME.md">the rename note</a>.</p>
+docs/skills.html:655:        <div class="tool-row"><span class="tool-name">/chitta:cc-soul-setup</span><span class="tool-desc">Build from source; skill suffix retained after rename (C++20 compiler, CMake, make).</span></div>
+docs/skills.html:656:        <div class="tool-row"><span class="tool-name">/chitta:cc-soul-update</span><span class="tool-desc">Update binaries; skill suffix retained after rename.</span></div>
+docs/skills.html:657:        <div class="tool-row"><span class="tool-name">/chitta:cc-soul-daemon</span><span class="tool-desc">Manage the daemon; skill suffix retained after rename.</span></div>
+docs/skills.html:658:        <div class="tool-row"><span class="tool-name">/chitta:cc-soul-shutdown</span><span class="tool-desc">Graceful shutdown; skill suffix retained after rename.</span></div>
+docs/skills.html:659:        <div class="tool-row"><span class="tool-name">/chitta:cc-soul-mcp</span><span class="tool-desc">Configure MCP; skill suffix retained after rename (<code>mcp__chitta__*</code>).</span></div>
+README.md:4:> Renamed from cc-soul on 2026-09-02; legacy CC_SOUL_* aliases remain supported — see [docs/RENAME.md](docs/RENAME.md).
+README.md:194:| [RENAME.md](docs/RENAME.md) | Migrating from `cc-soul`, and the `CC_SOUL_*` alias table |
+```
+
+### Retirement/history search — exact result list
+
+Matches are protected decision history, EVOLVE's retirement block, rendered CHANGELOG history, and one audit inventory row linking the protected decision memo. That inventory reference is the only match outside the requested history-file allowlist; a complete per-file audit necessarily names the memo. No current behavior uses the retired mechanisms.
+
+```text
+docs/DECISION-2026-09-15-learning-experiment.md:5:> `DECISION-2026-09-15-mdl-analogy.md` section 1 and the pending block in
+docs/DECISION-2026-09-15-mdl-analogy.md:7:**The MDL premise also needs updating.** The live log contains a pooled acceptance: saving **97 bytes**, evidence **70,558 bytes**, three pooled chunks, for “evolve-cycle-3-started.” That contradicts “never accepts”; it does not establish useful selection. The private replay’s **0/224** remains a separate result. ([shadow log:267](/home/kbd606/.claude/mind/mdl_gate_shadow.jsonl:267), [EVOLVE.md:74](/projects/caeg/scratch/kbd606/tmp/codex-wt-consult/docs/EVOLVE.md:74))
+docs/DECISION-2026-09-15-mdl-analogy.md:9:## 1. MDL: choose **(c), drop admission compression and rely on recall ranking**
+docs/DECISION-2026-09-15-mdl-analogy.md:11:**Diagnosis:** zlib savings are the wrong operational proxy for useful conversational learning. This rejects the chosen compressor/evidence model, not MDL in general. The corpus statistic rewards reduced compressed bytes, charges raw learning length, and replaces part of a 32 KiB dictionary. It measures string reuse plus dictionary displacement; nothing in that statistic measures whether advice changes a later decision correctly. ([mdl_gate.hpp:143](/projects/caeg/scratch/kbd606/tmp/codex-wt-consult/chitta/include/chitta/mdl_gate.hpp:143))
+docs/DECISION-2026-09-15-mdl-analogy.md:25:Retire the native MDL shadow tap, pooling, and corpus-dictionary machinery now. More compressor tuning is not the next experiment.
+docs/DECISION-2026-09-15-mdl-analogy.md:37:**Narrow contract:** infer the directed predicate connecting `a` and `b`; return actual matching neighbors of `c`, with supporting edges. Abstain on missing or ambiguous relations. Use indexed graph lookups. Remove structural mode and VSA ranking from this endpoint; retain ordinary graph storage/querying.
+docs/DOCS-AUDIT-2026-09-16.md:32:| [DECISION-2026-09-15-mdl-analogy.md](DECISION-2026-09-15-mdl-analogy.md) | 2026-09-15 | 2026-09-15 | current | Protected dated consultation; later implementation is recorded in EVOLVE and EVALS. Text unchanged. This row indexes history, not an active policy. |
+docs/EVOLVE.md:52:> Status as of 2026-09-15 — **MDL admission compression retired.** The reported
+docs/EVOLVE.md:57:> [decision memo, section 1](DECISION-2026-09-15-mdl-analogy.md#1-mdl-choose-c-drop-admission-compression-and-rely-on-recall-ranking)
+docs/EVOLVE.md:61:> dictionaries/bootstrap, Python judging, environment knobs and MDL telemetry
+docs/EVOLVE.md:86:> `~/.claude/mind/mdl_gate_shadow.jsonl` stays untouched and inert: retirement
+docs/changelog.html:479:          <li><code>recall_analogy</code> is explicit relation transfer only (a:b :: c:?): the predicate(s) linking a→b come from indexed triplet lookups and the answers are c's actual neighbours over those predicates, with supporting edges and a <code>reason</code> on abstention. Structural mode and VSA ranking are gone from the endpoint. Frozen-replica benchmark: hit@1 14/14, hit@3 14/14, 14/14 negative abstentions, 0 unsupported answers (<a href="EVALS.md">docs/EVALS.md</a>).</li>
+docs/changelog.html:489:        <ul><li>Retired MDL admission compression on 2026-09-15: native and Bash shadow taps, same-chunk pooling, corpus dictionaries/bootstrap, Python mirror, test targets, environment knobs and evolve coverage telemetry. Distilled learning storage, deduplication and recall ranking remain unchanged; no utility-posterior hard gate replaces it. Historical shadow logs remain untouched and inert. The paired 20-task automatic-learning experiment remains pending (see <a href="EVOLVE.md">docs/EVOLVE.md</a>).</li></ul>
+docs/changelog.html:499:          <li>Task ledger (threads, inbox, artifacts, session bindings, leases) moved from <code>~/.claude/task-ledger.db</code> (NFS sqlite) into the daemon (<code>ledger_op</code> RPC) with an idempotent <code>task_ledger.py migrate</code>.</li>
+docs/changelog.html:500:          <li>Queue lives at <code>&lt;mind&gt;/queue.jsonl</code>; tag recall is a hard filter with realm applied after; correction lane realm-scoped; MDL small-evidence pooling (shadow).</li>
+docs/changelog.html:512:        <ul><li>Proposal cards carry <code>verifiability</code>, <code>prior_effort</code>, <code>internal_evidence</code>; selector weights them; every cycle requires a <code>SELF_CHECK</code> test and runs a bounded survey phase first; nightly/weekly timers; <code>select.py</code> renamed <code>selector.py</code>.</li></ul>
+```
+
+### Regression checks and commit exception
+
+- Link checker and positive/negative fixtures pass; shell syntax passes. Fixture coverage includes duplicate heading slugs, setext, explicit HTML anchors, reference links, code fences and three broken targets.
+- Ruff passes on scripts/gen-tools-docs.py. Repeated generation is byte-identical.
+- All 19 existing hook test scripts passed, with test_session_start_concurrency.sh requiring one rerun: its first run caught a child still present at a deadline. The unchanged script passed fully in a fresh isolated environment on rerun.
+- MCP unittest discover: 136 tests, 1 error in unchanged test_http_sessions.SDKSessionTests.test_initialize_cap_expire_and_expired_id_is_404. Installed SDK 1.27.2 lacks BoundedSessionManager._session_owners, required by unchanged server.py:2932. This existing SDK incompatibility is also recorded in FIELD_PERF.md. No tests were disabled or edited.
+- SMRITI unittest discover: 46 tests passed.
+- Tests ran with a scratch HOME/mind/queue/runtime and inert default CLI binaries; fixtures supplied their own mocks. No service restart or live mutation was used.
+- Protected decision memos, CHANGELOG.md, RENAME.md, styles/CNAME/favicon, visualization assets/data and ledger-migration evidence are unchanged. Hooks, runtime, benchmarks and existing tests have no diff.
+
+The owner explicitly authorized committing with the known `_session_owners` MCP
+error on 2026-09-16. The owner reports that another worker has fixed it on a
+separate branch, which will be merged before this branch. The failing gate is
+recorded as an exception, not a pass; no tests were disabled or edited.

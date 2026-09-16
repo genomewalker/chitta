@@ -144,7 +144,7 @@ CATEGORIES = [
 
 
 def die(msg):
-    sys.stderr.write("gen-tools-docs: %s\n" % msg)
+    sys.stderr.write(f"gen-tools-docs: {msg}\n")
     sys.exit(1)
 
 
@@ -154,9 +154,9 @@ def fetch_live_tools(cli):
         out = subprocess.run([cli, "mcp"], input=req, capture_output=True,
                              text=True, timeout=60)
     except FileNotFoundError:
-        die("chitta CLI not found at %s (pass --chitta)" % cli)
+        die(f"chitta CLI not found at {cli} (pass --chitta)")
     if out.returncode != 0:
-        die("`%s mcp` exited %d: %s" % (cli, out.returncode, out.stderr.strip()[:400]))
+        die(f"`{cli} mcp` exited {out.returncode}: {out.stderr.strip()[:400]}")
     for line in out.stdout.splitlines():
         line = line.strip()
         if not line.startswith("{"):
@@ -179,7 +179,7 @@ def parse_assigned_set(path, names):
             found[node.targets[0].id] = set(ast.literal_eval(node.value))
     missing = set(names) - set(found)
     if missing:
-        die("could not parse %s from %s" % (", ".join(sorted(missing)), path))
+        die("could not parse {} from {}".format(", ".join(sorted(missing)), path))
     return found
 
 
@@ -188,13 +188,13 @@ def parse_dict_keys(path, name):
     for node in tree.body:
         if isinstance(node, ast.Assign) and getattr(node.targets[0], "id", "") == name:
             return {ast.literal_eval(k) for k in node.value.keys}
-    die("%s not found in %s" % (name, path))
+    die(f"{name} not found in {path}")
 
 
-def parse_composite_tools(path):
+def parse_composite_tools(path, assignment="COMPOSITE_TOOLS"):
     tree = ast.parse(open(path, encoding="utf-8").read())
     for node in tree.body:
-        if isinstance(node, ast.Assign) and getattr(node.targets[0], "id", "") == "COMPOSITE_TOOLS":
+        if isinstance(node, ast.Assign) and getattr(node.targets[0], "id", "") == assignment:
             out = []
             for el in node.value.elts:
                 kw = {k.arg: k.value for k in el.keywords}
@@ -204,7 +204,54 @@ def parse_composite_tools(path):
                     "inputSchema": ast.literal_eval(kw["inputSchema"]),
                 })
             return out
-    die("COMPOSITE_TOOLS not found in %s" % path)
+    die(f"{assignment} not found in {path}")
+
+
+def native_cli_extras(listed_names):
+    """CLI help entries absent from MCP discovery; never infer MCP visibility."""
+    path = os.path.join(ROOT, "chitta", "src", "rpc_server.cpp")
+    source = open(path, encoding="utf-8").read().split("TOOL_SPECS = {", 1)[1]
+    source = source.split("static std::set<std::string> build_known_tools", 1)[0]
+    quoted = r'"((?:[^"\\]|\\.)*)"'
+    headers = list(re.finditer(r'^    \{' + quoted + r',\s*' + quoted + r',', source, re.M))
+    param = re.compile(r'\{' + quoted + r',\s*' + quoted + r',\s*(true|false),\s*(nullptr|"(?:[^"\\]|\\.)*")\}')
+    extras = []
+    for index, match in enumerate(headers):
+        name, description = match.groups()
+        if name in listed_names:
+            continue
+        end = headers[index + 1].start() if index + 1 < len(headers) else len(source)
+        rows = []
+        for pname, desc, required, default in param.findall(source[match.end():end]):
+            rows.append({"name": pname, "type": "CLI value", "required": required == "true",
+                         "default": None if default == "nullptr" else json.loads(default),
+                         "desc": json.loads('"' + desc + '"')})
+        extras.append({"name": name, "description": json.loads('"' + description + '"'),
+                       "params": rows})
+    if not headers:
+        die("could not parse native CLI help table")
+    return sorted(extras, key=lambda item: item["name"])
+
+
+def cli_appendix(extras):
+    intro = ("These native CLI help entries are in rpc_server.cpp TOOL_SPECS / KNOWN_TOOLS "
+             "but absent from the MCP listing used above. They are not included in its "
+             "visibility counts. Use chitta <tool> --help; an empty help schema does not "
+             "prove that the handler takes no arguments.")
+    md = ["", "## Additional native CLI tools", "", intro, ""]
+    rows = []
+    for tool in extras:
+        md.extend(["### `{}`".format(tool["name"]), "", tool["description"], ""])
+        for param in tool["params"]:
+            md.append("- `--{}`: {}{}".format(param["name"], param["desc"],
+                      " (required)" if param["required"] else ""))
+        md.append("")
+        rows.append('<details class="tool-item"><summary><code>{}</code> — {}</summary>{}</details>'.format(
+            html.escape(tool["name"]), html.escape(tool["description"]), render_params_html(tool["params"])))
+    page = ('<section class="tools-section" id="native-cli"><div class="container">'
+            '<h2>Additional native CLI tools</h2><p>{}</p>{}</div></section>\n'.format(
+                html.escape(intro), "\n".join(rows)))
+    return "\n".join(md), page
 
 
 def categorize(name):
@@ -227,9 +274,9 @@ def params_of(tool):
         spec = props[pname] or {}
         ptype = spec.get("type", "any")
         if ptype == "array" and isinstance(spec.get("items"), dict):
-            ptype = "array<%s>" % spec["items"].get("type", "any")
+            ptype = "array<{}>".format(spec["items"].get("type", "any"))
         if "enum" in spec:
-            ptype = "%s (%s)" % (ptype, "|".join(str(v) for v in spec["enum"]))
+            ptype = "{} ({})".format(ptype, "|".join(str(v) for v in spec["enum"]))
         rows.append({
             "name": pname,
             "type": ptype,
@@ -267,7 +314,7 @@ def nav_html(active):
     li = []
     for href, label in NAV_ITEMS:
         cls = ' class="active"' if href == active else ""
-        li.append('      <li><a href="%s"%s>%s</a></li>' % (href, cls, label))
+        li.append(f'      <li><a href="{href}"{cls}>{label}</a></li>')
     li.append('      <li><a href="https://github.com/genomewalker/chitta" '
               'target="_blank" rel="noopener">GitHub</a></li>')
     return """<nav class="nav">
@@ -277,10 +324,10 @@ def nav_html(active):
       <span></span><span></span><span></span>
     </button>
     <ul class="nav-links">
-%s
+{}
     </ul>
   </div>
-</nav>""" % "\n".join(li)
+</nav>""".format("\n".join(li))
 
 
 PAGE_STYLE = """<style>
@@ -415,11 +462,11 @@ def render_params_html(rows):
     for p in rows:
         default = "&mdash;" if p["default"] is None else esc(json.dumps(p["default"]))
         out.append(
-            '<tr><td><span class="param-name">%s</span></td>'
-            '<td><span class="param-type">%s</span></td>'
-            '<td><span class="%s">%s</span></td>'
-            '<td><span class="param-type">%s</span></td>'
-            '<td><span class="param-desc">%s</span></td></tr>' % (
+            '<tr><td><span class="param-name">{}</span></td>'
+            '<td><span class="param-type">{}</span></td>'
+            '<td><span class="{}">{}</span></td>'
+            '<td><span class="param-type">{}</span></td>'
+            '<td><span class="param-desc">{}</span></td></tr>'.format(
                 esc(p["name"]), esc(p["type"]),
                 "param-required" if p["required"] else "param-optional",
                 "Yes" if p["required"] else "No",
@@ -430,8 +477,7 @@ def render_params_html(rows):
 
 def build_html(groups, meta):
     toc = "\n".join(
-        '    <a href="#cat-%s" class="submenu-toc-link" data-section="cat-%s">%s</a>'
-        % (cid, cid, esc(title)) for cid, title, tools in groups)
+        f'    <a href="#cat-{cid}" class="submenu-toc-link" data-section="cat-{cid}">{esc(title)}</a>' for cid, title, tools in groups)
     blocks = []
     for cid, title, tools in groups:
         rows = []
@@ -439,56 +485,55 @@ def build_html(groups, meta):
             flag = ('<span class="tool-flag">gateway</span>' if t["gateway"]
                     else ('<span class="tool-flag">via advanced</span>' if t["hidden"] else ""))
             rows.append(
-                '        <div class="tool-row"><span class="tool-name">%s</span>'
-                '<span class="tool-desc">%s%s</span>%s</div>' % (
+                '        <div class="tool-row"><span class="tool-name">{}</span>'
+                '<span class="tool-desc">{}{}</span>{}</div>'.format(
                     esc(t["name"]), esc(t["description"]), flag,
                     render_params_html(t["params"])))
         blocks.append(
-            '    <div class="tools-category" id="cat-%s">\n'
+            '    <div class="tools-category" id="cat-{}">\n'
             '      <div class="tools-category-header" onclick="this.parentElement.classList.toggle(\'collapsed\')">\n'
-            '        <div class="tools-category-icon">%s</div>\n'
-            '        <span class="tools-category-name">%s</span>\n'
-            '        <span class="tools-category-count">%d tool%s</span>\n'
+            '        <div class="tools-category-icon">{}</div>\n'
+            '        <span class="tools-category-name">{}</span>\n'
+            '        <span class="tools-category-count">{} tool{}</span>\n'
             '        <span class="tools-category-toggle">&#x25BE;</span>\n'
             '      </div>\n'
-            '      <div class="tools-list">\n%s\n      </div>\n'
-            '    </div>' % (cid, CAT_ICON, esc(title), len(tools),
+            '      <div class="tools-list">\n{}\n      </div>\n'
+            '    </div>'.format(cid, CAT_ICON, esc(title), len(tools),
                             "" if len(tools) == 1 else "s", "\n".join(rows)))
-    title = "%d MCP tools — chitta" % meta["total"]
+    title = f"{meta['total']} MCP tools — chitta"
     desc = ("Generated reference for every MCP tool served by the chitta daemon: "
-            "%d listed by default, %d more reachable through the advanced gateway."
-            % (meta["visible"], meta["hidden"]))
+            f"{meta['visible']} listed by default, {meta['hidden']} more reachable through the advanced gateway.")
     return """<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>%(title)s</title>
-<meta name="description" content="%(desc)s">
+<title>{title}</title>
+<meta name="description" content="{desc}">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<meta property="og:title" content="%(title)s">
-<meta property="og:description" content="%(desc)s">
+<meta property="og:title" content="{title}">
+<meta property="og:description" content="{desc}">
 <meta property="og:type" content="website">
 <meta property="og:image" content="favicon.svg">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="%(title)s">
-<meta name="twitter:description" content="%(desc)s">
+<meta name="twitter:title" content="{title}">
+<meta name="twitter:description" content="{desc}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
-%(style)s
+{style}
 </head>
 <body>
 
-%(nav)s
+{nav}
 
 <header class="page-header">
   <div class="container">
     <div class="page-header-badge reveal">MCP tool reference</div>
-    <h1 class="reveal reveal-delay-1">%(total)d tools. One daemon.</h1>
-    <p class="page-header-sub reveal reveal-delay-2">Every tool is served by <code style="color: var(--aura-300);">chittad</code>, a C++ daemon reached over a Unix socket. %(visible)d are listed to the model by default; the remaining %(hidden)d stay callable through the <code style="color: var(--aura-300);">advanced</code> gateway, which keeps the default tool list small. Click a row for its parameters.</p>
-    <p class="gen-note">Generated from a live daemon on %(date)s, %(total)d tools &mdash; regenerate with <code>python3 scripts/gen-tools-docs.py</code></p>
+    <h1 class="reveal reveal-delay-1">{total} tools. One daemon.</h1>
+    <p class="page-header-sub reveal reveal-delay-2">Every tool is served by <code style="color: var(--aura-300);">chittad</code>, a C++ daemon reached over a Unix socket. {visible} are listed to the model by default; the remaining {hidden} stay callable through the <code style="color: var(--aura-300);">advanced</code> gateway, which keeps the default tool list small. Click a row for its parameters.</p>
+    <p class="gen-note">Generated from a live daemon on {date}, {total} tools &mdash; regenerate with <code>python3 scripts/gen-tools-docs.py</code></p>
   </div>
 </header>
 
@@ -503,14 +548,14 @@ def build_html(groups, meta):
 
 <nav class="submenu-toc">
   <div class="submenu-toc-inner">
-%(toc)s
+{toc}
   </div>
 </nav>
 
 <section class="tools-section">
   <div class="container">
 
-%(blocks)s
+{blocks}
 
   </div>
 </section>
@@ -531,27 +576,26 @@ def build_html(groups, meta):
   </div>
 </footer>
 
-%(script)s
+{script}
 </body>
 </html>
-""" % {
+""".format_map({
         "title": esc(title), "desc": esc(desc), "style": PAGE_STYLE,
         "nav": nav_html("tools.html"), "toc": toc, "blocks": "\n\n".join(blocks),
         "script": PAGE_SCRIPT, "date": meta["date"], "total": meta["total"],
         "visible": meta["visible"], "hidden": meta["hidden"],
-    }
+    })
 
 
 def build_markdown(groups, meta):
     out = [
         "# chitta MCP API reference",
         "",
-        "Generated from a live daemon on %s, %d tools — regenerate with "
-        "`python3 scripts/gen-tools-docs.py`." % (meta["date"], meta["total"]),
+        f"Generated from a live daemon on {meta['date']}, {meta['total']} tools — regenerate with "
+        "`python3 scripts/gen-tools-docs.py`.",
         "",
-        "%d tools are listed in `tools/list` by default. The other %d are hidden to keep "
-        "the model's tool list small, and stay callable through the `advanced` gateway:"
-        % (meta["visible"], meta["hidden"]),
+        f"{meta['visible']} tools are listed in `tools/list` by default. The other {meta['hidden']} are hidden to keep "
+        "the model's tool list small, and stay callable through the `advanced` gateway:",
         "",
         "```json",
         '{"tool": "pin_memory", "arguments": {"id": 123}}',
@@ -568,16 +612,16 @@ def build_markdown(groups, meta):
         "",
     ]
     for cid, title, tools in groups:
-        out.append("- [%s](#%s) — %d" % (title, cid, len(tools)))
+        out.append(f"- [{title}](#{cid}) — {len(tools)}")
     out.append("")
     for cid, title, tools in groups:
-        out.append('<a id="%s"></a>' % cid)
+        out.append(f'<a id="{cid}"></a>')
         out.append("")
-        out.append("## %s" % title)
+        out.append(f"## {title}")
         out.append("")
         for t in tools:
             flag = " *(gateway)*" if t["gateway"] else (" *(via advanced)*" if t["hidden"] else "")
-            out.append("### `%s`%s" % (t["name"], flag))
+            out.append("### `{}`{}".format(t["name"], flag))
             out.append("")
             out.append(t["description"] or "_No description._")
             out.append("")
@@ -585,9 +629,9 @@ def build_markdown(groups, meta):
                 out.append("| Parameter | Type | Required | Default | Description |")
                 out.append("|---|---|---|---|---|")
                 for p in t["params"]:
-                    default = "—" if p["default"] is None else "`%s`" % json.dumps(p["default"])
+                    default = "—" if p["default"] is None else "`{}`".format(json.dumps(p["default"]))
                     desc = (p["desc"] or "").replace("|", "\\|")
-                    out.append("| `%s` | %s | %s | %s | %s |" % (
+                    out.append("| `{}` | {} | {} | {} | {} |".format(
                         p["name"], p["type"], "yes" if p["required"] else "no", default, desc))
             else:
                 out.append("No parameters.")
@@ -603,6 +647,10 @@ def main():
     args = ap.parse_args()
 
     live = fetch_live_tools(args.chitta)
+    static = parse_composite_tools(os.path.join(MCP, "tools_static.py"), "TOOLS")
+    missing = {t["name"] for t in static} - {t["name"] for t in live}
+    if missing:
+        sys.stderr.write("static-only schema entries (not assumed live): {}\n".format(", ".join(sorted(missing))))
     sets = parse_assigned_set(os.path.join(MCP, "server.py"),
                               ["INTERNAL_TOOLS", "ADVANCED_TOOLS"])
     hidden = sets["INTERNAL_TOOLS"] | sets["ADVANCED_TOOLS"]
@@ -652,14 +700,19 @@ def main():
         "date": datetime.date.today().isoformat(),
     }
 
-    open(args.out_html, "w", encoding="utf-8").write(build_html(groups, meta))
-    open(args.out_md, "w", encoding="utf-8").write(build_markdown(groups, meta))
-    sys.stderr.write("wrote %s and %s: %d tools (%d listed, %d via advanced), %d categories\n"
-                     % (args.out_html, args.out_md, meta["total"], meta["visible"],
-                        meta["hidden"], len(groups)))
+    extra_md, extra_html = cli_appendix(native_cli_extras(set(merged)))
+    page = build_html(groups, meta).replace('<section class="back-section">', extra_html + '<section class="back-section">')
+    page = page.replace('Generated from a live daemon on ', 'Status as of ' + meta["date"] + '. Generated from a live daemon on ', 1)
+    page = page.replace('Every tool is served by', 'Native tools are served by', 1)
+    page = page.replace('Click a row for its parameters.', 'Composed gateways run in chitta-mcp. Click a row for its parameters; additional native CLI entries appear below.', 1)
+    markdown = build_markdown(groups, meta).replace('\n\n', '\n\nStatus as of ' + meta["date"] + '.\n\n', 1)
+    open(args.out_html, "w", encoding="utf-8").write(page)
+    open(args.out_md, "w", encoding="utf-8").write(markdown + extra_md)
+    sys.stderr.write(f"wrote {args.out_html} and {args.out_md}: {meta['total']} tools "
+                     f"({meta['visible']} listed, {meta['hidden']} via advanced), {len(groups)} categories\n")
     if "other" in by_cat:
-        sys.stderr.write("uncategorized (%d): %s\n" % (
-            len(by_cat["other"]), ", ".join(t["name"] for t in by_cat["other"])))
+        sys.stderr.write(f"uncategorized ({len(by_cat['other'])}): " +
+                         ", ".join(t["name"] for t in by_cat["other"]) + "\n")
 
 
 if __name__ == "__main__":

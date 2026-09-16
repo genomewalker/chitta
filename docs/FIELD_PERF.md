@@ -1,6 +1,6 @@
 # chitta-field performance
 
-Status as of 2026-09-14: measured in `fix/field-perf` on private copies of the eval replica; no installation or live-daemon changes. Rust and C++ gates pass. RSS and hybrid-p95 targets are met; first/warm ratio, median parity and full adaptive-result parity remain unresolved. The ancillary MCP SDK test failure is recorded below.
+Status as of 2026-09-16. The dated results below preserve the `fix/field-perf` measurements on private eval copies, including unmet targets and the ancillary MCP SDK failure. Two original JSON artifacts are absent; their committed tables are linked instead. Current live startup is about 9.5 s with sidecar hits, about 20 s on the first start after deployment or a format change; see [startup and recovery](CLI.md#startup-sidecars-and-instance-lock). These current operational figures do not replace the historical control/experiment measurements below.
 
 ## Measurement boundary
 
@@ -14,7 +14,7 @@ The control is `e109286` chitta-field / `f8686fed` superproject plus load/recall
 
 ## Before and after
 
-Primary control: [BEFORE JSON](../benchmarks/field-perf/results-before.json). Primary final implementation: [AFTER JSON, label `primed`](../benchmarks/field-perf/results-primed.json). Earlier `after` / `final` artifacts are intermediate steps, identified below.
+Primary control: [BEFORE JSON](../benchmarks/field-perf/results-before.json). Primary final implementation: [AFTER table, label `primed`](../benchmarks/field-perf/table-primed.md). The original primed JSON is not present in this checkout; the committed table preserves its reported measurements. Earlier `after` / `final` artifacts are intermediate steps, identified below.
 
 | Metric | before |
 |---|---:|
@@ -64,7 +64,7 @@ The process-ready log reports 35,912 → 28,696 ms; the tables use the external 
 
 First recall improved 98.57%, but remaining cold-query/competitive-refresh work still exceeds the requested ratio against repeated warm queries. Host variation does not establish median parity.
 
-Clean checkpoint restart with the final binary ([JSON](../benchmarks/field-perf/results-clean-final.json)):
+Clean checkpoint restart with the final binary ([committed table](../benchmarks/field-perf/table-clean-final.md); the original JSON is not present in this checkout):
 
 | Load measurement | BEFORE legacy family | AFTER same legacy family | AFTER clean checkpoint |
 |---|---:|---:|---:|

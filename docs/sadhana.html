@@ -1166,6 +1166,8 @@
   <div class="container">
     <div class="page-header-badge reveal">Autonomous Agents</div>
     <h1 class="reveal reveal-delay-1">Sadhana</h1>
+    <p class="status-line">Status as of 2026-09-16. <a href="SADHANA.md">Canonical agent lifecycle</a> · <a href="EVOLVE.md">Separate evolve workflow</a>.</p>
+    <p class="page-header-sub">The animated agents, investigation stories and schedules below are illustrative historical examples, not live state or current configuration. Code changes now follow the isolated <a href="EVOLVE.md">evolve workflow</a>, with optional <code>--candidates N</code> and human merge/deployment.</p>
     <p class="page-header-sub reveal reveal-delay-2">Persistent agents that work toward goals through continuous sense-think-act cycles&thinsp;&mdash;&thinsp;with memory integration and self-learning.</p>
   </div>
 </header>
@@ -1556,11 +1558,14 @@
       <pre><span class="cm"># Via skill</span>
 <span class="kw">/shepherd</span> snakemake --cores 8 --interval 300
 
-<span class="cm"># Via MCP tool</span>
-<span class="kw">sadhana_start</span> goal="Monitor pipeline" brain="claude" model="haiku" interval=120</pre>
+<span class="cm"># Daemon MCP/RPC tool name: sadhana_start</span>
+{"goal":"Monitor pipeline", "brain_provider":"claude",
+ "brain_model":"haiku", "interval_seconds":120, "max_turns":10}</pre>
+      <p>The direct CLI does not advertise this tool as a subcommand. Use MCP/RPC or forward a <code>tools/call</code> request through <code>chitta mcp</code>; see <a href="SADHANA.md#start-and-manage">the complete example</a>. Start parameters differ from setter parameters.</p>
     </div>
 
-    <h3 style="font-family: var(--font-display); font-size: var(--text-xl); color: var(--lotus-200); font-weight: 500; margin-top: var(--space-6); margin-bottom: var(--space-4);" class="reveal">Management Commands</h3>
+    <h3 style="font-family: var(--font-display); font-size: var(--text-xl); color: var(--lotus-200); font-weight: 500; margin-top: var(--space-6); margin-bottom: var(--space-4);" class="reveal">Management RPC tools</h3>
+    <p>Names and arguments below describe RPC tools, not direct shell subcommands. Manager defaults are local/gemma4:26b, 300 s interval, 10 concurrent agents, 20 turns per cycle and a 600 s timeout. State persists as chitta-field task payloads and transitions. The <code>--no-autonomous</code> daemon option pauses restored agents.</p>
 
     <table class="comp-table reveal reveal-delay-2">
       <thead>

@@ -1,6 +1,6 @@
 # chitta Hooks System
 
-Status as of 2026-09-13.
+Status as of 2026-09-16.
 
 chitta integrates with Claude Code and Codex through the hooks system, enabling
 automatic context injection and lifecycle management.
@@ -103,6 +103,7 @@ All lifecycle hooks write JSON `hookSpecificOutput` schema on stdout. This is no
 | `file-changed-hook.sh`  | FileChanged      | Re-index a changed file, asynchronously                                              |
 | `log-bash-history.sh`   | PostToolUse (async) | Append every Bash command to history for pattern learning                         |
 | `memory-intercept.sh`   | PostToolUse:Write (async) | Capture Write operations to learn what you build                           |
+| `artifact-trace.sh` | PostToolUse:Write (async) | Register newly written scripts as artifact signals with path, hash and purpose |
 | `distill.sh`            | Background       | Transcript distillation into compressed wisdom nodes                                 |
 | `subconscious.sh`       | SessionStart     | Start/stop/restart/status for the chittad daemon                                     |
 
@@ -233,12 +234,12 @@ Raw benchmark/harness evidence: `/tmp/chitta-nopython-finish/` and
 
 #### Automatic learning admission
 
-> Status as of 2026-09-15 — **MDL shadow judging retired.** Compression of
+> **Automatic learning admission.** Compression of
 > chat-shaped evidence did not establish useful learning selection. The Bash
 > distillation tap and native shadow machinery are removed; existing storage,
 > deduplication and recall ranking continue. Admission means eligibility for
 > retrieval after deduplication, with no utility-posterior hard gate. Historical
-> `~/.claude/mind/mdl_gate_shadow.jsonl` remains untouched and inert. See the
+> shadow logs remain untouched and inert. See the
 > [retirement status and pending paired 20-task experiment](EVOLVE.md).
 > Outcome hooks remain active, recording associational evidence for offline
 > analysis; null exit codes are excluded from known outcomes, while `likely_fail`
@@ -246,20 +247,23 @@ Raw benchmark/harness evidence: `/tmp/chitta-nopython-finish/` and
 
 #### Daemon task ledger
 
-Status 2026-09-13: threads, inbox items, artifacts, session bindings and exclusive
-thread leases are daemon-owned records. Hooks use the shared stdlib socket/HTTP
-client; they no longer open a local SQLite ledger. `task_ledger.py` preserves its
+Threads, inbox items, artifacts, session bindings and exclusive
+thread leases are daemon-owned records. Hooks call the native `chitta` CLI
+(`session_register`, `session_heartbeat`, `ledger_op`) with bash/jq rendering;
+they do not start the Python registry or open a local SQLite ledger. `task_ledger.py` preserves its
 public API and renderers. Its single `ledger_op` RPC stores atomic row-change
 batches in the Rust event WAL; a snapshot section preserves ledger and native
 session events. Indexed maps are rebuilt on startup. Read pages are capped at 100;
 the Python client follows pages for larger or unlimited lists.
 
-`session_registry.py` calls `session_register`, `session_heartbeat` and
-`session_deregister` directly. Those handlers update durable bindings and leases,
+`session_registry.py` remains a compatibility client for Python callers.
+The hook path calls `chitta session_register`, `chitta session_heartbeat` and
+`chitta session_deregister` directly. Those handlers update durable bindings and leases,
 including when invoked by the private mind's `queue.jsonl` processor. The
-`heartbeat --queued` path only appends a queue item; it performs no RPC. Direct
-registry calls share a 100 ms daemon-wait budget, and individual hook RPCs have a
-75 ms deadline. Unavailable or warming daemons return empty results; registration
+Python compatibility `heartbeat --queued` path only appends a queue item; it
+performs no RPC. Its 100 ms daemon-wait and 75 ms RPC budgets describe that
+client, not the native hook path. Native hook calls use their enclosing shell
+timeouts and queue failed heartbeats. Unavailable or warming daemons return empty results; registration
 reports `registered:false`. No hook starts a daemon or falls back to SQLite.
 
 The endpoint is `CHITTA_SOCKET_PATH` when explicitly set; otherwise the client
@@ -271,7 +275,7 @@ as well as HOME, runtime, mind and queue.
 Migrate the legacy SQLite file once against the intended daemon:
 
 ```bash
-python3 chitta-mcp/task_ledger.py migrate --from ~/.claude/task-ledger.db
+python3 chitta-mcp/task_ledger.py migrate --from /path/to/legacy-ledger.db
 ```
 
 Migration opens the source with SQLite URI `mode=ro`, preserving every row's keys,

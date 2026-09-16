@@ -77,7 +77,7 @@
     <div class="page-header-badge reveal">Measurement</div>
     <h1 class="reveal reveal-delay-1">Does the memory help?</h1>
     <p class="page-header-sub reveal reveal-delay-2">A coding agent&rsquo;s memory exists to make it better at the <em>next</em> task, not better at reciting the last one. SMRITI-Bench scores that directly: an objective check either passes or it does not, and the tokens are counted either way.</p>
-    <p class="status-line">Status as of 2026-09-02.</p>
+    <p class="status-line">Status as of 2026-09-16. <a href="EVALS.md">Evaluation status and evidence</a>.</p>
   </div>
 </header>
 
@@ -133,7 +133,7 @@
           <li>Append one record: condition, trial, pass/fail, token counts, transcript, whether injection was confirmed.</li>
           <li>Tear the working directory down and forget every planted id by exact id.</li>
         </ol>
-        <p class="section-intro">Step three is the part that makes the measurement honest. Memory reaches the agent the way it does in real use &mdash; chitta&rsquo;s own prompt and session hooks recall from the live daemon when the agent process starts &mdash; so what is being measured is the real recall-routing path, not a hand-built context string. The condition is set through the environment: the on condition pins the agent&rsquo;s realm, and the off condition sets the existing global kill switch that makes every memory-injecting hook return immediately.</p>
+        <p class="section-intro">Memory reaches the agent through its prompt and session hooks. For controlled evaluation, point the CLI and child hooks at the same private frozen replica using the exported socket settings. The on condition pins the agent's realm; the off condition uses the existing headless switch to suppress injection. See <a href="EVAL_REPLICA.md">replica setup and isolation</a>.</p>
         <p class="section-intro">An empty realm was considered for the off condition and rejected: a realm-scoped recall with no hits falls back to unfiltered cross-realm results, so an empty realm does not reliably mean zero injection. The kill switch does.</p>
         <p class="section-intro">Each task also ships a solution directory, which must make the check pass when copied over the fixture, and a hidden directory holding every test that would reveal the planted convention&rsquo;s exact answer. The hidden directory is applied only after the agent&rsquo;s turn ends and is never part of what the agent sees. A corpus test enforces both, plus the invariant that the check fails on the untouched fixture and passes once the solution is applied &mdash; a task that passes with no work at all is broken.</p>
       </div>
@@ -273,6 +273,22 @@
 </section>
 
 <!-- BACK -->
+<section class="tools-section" id="current-evidence">
+  <div class="container">
+    <h2>Retrieval and automatic-learning evidence</h2>
+    <table class="comp-table">
+      <thead><tr><th>Measurement</th><th>Result</th><th>Boundary</th></tr></thead>
+      <tbody>
+        <tr><td>Golden recall, 30 queries</td><td>Historical prefilter comparison: mean nDCG@20 0.435 → 0.487</td><td>Match snapshot, strategy, depth and reranker; this is retrieval quality, not task success.</td></tr>
+        <tr><td>Replication weighting</td><td>0.499994 mean in both arms, delta zero; default-off</td><td>No memory in the measured cohort had two independent replications.</td></tr>
+        <tr><td>Explicit relation transfer</td><td>Hit@1 14/14, hit@3 14/14; negative abstentions 14/14; unsupported answers 0</td><td>Directed graph edges on the frozen replica, with reasons on abstention.</td></tr>
+        <tr><td>Automatic-learning experiment</td><td>Official cut: 2026-09-15 23:15 CEST; prospective panel pending</td><td>20 real tasks × 3 trials × 2 arms = 120 runs. No causal result yet.</td></tr>
+      </tbody>
+    </table>
+    <p>The automatic-learning panel compares including versus excluding eligible automatic records created after the cut and before each task. Earlier records remain in both arms. Prompt, grader, initial files and cohort membership must be frozen before trials. Invalid isolation, provenance or telemetry yields no verdict. The screening threshold is at least three net successes over 20 tasks, equivalent to nine over 60 trials; it is not statistical proof.</p>
+    <p>Use a private <a href="EVAL_REPLICA.md">frozen replica</a> and record the full snapshot/WAL identity. The planted-memory SMRITI matrix above tests a different question. See <a href="https://github.com/genomewalker/chitta/blob/main/benchmarks/learning/protocol.md">the frozen protocol</a> and <a href="EVALS.md">current collection status</a>.</p>
+  </div>
+</section>
 <section class="back-section">
   <div class="container">
     <a href="index.html" class="back-link">&larr; Back to chitta</a>

@@ -290,6 +290,7 @@
   <div class="container">
     <div class="page-header-badge reveal">Philosophy</div>
     <h1 class="reveal reveal-delay-1">Grounded in Vedanta. Validated by engineering.</h1>
+    <p class="status-line">Status as of 2026-09-16. <a href="PHILOSOPHY.md">Conceptual reference</a> · <a href="ARCHITECTURE.md">Current implementation</a>.</p>
     <p class="page-header-sub reveal reveal-delay-2">Sanskrit terms name system behaviors. Design principles carry evidence and trade-offs. Philosophy isn't metaphor here&thinsp;&mdash;&thinsp;it's architecture.</p>
   </div>
 </header>
@@ -361,7 +362,7 @@
         </div>
         <div class="mapping-system">
           <span class="mapping-arrow">&rarr;</span>
-          Persistent embeddings and semantic indexing. The C++ daemon at the heart of the system. 768-dimensional vectors anchor meaning in stable latent space.
+          Persistent embeddings and semantic indexing in a Rust store behind the C++ daemon. Vector dimension follows the compiled model identity: 768 on the measured deployment, 1024 in public defaults.
         </div>
       </div>
 
@@ -451,7 +452,7 @@
 
       <div class="principle-card reveal">
         <h3 class="principle-title">Embeddings live separately from content</h3>
-        <p class="principle-desc">Vector embeddings stored in dedicated database, separate from memory content. Query isolation&thinsp;&mdash;&thinsp;vector search doesn't touch main storage.</p>
+        <p class="principle-desc">Dense embeddings and payloads use separate structures and sidecars within one Rust store. Search indexes are derived state; snapshot families and the WAL preserve authoritative memory.</p>
         <div class="principle-meta">
           <span class="principle-tag principle-tag--evidence">Database sharding</span>
           <span class="principle-tag principle-tag--tradeoff">Join complexity</span>
@@ -625,7 +626,7 @@ Correction warnings: ~100 tokens</div>
           <span class="principle-tag principle-tag--evidence">Connection pooling, model serving</span>
           <span class="principle-tag principle-tag--tradeoff">Memory footprint (~1GB)</span>
         </div>
-        <div class="principle-mechanism">Unix socket IPC. Thread pool (2-16 workers).
+        <div class="principle-mechanism">Unix socket IPC. Thread pool (8-16 workers).
 First query as fast as hundredth.</div>
       </div>
 

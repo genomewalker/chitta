@@ -1,6 +1,6 @@
 # Frozen eval replica
 
-Status as of 2026-09-13.
+Status as of 2026-09-16.
 
 Recall grading and SMRITI used to share the live daemon with distillation,
 backfill, consolidation, and other maintenance. That made a measurement depend
@@ -32,7 +32,8 @@ The start command is idempotent while its recorded daemon is running. It
 selects the highest-seqno family whose snapshot and every manifest-recorded
 sidecar exist at the committed sizes. A matching `cortex.<id>.snapshot` is
 copied when present; it is an optional cache and is not part of the manifest's
-commit record. The source manifests are fingerprinted before and after the
+commit record. Uncovered WAL segments are copied at the selected byte lengths, and loader
+markers are retained. The source manifests are fingerprinted before and after the
 copy, and current manifest/family temp files cause a refusal. Old temp files
 from unrelated, dead writers do not permanently prevent evaluation.
 
@@ -45,14 +46,14 @@ process.
 
 ## Limits
 
-- The copy contains one committed snapshot family and its manifest, not live
-  WAL segments. It therefore represents the snapshot seqno, not writes made
-  after that checkpoint. The replica may create its own local WAL after it is
-  opened; those files are never copied back.
+- The copy contains one committed snapshot family, loader markers and the
+  selected prefixes of uncovered WAL segments. Snapshot seqno alone is not
+  the complete identity; preserve the family manifest and WAL hashes. Later
+  live appends are excluded. Replica writes are never copied back.
 - Direct grader and SMRITI adapter CLI calls honor `CHITTA_EVAL_SOCKET` today.
   The SMRITI runner also passes `CHITTA_SOCKET_PATH=<socket>` into the
-  `claude -p` child. Hooks inside that child target the replica only after the
-  separate CLI change that makes `chitta` honor `CHITTA_SOCKET_PATH` lands.
+  `claude -p` child. The CLI and hooks honor `CHITTA_SOCKET_PATH`; isolate
+  HOME, runtime, queue and mind as well as the socket for every trial.
 - The grader's graph-expansion helper uses the replica HTTP port. Source
   `replica.env` (or set `CHITTA_EVAL_PORT`) when using graph-based strategies
   with a non-default replica port.
