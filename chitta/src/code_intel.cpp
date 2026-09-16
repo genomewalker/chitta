@@ -24,6 +24,8 @@ extern "C" const TSLanguage* tree_sitter_cmake();
 extern "C" const TSLanguage* tree_sitter_sql();
 extern "C" const TSLanguage* tree_sitter_php();
 
+extern "C" const TSLanguage* tree_sitter_kotlin();
+
 namespace chitta {
 const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
     if (language == "bash") return tree_sitter_bash();
@@ -38,11 +40,12 @@ const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
     if (language == "sql") return tree_sitter_sql();
 #ifdef CHITTA_EXTRA_GRAMMARS
     if (language == "php") return tree_sitter_php();
+    if (language == "kotlin") return tree_sitter_kotlin();
 #endif
     return nullptr;
 }
 void CodeIntel::initialize_extended_parsers() {
-    for (const auto* language : {"bash", "r", "julia", "fortran", "nextflow", "snakemake", "perl", "make", "cmake", "sql", "php"}) {
+    for (const auto* language : {"bash", "r", "julia", "fortran", "nextflow", "snakemake", "perl", "make", "cmake", "sql", "kotlin", "php"}) {
         if (!extended_grammar(language)) continue; // Optional grammar group disabled.
         auto* parser = ts_parser_new();
         if (!ts_parser_set_language(parser, extended_grammar(language))) {
@@ -56,6 +59,7 @@ std::string CodeIntel::detect_extended_language(const std::string& path) {
     auto ext = std::filesystem::path(path).extension().string();
     if (ext == ".sh" || ext == ".bash") return "bash";
     auto filename = std::filesystem::path(path).filename().string();
+    if ((ext == ".kt" || ext == ".kts") && extended_grammar("kotlin")) return "kotlin";
     if ((ext == ".php" || ext == ".phtml") && extended_grammar("php")) return "php";
     if (ext == ".sql" || ext == ".ddl") return "sql";
     if (ext == ".cmake" || filename == "CMakeLists.txt") return "cmake";
@@ -562,6 +566,32 @@ void CodeIntel::extract_extended(TSNode root, const std::string& source,
                 auto declaration = text(node);
                 result.imports.push_back({path, declaration.substr(4, declaration.size() - 5), "", {}, uint32_t(node_line(node))});
             }
+        }
+        if (language == "kotlin") {
+            if (type == "function_declaration" || type == "class_declaration" || type == "object_declaration") {
+                auto name = text(ast_find(node, type == "function_declaration" ? "simple_identifier" : "type_identifier"));
+                std::string kind = type == "function_declaration" ? "function" : type == "object_declaration" ? "object" : "class";
+                for (uint32_t i = 0; i < ast_child_count(node); ++i)
+                    if (std::string(ast_type(ast_child(node, i))) == "interface") kind = "interface";
+                define(node, name, kind, parent, ast_find(node, type == "function_declaration" ? "function_body" : "class_body"));
+                for (uint32_t i = 0; i < ast_named_count(node); ++i) {
+                    auto child = ast_named_child(node, i);
+                    if (std::string(ast_type(child)) == "delegation_specifier") {
+                        auto base = leaf_name(child);
+                        if (!base.empty()) result.type_relationships.push_back({name, base, "inherits", path, uint32_t(node_line(child))});
+                    }
+                }
+                parent = name;
+            }
+            if (type == "call_expression") {
+                auto fn = ast_named_child(node, 0);
+                if (std::string(ast_type(fn)) == "simple_identifier") call(node, text(fn), parent);
+                else if (std::string(ast_type(fn)) == "navigation_expression") {
+                    auto suffix = ast_named_child(fn, ast_named_count(fn) - 1);
+                    call(node, text(ast_named_child(suffix, ast_named_count(suffix) - 1)), parent, "", text(ast_named_child(fn, 0)));
+                }
+            }
+            if (type == "import_header") result.imports.push_back({path, text(ast_find(node, "identifier")), "", {}, uint32_t(node_line(node))});
         }
         for (uint32_t i = 0; i < ast_named_count(node); ++i) visit(ast_named_child(node, i), parent);
     };

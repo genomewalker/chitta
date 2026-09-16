@@ -398,3 +398,13 @@ helper supports grammar repositories with generated parsers in subdirectories.
 The source-filter performance fix qualifies on a fresh private daemon:
 855/865 tracked supported files (98.84%) in 37.374 seconds, 80,953,087 index
 bytes, including 208 Bash symbols. Ten deliberately ignored files remain out.
+
+### Kotlin
+
+Kotlin navigation extracts functions, classes, interfaces and objects, calls,
+imports and delegated supertypes. The fixture checks a superclass plus an
+interface and has 5 definitions, 7 query edges (2 calls, 1 import, 2 inheritance,
+2 references), and 11 raw identifier references. Fresh parsing averages
+548.10 microseconds/KiB; daemon size is 87,994,752 bytes (+5,755,640).
+Offline builds and all extraction/query fixtures pass. Contracts and recall
+scoring are unchanged.

@@ -14,6 +14,8 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 - PHP code navigation adds definitions, imports and inheritance; optional Graphify-parity grammars default ON with `CHITTA_EXTRA_GRAMMARS`.
 
+- Kotlin code navigation: Functions, classes/objects, calls, imports and delegation/inheritance.
+
 ## [Unreleased]
 
 - Add Make target/macro navigation, prerequisite links, calls and includes.

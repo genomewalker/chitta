@@ -255,6 +255,7 @@ chitta_grammar(sql DerekStride/tree-sitter-sql 593a5ecc5dc3889890d8b24ba8fa7487e
 option(CHITTA_EXTRA_GRAMMARS "Build the additional Graphify-parity language grammars" ON)
 if(CHITTA_EXTRA_GRAMMARS)
     target_compile_definitions(tree-sitter-parsers PUBLIC CHITTA_EXTRA_GRAMMARS=1)
+    chitta_grammar(kotlin fwcd/tree-sitter-kotlin 1852ea17b7f60fb3f9d84e0b1555d56b46b39fb1)
     chitta_grammar(php tree-sitter/tree-sitter-php 3fda2fb9577166c6399834917f9844f30370beea php)
 endif()
 
