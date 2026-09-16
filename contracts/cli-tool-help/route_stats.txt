@@ -1,3 +1,0 @@
-chitta route_stats - Show route learner status and arm configuration for smart_recall
-
-  No parameters required.
