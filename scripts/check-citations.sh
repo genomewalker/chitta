@@ -143,11 +143,16 @@ by_url = {u: k for k in rows for u in urls(k)}
 for path in sorted(Path('chitta-mcp/evolve/proposals.d').glob('*.json')):
     text = path.read_text()
     data = json.loads(text)
+    # Cards written by the nightly literature watch (kind == "sota-card") cite
+    # their paper in evidence[].source and arrive without a hand-written index
+    # entry; they are self-citing. Hand-written hypothesis cards stay indexed.
+    self_citing = data.get('kind') == 'sota-card'
     for evidence in data.get('evidence', []):
         source = evidence.get('source', '')
         if source.startswith(('http://', 'https://')):
             if source not in by_url:
-                errors.append(f'{path}: evidence source absent from index: {source}')
+                if not self_citing:
+                    errors.append(f'{path}: evidence source absent from index: {source}')
             else:
                 for n, line in enumerate(text.splitlines(), 1):
                     if '"source":' in line and source in line:

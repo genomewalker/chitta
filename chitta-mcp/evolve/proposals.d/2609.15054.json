@@ -1,0 +1,43 @@
+{
+  "id": "2609.15054",
+  "title": "BusMA: A Bus Communication Substrate for Multi-Agent Systems",
+  "mechanism": "Add intent-tagged shared-memory bus messages (discussion/challenge/guidance/request-explanation) so subagents can post to and query a common channel instead of only reporting back to the orchestrator, letting any Fable-launched agent directly address a specific peer agent mid-task",
+  "expected_gain": {
+    "metric": "cross-agent task success rate on multi-agent workflows, %",
+    "delta": 3.0,
+    "confidence": 0.15,
+    "rationale": "chitta already has msg_* cross-harness messaging and agent_upsert/get/list/disable (agent registry) per inventory §4, but no documented typed-intent bus or Chair-style convergence monitor, so the gap is intent structure + convergence coordination, not messaging transport itself"
+  },
+  "cost": {
+    "effort_h": 6.0,
+    "blast_radius": 3,
+    "scope": "chitta-mcp/server.py msg_* handlers, agent registry tools, Workflow orchestration layer"
+  },
+  "evidence": [
+    {
+      "source": "https://arxiv.org/abs/2609.15054",
+      "claim": "BusMA introduces a shared Bus with agent registration, message routing, and shared memory management (abstract)"
+    },
+    {
+      "source": "https://arxiv.org/abs/2609.15054",
+      "claim": "Four typed intents (discussion, challenge, guidance, request-explanation) enable fine-grained peer communication (abstract)"
+    },
+    {
+      "source": "https://arxiv.org/abs/2609.15054",
+      "claim": "A Chair agent monitors shared memory to coordinate Workers and facilitate convergence (abstract)"
+    }
+  ],
+  "source": "hypothesis",
+  "already_have": false,
+  "kind": "sota-card",
+  "inventory": {
+    "path": "/projects/caeg/scratch/kbd606/tmp/chitta-truth-inventory.md",
+    "sha256": "6a2b73d936ff564571596f34659e799a58314c568673f3561f831fa6fc8150b1"
+  },
+  "created_at": "2026-09-16T00:42:32.523595+00:00",
+  "memory": {
+    "id": "16097471566379483146",
+    "realm": "project:chitta-evolve",
+    "type": "hypothesis"
+  }
+}
