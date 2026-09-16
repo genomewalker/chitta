@@ -442,3 +442,14 @@ The fixture has 5 definitions and 5 query edges (1 call, 1 import, 3 references)
 Fresh parsing averages 277.36 microseconds/KiB; daemon size is 92,876,520 bytes
 (+141,008). The C++ scanner links offline, and all extraction/query fixtures
 pass. Contracts and recall scoring are unchanged.
+
+### OCaml
+
+Both OCaml implementation and interface parsers build from one immutable
+source checkout. `.ml` extraction covers functions, types, modules, classes,
+methods, calls, open/include imports and inheritance; `.mli` adds declarations.
+The implementation fixture has 7 definitions and 6 query edges; the interface
+fixture has 6 definitions and 1 import edge. Fresh parsing averages 471.03
+and 495.24 microseconds/KiB respectively. Daemon size is 101,757,816 bytes
+(+8,881,296 for both parsers). Offline extraction/query fixtures pass.
+Contracts and recall scoring are unchanged.

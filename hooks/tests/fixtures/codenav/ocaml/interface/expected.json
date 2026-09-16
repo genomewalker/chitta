@@ -1,0 +1,16 @@
+{
+  "file": "navigation.mli",
+  "language": "ocaml_interface",
+  "extra": true,
+  "symbols": {
+    "Reads": "module",
+    "sample": "type",
+    "normalize": "function",
+    "total": "function",
+    "counts": "class",
+    "describe": "method"
+  },
+  "imports": [
+    "List"
+  ]
+}

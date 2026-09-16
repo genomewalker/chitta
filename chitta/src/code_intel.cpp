@@ -32,6 +32,9 @@ extern "C" const TSLanguage* tree_sitter_zig();
 
 extern "C" const TSLanguage* tree_sitter_hcl();
 
+extern "C" const TSLanguage* tree_sitter_ocaml();
+extern "C" const TSLanguage* tree_sitter_ocaml_interface();
+
 namespace chitta {
 const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
     if (language == "bash") return tree_sitter_bash();
@@ -50,11 +53,13 @@ const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
     if (language == "scala") return tree_sitter_scala();
     if (language == "zig") return tree_sitter_zig();
     if (language == "hcl") return tree_sitter_hcl();
+    if (language == "ocaml") return tree_sitter_ocaml();
+    if (language == "ocaml_interface") return tree_sitter_ocaml_interface();
 #endif
     return nullptr;
 }
 void CodeIntel::initialize_extended_parsers() {
-    for (const auto* language : {"bash", "r", "julia", "fortran", "nextflow", "snakemake", "perl", "make", "cmake", "sql", "kotlin", "scala", "zig", "hcl", "php"}) {
+    for (const auto* language : {"bash", "r", "julia", "fortran", "nextflow", "snakemake", "perl", "make", "cmake", "sql", "kotlin", "scala", "zig", "hcl", "ocaml", "ocaml_interface", "php"}) {
         if (!extended_grammar(language)) continue; // Optional grammar group disabled.
         auto* parser = ts_parser_new();
         if (!ts_parser_set_language(parser, extended_grammar(language))) {
@@ -72,6 +77,8 @@ std::string CodeIntel::detect_extended_language(const std::string& path) {
     if ((ext == ".scala" || ext == ".sc") && extended_grammar("scala")) return "scala";
     if ((ext == ".zig") && extended_grammar("zig")) return "zig";
     if ((ext == ".tf" || ext == ".tfvars" || ext == ".hcl") && extended_grammar("hcl")) return "hcl";
+    if (ext == ".ml" && extended_grammar("ocaml")) return "ocaml";
+    if (ext == ".mli" && extended_grammar("ocaml_interface")) return "ocaml_interface";
     if ((ext == ".php" || ext == ".phtml") && extended_grammar("php")) return "php";
     if (ext == ".sql" || ext == ".ddl") return "sql";
     if (ext == ".cmake" || filename == "CMakeLists.txt") return "cmake";
@@ -687,6 +694,33 @@ void CodeIntel::extract_extended(TSNode root, const std::string& source,
                 if (target.starts_with("data.") && end != std::string::npos) end = target.find('.', end + 1);
                 target = target.substr(0, end);
                 if (!target.empty()) result.references.push_back({path, target, uint32_t(node_line(node))});
+            }
+        }
+        if ((language == "ocaml" || language == "ocaml_interface")) {
+            std::string name, kind;
+            if (type == "let_binding") {
+                auto pattern = field(node, "pattern");
+                if (std::string(ast_type(pattern)) == "value_name") {
+                    name = text(pattern);
+                    kind = !ts_node_is_null(ast_find(node, "parameter")) || std::string(ast_type(field(node, "body"))) == "function_expression" ? "function" : "variable";
+                }
+            }
+            if (type == "module_binding") { name = text(ast_find(node, "module_name")); kind = "module"; }
+            if (type == "type_binding") { name = text(field(node, "name")); kind = "type"; }
+            if (type == "class_binding") { name = text(ast_find(node, "class_name")); kind = "class"; }
+            if (type == "value_specification") { name = text(ast_find(node, "value_name")); kind = "function"; }
+            if (type == "method_specification") { name = text(ast_find(node, "method_name")); kind = "method"; }
+            if (type == "method_definition") { name = text(ast_find(node, "method_name")); kind = "method"; }
+            if (!name.empty()) { define(node, name, kind, parent, field(node, "body")); parent = name; }
+            if (type == "application_expression") {
+                auto fn = field(node, "function");
+                auto scope = ast_find(fn, "module_path");
+                call(node, text(ast_named_child(fn, ast_named_count(fn) - 1)), parent, text(scope));
+            }
+            if (type == "open_module" || type == "open_module_signature" || type == "include_module") result.imports.push_back({path, text(field(node, "module")), "", {}, uint32_t(node_line(node))});
+            if (type == "inheritance_definition") {
+                auto base = text(field(node, "class"));
+                if (!base.empty()) result.type_relationships.push_back({parent, base, "inherits", path, uint32_t(node_line(node))});
             }
         }
         for (uint32_t i = 0; i < ast_named_count(node); ++i) visit(ast_named_child(node, i), parent);

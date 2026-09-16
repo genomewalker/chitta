@@ -1,0 +1,30 @@
+{
+  "symbols": {
+    "Reads": "module",
+    "sample": "type",
+    "normalize": "function",
+    "total": "function",
+    "base": "class",
+    "counts": "class",
+    "describe": "method"
+  },
+  "calls": [
+    "abs",
+    "fold_left",
+    "map",
+    "total"
+  ],
+  "imports": [
+    "List"
+  ],
+  "inherits": [
+    "base"
+  ],
+  "parents": {
+    "normalize": "Reads",
+    "describe": "counts"
+  },
+  "file": "navigation.ml",
+  "language": "ocaml",
+  "extra": true
+}

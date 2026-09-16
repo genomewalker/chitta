@@ -149,6 +149,8 @@ def main():
                     ".tf",
                     ".tfvars",
                     ".hcl",
+                    ".ml",
+                    ".mli",
                     ".php",
                     ".phtml",
                     ".sql",

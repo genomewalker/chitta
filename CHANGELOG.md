@@ -22,6 +22,8 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 - HCL / Terraform code navigation: Resource, data, variable, module and output blocks; module sources, function calls and attribute references.
 
+- OCaml code navigation: Functions, types, modules, classes/methods, calls, open/include imports and inheritance; implementation and interface grammars.
+
 ## [Unreleased]
 
 - Add Make target/macro navigation, prerequisite links, calls and includes.
