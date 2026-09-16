@@ -142,6 +142,7 @@ void Subconscious::process_loop() {
         // Eval quiesce: freeze every periodic store-mutating pass while the
         // flag file is fresh (see quiesce_active in mind/subconscious.hpp).
         if (quiesce_active(config_.quiesce_flag_path)) continue;
+        const auto published_callbacks = callbacks();
 
         // Theme maintenance via FieldStore
         if (config_.enable_theme_maintenance && time_for_theme_maintenance()) {
@@ -159,13 +160,13 @@ void Subconscious::process_loop() {
         }
 
         // Belief maintenance: stale demotion + contradiction resolution + duplicate consolidation
-        if (config_.enable_belief_maintenance && maintenance_cb_ && time_for_belief_maintenance()) {
+        if (config_.enable_belief_maintenance && published_callbacks.maintenance && time_for_belief_maintenance()) {
             if (!maintenance_loaded("belief_maintenance")) {
                 last_belief_maintenance_ = std::chrono::steady_clock::now();
                 stats_.belief_maintenance_runs++;
                 stats_.last_belief_maintenance_at = now_ms();
                 try {
-                    maintenance_cb_();
+                    published_callbacks.maintenance();
                 } catch (const std::exception& e) {
                     std::cerr << "[subconscious] Belief maintenance failed: " << e.what() << "\n";
                 }
@@ -197,20 +198,20 @@ void Subconscious::process_loop() {
         // Background embedding runs in embed_thread_ (dedicated thread, no rpc_mutex).
 
         // Auto-dream: trigger curiosity-driven exploration when idle > 10 min
-        if (dream_callback_ && time_for_dream()) {
+        if (published_callbacks.dream && time_for_dream()) {
             last_dream_triggered_at_ = now_ms();
             try {
-                dream_callback_();
+                published_callbacks.dream();
             } catch (const std::exception& e) {
                 std::cerr << "[subconscious] Dream callback failed: " << e.what() << "\n";
             }
         }
 
         // Auto-think: trigger internal memory synthesis when idle > 5 min, hourly
-        if (think_callback_ && time_for_think()) {
+        if (published_callbacks.think && time_for_think()) {
             last_think_triggered_at_ = now_ms();
             try {
-                think_callback_();
+                published_callbacks.think();
             } catch (const std::exception& e) {
                 std::cerr << "[subconscious] Think callback failed: " << e.what() << "\n";
             }

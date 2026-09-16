@@ -1,5 +1,52 @@
 # chitta-field performance
 
+## Phase 1 synchronization inventory — 2026-09-16
+
+This inventory covers the registered handler surface and its maintenance,
+queue, backfill, distillation and subconscious callers. An FFI call releases
+its Rust guards before returning; separate FFI calls are not one transaction.
+
+| Mutable state / caller | Synchronization and publication | Evidence |
+| --- | --- | --- |
+| Task-ledger tables, indexes and revisions | Dedicated transaction mutex covers read/validate, WAL append and publication; reads return copies. Persistence callbacks must not reenter the ledger. | `chitta/include/chitta/task_ledger.hpp:78`, `chitta/src/handlers/field_task_ledger.cpp:23` |
+| Query embedding LRU and in-flight requests | Cache mutex and shared futures; inference outside the mutex; hit/miss counters atomic. | `chitta/include/chitta/rpc/field_handler.hpp:101` |
+| Health/soul memory and spectral caches | Separate mutexes, single-flight refresh outside locks, stale values while refreshing. One store lifetime per daemon. | `chitta/src/handlers/field_system.cpp:19`, `chitta/src/handlers/field_system.cpp:61` |
+| Distillation model and enabled flag | `distill_mutex_` for the string; atomic flag. | `chitta/include/chitta/rpc/field_handler.hpp:235` |
+| Embedding jobs and cached vectors | Separate queue/cache mutexes; pressure flags atomic. | `chitta/include/chitta/embed_queue.hpp:254`, `chitta/include/chitta/embed_queue.hpp:261` |
+| Embedding contexts / model | Per-context mutexes and bounded semaphore; model immutable after construction. | `chitta/include/chitta/vak_llama.hpp:86` |
+| Subconscious queues / stats | Separate event, embedding, suggestion, anticipation and tool-sequence mutexes; counters/timestamps atomic. | `chitta/include/chitta/mind/subconscious.hpp:116`, `chitta/include/chitta/mind/subconscious.hpp:276` |
+| Subconscious callbacks / load probe | Setter and copy-out mutex; invoke copies outside that mutex; initial callbacks installed before starting workers. | `chitta/include/chitta/mind/subconscious.hpp:226`, `chitta/src/simple_cli.cpp:401` |
+| Sadhana state and subscriptions | Manager mutex and subscription mutex; counters atomic. Construct and set stream callback before readers start; handler pointer atomic. | `chitta/include/chitta/sadhana/sadhana_manager.hpp:218`, `chitta/include/chitta/sadhana/sadhana_manager.hpp:224`, `chitta/src/simple_cli.cpp:291` |
+| Queue counters and paths | Counter values atomic; pointer/path publication uses a dedicated mutex and copy-out snapshot. File scans and FFI calls occur after releasing it. | `chitta/include/chitta/rpc/field_handler.hpp:208` |
+| Write notification callback | Mutex on setter/copy; callback invoked outside lock so reentrant replacement is safe. | `chitta/include/chitta/rpc/field_handler.hpp:220` |
+| Registrations, schemas, recall callback, embed/subconscious/load pointers | Published during construction/startup before serving; thereafter immutable. Owners remain alive while workers drain. | `chitta/include/chitta/rpc/field_handler.hpp:162`, `chitta/src/simple_cli.cpp:274` |
+| RPC budgets and maintenance load/wait counters | Atomics; immutable configured limits. | `chitta/include/chitta/rpc/work_policy.hpp:101`, `chitta/include/chitta/rpc/field_handler.hpp:748` |
+| Consolidation admission | Atomic in-flight flag; request-local work and Rust-owned stored state. | `chitta/src/handlers/field_memory_recall.cpp:2165` |
+| RPC / compaction lifetime | Foreground pool explicitly drained before referenced locals die; owned compaction thread joined before pool and handlers are destroyed. | `chitta/src/simple_cli.cpp:264`, `chitta/src/simple_cli.cpp:1334` |
+| Queue lane / applied-ack state | One worker owns each lane. Existing checked `cf_sync` precedes applied-ack fsync/rename. Phase 1 changes acquisition only. | `chitta/src/queue_processor.cpp:182`, `chitta/src/queue_processor.cpp:937` |
+| Maintenance / distillation / backfill | Handler factories acquire the global lock; Rust collect/plan/apply phases own their state. Belief read/decide/write sequences lack a store-level compare-and-apply transaction. | `chitta/src/distillation.cpp:78`, `chitta/include/chitta/rpc/field_handler.hpp:342`, `chitta/src/simple_cli.cpp:521` |
+| Subconscious direct store writes | Existing raw global-mutex injection must obey the same switch as handler factories. | `chitta/src/subconscious.cpp:106` |
+
+The acknowledgement policy is independent of acquisition: historically exclusive
+write classes call `FieldStore::sync()` after dispatch, while existing lock-free
+and subprocess classes retain the boundaries below. Bypassing a mutex must not
+silently bypass that sync. Multi-FFI belief maintenance remains unqualified for
+production without the global lock; component locks alone do not prevent stale
+read/decide/write decisions.
+
+Initial baseline on frozen snapshot da86decb: distinct-query restart identity
+15/20 then 18/20; both fixed-query controls 20/20. The lead confirmed the drift
+on unchanged main and replaced this stream's identity gate with no worse than
+before on the same copy/script plus fixed control 20/20. Reports remain outside
+git. The global-lock default remains subject to the 300-second stress gate.
+
+Step (b) validation, 2026-09-16: CTest 26/26, MCP 149/149, all 23 hook scripts,
+CI Ruff and chaos 9/9 pass. Same-copy distinct restart identity 20/20, fixed
+response and ordered-ID controls both 20/20. Current-truth remains 20/50;
+golden nDCG moves from 0.5708 to 0.5773 (both below the grader's 0.7 target).
+The inherited primary-node hook fixture initially saw the old binary; it passed
+with exit 75 after rebuilding the merged Phase 6 daemon.
+
 ## Acknowledged-write durability
 
 Status 2026-09-16 (Phase 6 source audit). A successful response is not a universal

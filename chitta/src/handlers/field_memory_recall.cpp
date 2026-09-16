@@ -241,8 +241,9 @@ ToolResult FieldRpcHandler::tool_remember(const json& params) {
     if (content.empty()) return ToolResult::error("content is required");
 
     if (sandbox::is_sandboxed()) {
+        const auto queue = queue_snapshot();
         std::string dead_id = sandbox::dead_letter_write(
-            failed_queue_path_, queue_fail_count_, "remember", params);
+            queue.failed_path, queue.fail_count, "remember", params);
         return ToolResult::ok(
             "Sandboxed write diverted to dead-letter queue",
             {{"sandboxed", true}, {"dead_lettered_id", dead_id}, {"tool", "remember"}});

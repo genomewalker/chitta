@@ -168,6 +168,8 @@ public:
     // Requires the caller to hold rpc_mutex_ (queue and normal dispatch).
     ToolResult dispatch_session(const std::string& tool, const json& args);
 
+    // Startup-only: embedder, subconscious, mind path and recall callback are
+    // published before HTTP/Unix serving starts; owners must outlive RPC workers.
     void set_embed_queue(EmbedQueue* eq) { embed_queue_ = eq; }
 
     // Base mind dir (parent of chitta-field). Used by tool_consolidation_pass to
@@ -184,14 +186,29 @@ public:
     void set_sadhana_manager(SadhanaManager* sm) { sadhana_manager_ = sm; }
     void set_queue_stats(std::atomic<size_t>* count, std::atomic<size_t>* fails,
                          const std::string& failed_path) {
+        std::lock_guard<std::mutex> lock(queue_state_mutex_);
         queue_count_ = count; queue_fail_count_ = fails; failed_queue_path_ = failed_path;
     }
     // Live queue depth for queue_status: in-flight claimed batch + distill counter
     // + the queue file path (unclaimed lines counted on demand). Read-only, lock-free.
     void set_queue_live(std::atomic<size_t>* distill, const std::atomic<size_t>* batch_remaining,
                         const std::string& queue_path) {
+        std::lock_guard<std::mutex> lock(queue_state_mutex_);
         queue_distill_count_ = distill; queue_batch_remaining_ = batch_remaining;
         queue_path_ = queue_path;
+    }
+    struct QueueSnapshot {
+        std::atomic<size_t>* count;
+        std::atomic<size_t>* fail_count;
+        std::atomic<size_t>* distill_count;
+        const std::atomic<size_t>* batch_remaining;
+        std::string failed_path;
+        std::string path;
+    };
+    QueueSnapshot queue_snapshot() const {
+        std::lock_guard<std::mutex> lock(queue_state_mutex_);
+        return {queue_count_, queue_fail_count_, queue_distill_count_,
+                queue_batch_remaining_, failed_queue_path_, queue_path_};
     }
     using RecallCallback = std::function<void(const std::vector<uint64_t>&, int)>;
     void set_recall_callback(RecallCallback cb) { recall_callback_ = std::move(cb); }
@@ -199,8 +216,18 @@ public:
     // Called after any write that stores a memory with empty embedding (pending backfill).
     // Used by the backfill thread to wake immediately rather than waiting 30s.
     using WriteNotifyCallback = std::function<void()>;
-    void set_write_notify_callback(WriteNotifyCallback cb) { write_notify_fn_ = std::move(cb); }
-    void fire_write_notify() const { if (write_notify_fn_) write_notify_fn_(); }
+    void set_write_notify_callback(WriteNotifyCallback cb) {
+        std::lock_guard<std::mutex> lock(write_notify_mutex_);
+        write_notify_fn_ = std::move(cb);
+    }
+    void fire_write_notify() const {
+        WriteNotifyCallback notify;
+        {
+            std::lock_guard<std::mutex> lock(write_notify_mutex_);
+            notify = write_notify_fn_;
+        }
+        if (notify) notify(); // No publication lock held while invoking user code.
+    }
     FieldStore* get_field_store() const { return field_store_; }
     VakYantra* get_yantra() const { return yantra_; }
 
@@ -699,7 +726,7 @@ private:
     FieldStore* field_store_;
     VakYantra* yantra_;
     Subconscious* subconscious_ = nullptr;
-    SadhanaManager* sadhana_manager_ = nullptr;
+    std::atomic<SadhanaManager*> sadhana_manager_{nullptr};
     std::atomic<size_t>* queue_count_ = nullptr;
     std::atomic<size_t>* queue_fail_count_ = nullptr;
     std::atomic<size_t>* queue_distill_count_ = nullptr;
@@ -714,6 +741,8 @@ private:
 
     mutable std::shared_mutex rpc_mutex_;    // Reads share, writes exclusive; see is_read_only_tool()
     mutable std::mutex distill_mutex_;
+    mutable std::mutex queue_state_mutex_;
+    mutable std::mutex write_notify_mutex_;
     std::string distill_model_ = "github-copilot/gpt-5-mini";
     std::atomic<bool> distill_enabled_{true};
     mutable rpc::BudgetTracker rpc_budget_;

@@ -96,6 +96,9 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 - Chained `git add … && git commit` commands are captured as milestones.
 
 ### Fixed
+- 2026-09-16 (Phase 1b): publish queue metadata and callbacks under narrow
+  mutexes, initialize sadhana before background readers, and join foreground
+  RPC and compaction workers before destroying their captured state.
 - 2026-09-16 (Phase 1a): task-ledger reads, revision allocation, WAL append,
   and table publication now share a dedicated transaction mutex instead of
   depending on the RPC dispatcher lock. A 24-client regression verifies one

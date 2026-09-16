@@ -888,21 +888,22 @@ ToolResult FieldRpcHandler::tool_realm_detect() {
 }
 
 ToolResult FieldRpcHandler::tool_queue_status(const json&) {
-    size_t processed = queue_count_ ? queue_count_->load() : 0;
-    size_t distilled = queue_distill_count_ ? queue_distill_count_->load() : 0;
-    size_t failed    = queue_fail_count_ ? queue_fail_count_->load() : 0;
+    const auto queue = queue_snapshot();
+    size_t processed = queue.count ? queue.count->load() : 0;
+    size_t distilled = queue.distill_count ? queue.distill_count->load() : 0;
+    size_t failed    = queue.fail_count ? queue.fail_count->load() : 0;
     size_t in_file   = 0;
-    if (!failed_queue_path_.empty()) {
-        std::ifstream f(failed_queue_path_);
+    if (!queue.failed_path.empty()) {
+        std::ifstream f(queue.failed_path);
         std::string ln;
         while (std::getline(f, ln)) if (!ln.empty()) in_file++;
     }
     // Live depth: in-flight claimed batch (RAM counter) + unclaimed queue file lines.
     // The .processing file is NOT counted — its unprocessed tail IS batch_remaining.
-    size_t in_flight = queue_batch_remaining_ ? queue_batch_remaining_->load() : 0;
+    size_t in_flight = queue.batch_remaining ? queue.batch_remaining->load() : 0;
     size_t unclaimed = 0;
-    if (!queue_path_.empty()) {
-        std::ifstream f(queue_path_);
+    if (!queue.path.empty()) {
+        std::ifstream f(queue.path);
         std::string ln;
         while (std::getline(f, ln)) if (!ln.empty()) unclaimed++;
     }
@@ -910,13 +911,13 @@ ToolResult FieldRpcHandler::tool_queue_status(const json&) {
     // Slow lane (distill_trigger re-routes): unclaimed + unprocessed suffix of
     // its claimed batch (file-based — .ckpt watermark marks the done prefix).
     size_t slow_pending = 0;
-    if (!queue_path_.empty()) {
+    if (!queue.path.empty()) {
         auto count_lines = [](const std::string& p) {
             size_t n = 0; std::ifstream f(p); std::string ln;
             while (std::getline(f, ln)) if (!ln.empty()) n++;
             return n;
         };
-        std::string slow = queue_path_ + ".slow";
+        std::string slow = queue.path + ".slow";
         slow_pending = count_lines(slow);
         size_t claimed = count_lines(slow + ".processing");
         if (claimed > 0) {
@@ -936,7 +937,7 @@ ToolResult FieldRpcHandler::tool_queue_status(const json&) {
     s["failed"]             = failed;
     s["pending_embeddings"] = pending_embeds;
     s["dead_letter_count"]  = in_file;
-    s["dead_letter_path"]   = failed_queue_path_;
+    s["dead_letter_path"]   = queue.failed_path;
     std::ostringstream ss;
     ss << "Queue: " << (in_flight + unclaimed) << " pending (" << in_flight
        << " in-flight, " << unclaimed << " unclaimed), " << slow_pending
@@ -948,12 +949,13 @@ ToolResult FieldRpcHandler::tool_queue_status(const json&) {
 }
 
 ToolResult FieldRpcHandler::tool_ledger_health(const json&) {
+    const auto queue = queue_snapshot();
     // Queue stats
-    size_t processed = queue_count_ ? queue_count_->load() : 0;
-    size_t failed    = queue_fail_count_ ? queue_fail_count_->load() : 0;
+    size_t processed = queue.count ? queue.count->load() : 0;
+    size_t failed    = queue.fail_count ? queue.fail_count->load() : 0;
     size_t in_file   = 0;
-    if (!failed_queue_path_.empty()) {
-        std::ifstream f(failed_queue_path_);
+    if (!queue.failed_path.empty()) {
+        std::ifstream f(queue.failed_path);
         std::string ln;
         while (std::getline(f, ln)) if (!ln.empty()) in_file++;
     }

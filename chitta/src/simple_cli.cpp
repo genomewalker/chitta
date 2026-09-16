@@ -261,7 +261,8 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
         size_t value = std::strtoul(qd, nullptr, 10);
         if (value > 0) max_queue_depth = value;
     }
-    ThreadPool pool(8, 16, max_queue_depth);
+    auto pool_owner = std::make_unique<ThreadPool>(8, 16, max_queue_depth);
+    auto& pool = *pool_owner;
     // Writes wait in their own bounded pool; they cannot occupy every recall
     // dispatcher while waiting for inference or the store's write lock.
     std::unique_ptr<ThreadPool> write_pool;
@@ -284,7 +285,21 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
     subconscious.set_maintenance_load_probe([&handler](const std::string& task) {
         return handler.maintenance_should_skip(task);
     });
-    subconscious.start();
+
+    // FieldStore is already ready. Publish the manager and callback before
+    // HTTP, subconscious and maintenance workers can access them.
+    auto sadhana_manager = std::make_unique<SadhanaManager>(field_store);
+    sadhana_manager->set_stream_fn([&server](int fd, std::string line) {
+        server.queue_response(fd, std::move(line));
+    });
+    if (no_autonomous) {
+        auto running = sadhana_manager->list("running");
+        if (!running.empty()) {
+            std::cerr << "[daemon] --no-autonomous: pausing " << running.size() << " running sadhana(s)\n";
+            for (const auto& s : running) sadhana_manager->pause(s.id);
+        }
+    }
+    handler.set_sadhana_manager(sadhana_manager.get());
 
     // HTTP visualization server (optional)
     std::unique_ptr<VizServer> viz_server;
@@ -331,10 +346,6 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
         });
         std::cerr << "[rpc-http] listening on 127.0.0.1:" << rpc_port << "\n";
     }
-
-    // Sadhana manager — deferred until FieldStore is ready
-    std::unique_ptr<SadhanaManager> sadhana_manager;
-    std::cerr << "[daemon] Sadhana manager will init when chitta-field is ready\n";
 
     // Wire dream/think callbacks (unless --no-autonomous)
     if (!no_autonomous) {
@@ -387,6 +398,8 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
         });
     }
 
+    subconscious.start();
+
     std::signal(SIGTERM, daemon_signal_handler);
     std::signal(SIGINT, daemon_signal_handler);
     std::signal(SIGPIPE, SIG_IGN);
@@ -408,6 +421,7 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
     // compact_wal runs on its own dedicated thread; declared here so the maintenance
     // lambda can check it and pause sync_foreign while compaction is in progress.
     std::atomic<bool> compact_wal_inflight{false};
+    std::thread compact_wal_thread;
 
     // Maintenance thread - sync and apply decay periodically
     std::atomic<size_t> cycle_count{0};
@@ -1019,26 +1033,13 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
     else
         std::cerr << "[daemon] Queue processor started (path=" << queue_path << ")\n";
 
-    // SadhanaManager init — FieldStore is ready synchronously
-    sadhana_manager = std::make_unique<SadhanaManager>(field_store);
-    handler.set_sadhana_manager(sadhana_manager.get());
+    // Queue metadata is published as one protected snapshot per setter.
     handler.set_queue_stats(&queue_count, &queue_fail_count, failed_queue_path);
     handler.set_queue_live(&queue_distill_count, &queue_proc.batch_remaining(), queue_path);
-    sadhana_manager->set_stream_fn([&server](int fd, std::string line) {
-        server.queue_response(fd, std::move(line));
-    });
+
     server.set_disconnect_callback([&sadhana_manager](int fd) {
         if (sadhana_manager) sadhana_manager->stream_unsubscribe(fd);
     });
-    if (no_autonomous) {
-        auto running = sadhana_manager->list("running");
-        if (!running.empty()) {
-            std::cerr << "[daemon] --no-autonomous: pausing " << running.size() << " running sadhana(s)\n";
-            for (const auto& s : running) {
-                sadhana_manager->pause(s.id);
-            }
-        }
-    }
     std::cerr << "[daemon] Sadhana manager initialized\n";
     std::cerr << "[daemon] chitta-field active: " << field_store.memory_count()
               << " memories, " << field_store.symbol_count() << " symbols\n";
@@ -1227,13 +1228,14 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
                     server.respond(req.client_fd, resp.dump(-1, ' ', false, json::error_handler_t::replace));
                     continue;
                 }
-                std::thread([&handler, &server, &compact_wal_inflight,
+                if (compact_wal_thread.joinable()) compact_wal_thread.join();
+                compact_wal_thread = std::thread([&handler, &server, &compact_wal_inflight,
                              fd = req.client_fd, data = req.data]() {
                     auto request = json::parse(data);
                     auto response = handler.handle(request);
                     compact_wal_inflight.store(false);
                     server.queue_response(fd, response.dump(-1, ' ', false, json::error_handler_t::replace));
-                }).detach();
+                });
                 continue;
             }
 
@@ -1328,6 +1330,9 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
     write_pool.reset();
     if (runtime_ledger_thread.joinable()) runtime_ledger_thread.join();
     subconscious.stop();
+    // Drain requests while queue counters, callbacks and managers still exist.
+    if (compact_wal_thread.joinable()) compact_wal_thread.join();
+    pool_owner.reset();
 
     alarm(0);  // Cancel watchdog — all threads finished normally
 
