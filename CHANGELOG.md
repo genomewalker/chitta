@@ -10,6 +10,8 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 ## [Unreleased]
 
+- Add Make target/macro navigation, prerequisite links, calls and includes.
+
 - Add Perl package/subroutine navigation, imports, calls and literal parent/base relationships.
 
 - Add Snakemake rules, input/output/params sections, includes/modules and explicit rule-output dependencies using its dedicated grammar.

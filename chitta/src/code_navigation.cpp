@@ -171,7 +171,7 @@ struct CodeNavigation::Impl {
                         const auto& source = nodes[id];
                         const auto source_kind = source.data.value("kind", "");
                         if (source.root == nodes[from].root && source.lang == nodes[from].lang &&
-                            (source_kind == "process" || source_kind == "workflow" || source_kind == "rule" || source_kind == "checkpoint")) sources.push_back(id);
+                            (source_kind == "process" || source_kind == "workflow" || source_kind == "rule" || source_kind == "checkpoint" || source_kind == "target")) sources.push_back(id);
                     }
                     if (sources.size() != 1) continue; // A channel producer must resolve uniquely.
                     from = static_cast<int>(sources.front());

@@ -345,3 +345,15 @@ The fixture has 5 definitions, 2 calls, 5 imports and 1 inheritance edge. Fresh
 parsing averages 472.68 microseconds/KiB; daemon size is 69,770,184 bytes
 (+4,742,352). All language fixtures and graph regressions pass; contracts and
 recall scoring are unchanged.
+
+### Make
+
+Make navigation extracts literal targets, `define` macros, prerequisites,
+macro calls and includes. The fixture has 4 definitions, 4 calls (including
+3 target dependencies) and 1 include. Fresh parsing averages 149.84
+microseconds/KiB; daemon size is 69,968,848 bytes (+198,664).
+
+Offline builds, extraction and query-edge assertions pass for every language
+so far. Empty and truncated source tests exposed unsafe optional AST access;
+null-safe traversal fixes it. Exclusive AST end positions now keep a call
+following `endef` outside the macro. Contracts and recall scoring are unchanged.

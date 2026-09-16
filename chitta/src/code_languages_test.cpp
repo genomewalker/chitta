@@ -1,12 +1,15 @@
 #include "chitta/code_intel.hpp"
 #include <algorithm>
 #include <cassert>
+#include <cstdlib>
 #include <iostream>
 
 int main(int argc, char** argv) {
     assert(argc == 2);
     namespace fs = std::filesystem;
     chitta::CodeIntel intel;
+    char scratch[] = "/tmp/chitta-language-partial-XXXXXX";
+    assert(mkdtemp(scratch));
     std::vector<fs::path> fixtures;
     for (const auto& item : fs::recursive_directory_iterator(argv[1]))
         if (item.path().filename() == "expected.json") fixtures.push_back(item.path());
@@ -70,10 +73,16 @@ int main(int argc, char** argv) {
         }
         const auto us = std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - start).count();
         ts_parser_delete(parser);
+        for (auto length : {size_t(0), size_t(1), source.size() / 2}) {
+            auto partial = fs::path(scratch) / path.filename();
+            std::ofstream(partial) << source.substr(0, length);
+            (void)intel.extract_file_full(partial.string());
+        }
         std::cout << nlohmann::json({{"language", language}, {"symbols", result.symbols.size()},
             {"calls", result.callsites.size()}, {"imports", result.imports.size()}, {"inherits", result.type_relationships.size()},
             {"references", result.references.size()}, {"parse_us_per_KB", us / 200 / (source.size() / 1024.0)}}).dump() << '\n';
     }
+    fs::remove_all(scratch);
     // The production hooks are a second shell fixture: real function definitions
     // must be indexed, not just a carefully selected miniature.
     auto root = fs::path(argv[1]).parent_path().parent_path().parent_path().parent_path();

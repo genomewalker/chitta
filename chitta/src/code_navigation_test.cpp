@@ -137,6 +137,34 @@ int main() {
             package_base = true;
         }
     assert(package_base);
+    // Every grammar fixture must produce usable query edges, not just raw AST records.
+    std::vector<fs::path> language_specs;
+    for (const auto& item : fs::recursive_directory_iterator(fixture.parent_path().parent_path()))
+        if (item.path().filename() == "expected.json") language_specs.push_back(item.path());
+    std::sort(language_specs.begin(), language_specs.end());
+    for (const auto& spec : language_specs) {
+        std::ifstream input(spec); nlohmann::json expected; input >> expected;
+        auto source = fs::weakly_canonical(spec.parent_path() / expected["file"].get<std::string>());
+        std::vector<std::string> sources{source.string()};
+        std::unordered_set<std::string> dirty{source.string()};
+        chitta::CodeNavigation graph;
+        graph.open((root / (expected["language"].get<std::string>() + ".json")).string());
+        graph.update(source.parent_path().string(), "grammar", sources, dirty, intel.extract_files(dirty), true);
+        auto answer = graph.query({{"path", source.string()}, {"limit", 40}});
+        for (const auto& [key, kind] : std::vector<std::pair<std::string, std::string>>{{"calls", "calls"}, {"imports", "imports"}, {"inherits", "inherits"}})
+            for (const auto& surface : expected.value(key, nlohmann::json::array())) {
+                bool found = false;
+                for (const auto& edge : answer["edges"]) found |= edge["kind"] == kind && edge["surface"] == surface;
+                if (!found) std::cerr << expected["language"] << " missing query edge " << kind << ':' << surface << '\n';
+                assert(found);
+            }
+        for (const auto& pair : expected.value("channels", nlohmann::json::array())) {
+            bool found = false;
+            for (const auto& edge : answer["edges"])
+                found |= edge["kind"] == "calls" && edge["surface"] == pair[1] && edge["source"].get<std::string>().ends_with(":" + pair[0].get<std::string>());
+            assert(found);
+        }
+    }
     fs::remove_all(root);
     std::cout << "navigation: confidence, ambiguity, scope, paths, restart identity, stale reads and deletion passed\n";
 }
