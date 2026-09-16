@@ -10,6 +10,8 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 ## [Unreleased]
 
+- Add Fortran navigation with case-insensitive symbols, module/include edges, calls and derived-type inheritance.
+
 - Add Julia AST navigation, including both function forms, type relationships, module imports and literal includes.
 
 - Extend structural navigation to R functions, package/source imports, and S4/R6 classes and inheritance.

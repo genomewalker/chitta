@@ -288,3 +288,14 @@ Julia's quick gate passes. Extraction is now one shared static library rather
 than seven repeated compilations; all native CodeIntel users link it explicitly.
 The older callsite regression now runs with assertions enabled. Callsite,
 repository-index, code-index and graph CTests pass (4/4).
+
+### Fortran
+
+A pinned offline-buildable Fortran grammar now extracts modules, programs,
+subroutines, functions, derived types, `use`/include relationships, calls and
+`extends`. Extensions accept upper/lower case. Symbol, call and module names
+are folded consistently while signatures preserve the source spelling.
+The mixed-case fixture yields 5 definitions, 3 calls, 2 imports, 1 inheritance
+edge and 16 identifier references. Fresh parsing averages 292.73 microseconds
+per KiB; daemon size is 63,698,552 bytes (+3,766,344). All language fixtures and
+graph regressions pass; contracts and recall scoring are unchanged.

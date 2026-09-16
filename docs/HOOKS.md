@@ -1457,6 +1457,7 @@ connections. Runtime dispatch and dynamic import paths are not evaluated.
 | Bash / sh | `.sh`, `.bash` | Functions with signatures; literal command calls (resolved to known functions); `source` and `.` imports. Comments and heredocs remain data. |
 | R | `.R`, `.r`, `.Rprofile` | Assigned functions and named methods; calls; `source`, `library`, `require` and namespace imports; S4/R6 classes with literal inheritance. |
 | Julia | `.jl` | Long/short functions, macros, modules, structs and abstract types; calls, `using`/`import`, literal `include`, and subtype edges. |
+| Fortran | `.f`, `.for`, `.f77`, `.f90`, `.f95`, `.f03`, `.f08` (also uppercase) | Modules, programs, subroutines, functions and derived types; `use`, includes, calls and `extends`. Names are case-insensitive; signatures preserve source spelling. |
 
 New grammars use CMake FetchContent with immutable commits. After populating the
 cache, configure with `FETCHCONTENT_FULLY_DISCONNECTED=ON`; a source mirror can

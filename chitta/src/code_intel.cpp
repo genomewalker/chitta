@@ -15,16 +15,18 @@ extern char** environ;
 extern "C" const TSLanguage* tree_sitter_bash();
 extern "C" const TSLanguage* tree_sitter_r();
 extern "C" const TSLanguage* tree_sitter_julia();
+extern "C" const TSLanguage* tree_sitter_fortran();
 
 namespace chitta {
 const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
     if (language == "bash") return tree_sitter_bash();
     if (language == "r") return tree_sitter_r();
     if (language == "julia") return tree_sitter_julia();
+    if (language == "fortran") return tree_sitter_fortran();
     return nullptr;
 }
 void CodeIntel::initialize_extended_parsers() {
-    for (const auto* language : {"bash", "r", "julia"}) {
+    for (const auto* language : {"bash", "r", "julia", "fortran"}) {
         auto* parser = ts_parser_new();
         if (!ts_parser_set_language(parser, extended_grammar(language))) {
             ts_parser_delete(parser);
@@ -38,6 +40,8 @@ std::string CodeIntel::detect_extended_language(const std::string& path) {
     if (ext == ".sh" || ext == ".bash") return "bash";
     if (ext == ".jl") return "julia";
     if (ext == ".R" || ext == ".r" || std::filesystem::path(path).filename() == ".Rprofile") return "r";
+    for (auto& c : ext) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    if (ext == ".f" || ext == ".for" || ext == ".f77" || ext == ".f90" || ext == ".f95" || ext == ".f03" || ext == ".f08") return "fortran";
     return {};
 }
 
@@ -214,6 +218,38 @@ void CodeIntel::extract_extended(TSNode root, const std::string& source,
                     if (!ts_node_is_null(arg) && std::strcmp(ts_node_type(arg), "string_literal") == 0)
                         result.imports.push_back({path, literal(arg), "", {}, uint32_t(node_line(node))});
                 }
+            }
+        }
+        if (language == "fortran") {
+            auto folded = [](std::string value) {
+                for (auto& c : value) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                return value;
+            };
+            if (type == "module" || type == "subroutine" || type == "function" || type == "program" || type == "derived_type_definition") {
+                auto statement = ts_node_named_child(node, 0);
+                auto name_node = field(statement, "name");
+                if (ts_node_is_null(name_node)) name_node = find_child(statement, type == "derived_type_definition" ? "type_name" : "name");
+                auto name = folded(text(name_node));
+                define(node, name, type == "derived_type_definition" ? "struct" : type == "program" ? "module" : type, parent);
+                if (!name.empty()) result.symbols.back().signature = text(statement);
+                auto base = field(statement, "base");
+                if (!ts_node_is_null(base))
+                    result.type_relationships.push_back({name, folded(leaf_name(base)), "extends", path, uint32_t(node_line(statement))});
+                parent = name;
+            }
+            if (type == "use_statement") {
+                auto module = find_child(node, "module_name");
+                if (!ts_node_is_null(module)) result.imports.push_back({path, folded(text(module)), "", {}, uint32_t(node_line(node))});
+            }
+            if (type == "include_statement")
+                result.imports.push_back({path, literal(field(node, "path")), "", {}, uint32_t(node_line(node))});
+            if (type == "subroutine_call" || type == "call_expression") {
+                auto callee = type == "subroutine_call" ? field(node, "subroutine") : ts_node_named_child(node, 0);
+                auto name = folded(text(callee));
+                std::string receiver;
+                auto member = name.rfind('%');
+                if (member != std::string::npos) { receiver = name.substr(0, member); name = name.substr(member + 1); }
+                call(node, name, parent, "", receiver);
             }
         }
         for (uint32_t i = 0; i < ts_node_named_child_count(node); ++i) visit(ts_node_named_child(node, i), parent);

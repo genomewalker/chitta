@@ -181,7 +181,9 @@ def main():
                 expected = {
                     str(root / f)
                     for f in tracked
-                    if Path(f).suffix in extensions or Path(f).name == ".Rprofile"
+                    if Path(f).suffix in extensions
+                    or Path(f).suffix.lower() in {".f", ".for", ".f77", ".f90", ".f95", ".f03", ".f08"}
+                    or Path(f).name == ".Rprofile"
                 }
                 present = set(call("codebase_overview", project="chitta")["indexed_files"])
                 result["tracked_supported"] = len(expected)
