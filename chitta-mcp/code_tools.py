@@ -38,6 +38,9 @@ def handle_read_symbol(ctx, arguments: dict) -> str:
 
     Token savings: ~10x vs full file read
     """
+    if "path" in arguments or "line" in arguments:
+        # The navigation index validates source hashes and disambiguates overloads.
+        return ctx.daemon_call("read_symbol", arguments)
     name = arguments.get("name", "")
     kind = arguments.get("kind")
     project = arguments.get("project")

@@ -1,0 +1,16 @@
+chitta code_query - Navigate indexed code with a natural-language question. Returns ranked symbols, file locations, typed AST/name-resolution edges and read_symbol invocations. Empty question plus path returns file context. Use before reading files.
+
+Parameters:
+  --limit
+
+  --neighbors
+
+  --path
+
+  --question
+
+  --realm
+
+
+Example:
+  chitta code_query

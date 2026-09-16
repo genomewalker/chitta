@@ -29,6 +29,8 @@ cleanup
 close_intervention
 close_rederive
 code_context
+code_path
+code_query
 codebase_overview
 compact_context
 compact_wal

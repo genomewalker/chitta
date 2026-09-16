@@ -122,3 +122,38 @@ files, tracked ignore rules, quoting, deterministic ordering and deletion.
 Git hook probes cover both events, preservation and idempotent installation.
 Contracts regenerated: existing `learn_codebase` gains optional `embed`; no new
 RPC in this step. Recall scoring and snapshot/WAL formats are unchanged.
+
+
+## Phase 9, step 2 — scoped navigation graph
+
+Added `code_query` and `code_path`; extended `read_symbol`, `code_context` and
+`codebase_overview` instead of introducing a duplicate explanation tool. The
+optional code-navigation.json sidecar stores AST evidence and symbol bodies;
+resolved named endpoints are INFERRED, unresolved/ambiguous syntax remains
+EXTRACTED with explicit resolution status. Query matching is lexical over code,
+identifiers and paths; it adds bounded graph neighbors. C++ method ownership,
+signatures, and Python docstrings come from the full AST extraction pass.
+The compact repo map uses deterministic call-graph label propagation and
+highest call-degree nodes. Hash checks make stale file queries/reads visible.
+No recall scoring, embedding identity, snapshot or WAL format changes.
+
+Fresh empty scratch mind: 711/713 tracked supported files (99.72%), 717 total
+eligible files including untracked development sources, 29.047 s wall time,
+74,867,533 mind bytes including the graph sidecar. The same two explicitly
+ignored tracked files are excluded. Store unique symbols by language:
+C/C++ 2,586; Python 2,027; Rust 2,694; Markdown 1,872 (the navigation graph
+also preserves overloads/definitions collapsed by the store's legacy identity).
+A forced incremental rebuild took 20.431 s. Twenty fixed development queries
+achieved 18/20 file:symbol hits; 100 samples per run gave p95 74.383 ms before
+and 66.677 ms after restart. All 20 complete query JSON responses matched
+across restart. The separate strict byte proxy counted 253,347 vs 604,760
+bytes (58.11% reduction), charging answer bodies even for retrieval misses.
+The question set and runner are reserved for the step 4 evaluation commit.
+
+Validation: Rust 296 passed / 2 ignored; CTest 36 passed (embedding-model test
+skipped); MCP 159 and SMRITI 46 tests; all hook fixtures; CI ruff check/format;
+changed generator lint and native graph tests covering confidence, receiver
+ambiguity, path scope, shortest connections, reload identity, stale reads and
+deletion. Contracts regenerated and checked against the private scratch daemon:
+new RPCs `code_query`, `code_path`; existing code tool extensions above. Core
+MCP surface is 55 tools / approximately 6,555 tokens, within its gate.

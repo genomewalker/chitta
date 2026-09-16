@@ -170,12 +170,19 @@ struct ImportStatement {
     uint32_t line = 0;
 };
 
+struct CodeReference {
+    std::string file_path;
+    std::string name;
+    uint32_t line;
+};
+
 // Combined extraction result
 struct ExtractionResult {
     std::vector<ExtractedSymbol> symbols;
     std::vector<Callsite> callsites;
     std::vector<TypeRelationship> type_relationships;
     std::vector<ImportStatement> imports;
+    std::vector<CodeReference> references;
 };
 
 // Language detection and parser management
@@ -444,6 +451,49 @@ public:
             }
         }
 
+        // Complete navigation metadata from the defining AST node. Basic
+        // extraction historically left signatures and out-of-class C++ parents
+        // empty; those omissions must not invent global name bindings.
+        std::unordered_map<uint64_t, std::vector<ExtractedSymbol*>> definitions;
+        for (auto& symbol : result.symbols)
+            definitions[(uint64_t(symbol.line_start) << 32) | uint32_t(symbol.line_end)].push_back(&symbol);
+        std::vector<TSNode> pending{root};
+        while (!pending.empty()) {
+            auto node = pending.back(); pending.pop_back();
+            auto body = find_child_by_field(node, "body");
+            auto key = (uint64_t(node_line(node)) << 32) | uint32_t(node_end_line(node));
+            auto found = definitions.find(key);
+            if (!ts_node_is_null(body) && found != definitions.end()) {
+                auto start = ts_node_start_byte(node), end = ts_node_start_byte(body);
+                auto header = source.substr(start, end - start);
+                while (!header.empty() && std::isspace(static_cast<unsigned char>(header.back()))) header.pop_back();
+                for (auto* symbol : found->second) {
+                    if (header.find(symbol->name) == std::string::npos) continue;
+                    if (symbol->signature.empty()) symbol->signature = header;
+                    if (lang != "cpp" || !symbol->parent.empty()) continue;
+                    auto declarator = find_child_by_field(node, "declarator");
+                    std::vector<TSNode> names;
+                    if (!ts_node_is_null(declarator)) names.push_back(declarator);
+                    while (!names.empty()) {
+                        auto name_node = names.back(); names.pop_back();
+                        if (std::strcmp(ts_node_type(name_node), "qualified_identifier") == 0 &&
+                            extract_declarator_name(name_node, source) == symbol->name) {
+                            auto scope = find_child_by_field(name_node, "scope");
+                            if (!ts_node_is_null(scope)) symbol->parent = node_text(scope, source);
+                            break;
+                        }
+                        for (uint32_t n = 0; n < ts_node_named_child_count(name_node); ++n)
+                            names.push_back(ts_node_named_child(name_node, n));
+                    }
+                }
+            }
+            std::string type = ts_node_type(node);
+            if (type == "identifier" || type == "type_identifier" || type == "field_identifier")
+                result.references.push_back({path, node_text(node, source), static_cast<uint32_t>(node_line(node))});
+            for (uint32_t n = 0; n < ts_node_named_child_count(node); ++n)
+                pending.push_back(ts_node_named_child(node, n));
+        }
+
         ts_tree_delete(tree);
         return result;
     }
@@ -534,6 +584,9 @@ public:
             result.imports.insert(result.imports.end(),
                                  std::make_move_iterator(file_result.imports.begin()),
                                  std::make_move_iterator(file_result.imports.end()));
+            result.references.insert(result.references.end(),
+                                     std::make_move_iterator(file_result.references.begin()),
+                                     std::make_move_iterator(file_result.references.end()));
         }
         return result;
     }

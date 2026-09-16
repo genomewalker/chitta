@@ -8,6 +8,7 @@
 #include "../vak.hpp"
 #include "../embed_queue.hpp"
 #include "../code_intel.hpp"
+#include "../code_navigation.hpp"
 #include "../mind/subconscious.hpp"
 #include "../sadhana/sadhana_manager.hpp"
 #include "../version.hpp"
@@ -177,8 +178,10 @@ public:
     void set_mind_path(const std::string& p) {
         mind_path_ = p;
         repository_index_.open(p + "/repository-roots.json", field_store_->list_code_files(""));
+        code_navigation_.open(p + "/code-navigation.json");
     }
     RepositoryIndex repository_index_;
+    CodeNavigation code_navigation_;
     const std::string& mind_path() const { return mind_path_; }
 
     void set_subconscious(Subconscious* s) { subconscious_ = s; }
@@ -483,7 +486,7 @@ public:
             // set_symbol_description(). clear_triplets/resolve_callsites are current no-op reads.
             "extract_symbols", "find_symbol", "symbol_callers", "symbol_callees",
             "read_symbol", "read_function", "search_symbols", "code_context",
-            "smart_context", "codebase_overview", "clear_triplets", "resolve_callsites",
+            "smart_context", "code_query", "code_path", "codebase_overview", "clear_triplets", "resolve_callsites",
             "type_hierarchy", "file_imports", "file_dependents", "enrichment_status",
 
             // Distillation/drift inspection and pure transforms.

@@ -10,6 +10,9 @@
 
     // ── Symbol helper: convert CfSymbolHit to JSON ─────────────────────────
 
+    ToolResult tool_code_query(const json& params);
+    ToolResult tool_code_path(const json& params);
+
     struct ResolvedSymbol {
         uint64_t id;
         std::string kind;

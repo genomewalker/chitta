@@ -53,6 +53,7 @@ CORE_TOOLS = {
     "observe",
     "query_graph",
     "read_symbol",
+    "code_query",
     "realm_detect",
     "recall",
     "recall_analogy",

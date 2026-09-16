@@ -72,6 +72,8 @@ COMPOSITE = [
                     "type": "string",
                     "description": "Symbol kind filter: class, function, method (optional)",
                 },
+                "path": {"type": "string", "description": "Exact path from code_query"},
+                "line": {"type": "integer", "description": "Definition line from code_query"},
                 "context": {
                     "type": "integer",
                     "description": "Lines of context before symbol (default: 3)",

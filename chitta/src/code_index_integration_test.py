@@ -122,6 +122,8 @@ def main():
             assert indexed["files_total"] == 2, indexed
             assert call("codebase_overview", project="fixture")["symbols"] == 3
             assert call("codebase_overview", project="project:fixture")["symbols"] == 3
+            call("learn_codebase", path=str(repo))
+            assert call("codebase_overview", project="fixture")["project"] == "fixture"
             source.write_text("def renamed():\n    return 3\n")
             call("learn_codebase", path=str(source), project="fixture", incremental=True)
             assert not call("find_symbol", name="alpha")["symbols"]
