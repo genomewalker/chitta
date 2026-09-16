@@ -170,6 +170,15 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
         if (value > 0) max_queue_depth = value;
     }
     ThreadPool pool(8, 16, max_queue_depth);
+    // Writes wait in their own bounded pool; they cannot occupy every recall
+    // dispatcher while waiting for inference or the store's write lock.
+    std::unique_ptr<ThreadPool> write_pool;
+    if (embed_queue && embed_queue->bounded_writes())
+        write_pool = std::make_unique<ThreadPool>(2, 2, max_queue_depth);
+    auto embedding_write = [](const std::string& name) {
+        return name == "remember" || name == "remember_batch" || name == "observe"
+            || name == "distill" || name == "distill_now" || name == "distill_batch";
+    };
     handler.set_rpc_load_counters(&pool.pending_counter(), &pool.active_counter());
     MaintenanceJitter maintenance_jitter;
 
@@ -565,7 +574,11 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
             std::chrono::steady_clock::now() - std::chrono::seconds(60);
         uint64_t poll_sequence = 0;
         while (daemon_running) {
-            if (embed_queue && !handler.maintenance_should_skip("backfill")) {
+            // The bounded document lane already yields to recall and reserves
+            // read capacity. Do not let the maintenance RPC-load gate defer an
+            // acknowledged write backlog indefinitely under continuous reads.
+            if (embed_queue && (embed_queue->bounded_writes()
+                                || !handler.maintenance_should_skip("backfill"))) {
                 try {
                     std::vector<uint64_t> pending;
                     std::vector<std::string> contents;
@@ -589,8 +602,9 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
                         for (size_t i = 0; i < pending.size() && daemon_running; ++i) {
                             if (contents[i].empty()) continue;
                             auto text = chitta::ssl::retrieval_text(contents[i]);
-                            auto emb  = embed_queue->query(text,
-                                                           std::chrono::milliseconds(30000));
+                            auto emb = embed_queue->bounded_writes()
+                                ? embed_queue->write(text)
+                                : embed_queue->query(text, std::chrono::milliseconds(30000));
                             if (emb.size() == EMBED_DIM) {
                                 bids.push_back(pending[i]);
                                 bembs.insert(bembs.end(), emb.begin(), emb.end());
@@ -853,6 +867,25 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
         }
     });
 
+    // Ledger checkpoint I/O has its own thread: an unavailable NFS ledger must
+    // not block RPC dispatch, recall or the maintenance loop.
+    std::thread runtime_ledger_thread;
+    if (runtime_local_enabled()) {
+        runtime_ledger_thread = std::thread([&mind_path]() {
+            try {
+                RuntimeLedger ledger(mind_path);
+                while (daemon_running) {
+                    try { ledger.flush(); }
+                    catch (const std::exception& e) { std::cerr << "[runtime-ledger] " << e.what() << "\n"; }
+                    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                }
+                ledger.flush(true);
+            } catch (const std::exception& e) {
+                std::cerr << "[runtime-ledger] initialization failed: " << e.what() << "\n";
+            }
+        });
+    }
+
     // Queue processor - handles fire-and-forget writes from hooks
     std::atomic<size_t> queue_count{0};
     std::atomic<size_t> queue_distill_count{0};  // Separate counter for pre-compact distillations
@@ -923,9 +956,35 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
 
     // Main loop - handle socket I/O (never blocks on RPC)
     auto last_stats = std::chrono::steady_clock::now();
+    struct WaitingWrite {
+        ClientRequest request;
+        std::string method;
+        std::chrono::steady_clock::time_point deadline;
+    };
+    std::deque<WaitingWrite> waiting_writes;
+    auto submit_write = [&](const ClientRequest& request, const std::string& name) {
+        return write_pool->submit(request.client_fd, name,
+            [&handler, data = request.data]() {
+                return handler.handle(json::parse(data)).dump(-1, ' ', false, json::error_handler_t::replace);
+            }, [&server](int fd, std::string reply) { server.queue_response(fd, std::move(reply)); });
+    };
     while (daemon_running) {
+        // Poll admission rather than blocking the I/O thread. The extra waiting
+        // room is capped too; beyond both caps callers receive overload.
+        for (auto it = waiting_writes.begin(); it != waiting_writes.end();) {
+            if (std::chrono::steady_clock::now() >= it->deadline) {
+                auto parsed = json::parse(it->request.data);
+                server.queue_response(it->request.client_fd,
+                    rpc::make_error(parsed.value("id", json()), rpc::error::INTERNAL_ERROR,
+                                    "write queue admission timed out").dump());
+                it = waiting_writes.erase(it);
+            } else if (submit_write(it->request, it->method)) {
+                it = waiting_writes.erase(it);
+            } else break;
+        }
         // 1. Poll for I/O (fast, non-blocking)
         auto requests = server.poll(50);  // 50ms timeout for responsiveness
+        if (embed_queue) embed_queue->set_recall_pressure(handler.recall_pressured());
 
         // 2. Dispatch RPC requests to thread pool
         for (const auto& req : requests) {
@@ -1086,6 +1145,19 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
                 continue;
             }
 
+            if (write_pool && embedding_write(tool_name)) {
+                if (!submit_write(req, tool_name)) {
+                    if (waiting_writes.size() < max_queue_depth)
+                        waiting_writes.push_back({req, tool_name,
+                            std::chrono::steady_clock::now() + std::chrono::seconds(1)});
+                    else
+                        server.respond(req.client_fd,
+                            rpc::make_error(parsed.value("id", json()), rpc::error::INTERNAL_ERROR,
+                                            "server overloaded").dump());
+                }
+                continue;
+            }
+
             // All other requests go to thread pool (health_check included — main thread must not block on rpc_mutex_)
             auto submitted = pool.submit(req.client_fd, tool_name,
                 [&handler, &pool, data = req.data, tname = tool_name]() {
@@ -1161,6 +1233,8 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
     if (enrichment.joinable()) enrichment.join();
     if (hint_enrichment.joinable()) hint_enrichment.join();
     queue_proc.stop();
+    write_pool.reset();
+    if (runtime_ledger_thread.joinable()) runtime_ledger_thread.join();
     subconscious.stop();
 
     alarm(0);  // Cancel watchdog — all threads finished normally
@@ -1661,12 +1735,12 @@ int main(int argc, char* argv[]) {
     }
     if (!inner_yantra)
         inner_yantra = std::make_shared<chitta::OllamaYantra>(); // always-ready stub
-    // EmbedQueue owns all serialization: single worker thread, LRU cache, two-lane queue.
-    // Nothing needs to wrap the yantra in a concurrency guard any more — embed
-    // calls are never made directly, so the storm such a guard existed for cannot
-    // occur. (The old TimeoutYantra wrapper was deleted 2026-09-02.)
+    // Preserve the legacy inference path unless bounded document workers are
+    // explicitly enabled. Both lanes share the model's existing context pool.
     std::shared_ptr<VakYantra> yantra = inner_yantra;
     chitta::EmbedQueue embed_queue(inner_yantra);
+    if (embed_queue.bounded_writes())
+        yantra = std::make_shared<chitta::QueuedWriteYantra>(inner_yantra, embed_queue);
 
 
 

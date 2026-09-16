@@ -2,6 +2,58 @@
 
 Status as of 2026-09-16.
 
+### Phase 6 runtime placement and embedding workers (2026-09-16)
+
+| Environment | Default | Meaning |
+| --- | --- | --- |
+| `CHITTA_RUNTIME_LOCAL` | `0` | `1` selects node-local queue, saddle marker and outcome-ledger tail; experimental until the replay/marker gates below pass. |
+| `CHITTA_LEDGER_FLUSH_SECONDS` | `5` | Healthy-daemon ledger checkpoint interval, 1–300 seconds; flush also becomes eligible at 64 KiB pending. |
+| `CHITTA_EMBED_WRITE_WORKERS` | `0` | `0` preserves the existing embedding lane. Positive values enable dedicated document workers and a separate two-worker Unix write-RPC pool. Clamped to leave one of `CHITTA_EMBED_CONTEXTS` free when possible. |
+| `CHITTA_EMBED_WRITE_DEPTH` | `64` | Maximum queued document jobs, excluding active workers; 1–65536. |
+| `CHITTA_EMBED_WRITE_WAIT_MS` | `1000` | Actual document-inference callers wait for admission at most this long; 1–60000 ms. Cache-warming calls remain nonblocking because legacy callers can hold the global write lock. |
+| `CHITTA_MAX_QUEUE_DEPTH` | `256` | Existing RPC cap also bounds the opt-in Unix write pool and its additional admission waiting room; a full pool is retried for one second without blocking socket polling. |
+
+The shared resolver is `runtime_state_dir` in `queue_path.hpp` and `hooks/lib.sh`.
+With local placement enabled, canonicalize the mind path, hash its UTF-8 bytes
+with DJB2 modulo 2^64, and use sixteen lowercase hex digits:
+`${XDG_RUNTIME_DIR:-/tmp}/chitta/<store-hash>`. Explicit `CHITTA_QUEUE` then
+`CHITTA_QUEUE_PATH` still win. Store data, snapshots, WAL, the instance lock and
+`outcome_ledger.jsonl` remain under the mind. Existing socket placement is
+unchanged. Hooks and daemon must use the same mind and XDG runtime directory.
+
+The node's daemon drains that node's queue, including `.processing`,
+`.processing.ckpt`, `.slow`, slow checkpoints and attempt files. A same-node
+restart replays the uncheckpointed suffix. Node loss loses unprocessed local
+queue data; another node cannot drain it. Stop/drain before changing placement;
+existing NFS queues are not silently moved. **Replay is not yet atomic by
+ack_id**: the store API has no mutation-plus-receipt transaction. This is an
+explicit unmet enablement gate, not an exactly-once promise.
+
+Hooks append the ledger tail locally. A dedicated daemon thread checks every
+50 ms and appends complete records to the NFS ledger after five seconds or
+64 KiB, whichever threshold is observed first. Thus the healthy-service node-loss
+window is five seconds plus polling/I/O latency (or the pending bytes around
+64 KiB); it is not bounded while the daemon is down or NFS is unavailable.
+`outcome_ledger.tail.offset` records the last flushed byte. A fsynced local
+intent records the durable destination offset before append; replay compares
+already-written bytes before completing a partial append, so a same-node crash
+between append and offset publication does not duplicate the tail. Conflicts
+retain the local data and log an error. The append-only tail is retained locally;
+offset checkpoints do not compact it. Consumers reading only the durable ledger
+see events after the flush. The NFS ledger append lock is separate from, and
+does not alter, the store instance lock.
+
+With bounded workers enabled, synchronous distillation/queue document inference
+and backfill use the document pool. Query work retains its worker and context
+capacity; document workers yield to the existing recall-pressure signal for up
+to 100 ms before each job. The asynchronous remember/observe acknowledgement
+semantics remain unchanged. The Unix RPC write pool isolates remember/observe/
+distill dispatch from readers; HTTP request-thread saturation is not changed.
+The other four hard-coded marker callers still require path-only edits outside
+this stream's write scope. Keep local placement off until that migration and
+ack_id recovery are complete.
+
+
 chitta integrates with Claude Code and Codex through the hooks system, enabling
 automatic context injection and lifecycle management.
 
