@@ -27,6 +27,10 @@ exec </dev/null  # stdin consumed; children must not inherit the still-open hook
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib.sh" 2>/dev/null || true
 
+# Ephemeral hook state; persistent policy and cross-hook shared files stay in mind.
+HOOK_STATE_DIR=$(runtime_state_dir "${CHITTA_DB_PATH:-${HOME}/.claude/mind}")
+mkdir -p "$HOOK_STATE_DIR" 2>/dev/null || true
+
 _strict_mode_enabled() {
     case "${CHITTA_STRICT_MODE:-${CC_SOUL_STRICT_MODE:-}}" in
         1) return 0 ;;
@@ -333,8 +337,8 @@ case "$MATCHER" in
         MIND_PATH="${HOME}/.claude/mind"
         _session_id=$(echo "$STDIN_DATA" | jq -r '.session_id // empty')
         if [[ -n "$_session_id" ]]; then
-            _turn=$(cat "$MIND_PATH/.turn_index_${_session_id}" 2>/dev/null || echo 0)
-            _soul_sentinel="$MIND_PATH/.soul_injected_${_session_id}_${_turn}"
+            _turn=$(cat "${HOOK_STATE_DIR}/.turn_index_${_session_id}" 2>/dev/null || echo 0)
+            _soul_sentinel="${HOOK_STATE_DIR}/.soul_injected_${_session_id}_${_turn}"
             [[ -f "$_soul_sentinel" ]] && exit 0
             touch "$_soul_sentinel" 2>/dev/null || true
         fi
@@ -408,7 +412,7 @@ case "$MATCHER" in
             # a file is when its traces are worth one keyword RPC. Once per file per
             # session; exact-name filter keeps BM25 noise out; CHITTA_FILE_TRACES=0 disables.
             if [[ "${CHITTA_FILE_TRACES:-1}" != "0" && -n "$_session_id" ]]; then
-                _trace_cache="${CHITTA_DB_PATH:-${HOME}/.claude/mind}/.trace_cache_${_session_id}"
+                _trace_cache="${HOOK_STATE_DIR}/.trace_cache_${_session_id}"
                 _trace_base=$(basename "$file_path")
                 if ! grep -qxF "$file_path" "$_trace_cache" 2>/dev/null; then
                     printf '%s\n' "$file_path" >> "$_trace_cache" 2>/dev/null || true
@@ -439,7 +443,7 @@ case "$MATCHER" in
         # Resolve CHITTA_ALLOW_READ from env or persistent flag file.
         # Flag file survives across hook invocations (each is a separate shell).
         _allow_read="${CHITTA_ALLOW_READ:-${CC_SOUL_ALLOW_READ:-0}}"
-        _allow_read_flag="${CHITTA_DB_PATH:-${HOME}/.claude/mind}/.allow_read_${_session_id}"
+        _allow_read_flag="${HOOK_STATE_DIR}/.allow_read_${_session_id}"
         [[ "$_allow_read" != "1" && -f "$_allow_read_flag" ]] && _allow_read=1
 
         # Strict mode: enforce symbol-level flow for indexed files.
@@ -460,7 +464,7 @@ case "$MATCHER" in
         if [[ "$line_count" -gt 200 && -n "$_session_id" && "$_allow_read" != "1" && "$_is_system_path" == "0" ]]; then
             _file_mtime=$(stat -c %Y "$file_path" 2>/dev/null || echo 0)
             _file_hash=$(printf '%s:%s' "$file_path" "$_file_mtime" | md5sum | cut -c1-16)
-            _read_cache="${CHITTA_DB_PATH:-${HOME}/.claude/mind}/.read_cache_${_session_id}"
+            _read_cache="${HOOK_STATE_DIR}/.read_cache_${_session_id}"
             if grep -qF "$_file_hash" "$_read_cache" 2>/dev/null; then
                 _dd_offset=$(echo "$STDIN_DATA" | jq -r '.tool_input.offset // 0')
                 if _should_enforce; then
@@ -616,13 +620,13 @@ case "$MATCHER" in
         _sw_prompt=$(echo "$STDIN_DATA" | jq -r '.tool_input.prompt // empty' 2>/dev/null)
 
         if [[ -n "$_session_id" ]]; then
-            WAKEUP_FILE="$MIND_PATH/.wakeup_count_${_session_id}"
+            WAKEUP_FILE="${HOOK_STATE_DIR}/.wakeup_count_${_session_id}"
             WAKEUP_COUNT=$(cat "$WAKEUP_FILE" 2>/dev/null || echo 0)
             WAKEUP_COUNT=$((WAKEUP_COUNT + 1))
             echo "$WAKEUP_COUNT" > "$WAKEUP_FILE"
 
             if [[ "$_sw_prompt" == "<<autonomous-loop-dynamic>>" ]]; then
-                LOOP_FILE="$MIND_PATH/.loop_count_${_session_id}"
+                LOOP_FILE="${HOOK_STATE_DIR}/.loop_count_${_session_id}"
                 LOOP_COUNT=$(cat "$LOOP_FILE" 2>/dev/null || echo 0)
                 LOOP_COUNT=$((LOOP_COUNT + 1))
                 echo "$LOOP_COUNT" > "$LOOP_FILE"

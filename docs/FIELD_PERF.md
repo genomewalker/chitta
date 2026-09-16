@@ -107,10 +107,12 @@ not imply that all queries are stable.
 Runtime placement remains default-off. Queue recovery is currently checkpointed
 at-least-once: no atomic store API couples an arbitrary queued mutation to its
 `ack_id` receipt. Exact idempotence across a crash in that gap remains an unmet
-Phase 6 gate; a receipt sidecar alone cannot fix it. Four marker callers also
-remain outside this stream's authorized file scope (prompt-core, stop-core,
-pre-tool-hook and file-changed-hook). Do not enable local placement as a completed
-migration until those gates are resolved.
+Phase 6 gate; Phase 7's applied-ack sidecar does not close the mutation/receipt
+crash gap. The follow-up migrates transient markers in prompt-core, SessionStart,
+stop-core and pre-tool-hook (see `docs/HOOKS.md` for the groups). Files shared
+with other lifecycle hooks, and file-changed-hook's `.reindex_*` marker, remain
+on NFS; file-changed-hook is outside the follow-up scope. Do not enable local
+placement as a completed migration until those gates are resolved.
 
 The fortnight instrument is `scripts/report-runtime-incidents.py chittad.log`.
 It reports open failures, stale-lock replacements, repeated starts within five

@@ -11,6 +11,10 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 ## [Unreleased]
 
 ### Added
+- 2026-09-16: runtime placement for heartbeat, turn discipline, prompt/Stop
+  recall state and PreTool caches, with real hook tests for default and local
+  paths. Shared lifecycle markers stay on NFS; atomic queue mutation/ack replay
+  remains blocked on a store transaction API, so local placement stays off.
 - Opt-in nightly replica canary with dated reports, calibrated golden-score
   regression exits, explicit current-truth availability/calibration checks,
   and a disabled-by-default user timer (`--enable-canary`). On 2026-09-16,
