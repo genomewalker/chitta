@@ -46,6 +46,56 @@ cannot establish power-loss safety; the timer-synced case must not be asserted
 lost. Never use `eval-replica.sh start` between ack and verification: it replaces
 the copy from its source and would invalidate this test.
 
+## Phase 6 follow-up verification (2026-09-16)
+
+Base: merged `main` at `fd2797f1`; Rust submodule `5c5b5dd`. Native GGUF
+embedding remains 768-dimensional nomic-embed-text-v1.5, four contexts, one
+opt-in document worker, and `CHITTA_RUNTIME_LOCAL=1`. The private NFS copy was
+selected from learning-cut-20260915-frozen: family `da86decb`, manifest generation
+39285, snapshot sequence 206502617. This differs from the earlier Phase 6 copy;
+these measurements are a new run, not a controlled before/after comparison.
+
+The timing runner waited until native tests, Rust tests and chaos finished.
+The node's reported load averages at measurement were 86.89/89.88/84.34.
+
+| Measurement | Result |
+| --- | --- |
+| Remember writes | 200/200; zero errors |
+| Pending embeddings after / drain time | 0 / 64.44 s |
+| Idle recall p50 / p95 (40 samples) | 88.9 / 134.1 ms |
+| Recall during writes p50 / p95 (18 samples) | 77.0 / 113.9 ms |
+| Full loaded-window recall p50 / p95 (590 samples) | 78.7 / 162.8 ms |
+| Remember acknowledgement p50 / p95 | 986.1 / 1636.8 ms |
+| Cached restart | 16.098 s; 5 s gate unmet |
+| Distinct-query ordered IDs across restart | 20/20 |
+| Fixed-query full response / ordered IDs across restart | 20/20 / 20/20 |
+
+The full-window 150 ms stress gate **failed**; the write-active subset alone
+passes. No runtime-placement or worker default was enabled.
+
+Validation: frozen-replica chaos **9/9** (361.985 s summed case time), CTest
+**25/25** (103.35 s, real-model pool test included), Rust **289 passed / 2 ignored**,
+hooks **23/23**, MCP **149**, SMRITI **46**, and contracts unchanged before commits
+and after stress. Shell syntax, warning-level ShellCheck and touched-Python Ruff
+checks pass. The first CTest attempt failed with an older `python3` selected by
+`/usr/bin` in synthetic chaos helpers; explicitly configuring CMake with Conda
+Python fixed this. Its queue-log assertion and registration timing failure did
+not recur in the corrected run; the standalone queue-isolation rerun also passed.
+
+Timestamp checks covered 205 mixed C++/C/raw-fd/concurrent/partial lines and
+5,528 nonempty daemon log lines, all dated. A real scratch daemon refusing a
+foreign recorded lock holder produced one dated cross-host incident. The soak
+remains unestablished. Raw JSON/logs remain untracked under `results/followup/`
+and `/tmp/p6-*`; all scratch daemons were stopped.
+
+Remaining work: atomic queued mutation plus `ack_id` receipt requires a store
+transaction API; Phase 7's ledger was retained without duplication. Automatic
+cross-node client fallback was deferred as allowed: safe completion also needs
+MCP's bridge, CLI and socket-only helpers, including suppression of secondary-node
+local starts (transport diff: zero lines). See `docs/CLI.md` for the requested
+primary-node guard and its service-manager restart limitation. Shared lifecycle
+and FileChanged markers still reside on NFS. Phase 6 is not complete.
+
 ## Phase 6 measurements and remaining gates
 
 Status 2026-09-16: single sequential control/treatment runs on separate private

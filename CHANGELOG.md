@@ -11,6 +11,10 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 ## [Unreleased]
 
 ### Added
+- 2026-09-16 follow-up validation: 200/200 writes, zero errors, embeddings
+  drained; recall p95 113.9 ms during writes / 162.8 ms full window; cached
+  restart 16.10 s. Full-window latency and restart gates remain unmet. Chaos
+  9/9, CTest 25/25, Rust 289 passed/2 ignored, hooks 23/23; contracts unchanged.
 - 2026-09-16: UTC timestamps on daemon stderr, including Rust and native C
   diagnostics; incident reporting identifies foreign-host lock holders and
   accepts an explicit originating host. Scratch verification found all 5,528
