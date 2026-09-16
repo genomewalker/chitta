@@ -138,8 +138,9 @@ def check(path, source, page, pages):
     roots = page.tags('html')
     titles = page.tags('title')
     require(len(roots) == 1 and roots[0].attrs.get('lang') == 'en', 'Metadata', 'html lang=en required')
-    require(len(titles) == 1 and re.fullmatch(r'chitta — \S.*', titles[0].text.strip()) is not None,
-            'Metadata', 'title must be chitta — <page>')
+    require(len(titles) == 1 and re.fullmatch(r'chitta — \S.*', titles[0].text.strip()) is not None
+            and not titles[0].text.strip().endswith(' — chitta'),
+            'Metadata', 'title must be chitta — <page> (no repeated suffix)')
     for meta in page.tags('meta'):
         require(all(key in {'name', 'content', 'property', 'charset', 'http-equiv'}
                     for key in meta.attrs), 'Metadata', f'malformed meta attributes at line {meta.line}')
