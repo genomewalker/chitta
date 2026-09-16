@@ -17,6 +17,8 @@
 #include <fstream>
 #include <sstream>
 #include <chrono>
+#include <mutex>
+#include <nlohmann/json.hpp>
 
 // External tree-sitter language functions (from tree-sitter-parsers library)
 extern "C" {
@@ -34,6 +36,36 @@ extern "C" {
 }
 
 namespace chitta {
+
+// Derived source knowledge. The sidecar contains registered roots only; chunks
+// are rebuilt from the filesystem and hashes are checked on every source query.
+// It deliberately shares recall's result rows rather than adding an RPC/lane.
+class RepositoryIndex {
+public:
+    static bool repository_question(const std::string& query);
+    static std::string content_hash(const std::string& bytes);
+    static std::string file_hash(const std::string& path);
+    static std::string repository_root(const std::string& path);
+    void open(const std::string& sidecar, const std::string& known_files);
+    void index(const std::string& path, const std::string& realm);
+    nlohmann::json search(const std::string& query, const std::string& realm, size_t limit);
+private:
+    struct Chunk {
+        std::string identity, name, text, kind;
+        size_t line = 1;
+        std::unordered_map<std::string, size_t> terms;
+        size_t token_count = 0;
+    };
+    struct File {
+        std::string root, realm, path, hash;
+        std::vector<Chunk> chunks;
+    };
+    std::mutex mutex_;
+    std::string sidecar_;
+    std::unordered_map<std::string, std::string> roots_; // realm -> active checkout
+    std::unordered_map<std::string, File> files_;
+    void refresh(const std::string& realm);
+};
 
 // Extracted symbol with location info
 struct ExtractedSymbol {

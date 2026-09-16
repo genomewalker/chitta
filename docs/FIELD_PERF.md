@@ -1,5 +1,25 @@
 # chitta-field performance
 
+### Phase 3 source-index measurement (2026-09-16)
+
+Paired private copy of `learning-cut-20260915-frozen`, family `da86decb`:
+current-truth rose from 20/50 (visible 11/30, holdout 9/20) to 36/50
+(20/30, 16/20). Environment-variable and hook-location classes improved;
+the 40/50 gate remains unmet. Original five probes are preserved verbatim in
+`benchmarks/current_truth/original_probes.json`; its explicit deterministic
+rubric scored 0/5 before and 3/5 after, distinct from the historical human
+verdict of 2/5. The reconstructed frozen probes remain a separate report.
+Golden nDCG@20 fell from 0.480335 to 0.449095 (three runs each), outside the
+paired baseline noise band. Source rows occupy result slots previously used by
+memory IDs, which this golden panel grades; this is still a failed gate.
+Baseline ordered restart identity was 16/20, and baseline prompt median was
+935 ms with a 354 ms noise allowance. These are measurements, not a claim that
+Phase 3 is qualified for deployment.
+The indexed prompt median was 958 ms (+23 ms, inside that allowance).
+Verification: 26 CTests, 149 MCP tests (explicit stub binary), 46 SMRITI tests
+and all hook scripts passed. Replica chaos passed eight cases; its NFS lock
+case was skipped on the initial XFS scratch directory and must be rerun on NFS.
+
 ## Acknowledged-write durability
 
 Status 2026-09-16 (Phase 6 source audit). A successful response is not a universal

@@ -1,5 +1,20 @@
 # chitta Hooks System
 
+Repository knowledge is indexed by `learn_codebase`. Markdown chunks follow
+headings; code chunks follow symbols, with a file-scope fallback for shell and
+configuration. Recall recognizes repository questions (paths, environment
+variables, hook names and location questions) and includes at most three cited
+`[doc]`/`[code]` rows in its normal result limit. Each source row names the
+checkout, path, heading/symbol and SHA-256. Registered roots are realm scoped;
+the active checkout for a realm replaces its previous registration.
+
+FileChanged queues an incremental source refresh for every change and deletion.
+The 300-second directory throttle applies only to full symbol extraction.
+Queries hash sources again, and startup rebuilds chunks from registered roots,
+so missed watcher events cannot leave an old source chunk marked current.
+The root registry is a derived sidecar in the daemon mind; snapshot formats are
+unchanged. Queries with tag or historical time filters retain their memory lane.
+
 Status as of 2026-09-16.
 
 ### Phase 6 runtime placement and embedding workers (2026-09-16)

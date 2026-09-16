@@ -165,8 +165,16 @@ ToolResult FieldRpcHandler::tool_learn_codebase(const json& params) {
         cloned = true;
         path = clone_tmpdir;
     } else {
-        if (!std::filesystem::exists(path))
-            return ToolResult::error("Path does not exist: " + path);
+        if (!std::filesystem::exists(path)) {
+            auto project = params.value("project", "");
+            // Watchers report unlink after the file is gone. Invalidation must
+            // work even when there is nothing left for tree-sitter to open.
+            auto removed = field_store_->remove_symbols_by_file(path);
+            field_store_->invalidate_triplets_by_source_file(path);
+            repository_index_.index(path, project);
+            return ToolResult::ok("Removed deleted source: " + path,
+                {{"path", path}, {"project", project}, {"symbols_stored", 0}, {"stale_removed", removed}});
+        }
     }
 
     // Cleanup guard — removes tmpdir when we exit this scope (cloned repos only)
@@ -189,6 +197,12 @@ ToolResult FieldRpcHandler::tool_learn_codebase(const json& params) {
     }
 
     size_t max_files = static_cast<size_t>(params.value("max_files", 500));
+    // The watcher path refreshes source knowledge without embedding symbols.
+    // Full symbol extraction retains its independently throttled hook request.
+    if (!cloned) repository_index_.index(path, project);
+    if (params.value("incremental", false) && !cloned)
+        return ToolResult::ok("Source index refreshed: " + path,
+            {{"path", path}, {"project", project}, {"symbols_stored", 0}});
     // force=true re-extracts unchanged files (backfill after extractor fixes);
     // normal edits still flow through the content-hash gate.
     bool force = params.value("force", false);

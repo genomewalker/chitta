@@ -215,7 +215,7 @@ void FieldRpcHandler::format_hits(std::ostringstream& ss, json& results,
         ss << hit_line(id, pct, r.value("type", "?"), r.value("ts_ms", int64_t(0)),
                        r.value("text", ""), opts.show_type, opts.show_date);
 
-        if (!opts.link_atoms) continue;
+        if (!opts.link_atoms || r.contains("source_identity")) continue;
         // Memory→span forward edge: hyperlink this belief to the exact atoms its
         // text references (paths/commands/ids), un-paraphrased. Directly fixes the
         // ellesmere class — the distilled belief now carries the verbatim path.
@@ -1198,6 +1198,15 @@ ToolResult FieldRpcHandler::RecallPipeline::format() {
     bool explain = params.value("explain", false);
     profile.next("result_metadata");
     json results_json = handler.hits_to_results_json(hits, explain);
+    auto sources = tag.empty() && !windowed
+        ? handler.repository_index_.search(query, realm, std::min<size_t>(3, limit)) : json::array();
+    if (!sources.empty() && tag.empty()) {
+        for (const auto& memory : results_json) {
+            if (sources.size() >= limit) break;
+            sources.push_back(memory);
+        }
+        results_json = std::move(sources);
+    }
 
     // Abstain signal: if no candidate clears the calibrated relevance bar, say so honestly
     // instead of presenting a weak best-of-a-bad-batch as if confident. relevance(cos) =
@@ -1216,16 +1225,17 @@ ToolResult FieldRpcHandler::RecallPipeline::format() {
         max_rel = std::max(max_rel, std::max(dense, h.lexical_score));
     }
     bool weak = !hits.empty() && max_rel < 0.45f;
+    if (!results_json.empty() && results_json[0].contains("source_identity")) { max_rel = 1.0f; weak = false; }
 
     std::ostringstream ss;
     if (weak)
         ss << "[weak: no strongly-relevant memory (max relevance "
            << static_cast<int>(max_rel * 100) << "%); results may be tangential]\n";
-    ss << "Found " << hits.size() << " results";
+    ss << "Found " << results_json.size() << " results";
     if (!realm.empty()) ss << " in realm '" << realm << "'";
     // Surface the calibrated confidence always, not only when weak: downstream
     // C2 self-monitoring (prompt-core.sh) bins this into KNOWN/THIN/UNKNOWN.
-    if (!hits.empty()) ss << " (maxrel " << static_cast<int>(max_rel * 100) << "%)";
+    if (!results_json.empty()) ss << " (maxrel " << static_cast<int>(max_rel * 100) << "%)";
     ss << ":\n";
     profile.next("format");
     handler.format_hits(ss, results_json, query, {.show_date = true, .link_atoms = true});
@@ -1270,7 +1280,10 @@ ToolResult FieldRpcHandler::RecallPipeline::format() {
         ss << "\n[window: " << iso(win_from) << " → " << iso(win_to) << " UTC]\n";
     }
     auto result = ToolResult::ok(ss.str(), meta);
-    handler.fire_recall_callback(results_json, 1);
+    json memory_results = json::array();
+    for (const auto& row : results_json)
+        if (!row.contains("source_identity")) memory_results.push_back(row);
+    handler.fire_recall_callback(memory_results, 1);
     return result;
 }
 

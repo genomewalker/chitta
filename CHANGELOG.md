@@ -10,6 +10,11 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 ## [Unreleased]
 
+- Index repository Markdown headings and code with source identities, SHA-256
+  validation on startup/query, deletion-aware FileChanged refresh and cited
+  `[doc]`/`[code]` recall rows. Frozen-family current-truth improves 20/50 to
+  36/50; the current-truth and golden recall exit gates remain unmet.
+
 ### Added
 - Markdown heading extraction through code intel, including hierarchical heading
   names, duplicate-heading disambiguation, fenced examples and Setext headings.
