@@ -388,9 +388,11 @@ class Harness:
             inode = path.stat().st_ino
             path.write_text(f"{dead} another-host.invalid\n")
             fixture = self.args.fixture or ROOT / "bin/chaos_fixture_test"
+            # A live holder is otherwise waited for (CHITTA_STORE_LOCK_WAIT_S);
+            # this case asserts the refusal itself, so it must not wait.
             refused = subprocess.run(
                 [str(fixture), str(self.field)],
-                env=self.env,
+                env={**self.env, "CHITTA_STORE_LOCK_WAIT_S": "0"},
                 stdin=subprocess.DEVNULL,
                 capture_output=True,
                 text=True,
