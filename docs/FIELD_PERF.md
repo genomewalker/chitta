@@ -349,6 +349,46 @@ These are sequential implementation measurements on a shared node, not an additi
 
 2026-09-16 — Snapshot decode (V23 unchanged): four bounded Rayon workers decode immutable mmap section ranges, pre-size root maps, and overlap triplet-index reconstruction; keyword reverse reconstruction overlaps Turbo/HDC/lite startup. Two cold-process starts on the same scratch checkpoint plus one-row replay delta (Turbo cache hit both arms): snapshot **9195/7819 → 4263/3567 ms**, field_store **14999/14575 → 9516/9263 ms**. Targets <2500/<9000 ms were **not met**; triplet reconstruction remains 2944/2325 ms. The repeated-query restart gate is **20/20 byte-identical CLI JSON pairs**; the broader 20-query diagnostic is 19/20 after versus 18/20 in the warmed control (not a claim of universal determinism). Release build, 279 Rust tests (2 ignored), and all 16 CTests pass; current-main binary opens the new writer's checkpoint. Embedding constants remain 768/nomic-embed-text-v1.5/format-1; the worktree identity stamp was absent before/after and the main stamp hash is unchanged. OS caches and shared-host load were uncontrolled; overlapping phases must not be summed.
 
+## Phase 3 preparation, 2026-09-16 (not qualified)
+
+The `feat/freshness` worktree adds Markdown heading extraction to the existing
+code-intel API and task-ledger handoff capsules. It does not yet implement the
+repository recall merge, startup/query hash validation, or the derived anchor
+index. The real-thread continuation gate is unmeasured: all 54 threads in the
+inspected replica have empty metadata; the four synthetic capsule checks are
+mechanics coverage only.
+
+Measurements on private copies of eval family `bbcaed33`, using the frozen
+panels and no-learn recall:
+
+| Measure | Before | Current worktree | Interpretation |
+|---|---:|---:|---|
+| Current truth | 13/50 | 14/50 | Below 40/50; no gain claimed with recall unchanged |
+| Reconstructed F2 fixtures | 1/5 | 1/5 | Original five prompts still unavailable |
+| Golden nDCG@20, three-run mean | 0.499994 | 0.502660 | Baseline already outside stored band; first-run variation |
+| Prompt median, five fixed-query panels | 892 ms | 912 ms | +20 ms, within baseline 2-SD allowance 250.4 ms |
+
+The before daemon was the installed binary running only on the scratch copy;
+the after daemon was built in this worktree. This is qualification evidence,
+not a controlled causal attribution. The compiled vector-space ID matches
+`9230643459983636874`; the worktree embedding stamp was absent before and after.
+Rust release tests: 289 passed, 2 ignored. All 25 CTests passed (the initial
+`embed_pool_test` skip was resolved by supplying the existing GGUF model).
+MCP: 149 passed; SMRITI: 46 passed. All 23 hook shell tests, CI ruff check/format,
+touched-shell syntax and CI ShellCheck warning gate passed. Contracts printed
+`contracts unchanged`. The capsule round-tripped through the real scratch ledger
+and survived a cold daemon restart; this remains a synthetic action check.
+
+Ordered IDs were identical for **11/20 distinct queries** across that restart;
+this fails the 20/20 gate. The recall implementation was not changed. The
+full-replica chaos run passed snapshot and second-instance cases, then failed
+WAL on a 60-second RPC timeout. A retry passed WAL, lock, disk and queue cases,
+then failed prompt-hook recovery on an 8-second timeout. The final attempt to
+run hook/MCP/format cases timed out during replica setup (120 seconds), followed
+by an NFS cleanup error; no additional cases ran. A clean 9/9 run is not
+established. These are retained failures, not acceptance evidence. Raw logs and
+reports stay outside git under `/tmp/chitta-p3-freshness`.
+
 <!-- BEGIN CITATIONS -->
 ## References
 

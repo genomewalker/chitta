@@ -1220,6 +1220,30 @@ none of the relocated tools was listed. Hook registrations are unchanged.
 - `scripts/evolve-topology.sh`: Evolve conductor visibility matrices using archive fitness, ledger and stability gates; supports `--dry-run` and `--realm`.
 - `scripts/settle-predictions.sh`: Confirm expired open predictions without correction references; supports `--dry-run` and `--realm`.
 
+## Handoff capsule (Phase 3, partial qualification)
+
+Stop stores a versioned `handoff` object in the task ledger's session metadata
+through the existing `ledger_op/session_bind` metadata merge. It records the last
+explicit `Next:`, `Next action:`, `Next step:` or `TODO:` line in the latest visible
+assistant response, excluding fenced examples and quoted lines. If absent, an
+explicit `next_action` or first `next_steps` entry in the bound thread's metadata
+is eligible. Thread titles are not inferred actions. `verified` means the action
+has this recorded source; it does not certify that an action has already passed
+its tests or remains feasible.
+
+The capsule includes the checked-out branch (or detached commit), up to 20 sorted
+paths from git's staged, unstaged and untracked changes, the last explicit blocker line, and
+source session/thread identifiers. No eligible action writes an unverified
+capsule, replacing that session's earlier action. SessionStart selects the newest
+capsule for the exact project directory and branch, optionally restricted by an
+explicit thread ID, and renders it before other session context. An unverified
+newest capsule suppresses older ones. An empty blocker is shown as `none recorded`.
+
+`hooks/tests/test_handoff_capsule.sh` tests the mechanics with synthetic inputs.
+It does **not** qualify the required 20 real-thread continuation cases: the
+2026-09-16 replica inspected for this stream has 54 threads with empty metadata,
+so independent expected next actions must still be supplied or recovered.
+
 <!-- BEGIN CITATIONS -->
 ## References
 

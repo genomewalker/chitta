@@ -248,6 +248,62 @@ TOOLS_JSON=$(transcript_tool_names | jq -R . | jq -s . 2>/dev/null || echo "[]")
 FILES_JSON=$(transcript_tool_files_json 2>/dev/null || echo "[]")
 [[ "$FILES_JSON" == "null" ]] && FILES_JSON="[]"
 
+# BEGIN handoff capsule
+# Store in the task ledger's session metadata: session_bind merges metadata
+# atomically, so concurrent thread inference cannot erase unrelated fields.
+_save_handoff_capsule() {
+    local project branch action blocker source_kind thread_id row args capsule visible paths
+    project=$(jq -r '.cwd // .project_dir // empty' <<< "$INPUT")
+    [[ -d "$project" && "$SESSION_ID" != unknown ]] || return 0
+    project=$(cd "$project" && pwd -P) || return 0
+    branch=$(git -C "$project" symbolic-ref --quiet --short HEAD 2>/dev/null ||
+        git -C "$project" rev-parse --short HEAD 2>/dev/null || true)
+    # The transcript's files also include reads. Use git's actual changed paths
+    # instead, with NUL framing so spaces and escaped filenames remain exact.
+    paths=$({ git -C "$project" diff --name-only -z -- 2>/dev/null;
+              git -C "$project" diff --cached --name-only -z -- 2>/dev/null;
+              git -C "$project" ls-files --others --exclude-standard -z 2>/dev/null;
+            } | jq -Rs 'split("\u0000") | map(select(length > 0)) | unique | .[:20]')
+    visible=$(transcript_role_text assistant)
+    # Only explicit plan lines in user-visible text qualify. Do not mine quoted
+    # examples, fenced commands, hidden reasoning, or thread titles for actions.
+    action=$(printf '%s\n' "$visible" | awk '
+        /^[[:space:]]*(```|~~~)/ { fenced = !fenced; next }
+        !fenced && /^[[:space:]]*([-*][[:space:]]*)?([Nn]ext([[:space:]]+[Aa]ction|[[:space:]]+[Ss]tep)?|TODO):[[:space:]]*[^[:space:]]/ { line = $0 }
+        END { print line }' | head -c 400)
+    blocker=$(printf '%s\n' "$visible" | awk '
+        /^[[:space:]]*(```|~~~)/ { fenced = !fenced; next }
+        !fenced && /^[[:space:]]*([-*][[:space:]]*)?([Bb]locker|[Bb]locked):[[:space:]]*[^[:space:]]/ { line = $0 }
+        END { print line }' | head -c 400)
+    source_kind=visible_plan
+    thread_id=""
+    if [[ -z "$action" ]]; then
+        args=$(jq -nc --arg sid "$SESSION_ID" '{session_id:$sid}')
+        row=$(timeout "$MAX_WAIT" "$CHITTA_BIN" ledger_op --op session_get --args "$args" --json 2>/dev/null) || row='{}'
+        thread_id=$(jq -r '.value.thread_id // empty' <<< "$row" 2>/dev/null)
+        if [[ -n "$thread_id" ]]; then
+            args=$(jq -nc --arg tid "$thread_id" '{thread_id:$tid}')
+            row=$(timeout "$MAX_WAIT" "$CHITTA_BIN" ledger_op --op thread_get --args "$args" --json 2>/dev/null) || row='{}'
+            action=$(jq -r '(.value.metadata_json // "{}" | fromjson? // {}) |
+                (.next_action // .next_steps[0] // "") | select(type == "string")' <<< "$row" 2>/dev/null | head -c 400)
+            source_kind=ledger_thread
+        fi
+    fi
+    # An empty capsule invalidates this session's previous next action. Absence
+    # of evidence must not silently resurrect a plan completed on a later turn.
+    capsule=$(jq -nc --arg action "$action" --arg branch "$branch" --arg project "$project" \
+        --arg blocker "$blocker" --arg source "$source_kind" --arg tid "$thread_id" \
+        --arg sid "$SESSION_ID" --argjson paths "$paths" \
+        '{version:1, next_action:$action, verified:($action != ""), branch:$branch,
+          project_dir:$project, artifact_paths:($paths | unique | .[:20]), blocker:$blocker,
+          source:{kind:$source,session_id:$sid,thread_id:$tid}, saved_at:now}') || return 0
+    args=$(jq -nc --arg sid "$SESSION_ID" --arg project "$project" --argjson capsule "$capsule" \
+        '{op:"session_bind",args:{session_id:$sid,project_dir:$project,metadata:{handoff:$capsule}}}') || return 0
+    queue_write ledger_op "$args"
+}
+_save_handoff_capsule || true
+# END handoff capsule
+
 # Check for errors
 HAS_ERROR=false
 echo "$RESPONSE" | grep -qiE '(error|failed|exception|traceback)' && HAS_ERROR=true
