@@ -1,0 +1,102 @@
+{
+  "overall": {
+    "total": 135388,
+    "covered": 48164,
+    "share": 0.35574792448370607,
+    "with_session": 0,
+    "with_source": 48164,
+    "by_writer": {
+      "hook_compliance": {
+        "total": 360,
+        "covered": 360,
+        "share": 1.0,
+        "with_session": 0,
+        "with_source": 360
+      },
+      "hook_regex": {
+        "total": 6848,
+        "covered": 6848,
+        "share": 1.0,
+        "with_session": 0,
+        "with_source": 6848
+      },
+      "hook_regex+native_distiller": {
+        "total": 2,
+        "covered": 2,
+        "share": 1.0,
+        "with_session": 0,
+        "with_source": 2
+      },
+      "hook_turn_ingest": {
+        "total": 2911,
+        "covered": 2911,
+        "share": 1.0,
+        "with_session": 0,
+        "with_source": 2911
+      },
+      "mcp_tool": {
+        "total": 314,
+        "covered": 314,
+        "share": 1.0,
+        "with_session": 0,
+        "with_source": 314
+      },
+      "native_distiller": {
+        "total": 38274,
+        "covered": 37729,
+        "share": 0.9857605685321629,
+        "with_session": 0,
+        "with_source": 37729
+      },
+      "unknown": {
+        "total": 86679,
+        "covered": 0,
+        "share": 0.0,
+        "with_session": 0,
+        "with_source": 0
+      }
+    }
+  },
+  "last_7_days": {
+    "total": 2954,
+    "covered": 2808,
+    "share": 0.950575490859851,
+    "with_session": 0,
+    "with_source": 2808,
+    "by_writer": {
+      "hook_regex": {
+        "total": 476,
+        "covered": 476,
+        "share": 1.0,
+        "with_session": 0,
+        "with_source": 476
+      },
+      "native_distiller": {
+        "total": 2332,
+        "covered": 2332,
+        "share": 1.0,
+        "with_session": 0,
+        "with_source": 2332
+      },
+      "unknown": {
+        "total": 146,
+        "covered": 0,
+        "share": 0.0,
+        "with_session": 0,
+        "with_source": 0
+      }
+    }
+  },
+  "unknown_creation_time": 0,
+  "future_creation_time": 0,
+  "memories_exposing_session_field": 0,
+  "session_coverage_complete": false,
+  "coverage_is_lower_bound": true,
+  "schema_version": 1,
+  "as_of": "2026-09-16T09:26:53.089184+00:00",
+  "finished_at": "2026-09-16T09:29:02.823897+00:00",
+  "socket": "/run/user/363159793/chitta/chitta-1682066299.sock",
+  "scope": "all listed memories across realms; sequential live interval census",
+  "definition": "identifiable direct session or nonempty source triplet; source writer labels qualify as source, never as session; numeric sources require an existing memory",
+  "limitations": "not atomic; concurrent inserts/deletes can affect pagination; no inference from memory text, no transitive session expansion; public metadata may omit direct source_session, so report coverage completeness explicitly"
+}
