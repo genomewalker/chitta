@@ -63,6 +63,13 @@
 - Exit gate: stress run clean for 5 minutes with zero Rust-side holds over 50 ms; ordered recall identity checked on an unchanged corpus separately from the stress run (20 distinct queries, not one query 20 times); ctest; a live week with no hold over 150 ms.
 - Rollback: the switch above, kept for two release cycles.
 
+> Gate note 2026-09-16 (afternoon): the "20/20 ordered recall identity across
+> a restart" exit gate fails on unchanged main (15, 18, 11, 19 and 16 of 20 in
+> three independent streams; a fixed-query control stays 20/20). Until
+> `feat/restart-identity` root-causes it, running phases are held to "no worse
+> than before on the same replica copy, same script"; the 20/20 gate returns
+> once the shared `scripts/restart-identity.py` passes on main.
+
 ### Phase 3 — Memory that knows what is current
 - Answer repository questions from the index first: extend code intel to Markdown headings (`code_intel.hpp` currently excludes Markdown), make the FileChanged hook handle deletions and lose its 300 s throttle for the index path, validate content hashes at query and startup because watchers miss edits. Identity is repository + path + heading (or symbol); the content hash is the version.
 - Source-anchored memories only for hook-generated file facts at first (`artifact-trace.sh`, `[done]` provenance); explicit supersession through the queue's `observe` path and filtering in recall, not a blanket "unanchored is fresher" rule. Facts sharing a file must not supersede each other.
@@ -77,6 +84,14 @@
 
 ### Phase 4 — Surface reduction (with Phase 2)
 - Keep the existing tiering (`core` advertised, `advanced` and hidden callable). Add `scripts/check-mcp-surface.py` that measures the filtered `tools/list` and its payload in tokens for the model in use; target ≤ 80 advertised and payload ≤ 8k tokens. Unadvertised handlers are promoted, moved to advanced, or deleted; hidden direct calls stay compatible; contracts unchanged for kept tools.
+
+> Phase 4 status 2026-09-16 (afternoon): merged and deployed (757aa78c).
+> Advertised `tools/list` 89 → 54 tools, ~11.0k → ~6.3k estimated tokens;
+> `scripts/check-mcp-surface.py` gates core ≤ 80 and ≤ 8000 tokens in CI,
+> new tools default to advanced, hidden tools stay callable directly and via
+> `advanced(tool=...)`. Docs regenerate with
+> `python3 scripts/gen-tools-static.py --docs`. Every tier change and its
+> evidence is in CHANGELOG.md.
 
 ### Phase 5 — Policy out of bash
 - Move admission, budget accounting and lane fusion behind daemon RPCs incrementally (`recall_lanes` and the task-ledger RPC exist), keeping local safety checks and timeout fallbacks in the hooks. One implementation serves Claude Code and Codex.
