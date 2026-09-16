@@ -474,6 +474,9 @@ install(TARGETS chitta_migrate DESTINATION bin)
 # below re-enables assertions per test target so a green ctest means something.
 # Add new test targets to that list, or their checks silently evaporate.
 if(CHITTA_BUILD_TESTS)
+    add_executable(hook_ledger_policy_test src/hook_ledger_policy_test.cpp)
+    target_link_libraries(hook_ledger_policy_test PRIVATE chitta)
+    add_test(NAME hook_ledger_policy_test COMMAND hook_ledger_policy_test)
     add_executable(prompt_policy_test src/prompt_policy_test.cpp)
     target_link_libraries(prompt_policy_test PRIVATE chitta)
     add_test(NAME prompt_policy_test COMMAND prompt_policy_test)
@@ -603,6 +606,7 @@ if(CHITTA_BUILD_TESTS)
     endif()
 
     set(CHITTA_TEST_TARGETS
+        hook_ledger_policy_test
         prompt_policy_test
         task_ledger_test
         thread_pool_test llm_probe_test callsite_extract_test

@@ -10,6 +10,13 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 ## [Unreleased]
 
+- Move SessionStart ledger/task/handoff cards and Stop capsule assembly behind
+  `ledger_op`; route admitted Stop turns through its `hook_turn` operation while
+  preserving transcript event payloads and durable cursor acknowledgement.
+  Fix queued `ledger_op` being silently ignored, with a real queued-capsule
+  regression test. Add positive handoff/Stop and compact-card parity fixtures;
+  keep local transcript parsing and bounded compatibility fallbacks.
+
 - Route prompt lane fusion through one `prompt_context` call. Existing daemon
   recall handlers retain their query identities and scoring; C2 extraction,
   lane retagging/type filters, empty-realm retry and admission now assemble in

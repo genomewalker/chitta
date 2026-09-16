@@ -119,6 +119,27 @@ def main():
                                     no_learn=True)["results"]
                     assert not call("recall", query="zzzznomatchingwordszzzz", tag="shared-tag",
                                     realm="project:missing", no_learn=True)["results"]
+                    # Queued ledger_op used to be silently ignored. Require a
+                    # durable capsule round-trip through the real queue dispatch.
+                    cap_args = {"session_id": "queued-handoff", "project_dir": "/synthetic/project",
+                                "branch": "feature", "next_action": "Next: verify durable queue",
+                                "artifact_paths": ["fixture.cpp"], "blocker": "", "saved_at": 100}
+                    prepared = call("ledger_op", op="hook_handoff_prepare", args=cap_args)["value"]
+                    subprocess.run([cli, "queue_write", "ledger_op", json.dumps(prepared)],
+                                   env=env, stdin=subprocess.DEVNULL, capture_output=True, check=True)
+                    deadline = time.monotonic() + 10
+                    while True:
+                        card = call("ledger_op", op="hook_handoff_context",
+                                    args={"project_dir": "/synthetic/project", "branch": "feature"})["value"]["text"]
+                        if "Next: verify durable queue" in card:
+                            break
+                        assert time.monotonic() < deadline, "queued ledger_op was not applied"
+                        time.sleep(0.1)
+                    turn = call("ledger_op", op="hook_turn", args={"session_id": "queued-handoff",
+                                "role": "assistant", "content": "synthetic turn\n", "turn_index": 1,
+                                "tools_used": [], "files_touched": [], "has_error": False})
+                    assert turn["value"]["event_id"] > 0
+                    print("LEDGER: queued capsule applied and native turn event appended")
                     print("TAG: two project realms + brahman, 18 scoped recalls passed; unscoped preserved")
                     for tool in ("recall", "smart_recall", "hybrid_recall", "recall_keyword"):
                         args = {"query": "tagrealmcanary", "no_learn": True}

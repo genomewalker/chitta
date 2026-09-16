@@ -67,3 +67,12 @@ For the fusion migration, add `--require-pipeline` to the gate. Every prompt
 fixture must capture a daemon fusion response, including during warm-up; falling
 back silently cannot count as verification of the new path. This instrumentation
 copies one private response file and leaves stdout/stderr unchanged.
+
+The ledger cases seed a synthetic capsule through `ledger_op` before each hook,
+outside its timer. Default setup invalidates the fixture capsule; the positive
+case supplies a verified action. The Stop transcript has an explicit visible
+plan line. `--require-ledger` fails unless SessionStart/Stop use native assembly,
+and checks that Stop queues the prepared capsule unchanged plus `hook_turn`.
+The isolated CTest daemon test separately verifies actual queue consumption.
+In timing mode, Bash rows report an empty Bash stdin-reader baseline and the
+added wall time relative to it, alongside complete hook wall time.

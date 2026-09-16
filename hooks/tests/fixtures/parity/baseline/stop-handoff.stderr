@@ -1,0 +1,4 @@
+[soul] skip session-summary: too few turns (1<3)
+[ledger] queued: p5-parity (working, files=0 decisions=0 todos=0)
+[consolidation] Queued sleep consolidation for realm=project:cc-soul
+[cec] consolidation_pass disabled (marker/env) — skipping

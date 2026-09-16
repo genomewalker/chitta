@@ -68,6 +68,23 @@ calibration, lane fairness, per-session deduplication and output truncation are
 preserved. The hook retains its real deadline, timeout fallback, and final
 end-to-end elapsed value because a daemon cannot measure hook setup/rendering.
 
+### Phase 5 ledger assembly (2026-09-16)
+
+`ledger_op` now accepts `hook_handoff_context`, `hook_task_context`,
+`hook_session_context` and `hook_handoff_prepare`. They assemble the existing
+handoff, task and normal/clear/compact ledger cards in the daemon. Responses use
+`value` plus `assembly_ms`; handoff preparation returns the exact `session_bind`
+operation to queue. Stop keeps visible transcript parsing, git branch/path
+inspection, cursor management and durable queue acknowledgement local. A valid
+prepare response enables queued `ledger_op(op=hook_turn)` for that Stop process;
+its transcript event payload is unchanged. Unknown/invalid/late replies retain
+the previous shell path, with a 150 ms probe budget.
+
+The queue dispatcher now handles `ledger_op` through the ledger's existing
+transaction/WAL path. Previously queued capsule `session_bind` operations were
+silently skipped. The isolated daemon test requires a real queued capsule to
+round-trip before passing. No snapshot/WAL format or advertised tool changes.
+
 ### Phase 6 runtime placement and embedding workers (2026-09-16)
 
 | Environment | Default | Meaning |
@@ -79,6 +96,8 @@ end-to-end elapsed value because a daemon cannot measure hook setup/rendering.
 | `CHITTA_EMBED_WRITE_WAIT_MS` | `1000` | Actual document-inference callers wait for admission at most this long; 1–60000 ms. Cache-warming calls remain nonblocking because legacy callers can hold the global write lock. |
 | `CHITTA_PROMPT_CONTEXT` | `1` | One daemon call runs existing recall lanes, fuses their text and applies admission for both frontends. It retains the existing `MAX_WAIT + 1` timeout and legacy lane fallback; standalone admission has a 150 ms RPC / 250 ms native CLI fallback. `0` selects the previous shell implementation. Retrieval scoring is unchanged. |
 | `CHITTA_HOOK_PROFILE` | unset | Measurement only: write the complete prompt policy response to this private file, including lane statuses and daemon embedding, retrieval and admission milliseconds. The parity harness uses this only in `measure` mode. |
+| `CHITTA_LEDGER_POLICY` | `1` | Use daemon ledger/card assembly for SessionStart and Stop. `0` selects the previous shell path; `CC_SOUL_LEDGER_POLICY` remains an alias. |
+| `CHITTA_LEDGER_PROFILE` | unset | Evaluation only: private destination for the validated ledger assembly response. `--require-ledger` checks this and Stop's queued capsule/turn payloads. |
 | `CHITTA_HOOK_NOW` | unset | Parity evaluation only: 13-digit positive Unix milliseconds. Pins shell wall timestamps and displayed lane/total durations to zero; explicit date parsing, real timeout flags and prompt budget enforcement remain unpinned. Use with `CHITTA_RECALL_NOW` on a private replica and `scripts/bench-hook-parity.py`. Invalid values are ignored. |
 | `CHITTA_RECALL_NOW` | unset | Evaluation only: positive Unix milliseconds, fixed once per daemon for Rust recall scoring. Write/WAL clocks remain real. Unset or invalid uses the wall clock. The restart gate records and reuses one value across processes. |
 | `CHITTA_RECALL_EMBED_WAIT_MS` | `50` | Query and variant embedding wait, 1–60000 ms; invalid values retain 50 ms. Replica identity evaluation uses 10000 ms and rejects missing embeddings, preventing load-dependent semantic-lane loss. Production fallback remains 50 ms unless explicitly overridden. |

@@ -170,6 +170,7 @@ def main():
     parser.add_argument("--hooks", type=Path, default=ROOT / "hooks")
     parser.add_argument("--reference-hooks", type=Path)
     parser.add_argument("--require-pipeline", action="store_true")
+    parser.add_argument("--require-ledger", action="store_true")
     parser.add_argument("--work", type=Path, required=True)
     parser.add_argument("--baseline", type=Path, default=FIXTURES / "baseline")
     parser.add_argument("--results", type=Path, required=True)
@@ -205,9 +206,11 @@ def main():
             if args.only and name not in args.only:
                 continue
 
-            def execute(hook_root, case=case):
+            def execute(hook_root, case=case, name=name):
                 env = prepare(work, cli, metadata["CHITTA_EVAL_SOCKET"], now)
                 env.update(case.get("env", {}))
+                if args.require_ledger:
+                    env["CHITTA_LEDGER_PROFILE"] = str(work / "ledger-profile.json")
                 if args.mode == "measure":
                     env.pop("CHITTA_HOOK_NOW", None)
                 if args.mode == "measure" or args.require_pipeline:
@@ -217,12 +220,37 @@ def main():
                     target.write_text(content)
                     os.utime(target, (now / 1000, now / 1000))
                 transcript = (
-                    (FIXTURES / "transcript.jsonl").read_text().replace("@WORK@", str(work))
+                    (FIXTURES / case.get("transcript", "transcript.jsonl"))
+                    .read_text()
+                    .replace("@WORK@", str(work))
                 )
                 (work / "transcript.jsonl").write_text(transcript)
                 payload = (
                     (FIXTURES / case["input"]).read_bytes().replace(b"@WORK@", os.fsencode(work))
                 )
+                # Setup runs outside hook timing and only after replica identity
+                # checks. These synthetic rows live solely in the private copy.
+                for setup in config.get("ledger_setup", []) + case.get("ledger_setup", []):
+                    setup_args = json.dumps(setup["args"]).replace("@WORK@", str(work))
+                    subprocess.run(
+                        [
+                            str(cli),
+                            "--socket-path",
+                            metadata["CHITTA_EVAL_SOCKET"],
+                            "ledger_op",
+                            "--op",
+                            setup["op"],
+                            "--args",
+                            setup_args,
+                            "--json",
+                        ],
+                        env=env,
+                        stdin=subprocess.DEVNULL,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.PIPE,
+                        timeout=10,
+                        check=True,
+                    )
                 stdout, stderr, result = run_hook(
                     ["bash", str(hook_root / case["hook"])],
                     payload,
@@ -230,11 +258,50 @@ def main():
                     work / "project",
                     case.get("timeout_s", 15),
                 )
+                if args.mode == "measure" and name in ("bash", "codex-bash"):
+                    _, _, empty = run_hook(
+                        ["bash", "-c", "while IFS= read -r line; do :; done"],
+                        payload,
+                        env,
+                        work / "project",
+                        case.get("timeout_s", 15),
+                    )
+                    result["empty_reader_ms"] = empty["wall_ms"]
+                    result["added_wall_ms"] = round(result["wall_ms"] - empty["wall_ms"], 3)
                 return stdout, stderr, result
 
             reference = execute(args.reference_hooks) if args.reference_hooks else None
             stdout, stderr, result = execute(args.hooks)
             row = {"name": name, "iteration": iteration, **result}
+            if args.require_ledger and (
+                name.startswith(("session-", "stop")) or name == "codex-stop"
+            ):
+                ledger_profile = work / "ledger-profile.json"
+                if not ledger_profile.is_file():
+                    failures.append(f"{iteration}:{name}: daemon ledger assembly did not run")
+                else:
+                    row["ledger_assembly_ms"] = load(ledger_profile).get("assembly_ms")
+                if ledger_profile.is_file() and (name.startswith("stop") or name == "codex-stop"):
+                    queue = work / "queue.jsonl"
+                    writes = (
+                        [json.loads(line) for line in queue.read_text().splitlines()]
+                        if queue.is_file()
+                        else []
+                    )
+                    if not any(
+                        item.get("tool") == "ledger_op"
+                        and item.get("args", {}).get("op") == "hook_turn"
+                        for item in writes
+                    ):
+                        failures.append(f"{iteration}:{name}: turn did not use ledger_op")
+                    prepared = load(ledger_profile)["value"]
+                    if not any(
+                        item.get("tool") == "ledger_op" and item.get("args") == prepared
+                        for item in writes
+                    ):
+                        failures.append(
+                            f"{iteration}:{name}: assembled capsule was not queued unchanged"
+                        )
             profile = work / "prompt-profile.json"
             if (
                 args.require_pipeline

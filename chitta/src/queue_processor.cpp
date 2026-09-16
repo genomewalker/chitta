@@ -568,7 +568,7 @@ struct QueueToolDispatch {
 
     bool session_lifecycle() {
         auto result = handler_.dispatch_session(tool, args);
-        if (result.is_error) throw std::runtime_error("queued session lifecycle failed");
+        if (result.is_error) throw std::runtime_error("queued session/ledger operation failed: " + result.text);
         queue_count_++;
         return false;
     }
@@ -760,6 +760,7 @@ struct QueueToolDispatch {
             {"store_policy", &QueueToolDispatch::store_policy},
             {"store_claim", &QueueToolDispatch::store_claim},
             {"learn_outcome", &QueueToolDispatch::learn_outcome},
+            {"ledger_op", &QueueToolDispatch::session_lifecycle},
             {"session_register", &QueueToolDispatch::session_lifecycle},
             {"session_heartbeat", &QueueToolDispatch::session_lifecycle},
             {"session_deregister", &QueueToolDispatch::session_lifecycle},
