@@ -255,7 +255,6 @@ ADVANCED_TOOLS = {
     "consolidate_similar",
     "queue_status",
     "resonance_stats",
-    "route_stats",
     # Dream management (start/wander/list/status stay accessible via dream skill)
     "dream_start",
     "dream_wander",

@@ -436,9 +436,6 @@ void FieldRpcHandler::register_memory_core_tools() {
             }},{"required",{"query"}}},
             &FieldRpcHandler::tool_structured_recall, handlers_["structured_recall"]},
 
-        {"route_stats", "Show route learner status and arm configuration for smart_recall",
-            {{"type","object"},{"properties",json::object()}},
-            &FieldRpcHandler::tool_route_stats, handlers_["route_stats"]},
 
         {"ask", "Natural language insight query: retrieves and synthesizes memories to answer a question about the user, session, or project",
             {{"type","object"},{"properties",{

@@ -5357,14 +5357,6 @@
     "name": "retract_fact"
   },
   {
-    "description": "Show route learner status and arm configuration for smart_recall",
-    "inputSchema": {
-      "properties": {},
-      "type": "object"
-    },
-    "name": "route_stats"
-  },
-  {
     "description": "Report mid-cycle checkpoint",
     "inputSchema": {
       "properties": {

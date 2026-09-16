@@ -806,12 +806,6 @@ Show ResonanceLearner Bayesian bandit stats
 
 No parameters.
 
-### `route_stats` *(via advanced)*
-
-Show route learner status and arm configuration for smart_recall
-
-No parameters.
-
 ### `search_symbols`
 
 Semantic search for code symbols

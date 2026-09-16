@@ -240,7 +240,6 @@ resolve_merge
 resolve_probe
 resonance_stats
 retract_fact
-route_stats
 sadhana_checkpoint
 sadhana_list
 sadhana_pause

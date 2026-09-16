@@ -43,7 +43,7 @@ CATEGORIES = [
     ("recall", "Recall & Search", [
         "recall_", "hybrid_recall", "smart_recall", "structured_recall",
         "5w_search", "search_symbols", "query_claims", "expand_query",
-        "full_resonate", "resonance_stats", "route_stats", "stageb_set_surface",
+        "full_resonate", "resonance_stats", "stageb_set_surface",
         "routed_recall",
     ]),
     ("graph", "Graph & Triplets", [
