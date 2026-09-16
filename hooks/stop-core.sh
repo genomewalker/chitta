@@ -236,13 +236,9 @@ transcript_role_count() {
 # Extract last assistant message
 RESPONSE=$(transcript_role_text "assistant" | tail -n 1 | head -c 50000)
 
-[[ -z "$RESPONSE" || ${#RESPONSE} -lt 10 ]] && exit 0
-
 # ===========================================
 # LOSSLESS STORAGE: Store assistant turn
 # ===========================================
-# Get turn index from counter file
-TURN_INDEX=$(get_next_turn "$SESSION_ID")
 
 # Extract tools used from transcript for this turn
 TOOLS_JSON=$(transcript_tool_names | jq -R . | jq -s . 2>/dev/null || echo "[]")
@@ -307,6 +303,11 @@ _save_handoff_capsule() {
 }
 _save_handoff_capsule || true
 # END handoff capsule
+
+# Even a short "Done." turn must invalidate this session's old capsule.
+[[ -z "$RESPONSE" || ${#RESPONSE} -lt 10 ]] && exit 0
+# Get turn index only for turns admitted to lossless storage.
+TURN_INDEX=$(get_next_turn "$SESSION_ID")
 
 # Check for errors
 HAS_ERROR=false

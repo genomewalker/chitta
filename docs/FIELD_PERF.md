@@ -54,6 +54,14 @@ absent. Current-truth, original probes, golden recall and restart identity
 remain unqualified. Co-retrieval learning runs after source merging, so source
 IDs and displaced memory IDs do not receive memory co-occurrence updates.
 
+Continuation qualification is also unmet: the authorized transcript directory
+contains two conversational sessions and one title-only file. The construction
+script produced one consecutive pair; the strict production-selector replay
+scored **0/1**, short of **18/20**. Builder/scorer tests and the synthetic ledger
+capsule checks pass, including short completion invalidation, but do not replace
+the missing real cases. The extraction/scoring rule is documented in
+`docs/HOOKS.md`; transcript data and fixture output are outside the repository.
+
 ## Acknowledged-write durability
 
 Status 2026-09-16 (Phase 6 source audit). A successful response is not a universal

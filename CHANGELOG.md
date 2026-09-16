@@ -26,6 +26,9 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
   an explicit next action, branch, artifact paths, blocker and source provenance.
   Capsules render before other context on the matching project and branch;
   turns without a verified action invalidate the previous session capsule.
+- Clear handoff capsules even on short completion turns; add transcript-pair
+  construction and strict continuation scoring with source digests. Only one
+  real pair is available in the authorized source (0/1); the 18/20 gate is unmet.
 - 2026-09-16 follow-up validation: 200/200 writes, zero errors, embeddings
   drained; recall p95 113.9 ms during writes / 162.8 ms full window; cached
   restart 16.10 s. Full-window latency and restart gates remain unmet. Chaos

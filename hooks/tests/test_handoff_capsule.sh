@@ -42,7 +42,7 @@ grep -q 'run the focused tests' "$T/rendered"
 grep -q 'waiting for fixture data' "$T/rendered"
 echo 'ok: last explicit visible plan round-trips with branch, artifacts and blocker'
 # A later completed turn without a plan invalidates the old next action.
-VISIBLE='The work is complete. No next action has been verified.'
+VISIBLE='Done.'
 _save_handoff_capsule
 [[ -z $(_load_handoff_capsule) ]]
 echo 'ok: no invented action and no resurrection of a completed plan'

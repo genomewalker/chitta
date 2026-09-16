@@ -1288,9 +1288,28 @@ explicit thread ID, and renders it before other session context. An unverified
 newest capsule suppresses older ones. An empty blocker is shown as `none recorded`.
 
 `hooks/tests/test_handoff_capsule.sh` tests the mechanics with synthetic inputs.
-It does **not** qualify the required 20 real-thread continuation cases: the
-2026-09-16 replica inspected for this stream has 54 threads with empty metadata,
-so independent expected next actions must still be supplied or recovered.
+Short completion responses such as `Done.` also replace an earlier capsule
+with an unverified one before Stop's short-response exit.
+
+`benchmarks/continuation/build.py` reads the authorized Claude transcript
+directory, orders sessions by their earliest conversation timestamp, and takes
+the 20 newest consecutive same-realm pairs with a nonempty next-session first
+prompt. It retains the preceding last visible assistant response and explicit
+ledger/capsule fields, and records the next session's actual first prompt and
+first nontrivial tool call as ground truth. Transcript IDs and SHA-256 digests
+are retained. Fixture data goes outside the repository, by default to
+`/projects/caeg/scratch/kbd606/tmp/continuation-fixture/`.
+
+`benchmarks/continuation/score.py` replays the production visible-plan selector
+on preceding-session material only, with explicit ledger fields as fallback.
+The capsule's **next_action** must mention an exact target file path or complete
+command from the next session's first nontrivial tool call. A tool name alone,
+a shortened basename, similar wording, or a path only in the capsule's artifact
+list does not count. Missing evidence is a miss. This retrospective replay is
+identified as such; it is not evidence that old sessions wrote the new capsule.
+The available source on 2026-09-16 contained two conversational sessions plus
+one title-only transcript, yielding **one pair, 0/1 correct**. The required
+20-case, 18-correct gate is unmet; no cases or human labels were invented.
 
 <!-- BEGIN CITATIONS -->
 ## References
