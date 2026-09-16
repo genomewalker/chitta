@@ -279,6 +279,25 @@ passing candidates using measured bet delta, then patch size. The
 cohort cut at 2026-09-15 23:15 CEST; the prospective 20-task panel and causal
 verdict remain pending. See [evaluation status](docs/EVALS.md).
 
+## Maintaining plugin instructions and skills
+
+`CLAUDE.md` is canonical for Claude Code; the lean and shipped plugin instruction
+files are short pointers with the same constraint summary. Codex follows
+`codex-plugin/AGENTS.md`.
+
+Edit skills only in `skills/`. `codex-plugin/skills/` is a generated, committed
+mirror; `_conventions` stays source-only. Before committing skill changes, run:
+
+```bash
+bash scripts/sync-skills.sh
+bash scripts/check-skills-sync.sh
+```
+
+The existing release script also synchronizes this mirror. Both plugin manifests
+use local skill directories; neither documents symlink traversal, so the shipped
+mirror uses regular files. Keep the public `cc-soul-*` skill command names.
+See the [scripts index](scripts/README.md) for retained tools and pruning evidence.
+
 ## Measurement
 
 Two different questions, measured two different ways.

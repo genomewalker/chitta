@@ -4,7 +4,11 @@ description: Update chitta binaries (builds from source, falls back to pre-built
 execution: inline
 ---
 
-# cc-soul-update
+# Update chitta
+
+The `cc-soul-update` command name is retained for compatibility.
+Repository work follows the canonical `CLAUDE.md` (Codex: `codex-plugin/AGENTS.md`);
+implementation streams leave installation and service changes to the orchestrator.
 
 Update chitta binaries to the latest version.
 

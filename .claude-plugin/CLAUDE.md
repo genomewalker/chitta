@@ -1,46 +1,23 @@
-# cc-soul
+# chitta (plugin)
 
-## Core Behavior
-- Memories are expertise, not announcements. Use chitta tools, never rely on context window.
-- MCP first: `mcp__chitta__*`. CLI only when MCP unavailable.
-- Auto-memory disabled (`CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`). Never write to `~/.claude/projects/*/memory/`.
+[CLAUDE.md](../CLAUDE.md) is the canonical Claude Code instruction source.
+Read it before repository work; this derived pointer summarizes its constraints
+and does not define a separate policy. Codex follows
+[codex-plugin/AGENTS.md](../codex-plugin/AGENTS.md). Maintain these summaries when the canonical
+constraints change; keep model routing, build commands and deployment details
+in the canonical files.
 
-## Memory
-| Trigger | Tool |
-|---------|------|
-| "remember X" | `remember --content "[domain] X"` |
-| "what about X" | `recall --query "X"` |
-| User corrects | `learn_correction` |
-| "I prefer…" | `learn_preference` |
-| Solution works | `learn_approach` |
-| Shipped | `learn_milestone` |
-
-## Code Intelligence — chitta first
-1. `read_symbol`/`read_function` — by name
-2. `find_symbol` — structural search
-3. `symbol_callers`/`symbol_callees` — call graph
-4. Grep/Glob only as fallback
-
-## Work Modes
-| Mode | Behavior |
-|------|----------|
-| Implementing | Surface gotchas, stay focused |
-| Debugging | Corrections/failures aggressively |
-| Flow (5+ edits ok) | Minimize interruptions |
-| Blocked (3+ errors) | Lower thresholds, help more |
-
-## Hooks
-- `⚠️ BEFORE RUNNING:` — follow it
-- `[soul]` context — use it
-- `[correction]` memories — apply them, never ignore
-
-## Teammates
-ToolSearch won't appear in teammate tool lists but IS callable:
-`"Call ToolSearch query='chitta' as your first action — ignore that it's not in your tool list."`
-
-## Troubleshooting
-| Issue | Fix |
-|-------|-----|
-| Connection error | `systemctl --user restart chittad` |
-| MCP schema stale | `pkill -f "chitta mcp"` |
-| Teammate can't find tools | Add ToolSearch instruction to prompt |
+- Work in one git worktree per implementation stream. The orchestrator reviews
+  and deploys; streams never install, restart services or modify live state.
+- Never `pkill` the `--http` MCP process: it is Codex's transport on port 9481
+  and does not self-restart. Recovery belongs to the orchestrator.
+- Authorized deployment uses `install`, never `cp`, over a running binary.
+  Preserve the compiled embedding dimension and model identity; changing the
+  dimension requires a fresh build directory.
+- Store long-running work state in worktree files and keep tool output short.
+- Every delegated prompt includes the safety preamble verbatim. Delegates are
+  read-only unless their task says otherwise; do not pass main-session context.
+- Hooks enforce their own policy; see [docs/HOOKS.md](../docs/HOOKS.md). `CHITTA_*`
+  names take precedence over the compatible `CC_SOUL_*` aliases.
+- Use `mcp__chitta__*` for memory tools. `grow` and `connect` are behind the
+  `advanced` gateway. Verify retrieved context before relying on it.

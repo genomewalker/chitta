@@ -23,7 +23,7 @@ execution: direct
 2. **Review** — present each finding; user accepts, skips, or stops
 3. **Implement** — for accepted findings, read the relevant source and apply the change
 4. **Build** — `cmake --build build --parallel`
-5. **Install** — stop daemon → copy binaries → daemon auto-restarts
+5. **Deploy** — the orchestrator follows canonical `CLAUDE.md` after review; implementation streams stop at a verified commit
 6. **Verify** — `health_check` confirms the daemon is live
 7. **Release** — ask whether to release (patch / minor / skip)
 8. **Mark** — tag all applied memories `[applied]` so they don't resurface
@@ -129,8 +129,11 @@ If a finding is ambiguous or the file doesn't exist: skip it and log `⚠ Skippe
 
 ### Step 6 — Build
 
+Set `WORKTREE` to the assigned implementation checkout and follow its canonical
+`CLAUDE.md` (Codex: `codex-plugin/AGENTS.md`) for required build and test gates.
+
 ```bash
-cd /maps/projects/fernandezguerra/apps/repos/cc-soul/chitta && cmake --build build --parallel
+cmake --build "$WORKTREE/chitta/build" --parallel
 ```
 
 If build fails:
@@ -153,14 +156,13 @@ If build fails:
   - "Revert all": `git checkout -- .` and stop
   - "Abort": stop, leave changes uncommitted
 
-### Step 7 — Install
+### Step 7 — Reviewed deployment
 
-```bash
-pkill -TERM chittad 2>/dev/null; sleep 1
-cp /maps/projects/fernandezguerra/apps/repos/cc-soul/chitta/bin/chitta \
-   /maps/projects/fernandezguerra/apps/repos/cc-soul/chitta/bin/chittad \
-   ~/.claude/bin/
-```
+Implementation streams commit the verified change and report the build/test
+results; they do not install, restart services or modify live state. The
+orchestrator follows the canonical `CLAUDE.md` deployment procedure after review.
+Use `install`, never `cp`, over running binaries, and never `pkill` the `--http`
+MCP transport. Steps 8–9 apply only to the orchestrator's authorized deployment.
 
 ### Step 8 — Verify
 
@@ -189,7 +191,7 @@ AskUserQuestion({
 
 If patch or minor:
 ```bash
-cd /maps/projects/fernandezguerra/apps/repos/cc-soul && ./scripts/release.sh <patch|minor> -y
+cd "$WORKTREE" && ./scripts/release.sh <patch|minor> -y
 ```
 
 ### Step 10 — Mark applied memories

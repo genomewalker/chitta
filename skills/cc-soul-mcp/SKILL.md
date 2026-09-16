@@ -4,7 +4,11 @@ description: Configure chitta MCP server for direct tool access (mcp__chitta__*)
 execution: inline
 ---
 
-# cc-soul-mcp
+# Configure chitta MCP
+
+The `cc-soul-mcp` command name is retained for compatibility.
+Repository work follows the canonical `CLAUDE.md` (Codex: `codex-plugin/AGENTS.md`);
+implementation streams leave installation and service changes to the orchestrator.
 
 Configure the chitta MCP server in Claude Code settings.
 

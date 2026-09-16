@@ -1,20 +1,23 @@
 # chitta (lean)
 
-> Status as of 2026-09-13: this is the `CHITTA_LEAN=true` variant — stats only,
-> no scaffolding. **`CLAUDE.md` is canonical**; anything not here is there,
-> including the model split and every build gotcha. Deliberately not a summary
-> of it, only what lean mode still needs.
+[CLAUDE.md](CLAUDE.md) is the canonical Claude Code instruction source.
+Read it before repository work; this derived pointer summarizes its constraints
+and does not define a separate policy. Codex follows
+[codex-plugin/AGENTS.md](codex-plugin/AGENTS.md). Maintain these summaries when the canonical
+constraints change; keep model routing, build commands and deployment details
+in the canonical files.
 
-Memory persists across sessions and surfaces through hooks. No explicit recall
-call is needed to benefit from it.
-
-| Signal | Reading |
-|-------|--------|
-| τ > 80% | High confidence in retrieved context |
-| τ < 50% | Thin context — ask rather than assume |
-| ψ < 50% | Consolidating; a poor time to start new exploration |
-
-Reach for a tool when the hooks haven't already surfaced what you need:
-`recall` for deep search, `remember` for durable knowledge, `observe` for
-episodic notes. `grow` and `connect` sit behind the `advanced` gateway rather
-than being top-level tools.
+- Work in one git worktree per implementation stream. The orchestrator reviews
+  and deploys; streams never install, restart services or modify live state.
+- Never `pkill` the `--http` MCP process: it is Codex's transport on port 9481
+  and does not self-restart. Recovery belongs to the orchestrator.
+- Authorized deployment uses `install`, never `cp`, over a running binary.
+  Preserve the compiled embedding dimension and model identity; changing the
+  dimension requires a fresh build directory.
+- Store long-running work state in worktree files and keep tool output short.
+- Every delegated prompt includes the safety preamble verbatim. Delegates are
+  read-only unless their task says otherwise; do not pass main-session context.
+- Hooks enforce their own policy; see [docs/HOOKS.md](docs/HOOKS.md). `CHITTA_*`
+  names take precedence over the compatible `CC_SOUL_*` aliases.
+- Use `mcp__chitta__*` for memory tools. `grow` and `connect` are behind the
+  `advanced` gateway. Verify retrieved context before relying on it.
