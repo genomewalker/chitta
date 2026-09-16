@@ -85,7 +85,9 @@ class ProposalTests(unittest.TestCase):
         for path in paths:
             proposal = normalize(json.loads(path.read_text()))
             self.assertEqual(proposal.source, "hypothesis")
-            self.assertEqual(proposal.prior_effort, "none")
+            # "some" is legitimate once a card has been tried and measured
+            # (swarmworld-replication-rank, 2026-09-16: delta 0, default-off).
+            self.assertIn(proposal.prior_effort, ("none", "some"))
             self.assertFalse(proposal.internal_evidence)
             self.assertEqual(
                 proposal.verifiability,
