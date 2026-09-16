@@ -61,6 +61,10 @@ MAX_WAIT="${CHITTA_MAX_WAIT:-${CC_SOUL_MAX_WAIT:-2}}"
 # Source shared library (provides queue_write with ack_id, get_queue_file, etc.)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib.sh"
+
+# Ephemeral hook state; persistent policy and cross-hook shared files stay in mind.
+HOOK_STATE_DIR=$(runtime_state_dir "${CHITTA_DB_PATH:-${HOME}/.claude/mind}")
+mkdir -p "$HOOK_STATE_DIR" 2>/dev/null || true
 PLUGIN_DIR="$(resolve_cc_soul_root 2>/dev/null || dirname "$SCRIPT_DIR")"
 
 SOCKET_PATH=$(get_socket_path)
@@ -81,7 +85,7 @@ _reset_session_state() {
 if [[ "$HOOK_SOURCE" != "compact" ]]; then
     rm -f "$MIND_PATH/.session_active" "$MIND_PATH/.gaps_surfaced"
     rm -f "$MIND_PATH/.stop_dedup_"* 2>/dev/null || true
-    rm -f "$MIND_PATH/.size_warned_"* 2>/dev/null || true
+    rm -f "${HOOK_STATE_DIR}/.size_warned_"* 2>/dev/null || true
     # Reset subagent counter for new session
     [[ -n "$SESSION_ID" ]] && rm -f "$MIND_PATH/.subagent_count_${SESSION_ID}" 2>/dev/null || true
 fi
@@ -98,9 +102,9 @@ fi
 # Initialize turn-discipline counter to current turn so the discipline nudge
 # measures idle turns within THIS session, not across session boundaries.
 if [[ -n "$SESSION_ID" ]]; then
-    TURN_FILE="${MIND_PATH}/.turn_index_${SESSION_ID}"
+    TURN_FILE="${HOOK_STATE_DIR}/.turn_index_${SESSION_ID}"
     CURRENT_TURN=$(cat "$TURN_FILE" 2>/dev/null || echo 0)
-    echo "$CURRENT_TURN" > "${MIND_PATH}/.last_store_turn_${SESSION_ID}"
+    echo "$CURRENT_TURN" > "${HOOK_STATE_DIR}/.last_store_turn_${SESSION_ID}"
 fi
 
 }

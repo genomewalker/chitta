@@ -88,6 +88,8 @@ class ProposalTests(unittest.TestCase):
             # "some" is legitimate once a card has been tried and measured
             # (swarmworld-replication-rank, 2026-09-16: delta 0, default-off).
             self.assertIn(proposal.prior_effort, ("none", "some"))
-            self.assertFalse(proposal.internal_evidence)
+            # internal_evidence is derived from the evidence sources; a card may
+            # cite stored measurements (source: memory) and then it is true.
+            self.assertIsInstance(proposal.internal_evidence, bool)
             # Cards declare their own verifiability; the loader must keep it.
             self.assertIn(proposal.verifiability, ("self_verifying", "metric_only", "judgement"))

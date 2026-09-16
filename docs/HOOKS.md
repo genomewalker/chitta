@@ -6,7 +6,7 @@ Status as of 2026-09-16.
 
 | Environment | Default | Meaning |
 | --- | --- | --- |
-| `CHITTA_RUNTIME_LOCAL` | `0` | `1` selects node-local queue, saddle marker and outcome-ledger tail; experimental until the replay/marker gates below pass. |
+| `CHITTA_RUNTIME_LOCAL` | `0` | `1` selects node-local queue, transient hook markers and outcome-ledger tail; experimental until atomic replay is available. |
 | `CHITTA_LEDGER_FLUSH_SECONDS` | `5` | Healthy-daemon ledger checkpoint interval, 1–300 seconds; flush also becomes eligible at 64 KiB pending. |
 | `CHITTA_EMBED_WRITE_WORKERS` | `0` | `0` preserves the existing embedding lane. Positive values enable dedicated document workers and a separate two-worker Unix write-RPC pool. Clamped to leave one of `CHITTA_EMBED_CONTEXTS` free when possible. |
 | `CHITTA_EMBED_WRITE_DEPTH` | `64` | Maximum queued document jobs, excluding active workers; 1–65536. |
@@ -49,9 +49,25 @@ capacity; document workers yield to the existing recall-pressure signal for up
 to 100 ms before each job. The asynchronous remember/observe acknowledgement
 semantics remain unchanged. The Unix RPC write pool isolates remember/observe/
 distill dispatch from readers; HTTP request-thread saturation is not changed.
-The other four hard-coded marker callers still require path-only edits outside
-this stream's write scope. Keep local placement off until that migration and
-ack_id recovery are complete.
+Prompt, SessionStart, Stop and PreTool use the resolver for four transient
+marker groups: heartbeat (`.hb_*`); turn discipline (`.turn_index_*`,
+`.last_store_turn_*`, `.last_distill_turn_*`, `.last_stop_time*`); prompt/Stop
+recall state (`.ctx_window_*`, `.injected_hashes_*`, `.exposed_*`,
+`.last_user_message`, `.last_correction_context`, `.last_predictions.json`,
+`.last_auto_store_ts`, `.size_warned_*`, `.session_summary_written_*`); and
+PreTool caches/sentinels (`.soul_injected_*`, `.trace_cache_*`, `.read_cache_*`,
+`.allow_read_*`, `.wakeup_count_*`, `.loop_count_*`). `get_next_turn` uses the
+same resolver, including custom `CHITTA_DB_PATH`. Both placements run through
+real hook lifecycle fixtures in `hooks/tests/test_runtime_markers.sh`.
+
+Persistent policy (`.strict_claude_style`, `.disable_consolidation`), metrics,
+transcript/staging data, and files shared with other lifecycle hooks (including
+`.session_active`, `.gaps_surfaced`, `.stop_dedup_*`, `.subagent_count_*`,
+`.compact_advised_*`, current-thread and notification files) retain their NFS
+paths. The out-of-scope FileChanged `.reindex_*` marker also stays on NFS. A placement change resets transient local state; drain queues first.
+Keep local placement off until atomic ack_id recovery is complete. Phase 7's
+existing `.applied-acks` ledger suppresses already-recorded receipts, but a crash
+between durable mutation and receipt publication can still replay a mutation.
 
 
 chitta integrates with Claude Code and Codex through the hooks system, enabling
