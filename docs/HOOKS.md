@@ -1459,6 +1459,7 @@ connections. Runtime dispatch and dynamic import paths are not evaluated.
 | Julia | `.jl` | Long/short functions, macros, modules, structs and abstract types; calls, `using`/`import`, literal `include`, and subtype edges. |
 | Fortran | `.f`, `.for`, `.f77`, `.f90`, `.f95`, `.f03`, `.f08` (also uppercase) | Modules, programs, subroutines, functions and derived types; `use`, includes, calls and `extends`. Names are case-insensitive; signatures preserve source spelling. |
 | Nextflow | `.nf` | Processes, named/entry workflows and functions; includes, calls and channel routing through process outputs or pipes. Shell script bodies remain data. |
+| Snakemake | `.smk`, `Snakefile`, `snakefile` | Rules, checkpoints, modules, named input/output/params sections and Python definitions; calls, includes/module files and explicit `rules.NAME.output` dependencies. |
 
 New grammars use CMake FetchContent with immutable commits. After populating the
 cache, configure with `FETCHCONTENT_FULLY_DISCONNECTED=ON`; a source mirror can

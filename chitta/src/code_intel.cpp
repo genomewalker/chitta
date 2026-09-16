@@ -17,6 +17,7 @@ extern "C" const TSLanguage* tree_sitter_r();
 extern "C" const TSLanguage* tree_sitter_julia();
 extern "C" const TSLanguage* tree_sitter_fortran();
 extern "C" const TSLanguage* tree_sitter_nextflow();
+extern "C" const TSLanguage* tree_sitter_snakemake();
 
 namespace chitta {
 const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
@@ -25,10 +26,11 @@ const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
     if (language == "julia") return tree_sitter_julia();
     if (language == "fortran") return tree_sitter_fortran();
     if (language == "nextflow") return tree_sitter_nextflow();
+    if (language == "snakemake") return tree_sitter_snakemake();
     return nullptr;
 }
 void CodeIntel::initialize_extended_parsers() {
-    for (const auto* language : {"bash", "r", "julia", "fortran", "nextflow"}) {
+    for (const auto* language : {"bash", "r", "julia", "fortran", "nextflow", "snakemake"}) {
         auto* parser = ts_parser_new();
         if (!ts_parser_set_language(parser, extended_grammar(language))) {
             ts_parser_delete(parser);
@@ -40,6 +42,8 @@ void CodeIntel::initialize_extended_parsers() {
 std::string CodeIntel::detect_extended_language(const std::string& path) {
     auto ext = std::filesystem::path(path).extension().string();
     if (ext == ".sh" || ext == ".bash") return "bash";
+    auto filename = std::filesystem::path(path).filename().string();
+    if (ext == ".smk" || filename == "Snakefile" || filename == "snakefile") return "snakemake";
     if (ext == ".nf") return "nextflow";
     if (ext == ".jl") return "julia";
     if (ext == ".R" || ext == ".r" || std::filesystem::path(path).filename() == ".Rprofile") return "r";
@@ -51,6 +55,8 @@ std::string CodeIntel::detect_extended_language(const std::string& path) {
 void CodeIntel::extract_extended(TSNode root, const std::string& source,
                                 const std::string& path, const std::string& language,
                                 ExtractionResult& result) {
+    if (language == "snakemake")
+        extract_python_full(root, source, path, result.symbols, result.callsites, result.type_relationships, result.imports);
     auto field = [](TSNode node, const char* name) {
         return ts_node_child_by_field_name(node, name, std::strlen(name));
     };
@@ -319,6 +325,33 @@ void CodeIntel::extract_extended(TSNode root, const std::string& source,
                 auto name = type == "channel_factory" ? text(find_child(node, "identifier")) :
                     type == "channel_from_list" ? std::string("fromList") : type.substr(8);
                 call(node, name, parent, "Channel");
+            }
+        }
+        if (language == "snakemake") {
+            if (type == "rule_definition" || type == "checkpoint_definition" || type == "module_definition") {
+                auto name = text(field(node, "name"));
+                if (name.empty()) name = "<rule>";
+                define(node, name, type == "module_definition" ? "module" : type == "checkpoint_definition" ? "checkpoint" : "rule", parent, field(node, "body"));
+                parent = name;
+            }
+            if (type == "directive") {
+                auto directive = text(ts_node_child(node, 0));
+                if (!parent.empty() && (directive == "input" || directive == "output" || directive == "params")) {
+                    define(node, parent + "." + directive, directive, parent);
+                    result.symbols.back().signature = text(node);
+                }
+                if (directive == "include" || directive == "snakefile" || directive == "configfile") {
+                    auto value = ts_node_named_child(field(node, "arguments"), 0);
+                    if (!ts_node_is_null(value) && std::strcmp(ts_node_type(value), "string") == 0)
+                        result.imports.push_back({path, literal(value), "", {}, uint32_t(node_line(node))});
+                }
+            }
+            if (type == "attribute" && text(field(node, "attribute")) == "output" && !parent.empty()) {
+                auto producer = field(node, "object");
+                if (!ts_node_is_null(producer) && std::strcmp(ts_node_type(producer), "attribute") == 0 && text(field(producer, "object")) == "rules") {
+                    call(node, parent, text(field(producer, "attribute")));
+                    result.callsites.back().kind = CallKind::Channel;
+                }
             }
         }
         for (uint32_t i = 0; i < ts_node_named_child_count(node); ++i) visit(ts_node_named_child(node, i), parent);

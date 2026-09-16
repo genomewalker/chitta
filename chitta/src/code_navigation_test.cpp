@@ -113,6 +113,18 @@ int main() {
     chitta::CodeNavigation channel_restart;
     channel_restart.open((root / "navigation.json").string());
     assert(channel_restart.query(channel_query) == channels);
+    auto snake = root / "Snakefile";
+    auto snake_fixture = fixture.parent_path().parent_path() / "snakemake/navigation.smk";
+    fs::copy_file(snake_fixture, snake);
+    paths.push_back(snake.string()); changed = {snake.string()};
+    nav.update(root.string(), "fixture", paths, changed, intel.extract_files(changed), false);
+    auto rule_graph = nav.query({{"question", "align count"}, {"path", snake.string()}, {"limit", 40}});
+    bool rule_flow = false;
+    for (const auto& edge : rule_graph["edges"])
+        if (edge["source"].get<std::string>().ends_with(":align") && edge["surface"] == "count") {
+            assert(edge["confidence"] == "INFERRED"); rule_flow = true;
+        }
+    assert(rule_flow);
     fs::remove_all(root);
     std::cout << "navigation: confidence, ambiguity, scope, paths, restart identity, stale reads and deletion passed\n";
 }

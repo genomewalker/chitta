@@ -244,6 +244,7 @@ chitta_grammar(r r-lib/tree-sitter-r 58a22794466c0fc15b0d3b40531db751593721e8)
 chitta_grammar(julia tree-sitter/tree-sitter-julia a8e1262997d5a45520a06cbe1b86c0737d507054)
 chitta_grammar(fortran stadelmanma/tree-sitter-fortran 6f16bab7455cd2906a86679a1be83dd4f378db81)
 chitta_grammar(nextflow nextflow-io/tree-sitter-nextflow 69a72c6cf4e90609b8558fc05d7d17a5f3df7894)
+chitta_grammar(snakemake osthomas/tree-sitter-snakemake 315d8f4a55800bcacc2e420d2865d7f64b33efe6)
 
 # Extract version from plugin.json
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../.claude-plugin/plugin.json" PLUGIN_JSON)

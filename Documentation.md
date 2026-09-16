@@ -318,3 +318,17 @@ build and all language fixtures pass. The initial direct-output regression
 identified the grammar's expression wrapper; handling it makes both routing
 forms and the cross-file evidence check pass. Contracts and recall scoring
 are unchanged.
+
+### Snakemake
+
+The dedicated Snakemake grammar builds offline and parses the fixture without
+errors, so no Python fallback is needed. Rules, checkpoints and modules are
+definitions; input/output/params sections are named children that `read_symbol`
+can read directly. Python definitions and calls share the existing AST walker.
+Includes and module Snakefiles become imports. Explicit `rules.NAME.output`
+expressions connect unique producer and consumer rules.
+
+The fixture yields 9 definitions, 2 calls (one rule dependency), 2 imports and
+18 identifier references. Fresh parsing averages 291.94 microseconds/KiB;
+daemon size is 65,027,832 bytes (+823,328). All language fixtures and graph
+regressions pass; contracts and recall scoring are unchanged.
