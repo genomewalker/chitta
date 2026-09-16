@@ -11,6 +11,12 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 ## [Unreleased]
 
 ### Added
+- Restart identity gate on twenty frozen golden queries, with exact embedding
+  bytes, pre-fusion candidates, and score-component diagnostics. Replica restart
+  preserves the same store; evaluation pins recall time and gives embeddings a
+  bounded wait, rejecting incomplete semantic lanes instead of accepting fallback.
+- `no_learn` semantic recall preserves stored competitive weights and refresh
+  timestamps; learning and maintenance continue to refresh them normally.
 - 2026-09-16 follow-up validation: 200/200 writes, zero errors, embeddings
   drained; recall p95 113.9 ms during writes / 162.8 ms full window; cached
   restart 16.10 s. Full-window latency and restart gates remain unmet. Chaos

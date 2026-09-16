@@ -390,7 +390,14 @@ case "${1:-}" in
     restart)
         load_replica_env
         stop_replica
-        select_family "$EVAL_FIELD" >/dev/null || die "existing replica family is invalid"
+        selection="$(select_family "$EVAL_FIELD")" || die "existing replica family is invalid"
+        while IFS=$'\t' read -r kind value _; do
+            case "$kind" in
+                ID) CHITTA_EVAL_SNAPSHOT_ID="$value" ;;
+                SEQNO) CHITTA_EVAL_SNAPSHOT_SEQNO="$value" ;;
+                GENERATION) CHITTA_EVAL_MANIFEST_GENERATION="$value" ;;
+            esac
+        done <<< "$selection"
         launch_replica "$CHITTA_EVAL_SNAPSHOT_ID" "$CHITTA_EVAL_SNAPSHOT_SEQNO" "$CHITTA_EVAL_MANIFEST_GENERATION" ;;
     stop) stop_replica ;;
     status) status_replica ;;

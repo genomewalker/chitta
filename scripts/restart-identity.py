@@ -16,6 +16,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -43,8 +44,10 @@ def numeric_fields(value, prefix=""):
 
 
 def compare(before, after):
+    if len(before) != len(after):
+        raise ValueError("query panels have different lengths")
     rows = []
-    for left, right in zip(before, after, strict=True):
+    for left, right in zip(before, after):
         old = {hit["id"]: hit for hit in left["results"]}
         new = {hit["id"]: hit for hit in right["results"]}
         deltas = {}
@@ -105,6 +108,11 @@ def collect(args, env, queries):
             raise RuntimeError(f"duplicate IDs for {query!r}")
         if any("explain" not in hit for hit in hits):
             raise RuntimeError("recall --explain did not return score components")
+        embeddings = response.get("diagnostics", {}).get("embeddings", [])
+        if not embeddings or any(item["dimension"] != 768 for item in embeddings):
+            raise RuntimeError(
+                f"missing query/variant embedding for {query!r}; refusing fallback identity"
+            )
         rows.append({"query": query, **response})
     return rows
 
@@ -120,10 +128,25 @@ def main():
     parser.add_argument("--limit", type=int, default=20)
     parser.add_argument("--realm", default="", help="default: unscoped production recall")
     parser.add_argument("--within-process", action="store_true")
+    parser.add_argument(
+        "--now-ms",
+        type=int,
+        default=os.environ.get("CHITTA_RECALL_NOW"),
+        help="pin recall scoring time (default: this run's start, Unix milliseconds)",
+    )
+    parser.add_argument(
+        "--embed-wait-ms",
+        type=int,
+        default=10000,
+        help="bounded evaluation embedding wait; missing embeddings fail the gate",
+    )
     parser.add_argument("--restarts", type=int, default=1)
     args = parser.parse_args()
     if args.restarts < 1 or args.limit < 1:
         parser.error("restarts and limit must be positive")
+    if not 1 <= args.embed_wait_ms <= 60000 or (args.now_ms is not None and args.now_ms <= 0):
+        parser.error("embed-wait-ms must be 1..60000 and now-ms must be positive")
+    args.now_ms = args.now_ms or time.time_ns() // 1_000_000
     args.mind = (
         args.mind or Path(tempfile.mkdtemp(prefix="restart-identity-")) / "mind"
     ).absolute()
@@ -135,6 +158,11 @@ def main():
         or args.source.resolve() in args.mind.resolve().parents
     ):
         parser.error("scratch mind must be outside the source")
+    live_mind = (Path.home() / ".claude/mind").resolve()
+    if args.mind.resolve() == live_mind or live_mind in args.mind.resolve().parents:
+        parser.error("scratch mind must be outside the live mind")
+    private_home = args.mind.parent / (args.mind.name + "-home")
+    (private_home / ".claude/mind").mkdir(parents=True, exist_ok=True)
     if args.port is None:
         with socket.socket() as sock:
             sock.bind(("127.0.0.1", 0))
@@ -145,6 +173,7 @@ def main():
         raise RuntimeError("gate requires exactly 20 distinct frozen queries")
     env = dict(os.environ)
     env.update(
+        HOME=str(private_home),
         CHITTA_LIVE_MIND=str(args.source.resolve()),
         CHITTA_EVAL_MIND=str(args.mind),
         CHITTA_EVAL_PORT=str(args.port),
@@ -153,6 +182,8 @@ def main():
         OPENBLAS_NUM_THREADS="1",
         OMP_NUM_THREADS="1",
         RAYON_NUM_THREADS="1",
+        CHITTA_RECALL_NOW=str(args.now_ms),
+        CHITTA_RECALL_EMBED_WAIT_MS=str(args.embed_wait_ms),
         PATH=str(Path(sys.executable).parent) + ":" + env["PATH"],
     )
     helper = ["bash", str(ROOT / "scripts/eval-replica.sh")]
@@ -161,6 +192,9 @@ def main():
         "mind": str(args.mind),
         "port": args.port,
         "within_process": args.within_process,
+        "recall_now_ms": args.now_ms,
+        "embedding_wait_ms": args.embed_wait_ms,
+        "daemon": str(args.daemon.resolve()),
         "queries": queries,
         "runs": [],
         "comparisons": [],
