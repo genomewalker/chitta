@@ -419,55 +419,86 @@ ToolResult FieldRpcHandler::tool_flush_embeddings(const json& /*params*/) {
     return ToolResult::ok("Flushed " + std::to_string(n) + " embeddings", {{"flushed", (int)n}});
 }
 
-ToolResult FieldRpcHandler::tool_recall(const json& params) {
-    RecallStageTimer profile(field_store_ && field_store_->recall_profile_enabled(), "setup");
-    std::string query = params.value("query", "");
-    if (query.empty()) return ToolResult::error("query is required");
+// Per-request state keeps lane selection, score order and formatting explicit.
+// The timer spans the whole pipeline, including early returns and exceptions.
+struct FieldRpcHandler::RecallPipeline {
+    FieldRpcHandler& handler;
+    const json& params;
+    RecallStageTimer profile;
+    std::string query, realm, tag, strategy;
+    size_t limit = 0, pool_limit = 0, rerank_budget = 0;
+    bool expand = true, no_learn = false, windowed = false, prefilter_on = false;
+    int64_t win_from = 0, win_to = 0;
+    std::vector<FieldRecallHit> hits;
+    std::unordered_map<uint64_t, float> bridge_boost;
 
-    size_t limit         = static_cast<size_t>(params.value("limit", 10));
-    std::string realm    = params.value("realm", "");
-    std::string tag      = params.value("tag", "");
-    std::string strategy = params.value("strategy", "");
-    bool expand          = params.value("expand", true);
+    RecallPipeline(FieldRpcHandler& handler, const json& params)
+        : handler(handler), params(params),
+          profile(handler.field_store_ && handler.field_store_->recall_profile_enabled(), "setup") {}
+
+    bool parse_and_validate();
+    std::vector<FieldRecallHit> window_gate(std::vector<FieldRecallHit> v) const;
+    std::optional<ToolResult> dispatch_lanes();
+    void fuse_lanes(std::unordered_map<uint64_t, float>& rrf_scores,
+                    std::unordered_map<uint64_t, FieldRecallHit>& best_hit, float kRRF);
+    void filter_candidates();
+    void rescore_candidates();
+    void inject_graph_lane();
+    void rerank();
+    ToolResult format();
+};
+
+bool FieldRpcHandler::RecallPipeline::parse_and_validate() {
+    query = params.value("query", "");
+    if (query.empty()) return false;
+
+    limit = static_cast<size_t>(params.value("limit", 10));
+    realm = params.value("realm", "");
+    tag = params.value("tag", "");
+    strategy = params.value("strategy", "");
+    expand = params.value("expand", true);
     // Measurement mode: skip co-retrieval strengthening so an eval/diagnostic
     // recall never mutates the store. "no_learn":true or "strengthen":false.
-    bool no_learn        = params.value("no_learn", false) || !params.value("strengthen", true);
+    no_learn = params.value("no_learn", false) || !params.value("strengthen", true);
 
     // Temporal window (parsed from the query at the pre-embed hook, e.g.
     // "last week" / "in June"). The window GATES candidates by authored ts;
     // semantic relevance still RANKS — never recency-sorted (recency-ordered
     // temporal recall floods context with operationally-fresh noise).
-    int64_t win_from = 0, win_to = 0;
     if (params.contains("_twindow") && params["_twindow"].is_array()
         && params["_twindow"].size() == 2) {
         win_from = params["_twindow"][0].get<int64_t>();
         win_to   = params["_twindow"][1].get<int64_t>();
     }
-    const bool windowed = win_to > 0;
-    auto window_gate = [&](std::vector<FieldRecallHit> v) {
-        if (windowed) {
-            v.erase(std::remove_if(v.begin(), v.end(),
-                [&](const FieldRecallHit& h) { return h.ts_ms < win_from || h.ts_ms >= win_to; }),
-                v.end());
-        }
-        return v;
-    };
+    windowed = win_to > 0;
+    return true;
+}
 
+std::vector<FieldRecallHit> FieldRpcHandler::RecallPipeline::window_gate(std::vector<FieldRecallHit> v) const {
+    if (windowed) {
+        v.erase(std::remove_if(v.begin(), v.end(),
+            [&](const FieldRecallHit& h) { return h.ts_ms < win_from || h.ts_ms >= win_to; }),
+            v.end());
+    }
+    return v;
+}
+
+std::optional<ToolResult> FieldRpcHandler::RecallPipeline::dispatch_lanes() {
     // Field-RAG / Modern Hopfield mode: bypass RRF, run DAM relaxation.
     // Tagged requests must reach the common tag/realm selection below.
     std::vector<FieldRecallHit> tagged_field_hits;
     if (strategy == "field") {
         auto emb = params.contains("_preembedding")
             ? params["_preembedding"].get<std::vector<float>>()
-            : embed_query(query);
+            : handler.embed_query(query);
         if (!emb.empty()) {
-            auto hits = field_store_->recall_field(emb, query, limit, realm);
+            auto hits = handler.field_store_->recall_field(emb, query, limit, realm);
             hits.erase(
                 std::remove_if(hits.begin(), hits.end(),
                     [](const FieldRecallHit& h) { return h.content.empty(); }),
                 hits.end());
             if (tag.empty()) {
-                json results = hits_to_results_json(hits, false);
+                json results = handler.hits_to_results_json(hits, false);
                 return ToolResult::ok(std::to_string(hits.size()) + " field memories", {{"results", results}});
             }
             tagged_field_hits = std::move(hits);
@@ -498,7 +529,8 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
     };
     static const size_t kPoolDefault   = env_pos("CHITTA_RECALL_POOL", 60);
     static const size_t kRerankBudget  = env_pos("CHITTA_RERANK_BUDGET", 24);
-    const bool   prefilter_on = kPrefilterEnv && params.value("prefilter", true);
+    rerank_budget = kRerankBudget;
+    prefilter_on = kPrefilterEnv && params.value("prefilter", true);
     const size_t want_pool    = std::min(
         static_cast<size_t>(params.value("pool", static_cast<int>(kPoolDefault))), (size_t)160);
 
@@ -506,16 +538,14 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
     // we intend to over-select from — a gold at union rank 43 is unreachable if
     // no lane ever returned 43 rows. Still capped at 160 to bound HNSW/BM25 cost.
     if (prefilter_on) lane_depth = std::min(std::max(lane_depth, want_pool), (size_t)160);
-    size_t pool_limit = std::max(fetch_limit, lane_depth);
+    pool_limit = std::max(fetch_limit, lane_depth);
 
     // Multi-lane RRF: original query (2×, weighted) + SSL-shaped variants + BM25
     // Works directly on FieldRecallHit to preserve Hebbian/temporal scoring metadata.
-    std::vector<FieldRecallHit> hits;
     // Lane-0 atom bridge: id -> normalized saturating-IDF weight of a co-atom
     // partner of the recall anchor. Populated in the multi-lane block, consumed
     // as an additive atom-overlap boost in the rescore (identity-evidence analog
     // of the term-overlap lever). Populated by default; empty iff CHITTA_BRIDGE_LANE0=0.
-    std::unordered_map<uint64_t, float> bridge_boost;
     // strategy="keyword": BM25 only, realm-scoped. Previously this string fell
     // through to the fused path and the flag was a silent no-op, so callers who
     // asked for the keyword lane got whatever the fused path did — including,
@@ -524,8 +554,8 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
         hits = window_gate(std::move(tagged_field_hits));
     } else if (strategy == "keyword") {
         profile.next("keyword");
-        hits = window_gate(field_store_->recall_keyword(query, pool_limit, realm, no_learn));
-    } else if (expand && query_has_entities(query)) {
+        hits = window_gate(handler.field_store_->recall_keyword(query, pool_limit, realm, no_learn));
+    } else if (expand && handler.query_has_entities(query)) {
         std::vector<std::string> forms = {query, query}; // original 2× = boosted weight
         for (auto& v : chitta::ssl::ssl_query_variants(query)) forms.push_back(v);
 
@@ -552,123 +582,133 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
         profile.next("semantic_lanes");
         if (!base_emb.empty()) {
             for (const auto& f : forms) {
-                auto emb = (f == query) ? base_emb : embed_query(f);
+                auto emb = (f == query) ? base_emb : handler.embed_query(f);
                 if (emb.empty()) continue;
-                rrf_lane(window_gate(field_store_->recall(emb, lane_depth, realm, no_learn)));
+                rrf_lane(window_gate(handler.field_store_->recall(emb, lane_depth, realm, no_learn)));
             }
         }
         profile.next("keyword");
         // BM25 lane
-        rrf_lane(window_gate(field_store_->recall_keyword(query, lane_depth, realm, no_learn)));
+        rrf_lane(window_gate(handler.field_store_->recall_keyword(query, lane_depth, realm, no_learn)));
         profile.next("hdc");
         // HDC lane (skipped when disable_hdc=true for ablation/benchmarking)
         if (!params.value("disable_hdc", false)) {
-            rrf_lane(window_gate(field_store_->recall_hdc(query, lane_depth, realm)));
+            rrf_lane(window_gate(handler.field_store_->recall_hdc(query, lane_depth, realm)));
         }
 
-        profile.next("bridge_fusion");
-        // Lane-0 atom bridge: record the RRF leader's rare co-atom partners with a
-        // normalized saturating-IDF weight. The RRF position-based fusion above
-        // buries a keyword-absent partner under the keyword-matching crowd; the
-        // additive term-overlap rescore below then finishes the job. So instead of
-        // a (negligible) RRF-mass nudge here, we stash the partner's IDF weight and
-        // spend it in that same rescore stage as an additive atom-overlap boost —
-        // the identity-evidence analog of shared query terms. Never fabricates a
-        // hit: the boost only lands on partners the lanes already surfaced.
-        // Default ON since the honest-gold A/B (v7, n=161): single_hop recall+nDCG
-        // +0.02, overall recall 0.950->0.969, no material regression. Kill switch:
-        // CHITTA_BRIDGE_LANE0=0.
-        const char* lane0_env = std::getenv("CHITTA_BRIDGE_LANE0");
-        const bool lane0_on = !lane0_env || lane0_env[0] != '0';
-        if (lane0_on && !rrf_scores.empty()) {
-            // Anchor on the top-K fused hits, not just the RRF leader: the leader
-            // is often a pure keyword match that carries no rare identity atom,
-            // while the memory that DOES (the query's real subject) sits a rank or
-            // two down. Union the co-atom partners of the top-K, keeping the max
-            // saturating-IDF boost per partner.
-            std::vector<std::pair<uint64_t, float>> lead(rrf_scores.begin(), rrf_scores.end());
-            const size_t kAnchors = std::min<size_t>(5, lead.size());
-            std::partial_sort(lead.begin(), lead.begin() + kAnchors, lead.end(),
-                              [](auto& a, auto& b) { return a.second > b.second || (a.second == b.second && a.first < b.first); });
-            const float norm = std::log(static_cast<float>(field_store_->memory_count()) + 1.0f);
-            for (size_t a = 0; a < kAnchors; ++a) {
-                auto br = field_store_->bridge_lane(lead[a].first, realm, 16);
-                const auto& bids = br.first; const auto& bw = br.second;
-                for (size_t i = 0; i < bids.size(); ++i) {
-                    // Materialize a partner no lane surfaced (keyword-absent,
-                    // cosine-cold): fetch it realm-scoped so it can enter the pool.
-                    // A partner already present keeps its own hit; we only add the
-                    // bridge's vote+boost to it.
-                    if (!best_hit.count(bids[i])) {
-                        std::string content = field_store_->get_content(bids[i], false);
-                        if (content.empty()) continue;
-                        FieldRecallHit h;
-                        h.memory_id = bids[i];
-                        h.semantic_score = 0.0f;
-                        h.content = content;
-                        try {
-                            auto m = json::parse(field_store_->get_memory_metadata(bids[i]));
-                            h.ts_ms        = m.value("ts_ms", int64_t(0));
-                            h.strength     = m.value("strength", 0.5f);
-                            h.confidence   = m.value("confidence", 0.5f);
-                            h.access_count = m.value("access_count", uint32_t(0));
-                            h.kind         = m.value("kind", "episode");
-                            h.realm        = m.value("realm", "");
-                        } catch (...) {}
-                        if (!realm.empty() && h.realm != realm) continue;
-                        best_hit[bids[i]] = std::move(h);
-                    }
-                    // Bridge is a first-class RRF lane: partners come weight-sorted,
-                    // so rank i+1 gives the rarest-atom partner a rank-1 vote (same
-                    // magnitude as leading any other lane). Applied whether or not a
-                    // weak dense hit already put the partner in the pool — otherwise
-                    // that tiny natural RRF base can't be lifted by the boost alone.
-                    rrf_scores[bids[i]] += 1.0f / (kRRF + static_cast<float>(i + 1));
-                    float boost = norm > 0.0f ? std::min(1.0f, bw[i] / norm) : 0.0f;
-                    auto it = bridge_boost.find(bids[i]);
-                    if (it == bridge_boost.end() || boost > it->second)
-                        bridge_boost[bids[i]] = boost;
-                }
-            }
-        }
-
-        // Collect sorted by RRF score, keep original hit metadata
-        std::vector<std::pair<float, uint64_t>> ranked;
-        ranked.reserve(rrf_scores.size());
-        for (auto& [id, score] : rrf_scores) ranked.emplace_back(score, id);
-        std::sort(ranked.begin(), ranked.end(), std::greater<>());
-
-        // Normalize RRF scores to [0,1] so display_pct shows meaningful percentages.
-        // Raw RRF values are ~1/(60+rank) ≈ 0.016 — meaningless as relevance.
-        float max_rrf = ranked.empty() ? 1.0f : ranked[0].first;
-        if (max_rrf < 1e-6f) max_rrf = 1.0f;
-
-        // Keep the full rescore pool here; final truncation to `limit` happens
-        // AFTER drift + term-overlap rescoring so deep-pool golds can climb.
-        for (auto& [score, id] : ranked) {
-            if (hits.size() >= pool_limit) break;
-            auto& h = best_hit[id];
-            if (!h.content.empty()) {
-                h.score = score / max_rrf;
-                hits.push_back(std::move(h));
-            }
-        }
+        fuse_lanes(rrf_scores, best_hit, kRRF);
     } else {
         // _preembedding is set only when pre-embed succeeded (certainty > 0).
-        // Never call embed_query() here — that's inside rpc_mutex_ and blocks readers.
+        // Never call handler.embed_query() here — that's inside rpc_mutex_ and blocks readers.
         if (params.contains("_preembedding")) {
             auto emb = params["_preembedding"].get<std::vector<float>>();
-            hits = window_gate(field_store_->recall(emb, pool_limit, realm, no_learn));
+            hits = window_gate(handler.field_store_->recall(emb, pool_limit, realm, no_learn));
         } else {
             // Realm scoping: this is the pre-embed-miss fallback (embed_queue
             // timed out at 50ms, so no _preembedding), which fires for ordinary
             // recalls, not just diagnostics. It passed "" for realm, so every
             // cold-cache recall silently returned cross-realm memories while the
             // semantic leg two branches up was correctly scoped. Same `realm`.
-            hits = window_gate(field_store_->recall_keyword(query, pool_limit, realm, no_learn));
+            hits = window_gate(handler.field_store_->recall_keyword(query, pool_limit, realm, no_learn));
         }
     }
 
+    return std::nullopt;
+}
+
+void FieldRpcHandler::RecallPipeline::fuse_lanes(
+    std::unordered_map<uint64_t, float>& rrf_scores,
+    std::unordered_map<uint64_t, FieldRecallHit>& best_hit, float kRRF) {
+    profile.next("bridge_fusion");
+    // Lane-0 atom bridge: record the RRF leader's rare co-atom partners with a
+    // normalized saturating-IDF weight. The RRF position-based fusion above
+    // buries a keyword-absent partner under the keyword-matching crowd; the
+    // additive term-overlap rescore below then finishes the job. So instead of
+    // a (negligible) RRF-mass nudge here, we stash the partner's IDF weight and
+    // spend it in that same rescore stage as an additive atom-overlap boost —
+    // the identity-evidence analog of shared query terms. Never fabricates a
+    // hit: the boost only lands on partners the lanes already surfaced.
+    // Default ON since the honest-gold A/B (v7, n=161): single_hop recall+nDCG
+    // +0.02, overall recall 0.950->0.969, no material regression. Kill switch:
+    // CHITTA_BRIDGE_LANE0=0.
+    const char* lane0_env = std::getenv("CHITTA_BRIDGE_LANE0");
+    const bool lane0_on = !lane0_env || lane0_env[0] != '0';
+    if (lane0_on && !rrf_scores.empty()) {
+        // Anchor on the top-K fused hits, not just the RRF leader: the leader
+        // is often a pure keyword match that carries no rare identity atom,
+        // while the memory that DOES (the query's real subject) sits a rank or
+        // two down. Union the co-atom partners of the top-K, keeping the max
+        // saturating-IDF boost per partner.
+        std::vector<std::pair<uint64_t, float>> lead(rrf_scores.begin(), rrf_scores.end());
+        const size_t kAnchors = std::min<size_t>(5, lead.size());
+        std::partial_sort(lead.begin(), lead.begin() + kAnchors, lead.end(),
+                          [](auto& a, auto& b) { return a.second > b.second || (a.second == b.second && a.first < b.first); });
+        const float norm = std::log(static_cast<float>(handler.field_store_->memory_count()) + 1.0f);
+        for (size_t a = 0; a < kAnchors; ++a) {
+            auto br = handler.field_store_->bridge_lane(lead[a].first, realm, 16);
+            const auto& bids = br.first; const auto& bw = br.second;
+            for (size_t i = 0; i < bids.size(); ++i) {
+                // Materialize a partner no lane surfaced (keyword-absent,
+                // cosine-cold): fetch it realm-scoped so it can enter the pool.
+                // A partner already present keeps its own hit; we only add the
+                // bridge's vote+boost to it.
+                if (!best_hit.count(bids[i])) {
+                    std::string content = handler.field_store_->get_content(bids[i], false);
+                    if (content.empty()) continue;
+                    FieldRecallHit h;
+                    h.memory_id = bids[i];
+                    h.semantic_score = 0.0f;
+                    h.content = content;
+                    try {
+                        auto m = json::parse(handler.field_store_->get_memory_metadata(bids[i]));
+                        h.ts_ms        = m.value("ts_ms", int64_t(0));
+                        h.strength     = m.value("strength", 0.5f);
+                        h.confidence   = m.value("confidence", 0.5f);
+                        h.access_count = m.value("access_count", uint32_t(0));
+                        h.kind         = m.value("kind", "episode");
+                        h.realm        = m.value("realm", "");
+                    } catch (...) {}
+                    if (!realm.empty() && h.realm != realm) continue;
+                    best_hit[bids[i]] = std::move(h);
+                }
+                // Bridge is a first-class RRF lane: partners come weight-sorted,
+                // so rank i+1 gives the rarest-atom partner a rank-1 vote (same
+                // magnitude as leading any other lane). Applied whether or not a
+                // weak dense hit already put the partner in the pool — otherwise
+                // that tiny natural RRF base can't be lifted by the boost alone.
+                rrf_scores[bids[i]] += 1.0f / (kRRF + static_cast<float>(i + 1));
+                float boost = norm > 0.0f ? std::min(1.0f, bw[i] / norm) : 0.0f;
+                auto it = bridge_boost.find(bids[i]);
+                if (it == bridge_boost.end() || boost > it->second)
+                    bridge_boost[bids[i]] = boost;
+            }
+        }
+    }
+
+    // Collect sorted by RRF score, keep original hit metadata
+    std::vector<std::pair<float, uint64_t>> ranked;
+    ranked.reserve(rrf_scores.size());
+    for (auto& [id, score] : rrf_scores) ranked.emplace_back(score, id);
+    std::sort(ranked.begin(), ranked.end(), std::greater<>());
+
+    // Normalize RRF scores to [0,1] so display_pct shows meaningful percentages.
+    // Raw RRF values are ~1/(60+rank) ≈ 0.016 — meaningless as relevance.
+    float max_rrf = ranked.empty() ? 1.0f : ranked[0].first;
+    if (max_rrf < 1e-6f) max_rrf = 1.0f;
+
+    // Keep the full rescore pool here; final truncation to `limit` happens
+    // AFTER drift + term-overlap rescoring so deep-pool golds can climb.
+    for (auto& [score, id] : ranked) {
+        if (hits.size() >= pool_limit) break;
+        auto& h = best_hit[id];
+        if (!h.content.empty()) {
+            h.score = score / max_rrf;
+            hits.push_back(std::move(h));
+        }
+    }
+}
+
+void FieldRpcHandler::RecallPipeline::filter_candidates() {
     // Filter orphaned HNSW entries (deleted payloads with lingering vectors) and
     profile.next("rescore");
     // quarantine [gap] memories: they're epistemic-gap markers for the dream
@@ -690,7 +730,7 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
         auto emb = params["_preembedding"].get<std::vector<float>>();
         std::unordered_set<uint64_t> have;
         for (const auto& h : hits) have.insert(h.memory_id);
-        for (auto& h : field_store_->recall_with_fallback(emb, query, limit, realm,
+        for (auto& h : handler.field_store_->recall_with_fallback(emb, query, limit, realm,
                                                           win_from, win_to)) {
             if (hits.size() >= limit) break;
             if (h.content.empty() || have.count(h.memory_id)) continue;
@@ -701,7 +741,7 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
 
     // Hard-filter by tag: keep only memories that have (id, "tagged", tag) triplet
     if (!tag.empty()) {
-        std::string triplets_json = field_store_->query_object(tag);
+        std::string triplets_json = handler.field_store_->query_object(tag);
         std::unordered_set<uint64_t> tagged_ids;
         try {
             auto tj = json::parse(triplets_json);
@@ -727,9 +767,9 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
             if (hits.empty()) {
                 for (uint64_t tid : tagged_ids) {
                     if (hits.size() >= limit) break;
-                    std::string content = field_store_->get_content(tid, false);
+                    std::string content = handler.field_store_->get_content(tid, false);
                     if (content.empty()) continue;
-                    std::string meta_json = field_store_->get_memory_metadata(tid);
+                    std::string meta_json = handler.field_store_->get_memory_metadata(tid);
                     FieldRecallHit h;
                     h.memory_id    = tid;
                     h.score        = 1.0f;
@@ -754,9 +794,12 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
         }
     }
 
+}
+
+void FieldRpcHandler::RecallPipeline::rescore_candidates() {
     // Drift scoring: anti-perseveration penalty + curiosity boost
     {
-        const size_t total = field_store_->memory_count();
+        const size_t total = handler.field_store_->memory_count();
         if (total >= 5 && !hits.empty()) {
             const float max_access = 10.0f;
             const float exploration = 1.0f;
@@ -903,6 +946,9 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
         }
     }
 
+}
+
+void FieldRpcHandler::RecallPipeline::inject_graph_lane() {
     // Tier-2: SOTA Personalized-PageRank injection lane (HippoRAG-style). RRF and
     // the lexical rescore above can only reorder what the semantic/BM25/HDC lanes
     // already surfaced; a multi-hop query's bridge memory shares no query terms
@@ -962,7 +1008,7 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
             seed_ids.push_back(hits[i].memory_id);
             seed_w.push_back(std::max(hits[i].score, 1e-6f));
         }
-        auto lane = field_store_->ppr_lane(seed_ids, seed_w, top_g);
+        auto lane = handler.field_store_->ppr_lane(seed_ids, seed_w, top_g);
         if (!lane.empty()) {
             constexpr float kPPRRRF = 60.0f;
             std::unordered_map<uint64_t, float>          fused;
@@ -978,7 +1024,7 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
                 float contrib = lane_w * (1.0f / (kPPRRRF + rank++));
                 if (by_id.find(mid) != by_id.end()) { fused[mid] += contrib; continue; }
                 // Inject: hydrate the graph-reached memory (semantic_score 0).
-                std::string content = field_store_->get_content(mid, false);
+                std::string content = handler.field_store_->get_content(mid, false);
                 if (content.empty() || content.rfind("[gap]", 0) == 0) continue;
                 FieldRecallHit h;
                 h.memory_id      = mid;
@@ -986,7 +1032,7 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
                 h.semantic_score = 0.0f;
                 h.content        = std::move(content);
                 try {
-                    auto m = json::parse(field_store_->get_memory_metadata(mid));
+                    auto m = json::parse(handler.field_store_->get_memory_metadata(mid));
                     h.ts_ms        = m.value("ts_ms", int64_t(0));
                     h.strength     = m.value("strength", 0.5f);
                     h.confidence   = m.value("confidence", 0.5f);
@@ -1023,20 +1069,23 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
         }
     }
 
+}
+
+void FieldRpcHandler::RecallPipeline::rerank() {
     profile.next("prefilter");
     // ── Recall-biased pre-filter: wide pool → cheap over-selection ──────────
     // Runs AFTER every scoring stage and BEFORE the MMR/limit truncation (and
     // before the MCP's cross-encoder, which reranks whatever this returns), so
     // the reranker sees a budget of recall-biased survivors instead of the
     // arbitrary top-`limit` slice. See prefilter_keep() for the rules/evidence.
-    if (prefilter_on && hits.size() > std::max(limit, kRerankBudget)) {
+    if (prefilter_on && hits.size() > std::max(limit, rerank_budget)) {
         // Rule (d) adjacency: ONE FFI call for the top-3 hits' 1-hop neighbours,
         // not one per candidate. Keeps the stage O(pool) with no embedding work.
         std::unordered_set<uint64_t> nbr;
         {
             std::vector<uint64_t> seeds;
             for (size_t i = 0; i < hits.size() && i < 3; ++i) seeds.push_back(hits[i].memory_id);
-            for (const auto& n : field_store_->expand_associations(seeds, 1, 32))
+            for (const auto& n : handler.field_store_->expand_associations(seeds, 1, 32))
                 nbr.insert(n.memory_id);
         }
         auto q_toks = lex_tokens(query);
@@ -1051,9 +1100,9 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
             }
             cands.push_back({h.score, has_lex, nbr.count(h.memory_id) != 0, h.realm, h.kind});
         }
-        auto keep = prefilter_keep(cands, limit, kRerankBudget);
+        auto keep = prefilter_keep(cands, limit, rerank_budget);
         std::vector<FieldRecallHit> kept;
-        kept.reserve(std::max(limit, kRerankBudget));
+        kept.reserve(std::max(limit, rerank_budget));
         for (size_t i = 0; i < hits.size(); ++i)
             if (keep[i]) kept.push_back(std::move(hits[i]));
         hits = std::move(kept);
@@ -1140,12 +1189,15 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
         std::vector<uint64_t> ids;
         ids.reserve(hits.size());
         for (const auto& h : hits) ids.push_back(h.memory_id);
-        field_store_->record_co_retrieval(ids);
+        handler.field_store_->record_co_retrieval(ids);
     }
 
+}
+
+ToolResult FieldRpcHandler::RecallPipeline::format() {
     bool explain = params.value("explain", false);
     profile.next("result_metadata");
-    json results_json = hits_to_results_json(hits, explain);
+    json results_json = handler.hits_to_results_json(hits, explain);
 
     // Abstain signal: if no candidate clears the calibrated relevance bar, say so honestly
     // instead of presenting a weak best-of-a-bad-batch as if confident. relevance(cos) =
@@ -1176,7 +1228,7 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
     if (!hits.empty()) ss << " (maxrel " << static_cast<int>(max_rel * 100) << "%)";
     ss << ":\n";
     profile.next("format");
-    format_hits(ss, results_json, query, {.show_date = true, .link_atoms = true});
+    handler.format_hits(ss, results_json, query, {.show_date = true, .link_atoms = true});
     profile.next("spans");
 
     // Co-present the Span Lane: a separate, capped, realm-scoped block of verbatim
@@ -1185,7 +1237,7 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
     // seen only in project A never surfaces in a project-B recall (case #2).
     json atoms_json = json::array();
     {
-        std::string span_raw = field_store_->span_query_json(query, realm, 6);
+        std::string span_raw = handler.field_store_->span_query_json(query, realm, 6);
         auto atoms = json::parse(span_raw, nullptr, false);
         if (atoms.is_array() && !atoms.empty()) {
             atoms_json = atoms;
@@ -1218,8 +1270,19 @@ ToolResult FieldRpcHandler::tool_recall(const json& params) {
         ss << "\n[window: " << iso(win_from) << " → " << iso(win_to) << " UTC]\n";
     }
     auto result = ToolResult::ok(ss.str(), meta);
-    fire_recall_callback(results_json, 1);
+    handler.fire_recall_callback(results_json, 1);
     return result;
+}
+
+ToolResult FieldRpcHandler::tool_recall(const json& params) {
+    RecallPipeline recall(*this, params);
+    if (!recall.parse_and_validate()) return ToolResult::error("query is required");
+    if (auto result = recall.dispatch_lanes()) return std::move(*result);
+    recall.filter_candidates();
+    recall.rescore_candidates();
+    recall.inject_graph_lane();
+    recall.rerank();
+    return recall.format();
 }
 
 ToolResult FieldRpcHandler::tool_recall_temporal(const json& params) {

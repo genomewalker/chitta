@@ -1271,6 +1271,8 @@ private:
     ToolResult registered_tick_lineage_staleness(const json& p);
     ToolResult registered_lineage_expiry_check(const json& p);
 
+    struct RecallPipeline;
+
     void register_tools();
     void register_memory_core_tools();
     void register_code_intel_tools();
