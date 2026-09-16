@@ -83,10 +83,13 @@ ROOT=$(resolve_cc_soul_root) || {
     exit 0
 }
 policy=$(printf '%s' "$INPUT" | python3 -S "$ROOT/chitta-mcp/hook_client.py" pre-tool "$MATCHER")
-if [[ "$MATCHER" == Read && ( -z "$policy" || "$policy" == "{}" ) ]]; then
-    # Phase 9: structural context for an indexed source file (hooks/code-nav.sh).
+rc=$?
+# Phase 9: structural context for an indexed source file (hooks/code-nav.sh)
+# unless the daemon already decided something (enforcement, block, rewrite).
+if [[ "$MATCHER" == Read && $rc -eq 0 ]] && ! grep -qE '"(updatedInput|permissionDecision)"' <<< "$policy"; then
     file_path=$(jq -r '.tool_input.file_path // empty' <<< "$INPUT" 2>/dev/null)
     session_id=$(jq -r '.session_id // empty' <<< "$INPUT" 2>/dev/null)
     [[ -n "$file_path" ]] && bash "$SCRIPT_DIR/code-nav.sh" read "$file_path" "$session_id" && exit 0
 fi
 printf '%s' "$policy"
+exit $rc

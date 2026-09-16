@@ -26,7 +26,7 @@ def main():
         cli = base / "event-response"
         subprocess.run(
             [
-                os.environ.get("CXX", "g++"),
+                os.environ.get("CXX", os.environ.get("CXX", "g++")),
                 "-std=c++17",
                 "-O2",
                 "-pthread",

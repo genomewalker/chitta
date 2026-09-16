@@ -13,7 +13,7 @@ with tempfile.TemporaryDirectory(prefix="chitta-session-native-") as temporary:
     binary = base / "policy"
     subprocess.run(
         [
-            os.environ.get("CXX", "g++"),
+            os.environ.get("CXX", os.environ.get("CXX", "g++")),
             "-std=c++17",
             "-O2",
             "-pthread",
