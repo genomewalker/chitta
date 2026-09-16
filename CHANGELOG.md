@@ -96,6 +96,9 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 - Chained `git add … && git commit` commands are captured as milestones.
 
 ### Fixed
+- 2026-09-16 (Phase 1c): measure real Rust component RwLock waits and holds,
+  including timed reads and unwinding. Named diagnostics log first use, maxima,
+  and every wait or hold over 50 ms; archive poisoning remains intact.
 - 2026-09-16 (Phase 1b): publish queue metadata and callbacks under narrow
   mutexes, initialize sadhana before background readers, and join foreground
   RPC and compaction workers before destroying their captured state.

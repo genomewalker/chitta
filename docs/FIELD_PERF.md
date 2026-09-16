@@ -47,6 +47,32 @@ golden nDCG moves from 0.5708 to 0.5773 (both below the grader's 0.7 target).
 The inherited primary-node hook fixture initially saw the old binary; it passed
 with exit 75 after rebuilding the merged Phase 6 daemon.
 
+## Named Rust lock timings — 2026-09-16
+
+All 76 parking_lot component RwLocks in `chitta-field/src/field.rs` and the
+standard-library archive RwLock use guards from `chitta-field/src/profile.rs`.
+Acquisition attempts, wait and hold maxima are always measured, including timed
+read failures and unwinding. The archive retains standard-library poisoning.
+`[lockprof] RUST component=... mode=... held_us=... wait_us=...` is emitted on
+first use, new lifetime maxima, each 4096th completion, and every wait or hold
+over 50 ms. The guard releases its component before writing diagnostics.
+No profiling environment variable is required and no RPC or file format changes.
+
+Reports distinguish observed stress-interval timings from lifetime maxima that
+can include startup. Every over-threshold completion is logged even when its
+component had a larger startup maximum. Timing includes scheduler delays; these
+are real periods during which other clients cannot acquire the component.
+
+Step (c) validation, 2026-09-16: Rust release build and 291 tests pass (two
+existing fixtures ignored), CTest 26/26, MCP 149/149, hooks 23 scripts, SMRITI
+46/46, CI Ruff and chaos 9/9. Embedding identity remains 768 /
+nomic-embed-text-v1.5 / text-format 1, format ID 9230643459983636874.
+The same-copy distinct-query restart result is 15/20 against the 18/20 baseline:
+the revised no-worse gate is unmet. Both fixed-query controls remain 20/20.
+Current-truth is still 20/50 and golden nDCG is 0.5772. These are observations,
+not qualification to remove the global lock. The profiler observes 33 exercised
+components, with startup-inclusive maximum hold 705.761 ms and wait 71.131 ms.
+
 ## Acknowledged-write durability
 
 Status 2026-09-16 (Phase 6 source audit). A successful response is not a universal
