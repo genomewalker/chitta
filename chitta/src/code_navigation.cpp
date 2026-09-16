@@ -169,7 +169,8 @@ struct CodeNavigation::Impl {
                         for (const auto& entry : by_file) {
                             if (nodes[entry.second.front()].root != nodes[from].root) continue;
                             auto rel = fs::path(entry.first).lexically_relative(nodes[from].root).string();
-                            if (rel == module + ".py" || rel == target || rel == module + "/__init__.py")
+                            if (rel == target || (nodes[from].lang == "python" &&
+                                (rel == module + ".py" || rel == module + "/__init__.py")))
                                 candidates.push_back(entry.second.back());
                         }
                     }

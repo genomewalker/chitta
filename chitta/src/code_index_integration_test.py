@@ -141,6 +141,8 @@ def main():
                 result = call("learn_codebase", path=str(root), project="chitta")
                 elapsed = time.perf_counter() - started
                 extensions = {
+                    ".R",
+                    ".r",
                     ".sh",
                     ".bash",
                     ".c",
@@ -175,7 +177,11 @@ def main():
                     .decode()
                     .split("\0")
                 )
-                expected = {str(root / f) for f in tracked if Path(f).suffix in extensions}
+                expected = {
+                    str(root / f)
+                    for f in tracked
+                    if Path(f).suffix in extensions or Path(f).name == ".Rprofile"
+                }
                 present = set(call("codebase_overview", project="chitta")["indexed_files"])
                 result["tracked_supported"] = len(expected)
                 result["tracked_indexed"] = len(present & expected)

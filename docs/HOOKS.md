@@ -1455,6 +1455,7 @@ connections. Runtime dispatch and dynamic import paths are not evaluated.
 | Language | Files | Definitions and edges |
 |---|---|---|
 | Bash / sh | `.sh`, `.bash` | Functions with signatures; literal command calls (resolved to known functions); `source` and `.` imports. Comments and heredocs remain data. |
+| R | `.R`, `.r`, `.Rprofile` | Assigned functions and named methods; calls; `source`, `library`, `require` and namespace imports; S4/R6 classes with literal inheritance. |
 
 New grammars use CMake FetchContent with immutable commits. After populating the
 cache, configure with `FETCHCONTENT_FULLY_DISCONNECTED=ON`; a source mirror can

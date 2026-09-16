@@ -1,0 +1,39 @@
+{
+  "file": "navigation.R",
+  "language": "r",
+  "symbols": {
+    "normalize": "function",
+    "apply_normalize": "function",
+    "ReadSet": "class",
+    "Runner": "class",
+    "run": "method"
+  },
+  "signatures": {
+    "normalize": "normalize <- function(\n    x, scale = 2)",
+    "run": "run = function(x)"
+  },
+  "calls": [
+    "helper",
+    "normalize",
+    "setClass",
+    "R6Class"
+  ],
+  "imports": [
+    "methods",
+    "stats",
+    "helpers.R",
+    "R6"
+  ],
+  "inherits": [
+    "BaseSet",
+    "BaseRunner"
+  ],
+  "absent": [
+    "phantom",
+    "FUN"
+  ],
+  "aliases": [
+    "analysis.r",
+    ".Rprofile"
+  ]
+}

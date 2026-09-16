@@ -10,6 +10,8 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 ## [Unreleased]
 
+- Extend structural navigation to R functions, package/source imports, and S4/R6 classes and inheritance.
+
 - Code navigation now extracts Bash/sh functions, sourced files, and literal command calls using a pinned, offline-cacheable grammar; fixtures include the real hook library.
 
 - Add complete Git-aware structural indexing, `code_query` and `code_path`, a

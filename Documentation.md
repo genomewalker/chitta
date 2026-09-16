@@ -251,3 +251,22 @@ passed, including contracts. Two existing test-only ShellCheck warnings now
 explicitly document intentional literal tilde paths. The initial JSON assertion
 compile/lifetime defects in the new test harness were fixed and rerun. The full
 gate and expanded repository coverage run follow the last language commit.
+
+### R
+
+R source now contributes assigned functions, named methods, S4/R6 classes,
+source/package/namespace imports, calls and literal inheritance. `.R`, `.r` and
+`.Rprofile` are recognized. Multiline function signatures are retained. The
+pinned `r-lib/tree-sitter-r` revision builds with the existing runtime offline.
+The fixture finds 5 definitions, 10 calls, 4 imports, 2 inheritance relationships
+and 34 identifier references; fresh parsing averages 311.74 microseconds/KiB.
+The daemon is 53,685,328 bytes (+514,040). Bash regression and R extraction
+checks pass. A compute-side rebuild was required after shared-filesystem
+attribute caching reused an older object; the rebuilt signature check passes.
+Contracts unchanged; no recall scoring change.
+
+R package imports also no longer use Python module-file resolution. A graph
+regression keeps `library(a)` unresolved beside `a.py`, while an explicit
+`source("a.py")` resolves. The quick gate passes, including unchanged contracts.
+Named callback arguments remain anonymous; the R6 method fixture still extracts
+its method. The final extraction and graph-scope regression suites pass.

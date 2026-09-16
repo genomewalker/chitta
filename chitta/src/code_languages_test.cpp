@@ -17,6 +17,8 @@ int main(int argc, char** argv) {
         const auto path = fixture.parent_path() / expected["file"].get<std::string>();
         const auto language = expected["language"].get<std::string>();
         assert(intel.detect_language(path.string()) == language);
+        for (const auto& alias : expected.value("aliases", nlohmann::json::array()))
+            assert(intel.detect_language(alias.get<std::string>()) == language);
         const auto result = intel.extract_file_full(path.string());
         for (const auto& [name, kind] : expected["symbols"].items()) {
             auto found = std::find_if(result.symbols.begin(), result.symbols.end(), [&](const auto& s) { return s.name == name; });

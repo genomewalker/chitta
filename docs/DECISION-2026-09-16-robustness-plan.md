@@ -150,8 +150,8 @@
   See [benchmark protocol](../benchmarks/codenav/README.md) and
   [implementation evidence](../Documentation.md). Binaries and hooks remain
   subject to orchestrator review and deployment.
-- Language-expansion follow-up: in progress. Bash/sh extraction and its offline
-  build, fixture, and quick gate are verified (2026-09-17). Remaining languages
+- Language-expansion follow-up: in progress. Bash/sh and R extraction, offline
+  builds and fixtures are verified (2026-09-17). Remaining languages
   follow in the owner-requested order; the full gate and new coverage census
   run at the end.
 

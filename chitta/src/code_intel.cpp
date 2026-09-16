@@ -13,14 +13,16 @@
 extern char** environ;
 
 extern "C" const TSLanguage* tree_sitter_bash();
+extern "C" const TSLanguage* tree_sitter_r();
 
 namespace chitta {
 const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
     if (language == "bash") return tree_sitter_bash();
+    if (language == "r") return tree_sitter_r();
     return nullptr;
 }
 void CodeIntel::initialize_extended_parsers() {
-    for (const auto* language : {"bash"}) {
+    for (const auto* language : {"bash", "r"}) {
         auto* parser = ts_parser_new();
         if (!ts_parser_set_language(parser, extended_grammar(language))) {
             ts_parser_delete(parser);
@@ -32,6 +34,7 @@ void CodeIntel::initialize_extended_parsers() {
 std::string CodeIntel::detect_extended_language(const std::string& path) {
     auto ext = std::filesystem::path(path).extension().string();
     if (ext == ".sh" || ext == ".bash") return "bash";
+    if (ext == ".R" || ext == ".r" || std::filesystem::path(path).filename() == ".Rprofile") return "r";
     return {};
 }
 
@@ -47,6 +50,30 @@ void CodeIntel::extract_extended(TSNode root, const std::string& source,
         if (value.size() > 1 && (value.front() == '\'' || value.front() == '"') && value.back() == value.front())
             value = value.substr(1, value.size() - 2);
         return value;
+    };
+    auto define = [&](TSNode node, const std::string& name, const std::string& kind,
+                      const std::string& parent, TSNode body = TSNode{}) {
+        if (name.empty()) return;
+        auto signature = text(node);
+        if (!ts_node_is_null(body)) signature.resize(ts_node_start_byte(body) - ts_node_start_byte(node));
+        if (ts_node_is_null(body)) {
+            auto newline = signature.find('\n');
+            if (newline != std::string::npos) signature.resize(newline);
+        }
+        while (!signature.empty() && std::isspace(static_cast<unsigned char>(signature.back()))) signature.pop_back();
+        result.symbols.push_back({kind, name, signature, path, node_line(node), node_end_line(node), parent});
+    };
+    auto call = [&](TSNode node, const std::string& name, const std::string& parent,
+                    const std::string& scope = "", const std::string& receiver = "") {
+        if (name.empty()) return;
+        Callsite site;
+        site.file_path = path; site.start_byte = ts_node_start_byte(node); site.end_byte = ts_node_end_byte(node);
+        site.line = node_line(node); site.column = ts_node_start_point(node).column + 1;
+        site.caller_symbol = parent; site.callee_text = name; site.callee_leaf = name;
+        site.scope_text = scope; site.receiver_text = receiver;
+        if (!scope.empty()) site.kind = CallKind::Qualified;
+        if (!receiver.empty()) site.kind = CallKind::MemberCall;
+        result.callsites.push_back(std::move(site));
     };
     std::function<void(TSNode, std::string)> visit = [&](TSNode node, std::string parent) {
         std::string type = ts_node_type(node);
@@ -70,6 +97,61 @@ void CodeIntel::extract_extended(TSNode root, const std::string& source,
                 call.caller_symbol = parent; call.callee_text = name; call.callee_leaf = name;
                 result.callsites.push_back(std::move(call));
             }
+        }
+        if (language == "r") {
+            if (type == "binary_operator" || type == "argument") {
+                auto value = field(node, type == "argument" ? "value" : "rhs");
+                auto name = field(node, type == "argument" ? "name" : "lhs");
+                auto op = text(field(node, "operator"));
+                if (op == "->" || op == "->>") std::swap(value, name);
+                while (!ts_node_is_null(value) && std::strcmp(ts_node_type(value), "parenthesized_expression") == 0)
+                    value = ts_node_named_child(value, 0);
+                const bool assignment = type == "argument" || op == "<-" || op == "<<-" || op == "=" || op == "->" || op == "->>";
+                if (assignment && !ts_node_is_null(value) && std::strcmp(ts_node_type(value), "function_definition") == 0 && !ts_node_is_null(name)) {
+                    const bool class_scope = std::any_of(result.symbols.begin(), result.symbols.end(), [&](const auto& s) {
+                        return s.kind == "class" && s.name == parent;
+                    });
+                    // A named callback argument is not a global definition.
+                    // R6's public/private method lists do name class methods.
+                    if (type != "argument" || class_scope) {
+                        auto function = literal(name);
+                        define(node, function, class_scope ? "method" : "function", parent, field(value, "body"));
+                        parent = function;
+                    }
+                }
+            }
+            if (type == "call") {
+                auto function = field(node, "function");
+                auto args = field(node, "arguments");
+                auto function_type = ts_node_is_null(function) ? std::string{} : std::string(ts_node_type(function));
+                auto name = text(function), scope = std::string{}, receiver = std::string{};
+                if (function_type == "namespace_operator" || function_type == "extract_operator") {
+                    name = text(field(function, "rhs"));
+                    (function_type == "namespace_operator" ? scope : receiver) = text(field(function, "lhs"));
+                }
+                if (function_type == "identifier" || function_type == "namespace_operator" || function_type == "extract_operator")
+                    call(node, name, parent, scope, receiver);
+                auto first = field(ts_node_named_child(args, 0), "value");
+                if ((name == "source" || name == "library" || name == "require") && !ts_node_is_null(first))
+                    result.imports.push_back({path, literal(first), "", {}, uint32_t(node_line(node))});
+                if ((name == "setClass" || name == "R6Class") && !ts_node_is_null(first) && std::strcmp(ts_node_type(first), "string") == 0) {
+                    auto class_name = literal(first);
+                    define(node, class_name, "class", parent);
+                    parent = class_name;
+                    for (uint32_t i = 0; i < ts_node_named_child_count(args); ++i) {
+                        auto arg = ts_node_named_child(args, i);
+                        auto key = text(field(arg, "name"));
+                        if (key != "contains" && key != "inherit") continue;
+                        auto value = field(arg, "value");
+                        if (ts_node_is_null(value)) continue;
+                        auto base = literal(value);
+                        if (std::strcmp(ts_node_type(value), "identifier") == 0 || std::strcmp(ts_node_type(value), "string") == 0)
+                            result.type_relationships.push_back({class_name, base, "extends", path, uint32_t(node_line(arg))});
+                    }
+                }
+            }
+            if (type == "namespace_operator")
+                result.imports.push_back({path, text(field(node, "lhs")), "", {}, uint32_t(node_line(node))});
         }
         for (uint32_t i = 0; i < ts_node_named_child_count(node); ++i) visit(ts_node_named_child(node, i), parent);
     };

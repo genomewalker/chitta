@@ -63,6 +63,20 @@ int main() {
     assert(nav.read({{"name", "caller"}, {"path", a.string()}}).is_null());
     nav.remove(b.string());
     assert(nav.overview({{"project", "fixture"}})["files"] == 3);
+    // An R package import must not resolve through Python's module heuristic.
+    auto r = root / "analysis.R";
+    std::ofstream(r) << "library(a)\nsource(\"a.py\")\n";
+    paths.push_back(r.string());
+    changed = {r.string()};
+    nav.update(root.string(), "fixture", paths, changed, intel.extract_files(changed), false);
+    auto imported = nav.query({{"question", "library source"}, {"realm", "fixture"}, {"limit", 40}});
+    bool package = false, literal = false;
+    for (const auto& edge : imported["edges"]) {
+        if (edge["kind"] != "imports") continue;
+        if (edge["surface"] == "a") { assert(edge["confidence"] == "EXTRACTED"); package = true; }
+        if (edge["surface"] == "a.py") { assert(edge["confidence"] == "INFERRED"); literal = true; }
+    }
+    assert(package && literal);
     fs::remove_all(root);
     std::cout << "navigation: confidence, ambiguity, scope, paths, restart identity, stale reads and deletion passed\n";
 }

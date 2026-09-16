@@ -241,6 +241,7 @@ function(chitta_grammar name repository revision)
     target_link_libraries(tree-sitter-parsers PUBLIC grammar-${name})
 endfunction()
 chitta_grammar(bash tree-sitter/tree-sitter-bash 487734f87fd87118028a65a4599352fa99c9cde8)
+chitta_grammar(r r-lib/tree-sitter-r 58a22794466c0fc15b0d3b40531db751593721e8)
 
 # Extract version from plugin.json
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../.claude-plugin/plugin.json" PLUGIN_JSON)
