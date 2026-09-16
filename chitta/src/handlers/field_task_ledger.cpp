@@ -1,6 +1,10 @@
 #include "../../include/chitta/rpc/field_handler.hpp"
 #include <limits>
 #include <chitta/hook_ledger_policy.hpp>
+#include <chitta/hook_pretool_policy.hpp>
+#include <chitta/hook_saddle_policy.hpp>
+#include <chitta/hook_ancillary_policy.hpp>
+#include <chitta/hook_session_policy.hpp>
 
 namespace chitta {
 void FieldRpcHandler::load_task_ledger() {
@@ -32,6 +36,43 @@ ToolResult FieldRpcHandler::tool_ledger_op(const json& params) {
                 std::chrono::steady_clock::now() - started).count();
             return ToolResult::ok("Ledger operation complete", {{"value", value}, {"assembly_ms", ms}});
         };
+        auto invoke = [&](const std::string& tool, const json& input) {
+            const auto handler = handlers_.find(tool);
+            if (handler == handlers_.end()) throw std::runtime_error("missing hook dependency: " + tool);
+            const auto result = handler->second(input);
+            if (result.is_error) throw std::runtime_error(result.text);
+            return json{{"text", result.text}, {"structured", result.structured}};
+        };
+        if (op == "hook_session_start") return ok(hook_policy::session_start(args, invoke));
+        if (op == "hook_ancillary") {
+            if (args.value("family", "") == "shepherd" && args.value("list_tasks", false)) {
+                auto plan = hook_policy::plan();
+                plan["tasks"] = json::array();
+                for (const auto& task : json::parse(field_store_->task_list("long_task", true))) {
+                    const auto id = task.value("task_id", "");
+                    if (id.rfind("shepherd-", 0) != 0) continue;
+                    const auto current = tool_long_task_get({{"task_id", id}});
+                    if (current.is_error) throw std::runtime_error(current.text);
+                    plan["tasks"].push_back(current.structured);
+                }
+                return ok(plan);
+            }
+            return ok(hook_policy::ancillary(args, invoke));
+        }
+        if (op == "hook_apply") {
+            static const std::set<std::string> allowed = {
+                "remember", "forget", "import_soul", "learn_codebase", "long_task_event", "long_task_update",
+                "msg_ack", "log_event"
+            };
+            const auto tool = args.at("tool").get<std::string>();
+            if (!allowed.count(tool)) return ToolResult::error("unsupported deferred hook write");
+            return ok(invoke(tool, args.at("args")).at("structured"));
+        }
+        if (op == "hook_saddle") return ok(hook_saddle::detect(args));
+        if (op == "hook_pre_tool") return ok(hook_policy::pretool(args, invoke));
+        if (op == "hook_post_tool") return ok(hook_policy::bash(args, invoke));
+        if (op == "hook_pre_compact") return ok(hook_policy::precompact(args, invoke));
+        if (op == "hook_compact_restore") return ok(hook_policy::compact_restore(args, invoke));
         if (op == "hook_handoff_context") {
             auto rows = run("session_list", args);
             return ok({{"text", hook_ledger::handoff_card(rows.at("rows"),

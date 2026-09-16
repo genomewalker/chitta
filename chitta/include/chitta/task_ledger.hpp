@@ -143,7 +143,7 @@ public:
             // Classify explicitly: unknown operations (including hook_turn) must
             // retain the write dispatch and durable sync boundary.
             "hook_handoff_prepare", "hook_handoff_context", "hook_task_context",
-            "hook_session_context", "hook_stop_checkpoint", "hook_stop_progress"};
+            "hook_session_context", "hook_stop_checkpoint", "hook_stop_progress", "hook_post_tool", "hook_pre_compact", "hook_compact_restore", "hook_saddle", "hook_pre_tool", "hook_ancillary", "hook_session_start"};
         return reads.count(op) != 0;
     }
 private:

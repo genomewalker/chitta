@@ -32,8 +32,12 @@ exec </dev/null  # stdin consumed; children must not inherit the still-open hook
     IFS= read -r -d '' TRANSCRIPT_PATH
     IFS= read -r -d '' STOP_HOOK_ACTIVE
     IFS= read -r -d '' SESSION_ID_INPUT
+    IFS= read -r -d '' _ctx_used
+    IFS= read -r -d '' _ctx_max
 } < <(jq -j '(.transcript_path // ""),"\u0000",
-    ((.stop_hook_active // false)|tostring),"\u0000",(.session_id // ""),"\u0000"' \
+    ((.stop_hook_active // false)|tostring),"\u0000",(.session_id // ""),"\u0000",
+    ((.context_window.used_tokens // 0)|tostring),"\u0000",
+    ((.context_window.max_tokens // 0)|tostring),"\u0000"' \
     <<< "$INPUT" 2>/dev/null)
 
 # Set SESSION_ID once (used throughout this hook).
@@ -93,8 +97,6 @@ fi
 [[ -z "$TRANSCRIPT_PATH" || ! -f "$TRANSCRIPT_PATH" ]] && exit 0
 
 # ─── 85% context guard ────────────────────────────────────────────────────────
-_ctx_used=$(echo "$INPUT" | jq -r '.context_window.used_tokens // 0' 2>/dev/null || echo 0)
-_ctx_max=$(echo "$INPUT" | jq -r '.context_window.max_tokens // 0' 2>/dev/null || echo 0)
 if [[ "$_ctx_max" -gt 0 ]]; then
     _ctx_pct=$(( _ctx_used * 100 / _ctx_max ))
     _compact_sentinel="${MIND_PATH}/.compact_advised_${SESSION_ID}"
@@ -197,7 +199,7 @@ mkdir -p "$_CURSOR_DIR" 2>/dev/null || true
 if [[ -x "$_SNAPSHOT_HELPER" ]]; then
     printf '%s' "$INPUT" | CHITTA_PLUGIN_DIR="$_PLUGIN_DIR" CC_SOUL_PLUGIN_DIR="$_PLUGIN_DIR" \
         timeout "${CHITTA_SNAPSHOT_TIMEOUT:-${CC_SOUL_SNAPSHOT_TIMEOUT:-20}}" \
-        python3 "$_SNAPSHOT_HELPER" snapshot \
+        python3 -S "$_SNAPSHOT_HELPER" snapshot \
         --transcript "$TRANSCRIPT_PATH" \
         --cursor "$_CURSOR_FILE" \
         --bootstrap-bytes "${CHITTA_STOP_BOOTSTRAP_BYTES:-${CC_SOUL_STOP_BOOTSTRAP_BYTES:-4194304}}" \
@@ -252,7 +254,7 @@ RESPONSE=$(transcript_role_text assistant | tail -n 1 | head -c 50000)
 # Store in the task ledger's session metadata: session_bind merges metadata
 # atomically, so concurrent thread inference cannot erase unrelated fields.
 _save_handoff_capsule() {
-    local project branch action blocker args visible paths response
+    local project branch action blocker args visible paths response prepared
     project=$(jq -r '.cwd // .project_dir // empty' <<< "$INPUT")
     [[ -d "$project" && "$SESSION_ID" != unknown ]] || return 0
     project=$(cd "$project" && pwd -P) || return 0
@@ -282,17 +284,16 @@ _save_handoff_capsule() {
           blocker:$blocker,artifact_paths:$paths,saved_at:$saved}')
     response=$(timeout "$MAX_WAIT" "$CHITTA_BIN" ledger_op --op hook_handoff_prepare \
         --args "$args" --json 2>/dev/null) || response='{}'
-    if jq -se --arg sid "$SESSION_ID" --arg project "$project" \
-        'length==1 and (.[0] | .value.op=="session_bind" and
+    prepared=$(jq -sec --arg sid "$SESSION_ID" --arg project "$project" \
+        'if length==1 and (.[0] | .value.op=="session_bind" and
           .value.args.session_id==$sid and .value.args.project_dir==$project and
-          (.value.args.metadata.handoff|type)=="object")' <<< "$response" >/dev/null 2>&1; then
-        if [[ -n "${CHITTA_LEDGER_PROFILE:-}" ]]; then
-            printf '%s\n' "$response" > "$CHITTA_LEDGER_PROFILE"
-        fi
-        queue_write ledger_op "$(jq -c '.value' <<< "$response")"
-        return $?
+          (.value.args.metadata.handoff|type)=="object")
+         then .[0].value else error("invalid native handoff") end' \
+        <<< "$response" 2>/dev/null) || return 1
+    if [[ -n "${CHITTA_LEDGER_PROFILE:-}" ]]; then
+        printf '%s\n' "$response" > "$CHITTA_LEDGER_PROFILE"
     fi
-    return 1
+    queue_write ledger_op "$prepared"
 
 }
 _save_handoff_capsule || {
@@ -318,7 +319,7 @@ _turn_args=$(jq -nc --arg sid "$SESSION_ID" --arg content "$RESPONSE" \
     '{op:"hook_turn",args:{session_id:$sid,role:"assistant",content:($content+"\n"),
       turn_index:$turn,tools_used:$tools,files_touched:$files,has_error:$error}}')
 if safe_queue_write ledger_op "$_turn_args"; then
-    timeout 3 python3 "$_SNAPSHOT_HELPER" commit \
+    timeout 3 python3 -S "$_SNAPSHOT_HELPER" commit \
         --snapshot "$_SNAPSHOT_FILE" --cursor "$_CURSOR_FILE" \
         >/dev/null 2>&1 || true
     record_ingest_metric "true"
@@ -343,7 +344,10 @@ if [[ -n "${SESSION_ID:-}" && "$SESSION_ID" != "unknown" ]]; then
     queue_write "ledger_append" "{\"kind\":\"Outcome\",\"session_id\":\"${SESSION_ID}\",\"payload\":{\"Outcome\":{\"success\":${_success},\"error_kind\":null,\"turn_count\":${TURN_INDEX:-0}}}}"
 fi
 
-daemon_available || exit 0
+daemon_available || {
+    printf '[chitta] daemon unavailable; context not loaded.\n'
+    exit 0
+}
 
 # Detect realm (quick CLI call with short timeout)
 REALM=$(timeout "$MAX_WAIT" "$CHITTA_BIN" realm_detect 2>/dev/null || echo "brahman")
@@ -388,7 +392,7 @@ if [[ -n "$TRANSCRIPT_PATH" && -f "$TRANSCRIPT_PATH" && -f "$_MCP_DIR/thread_inf
     _TI_SNAPSHOT="$(mktemp "${TMPDIR:-/tmp}/cc-soul-thread-snapshot.XXXXXX")"
     cp "$_SNAPSHOT_FILE" "$_TI_SNAPSHOT" 2>/dev/null || true
     (
-        _infer_out=$(timeout 5 python3 "$_MCP_DIR/thread_inference.py" \
+        _infer_out=$(timeout 5 python3 -S "$_MCP_DIR/thread_inference.py" \
             --transcript "$TRANSCRIPT_PATH" --realm "${REALM:-}" \
             --snapshot "$_TI_SNAPSHOT" \
             --session-id "$SESSION_ID" --client "$_client" \

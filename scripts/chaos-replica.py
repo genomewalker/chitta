@@ -532,9 +532,10 @@ class Harness:
         marker = self.local / "hook-entered"
         success = self.local / "hook-success"
         wrapper.write_text(
-            '#!/bin/bash\nrecall=0\ncase "$1" in prompt_context) recall=1; touch '
+            "#!/bin/bash\nrequest=$(cat)\nrecall=0\n"
+            'if [[ $(jq -r .params.name <<< "$request") == prompt_context ]]; then recall=1; touch '
             + shlex.quote(str(marker))
-            + ";; esac\n"
+            + '; fi\nprintf "%s" "$request" | '
             + shlex.quote(str(self.args.cli))
             + ' "$@"\nrc=$?\nif [[ "$recall" == 1 && "$rc" == 0 ]]; then touch '
             + shlex.quote(str(success))

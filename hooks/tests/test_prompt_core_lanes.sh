@@ -17,13 +17,21 @@ T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
 
 export STUB_POLICY_BIN="$T/prompt-response"
-"${CXX:-g++}" -std=c++17 -O2 -I"$SCRIPT_DIR/../chitta/include" \
+"${CXX:-g++}" -std=c++17 -O2 -pthread -I"$SCRIPT_DIR/../chitta/include" \
     "$SCRIPT_DIR/tests/prompt-response.cpp" -lcrypto -o "$STUB_POLICY_BIN" || exit 1
 STUB="$T/chitta"
 cat > "$STUB" <<'STUBEOF'
 #!/bin/bash
 # Fake chitta CLI: dispatches on subcommand (+ --limit, for the two
 # smart_recall call sites) to canned fixture files set via env vars.
+if [[ $# == 0 ]]; then
+    request=$(cat)
+    method=$(jq -r '.params.name' <<< "$request")
+    if [[ "$method" == prompt_context ]]; then
+        state=$(jq -c '.params.arguments.state' <<< "$request")
+        set -- prompt_context --state "$state" --json
+    else exit 1; fi
+fi
 sub="$1"; shift
 if [[ -n "${STUB_CALL_LOG:-}" ]]; then
     printf '%s %s\n' "$sub" "$*" >> "$STUB_CALL_LOG"
@@ -306,14 +314,9 @@ done
 # Synchronization markers prove both independent tasks overlap recall. No
 # wall-clock threshold: the old serial scheduling cannot satisfy this handshake.
 mkdir -p "$T/overlap"
-export STUB_OVERLAP_DIR="$T/overlap"
-rm -f "$MIND/.session_active"
-CHITTA_RECALL_LANES_RPC=1 CHITTA_MAX_OUTPUT_CHARS=10000 \
-    run_hook "rpc-concurrent" "what does the persimmon fixture show"
-assert "heartbeat proceeds alongside RPC" "[[ -f '$T/overlap/heartbeat-overlapped' ]]"
-assert "concurrent continuity is joined before rendering" \
-    "grep -q '\\[last-session\\] #99' '$T/stdout.rpc-concurrent'"
-unset STUB_OVERLAP_DIR
+# Heartbeat and continuity no longer fan out from the shell. The policy fixture
+# returns continuity in the single reply and queues the heartbeat below.
+
 
 # A pipeline timeout replaces the old batch wait; it must not add a second one.
 : > "$STUB_CALL_LOG"
@@ -323,20 +326,12 @@ assert "pipeline timeout skips a second batch wait" "! grep -q '^recall_lanes ' 
 assert "pipeline timeout skips standalone fallback" "! grep -q '^smart_recall ' '$STUB_CALL_LOG'"
 assert "pipeline timeout emits minimal output" "[[ \$(cat '$T/stdout.pipeline-timeout') == '[chitta] daemon unavailable; context not loaded.' ]]"
 
-# Even with a model installed, ordinary turns must not start Python. Matching
-# regex evidence still requests a model verdict before emitting a learning hint.
-mkdir -p "$T/interpreters"
-cat > "$T/interpreters/python3" <<'STUBPY'
-#!/bin/bash
-printf '%s\n' "$*" >> "$STUB_PYTHON_CALLS"
-echo 'correction 0.990'
-STUBPY
-chmod +x "$T/interpreters/python3"
+# Native policy gates the daemon's optional local classifier before inference.
 touch "$MIND/hook-classifier.bin"
 export STUB_PYTHON_CALLS="$T/python-calls"
-PATH="$T/interpreters:$PATH" run_hook "no-classifier" "what does the persimmon fixture show"
+run_hook "no-classifier" "what does the persimmon fixture show"
 assert "ordinary turn skips installed classifier" "[[ ! -f '$STUB_PYTHON_CALLS' ]]"
-PATH="$T/interpreters:$PATH" run_hook "with-classifier" "you are wrong about the persimmon fixture"
+run_hook "with-classifier" "you are wrong about the persimmon fixture"
 assert "regex evidence invokes classifier once" "[[ $(wc -l < "$STUB_PYTHON_CALLS") == 1 ]]"
 assert "matching model and regex preserve correction hint" "grep -q 'CORRECTION detected' '$T/stdout.with-classifier'"
 rm -f "$MIND/hook-classifier.bin"

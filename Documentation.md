@@ -138,3 +138,34 @@ for the broader retirement in step 3. No timings are inferred from internal
 assembly spans. Top-level shell lines: 8,325 → 8,033; Stop 1,143 → 1,026;
 SessionStart 833 → 658. Contracts remain unchanged. Evidence:
 `/tmp/chitta-p5b-retire/evidence/step2-sync-{parity,timing,ctest}*`.
+
+Step 3 (2026-09-17): native read plans now own ancillary decisions and the
+remaining prompt/SessionStart policy. Python keeps local transcript/git/file/
+terminal input, queue/marker acknowledgement and bounded process transport.
+Shell PreToolUse safety_check stays local. hook_apply is an explicitly classified
+allowlisted write; pure assembly plans are reads. Distillation uses distill_now.
+Retired unregistered SQL/probe/watch calls; run-ledger preserves its historical
+zero count instead of issuing a query-less recall. No Rust/scoring/schema edits.
+
+Final shell total: 8,033 -> 2,696 (Phase 5 starting point 8,988). Verified 70
+byte-identical adjacent fixture pairs with native pipeline/ledger required;
+32 hook shell tests, 159 MCP, 46 SMRITI, nine hook Python, CI Ruff, shell syntax and
+ShellCheck. All 33 CTests pass across the final run and two unchanged isolated
+reruns of synchronization assertions; an earlier complete run passed 33/33.
+
+The documentation control exposed new helper processes escaping frontend cleanup.
+Restored shell-equivalent process-group ownership, added an actual PID/group
+regression, and individually terminated 134 verified private notifier processes.
+No live or other-stream process was targeted. Clean runs leave no notifiers.
+Removed duplicate root/default/context/handoff decoding work. Standard-library
+Stop helper startup measured 132.232ms vs 101.251ms with -S (seven interleaved pairs);
+the hook now skips site initialization and all nine Python tests also pass with -S.
+
+Final five-repeat full-wall medians after four warmups and no concurrent own
+tests: prompt 194.693ms, Codex prompt 194.931ms, SessionStart 200.101ms,
+Stop 691.566ms, Codex Stop 615.021ms, handoff Stop 610.999ms, Bash 83.397ms,
+Codex Bash 64.529ms. Median gates pass; substantial tail outliers remain in the
+report. Earlier missed gates and helper-leak runs are retained, not presented as
+final qualification. Current evidence: step3-stdlib-parity and
+step3-qualified-final under /tmp/chitta-p5b-retire/evidence. Docs are a separate
+fourth commit. Plan.md and all raw evidence remain untracked.

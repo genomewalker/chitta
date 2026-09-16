@@ -9,7 +9,14 @@ mkdir -p "$T/repo with spaces"
 git -c init.templateDir= init -q -b capsule-test "$T/repo with spaces"
 # Source only the production function definitions; no hook side effects.
 sed -n '/^_save_handoff_capsule() {/,/^}/p' "$ROOT/hooks/stop-core.sh" > "$T/functions"
-sed -n '/^_load_handoff_capsule() {/,/^}/p' "$ROOT/hooks/session-start-hook.sh" >> "$T/functions"
+# Native card entrypoint is now inside hook_session_start; exercise its pure production helper.
+cat >> "$T/functions" <<'FUNCTION'
+_load_handoff_capsule() {
+    local branch
+    branch=$(git -C "$PROJECT_DIR" symbolic-ref --quiet --short HEAD)
+    "$CHITTA_BIN" ledger_op --op hook_handoff_context --args "$(jq -nc --arg project "$PROJECT_DIR" --arg branch "$branch" '{project_dir:$project,branch:$branch}')" | jq -r '.value.text|select(length>0)'
+}
+FUNCTION
 # shellcheck source=/dev/null
 source "$T/functions"
 export STUB_HANDOFF_DIR="$T"

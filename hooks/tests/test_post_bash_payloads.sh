@@ -8,8 +8,10 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 hook="$here/../post-bash-hook.sh"
 T=$(mktemp -d "${TMPDIR:-/tmp}/postbash.XXXXXX")
 trap 'rm -rf "$T"' EXIT
-export CHITTA_DB_PATH="$T" MIND_PATH="$T" CHITTA_BIN="${CHITTA_BIN:-$HOME/.claude/bin/chitta}"
-[[ -x "$CHITTA_BIN" ]] || export CHITTA_BIN=/bin/true   # CI has no CLI; the hook only needs the executable gate
+ROOT="$(cd "$here/../.." && pwd)"
+export CHITTA_DB_PATH="$T" MIND_PATH="$T" CHITTA_BIN="$T/event-response"
+"${CXX:-g++}" -std=c++17 -O2 -pthread -I"$ROOT/chitta/include" \
+    "$here/event-response.cpp" -lcrypto -o "$CHITTA_BIN" || exit 1
 fail=0
 check() { if [[ "$2" == *"$3"* ]]; then echo "ok: $1"; else echo "FAIL: $1 -> $2"; fail=1; fi; }
 
@@ -41,4 +43,10 @@ printf '%s' '{"hook_event_name":"PostToolUse","session_id":"t-codex-ok","tool_na
 check "codex failure captures output excerpt" "$(grep t-codex-fail "$T/outcome_ledger.jsonl")" 'No such file or directory'
 check "codex clean output has no likely_fail" "$(grep t-codex-ok "$T/outcome_ledger.jsonl" | grep -c likely_fail)" '0'
 
+# Missing/late native policy emits only the unavailable envelope, with no
+# fallback outcome policy or fabricated successful exit code.
+export CHITTA_BIN=/bin/false
+actual=$(printf '%s' '{"session_id":"timeout","tool_input":{"command":"false"}}' | bash "$hook")
+check "unavailable policy emits minimal line" "$actual" '[chitta] daemon unavailable; context not loaded.'
+check "unavailable policy does not fabricate an outcome" "$(grep -c timeout "$T/outcome_ledger.jsonl")" '0'
 exit $fail
