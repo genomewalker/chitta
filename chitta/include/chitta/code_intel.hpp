@@ -90,7 +90,8 @@ enum class CallKind {
     New,         // new Foo(...)
     Ctor,        // Foo x(...), Foo{...}, Foo(...) temporaries
     Indirect,    // (*fp)(...), fp(...), unknown callee
-    LambdaCall   // []{}(...)
+    LambdaCall,  // []{}(...)
+    Channel      // Nextflow producer output routed to a consumer
 };
 
 inline std::string call_kind_to_string(CallKind kind) {
@@ -102,6 +103,7 @@ inline std::string call_kind_to_string(CallKind kind) {
         case CallKind::Ctor: return "ctor";
         case CallKind::Indirect: return "indirect";
         case CallKind::LambdaCall: return "lambda_call";
+        case CallKind::Channel: return "channel";
     }
     return "unknown";
 }

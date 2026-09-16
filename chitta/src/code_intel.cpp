@@ -16,6 +16,7 @@ extern "C" const TSLanguage* tree_sitter_bash();
 extern "C" const TSLanguage* tree_sitter_r();
 extern "C" const TSLanguage* tree_sitter_julia();
 extern "C" const TSLanguage* tree_sitter_fortran();
+extern "C" const TSLanguage* tree_sitter_nextflow();
 
 namespace chitta {
 const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
@@ -23,10 +24,11 @@ const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
     if (language == "r") return tree_sitter_r();
     if (language == "julia") return tree_sitter_julia();
     if (language == "fortran") return tree_sitter_fortran();
+    if (language == "nextflow") return tree_sitter_nextflow();
     return nullptr;
 }
 void CodeIntel::initialize_extended_parsers() {
-    for (const auto* language : {"bash", "r", "julia", "fortran"}) {
+    for (const auto* language : {"bash", "r", "julia", "fortran", "nextflow"}) {
         auto* parser = ts_parser_new();
         if (!ts_parser_set_language(parser, extended_grammar(language))) {
             ts_parser_delete(parser);
@@ -38,6 +40,7 @@ void CodeIntel::initialize_extended_parsers() {
 std::string CodeIntel::detect_extended_language(const std::string& path) {
     auto ext = std::filesystem::path(path).extension().string();
     if (ext == ".sh" || ext == ".bash") return "bash";
+    if (ext == ".nf") return "nextflow";
     if (ext == ".jl") return "julia";
     if (ext == ".R" || ext == ".r" || std::filesystem::path(path).filename() == ".Rprofile") return "r";
     for (auto& c : ext) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
@@ -250,6 +253,72 @@ void CodeIntel::extract_extended(TSNode root, const std::string& source,
                 auto member = name.rfind('%');
                 if (member != std::string::npos) { receiver = name.substr(0, member); name = name.substr(member + 1); }
                 call(node, name, parent, "", receiver);
+            }
+        }
+        if (language == "nextflow") {
+            if (type == "process_definition" || type == "workflow_definition" || type == "function_definition") {
+                auto name_node = find_child(node, "identifier");
+                if (ts_node_eq(name_node, field(node, "return_type"))) {
+                    for (uint32_t i = 0; i < ts_node_named_child_count(node); ++i) {
+                        auto child = ts_node_named_child(node, i);
+                        if (std::strcmp(ts_node_type(child), "identifier") == 0 && !ts_node_eq(child, name_node)) { name_node = child; break; }
+                    }
+                }
+                auto name = text(name_node);
+                if (name.empty() && type == "workflow_definition") name = "<workflow>";
+                define(node, name, type == "process_definition" ? "process" : type == "workflow_definition" ? "workflow" : "function", parent);
+                parent = name;
+            }
+            if (type == "include") {
+                auto target = find_child(node, "string");
+                result.imports.push_back({path, literal(target), "", {}, uint32_t(node_line(node))});
+            }
+            auto channel = [&](TSNode evidence, const std::string& producer, const std::string& consumer) {
+                if (producer.empty() || consumer.empty()) return;
+                call(evidence, consumer, producer);
+                result.callsites.back().kind = CallKind::Channel;
+            };
+            if (type == "function_call") {
+                auto name = text(ts_node_named_child(node, 0));
+                call(node, name, parent);
+                for (uint32_t i = 1; i < ts_node_named_child_count(node); ++i) {
+                    auto argument = ts_node_named_child(node, i);
+                    while (!ts_node_is_null(argument) &&
+                        (std::strcmp(ts_node_type(argument), "simple_expression") == 0 || std::strcmp(ts_node_type(argument), "parenthesized_expression") == 0))
+                        argument = ts_node_named_child(argument, 0);
+                    if (!ts_node_is_null(argument) && std::strcmp(ts_node_type(argument), "process_output") == 0)
+                        channel(argument, text(ts_node_named_child(argument, 0)), name);
+                }
+            }
+            if (type == "pipe_expression") {
+                auto lhs = ts_node_named_child(node, 0);
+                auto rhs = ts_node_named_child(node, 1);
+                auto operation = ts_node_named_child(rhs, 0);
+                auto consumer = leaf_name(operation);
+                if (!ts_node_is_null(operation) && std::strcmp(ts_node_type(operation), "identifier") == 0)
+                    call(operation, consumer, parent);
+                std::string producer;
+                if (!ts_node_is_null(lhs) && std::strcmp(ts_node_type(lhs), "pipe_expression") == 0)
+                    producer = leaf_name(ts_node_named_child(lhs, 1));
+                else if (!ts_node_is_null(lhs) && std::strcmp(ts_node_type(lhs), "process_output") == 0)
+                    producer = text(ts_node_named_child(lhs, 0));
+                channel(node, producer, consumer);
+            }
+            if (type == "method_call") {
+                auto receiver = text(ts_node_named_child(node, 0));
+                std::string name;
+                for (uint32_t i = 1; i < ts_node_child_count(node); ++i) {
+                    auto child = ts_node_child(node, i);
+                    if (std::strcmp(ts_node_type(child), "(") == 0 || std::strcmp(ts_node_type(child), "closure") == 0) break;
+                    if (std::strcmp(ts_node_type(child), "identifier") == 0) name = text(child);
+                }
+                call(node, name, parent, "", receiver);
+            }
+            if (type == "channel_of" || type == "channel_from" || type == "channel_from_list" ||
+                type == "channel_value" || type == "channel_factory") {
+                auto name = type == "channel_factory" ? text(find_child(node, "identifier")) :
+                    type == "channel_from_list" ? std::string("fromList") : type.substr(8);
+                call(node, name, parent, "Channel");
             }
         }
         for (uint32_t i = 0; i < ts_node_named_child_count(node); ++i) visit(ts_node_named_child(node, i), parent);

@@ -39,8 +39,7 @@ FetchContent_MakeAvailable(roaring)
 FetchContent_Declare(
     tree-sitter
     GIT_REPOSITORY https://github.com/tree-sitter/tree-sitter.git
-    GIT_TAG v0.24.6
-    GIT_SHALLOW TRUE
+    GIT_TAG da6fe9beb4f7f67beb75914ca8e0d48ae48d6406 # v0.25.10, grammar ABI 15
 )
 FetchContent_GetProperties(tree-sitter)
 if(NOT tree-sitter_POPULATED)
@@ -244,6 +243,7 @@ chitta_grammar(bash tree-sitter/tree-sitter-bash 487734f87fd87118028a65a4599352f
 chitta_grammar(r r-lib/tree-sitter-r 58a22794466c0fc15b0d3b40531db751593721e8)
 chitta_grammar(julia tree-sitter/tree-sitter-julia a8e1262997d5a45520a06cbe1b86c0737d507054)
 chitta_grammar(fortran stadelmanma/tree-sitter-fortran 6f16bab7455cd2906a86679a1be83dd4f378db81)
+chitta_grammar(nextflow nextflow-io/tree-sitter-nextflow 69a72c6cf4e90609b8558fc05d7d17a5f3df7894)
 
 # Extract version from plugin.json
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../.claude-plugin/plugin.json" PLUGIN_JSON)

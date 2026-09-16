@@ -1458,6 +1458,7 @@ connections. Runtime dispatch and dynamic import paths are not evaluated.
 | R | `.R`, `.r`, `.Rprofile` | Assigned functions and named methods; calls; `source`, `library`, `require` and namespace imports; S4/R6 classes with literal inheritance. |
 | Julia | `.jl` | Long/short functions, macros, modules, structs and abstract types; calls, `using`/`import`, literal `include`, and subtype edges. |
 | Fortran | `.f`, `.for`, `.f77`, `.f90`, `.f95`, `.f03`, `.f08` (also uppercase) | Modules, programs, subroutines, functions and derived types; `use`, includes, calls and `extends`. Names are case-insensitive; signatures preserve source spelling. |
+| Nextflow | `.nf` | Processes, named/entry workflows and functions; includes, calls and channel routing through process outputs or pipes. Shell script bodies remain data. |
 
 New grammars use CMake FetchContent with immutable commits. After populating the
 cache, configure with `FETCHCONTENT_FULLY_DISCONNECTED=ON`; a source mirror can
@@ -1465,3 +1466,9 @@ be supplied through `FETCHCONTENT_SOURCE_DIR_TREE-SITTER-<LANGUAGE>`.
 `code_languages_test` parses fixtures without executing them and reports mean
 fresh-parse microseconds per KiB across 200 parses (file I/O and extraction are
 excluded). It also checks the real shell hook library.
+
+Nextflow uses the `nextflow-io/tree-sitter-nextflow` grammar rather than Groovy:
+its AST distinguishes processes, workflows, process outputs and channel pipes.
+Its ABI-15 parser requires the pinned tree-sitter 0.25.10 runtime, which also
+accepts the older compiled grammars. Channel links resolve only unique indexed
+process/workflow producers; their evidence points to the routing expression.

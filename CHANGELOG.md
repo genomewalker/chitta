@@ -10,6 +10,8 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 ## [Unreleased]
 
+- Add Nextflow processes, workflows, includes and channel routing, backed by the dedicated grammar and the compatible tree-sitter 0.25.10 runtime.
+
 - Add Fortran navigation with case-insensitive symbols, module/include edges, calls and derived-type inheritance.
 
 - Add Julia AST navigation, including both function forms, type relationships, module imports and literal includes.

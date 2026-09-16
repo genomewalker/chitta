@@ -81,7 +81,7 @@ struct CodeNavigation::Impl {
     struct Edge {
         size_t from;
         int to;
-        std::string kind, surface, confidence, resolution;
+        std::string kind, surface, confidence, resolution, evidence_file;
         int line;
     };
     std::mutex mutex;
@@ -142,11 +142,11 @@ struct CodeNavigation::Impl {
         }
         average_length = nodes.empty() ? 1 : std::max(1.0, double(lengths) / nodes.size());
         std::set<std::tuple<size_t, int, std::string, std::string>> seen;
-        auto add = [&](size_t from, int to, const std::string& kind, const std::string& surface, int line, const std::string& resolution) {
+        auto add = [&](size_t from, int to, const std::string& kind, const std::string& surface, int line, const std::string& resolution, const std::string& evidence_file) {
             if (to == static_cast<int>(from)) return;
             if (!seen.emplace(from, to, kind, surface).second) return;
             auto id = edges.size();
-            edges.push_back({from, to, kind, surface, to < 0 ? "EXTRACTED" : "INFERRED", resolution, line});
+            edges.push_back({from, to, kind, surface, to < 0 ? "EXTRACTED" : "INFERRED", resolution, evidence_file, line});
             nodes[from].edges.push_back(id);
             if (to >= 0) nodes[to].edges.push_back(id);
         };
@@ -158,6 +158,18 @@ struct CodeNavigation::Impl {
                 int from = enclosing_cache[line];
                 if (from < 0) continue;
                 std::string target = raw["target"], kind = raw["kind"];
+                const auto source_name = raw.value("source_name", "");
+                if (!source_name.empty()) {
+                    std::vector<size_t> sources;
+                    for (auto id : names[source_name]) {
+                        const auto& source = nodes[id];
+                        const auto source_kind = source.data.value("kind", "");
+                        if (source.root == nodes[from].root && source.lang == nodes[from].lang &&
+                            (source_kind == "process" || source_kind == "workflow")) sources.push_back(id);
+                    }
+                    if (sources.size() != 1) continue; // A channel producer must resolve uniquely.
+                    from = static_cast<int>(sources.front());
+                }
                 std::vector<size_t> candidates;
                 if (kind == "imports") {
                     from = static_cast<int>(by_file[item.key()].back());
@@ -216,7 +228,7 @@ struct CodeNavigation::Impl {
                 int to = candidates.size() == 1 ? static_cast<int>(candidates[0]) : -1;
                 if (kind == "references" && to < 0) continue;
                 add(from, to, kind, target, raw.value("line", 1),
-                    to >= 0 ? "unique_name" : candidates.empty() ? "unresolved" : "AMBIGUOUS");
+                    to >= 0 ? "unique_name" : candidates.empty() ? "unresolved" : "AMBIGUOUS", item.key());
             }
         }
         labels.resize(nodes.size());
@@ -249,7 +261,7 @@ struct CodeNavigation::Impl {
         return {{"source", nodes[e.from].data["id"]},
             {"target", e.to < 0 ? json("external:" + e.surface) : nodes[e.to].data["id"]},
             {"kind", e.kind}, {"surface", e.surface}, {"confidence", e.confidence},
-            {"resolution", e.resolution}, {"file", nodes[e.from].file}, {"line", e.line},
+            {"resolution", e.resolution}, {"file", e.evidence_file}, {"line", e.line},
             {"evidence", "AST"}};
     }
     json render(const std::vector<size_t>& selected, const std::map<size_t, double>& scores = {}, bool commands = true) const {
@@ -375,7 +387,8 @@ void CodeNavigation::update(const std::string& root, const std::string& project,
             {"line_start", 1}, {"line_end", lines.size()}, {"doc", "File scope"}, {"body", body}});
         for (const auto* c : calls[path])
             file["edges"].push_back({{"kind", "calls"}, {"target", c->callee_leaf}, {"line", c->line},
-                {"receiver", c->receiver_text}, {"scope", c->scope_text}});
+                {"receiver", c->receiver_text}, {"scope", c->scope_text},
+                {"source_name", c->kind == CallKind::Channel ? c->caller_symbol : ""}});
         for (const auto* extracted : imports[path]) {
             const auto& c = *extracted;
             auto target = c.import_path;

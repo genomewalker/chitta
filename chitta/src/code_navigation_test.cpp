@@ -90,6 +90,29 @@ int main() {
             assert(edge["confidence"] == "INFERRED"); module_import = true;
         }
     assert(module_import);
+    auto stages = root / "stages.nf", flow = root / "flow.nf";
+    auto fixture = fs::path(__FILE__).parent_path().parent_path().parent_path() / "hooks/tests/fixtures/codenav/nextflow/navigation.nf";
+    std::ifstream nf(fixture);
+    std::string nf_source(std::istreambuf_iterator<char>(nf), {});
+    assert(nf_source.find("\ndef label") != std::string::npos);
+    nf_source.resize(nf_source.find("\ndef label"));
+    std::ofstream(stages) << nf_source;
+    std::ofstream(flow) << "workflow FLOW {\n ALIGN(Channel.of('sample'))\n COUNT(ALIGN.out)\n}\n";
+    paths.push_back(stages.string()); paths.push_back(flow.string());
+    changed = {stages.string(), flow.string()};
+    nav.update(root.string(), "fixture", paths, changed, intel.extract_files(changed), false);
+    auto channel_query = nlohmann::json{{"question", "ALIGN COUNT"}, {"realm", "fixture"}, {"limit", 40}};
+    auto channels = nav.query(channel_query);
+    bool routed = false;
+    for (const auto& edge : channels["edges"])
+        if (edge["source"].get<std::string>().ends_with(":ALIGN") && edge["surface"] == "COUNT") {
+            assert(edge["confidence"] == "INFERRED" && edge["file"] == flow.string() && edge["line"] == 3);
+            routed = true;
+        }
+    assert(routed);
+    chitta::CodeNavigation channel_restart;
+    channel_restart.open((root / "navigation.json").string());
+    assert(channel_restart.query(channel_query) == channels);
     fs::remove_all(root);
     std::cout << "navigation: confidence, ambiguity, scope, paths, restart identity, stale reads and deletion passed\n";
 }

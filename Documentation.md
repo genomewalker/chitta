@@ -299,3 +299,22 @@ The mixed-case fixture yields 5 definitions, 3 calls, 2 imports, 1 inheritance
 edge and 16 identifier references. Fresh parsing averages 292.73 microseconds
 per KiB; daemon size is 63,698,552 bytes (+3,766,344). All language fixtures and
 graph regressions pass; contracts and recall scoring are unchanged.
+
+### Nextflow
+
+The dedicated `nextflow-io/tree-sitter-nextflow` grammar was chosen over Groovy
+because its AST names processes, workflows, process outputs and pipes. Its
+pinned generated parser requires ABI 15, so the pinned tree-sitter runtime is
+now 0.25.10; the existing grammar fixtures and callsite regression still pass.
+Both `COUNT(ALIGN.out)` and `ALIGN | COUNT` produce channel links between unique
+indexed producers and consumers. Graph evidence retains the routing expression's
+file and line even when process definitions live in another file. The graph
+restart regression verifies those links remain deterministic.
+
+The fixture finds 5 definitions, 8 calls (including 2 channel links), 1 include
+and 22 identifier references. Fresh parsing averages 213.56 microseconds/KiB;
+the daemon is 64,204,504 bytes (+505,952, including the runtime upgrade). Offline
+build and all language fixtures pass. The initial direct-output regression
+identified the grammar's expression wrapper; handling it makes both routing
+forms and the cross-file evidence check pass. Contracts and recall scoring
+are unchanged.

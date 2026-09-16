@@ -37,6 +37,13 @@ int main(int argc, char** argv) {
                 std::cerr << language << ": missing call " << name << '\n'; return 1;
             }
         }
+        if (expected.contains("channel_count"))
+            assert(std::count_if(result.callsites.begin(), result.callsites.end(), [](const auto& c) { return c.kind == chitta::CallKind::Channel; }) == expected["channel_count"].get<int>());
+        for (const auto& edge : expected.value("channels", nlohmann::json::array())) {
+            assert(std::any_of(result.callsites.begin(), result.callsites.end(), [&](const auto& c) {
+                return c.kind == chitta::CallKind::Channel && c.caller_symbol == edge[0].get<std::string>() && c.callee_leaf == edge[1].get<std::string>();
+            }));
+        }
         for (const auto& name : expected.value("imports", nlohmann::json::array())) {
             if (std::none_of(result.imports.begin(), result.imports.end(), [&](const auto& i) { return i.import_path == name.get<std::string>(); })) {
                 std::cerr << language << ": missing import " << name << '\n'; return 1;
