@@ -15,12 +15,12 @@
   },
   "evidence": [
     {
-      "source": "https://arxiv.org/abs/2608.26081",
-      "claim": "isolated control retained the strongest final single artifact, 0.3488 versus 0.2380 under full culture (3,200 ticks, N=100)"
+      "source": "https://arxiv.org/html/2608.26081",
+      "claim": "Figure 14 reports mean best final artifact 0.3488 for the isolated envelope versus 0.2380 under full culture at tick 3,200, across four matched N=100 seeds."
     },
     {
-      "source": "https://arxiv.org/abs/2608.26081",
-      "claim": "shared worlds produced 5.75 and 7.00 validated inventions versus 2.75 in isolated search, so the advantage of sharing is breadth, not the best artifact"
+      "source": "https://arxiv.org/html/2608.26081",
+      "claim": "Figure 14 reports mean validated inventions 5.75 for full culture, 7.00 for no explicit culture, and 2.75 for the isolated envelope; the breadth/best-artifact contrast is specific to this experiment."
     }
   ],
   "source": "hypothesis",

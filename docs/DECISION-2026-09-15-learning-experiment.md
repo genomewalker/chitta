@@ -164,3 +164,11 @@ above; the original decision and memo remain unchanged as history.
 Implementation and count-only diagnostic:
 `benchmarks/learning/protocol.md` and
 `benchmarks/learning/evidence/live-postcut-2026-09-15.json`.
+
+Citation check — 2026-09-16: SwarmWorld HTML sections 2.5–2.6 and Figures 14/20 match the stated ~95% first-reuse and breadth/best-artifact comparisons [14](#ref-14). Historical editor-style code citations target another worktree and are not reproducible line references in this checkout; private historical state was not accessed. Body preserved.
+
+<!-- BEGIN CITATIONS -->
+## References
+
+- <a id="ref-14"></a>**[14]** Subhadeep Pal, Fiona Y. Wang, and Markus J. Buehler. SwarmWorld: Stigmergic technological evolution in societies of language-model agents. arXiv:2608.26081 (2026). [source](<https://arxiv.org/abs/2608.26081>) [source](<https://arxiv.org/html/2608.26081>)
+<!-- END CITATIONS -->

@@ -108,7 +108,7 @@
         <span class="tools-category-toggle">&#x25BE;</span>
       </div>
       <div class="tools-content">
-        <p class="section-intro">LoCoMo and LongMemEval score conversational question answering: given a long dialogue history, can the system answer a question about it, measured against a reference answer. For a coding agent that is the wrong target. Question-answering recall is a proxy that can rise while the thing that matters &mdash; does the agent ship a working change faster and cheaper because it remembered something &mdash; stays flat or gets worse. A memory system that retrieves plausible but stale context can raise a recall score while actively misleading the agent on a real task.</p>
+        <p class="section-intro">LoCoMo<sup><a href="#ref-17">17</a></sup> and LongMemEval<sup><a href="#ref-16">16</a></sup> score conversational question answering: given a long dialogue history, can the system answer a question about it, measured against a reference answer. For a coding agent that is the wrong target. Question-answering recall is a proxy that can rise while the thing that matters &mdash; does the agent ship a working change faster and cheaper because it remembered something &mdash; stays flat or gets worse. A memory system that retrieves plausible but stale context can raise a recall score while actively misleading the agent on a real task.</p>
         <p class="section-intro">SMRITI-Bench, named for <em>smṛti</em> (स्मृति), closes that gap by scoring the axis chitta is built for. There is no model-as-judge and no reference-answer overlap score. A task either passes its check command or it does not.</p>
       </div>
     </div>
@@ -153,7 +153,7 @@
         <table class="comp-table">
           <thead><tr><th>Metric</th><th>Definition</th></tr></thead>
           <tbody>
-            <tr><td>SR</td><td>Success rate per condition, reported with a Wilson 95% interval because the trial counts are small enough that a naive proportion misleads.</td></tr>
+            <tr><td>SR</td><td>Success rate per condition, reported with a Wilson<sup><a href="#ref-2">2</a></sup> 95% interval because the trial counts are small enough that a naive proportion misleads.</td></tr>
             <tr><td>&Delta;SR</td><td>Success rate with memory on, minus with memory off. The headline number.</td></tr>
             <tr><td>&Delta;T</td><td>Mean tokens on, minus mean tokens off. A system that adds success but doubles cost is not free.</td></tr>
             <tr><td>MUI</td><td>Memory utility index: the fraction of memory-on runs where memory demonstrably changed something.</td></tr>
@@ -296,6 +296,19 @@
 </section>
 
 <!-- FOOTER -->
+<!-- BEGIN CITATIONS -->
+<section id="references" class="references">
+  <div class="container">
+  <h2 class="heading-section">References</h2>
+  <ol>
+    <li id="ref-2" value="2">Edwin B. Wilson. Probable Inference, the Law of Succession, and Statistical Inference. Journal of the American Statistical Association 22(158), 209–212 (1927). <a href="https://doi.org/10.1080/01621459.1927.10502953">https://doi.org/10.1080/01621459.1927.10502953</a></li>
+    <li id="ref-16" value="16">Di Wu, Hongwei Wang, Wenhao Yu, Yuwei Zhang, Kai-Wei Chang, and Dong Yu. LongMemEval: Benchmarking Chat Assistants on Long-Term Interactive Memory. ICLR (2025); arXiv:2410.10813 (2024). <a href="https://arxiv.org/abs/2410.10813">https://arxiv.org/abs/2410.10813</a></li>
+    <li id="ref-17" value="17">Adyasha Maharana, Dong-Ho Lee, Sergey Tulyakov, Mohit Bansal, Francesco Barbieri, and Yuwei Fang. Evaluating Very Long-Term Conversational Memory of LLM Agents. ACL (2024); arXiv:2402.17753. <a href="https://arxiv.org/abs/2402.17753">https://arxiv.org/abs/2402.17753</a> <a href="https://aclanthology.org/2024.acl-long.747/">https://aclanthology.org/2024.acl-long.747/</a></li>
+  </ol>
+  </div>
+</section>
+<!-- END CITATIONS -->
+
 <footer class="footer">
   <div class="container">
     <p class="footer-text">

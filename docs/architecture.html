@@ -280,7 +280,7 @@
         <div class="phase-number">1</div>
         <div class="phase-content">
           <h3 class="phase-title">Semantic Seeds</h3>
-          <p class="phase-desc">Vector similarity search using HNSW index. Returns top-k memories by cosine distance to the query embedding&thinsp;&mdash;&thinsp;the initial gravity wells of meaning.</p>
+          <p class="phase-desc">Vector similarity search using HNSW<sup><a href="#ref-4">4</a></sup> index. Returns top-k memories by cosine distance to the query embedding&thinsp;&mdash;&thinsp;the initial gravity wells of meaning.</p>
           <div class="phase-params">
             <span class="phase-param">semantic_weight = 0.6</span>
             <span class="phase-param">HNSW cosine</span>
@@ -292,7 +292,7 @@
         <div class="phase-number">2</div>
         <div class="phase-content">
           <h3 class="phase-title">BM25 Hybrid</h3>
-          <p class="phase-desc">Keyword-based search using BM25 scoring complements semantic search for exact term matches. Results merge using weighted combination with confidence factor.</p>
+          <p class="phase-desc">Keyword-based search using BM25<sup><a href="#ref-24">24</a></sup> scoring complements semantic search for exact term matches. Results merge using weighted combination with confidence factor.</p>
           <div class="phase-params">
             <span class="phase-param">bm25_weight = 0.4</span>
             <span class="phase-param">tag_boost = 0.05</span>
@@ -365,7 +365,7 @@
         <div class="phase-number">8</div>
         <div class="phase-content">
           <h3 class="phase-title">Post-Processing</h3>
-          <p class="phase-desc">Attractor boost, lateral inhibition (similar memories compete), Hebbian learning (co-accessed memories strengthen connections), and credit assignment for the Bayesian bandit.</p>
+          <p class="phase-desc">Attractor boost, lateral inhibition (similar memories compete), Hebbian<sup><a href="#ref-26">26</a></sup> learning (co-accessed memories strengthen connections), and credit assignment for the Bayesian bandit.</p>
           <div class="phase-params">
             <span class="phase-param">inhibition = 0.7</span>
             <span class="phase-param">similarity_threshold = 0.85</span>
@@ -405,12 +405,12 @@
       </thead>
       <tbody>
         <tr><td class="class-name">Relevance</td><td class="file-name">Cosine similarity</td><td class="role-desc">Base semantic match score</td></tr>
-        <tr><td class="class-name">ACT-R</td><td class="file-name">Access history</td><td class="role-desc">Anderson &amp; Schooler (1991) power-law decay over access timestamps</td></tr>
+        <tr><td class="class-name">ACT-R<sup><a href="#ref-1">1</a></sup></td><td class="file-name">Access history</td><td class="role-desc">Anderson &amp; Schooler (1991) power-law decay over access timestamps</td></tr>
         <tr><td class="class-name">Strength</td><td class="file-name">Memory strength</td><td class="role-desc">Reinforcement from repeated access</td></tr>
         <tr><td class="class-name">Confidence</td><td class="file-name">Bayesian posterior</td><td class="role-desc">Beta posterior mean over observation history</td></tr>
         <tr><td class="class-name">Surprise</td><td class="file-name">FEP &sect;2.3</td><td class="role-desc">Reconstruction error as surprise signal</td></tr>
         <tr><td class="class-name">Arousal</td><td class="file-name">Affect dimensions</td><td class="role-desc">Flashbulb memory effect: high-arousal memories boosted</td></tr>
-        <tr><td class="class-name">MoodCongruence</td><td class="file-name">Query affect</td><td class="role-desc">Bower (1981): valence/arousal alignment between query and memory</td></tr>
+        <tr><td class="class-name">MoodCongruence</td><td class="file-name">Query affect</td><td class="role-desc">Bower<sup><a href="#ref-20">20</a></sup> (1981): valence/arousal alignment between query and memory</td></tr>
         <tr><td class="class-name">FrustrationEscalation</td><td class="file-name">Query affect</td><td class="role-desc">Negative valence + high arousal boosts corrections/preferences</td></tr>
         <tr><td class="class-name">Status</td><td class="file-name">Demotion tier</td><td class="role-desc">Tier-based weight (hot &gt; warm &gt; cool &gt; cold)</td></tr>
         <tr><td class="class-name">Epistemic</td><td class="file-name">Node type</td><td class="role-desc">Type-based multiplier (corrections, preferences weighted higher)</td></tr>
@@ -792,7 +792,7 @@
       <div class="section-divider"></div>
       <h2 class="heading-section">Self-Tuning (Bayesian Bandits)</h2>
     </div>
-    <p class="section-intro reveal reveal-delay-1">The <code>ResonanceLearner</code> uses Thompson sampling to automatically optimize resonance parameters. No manual tuning&thinsp;&mdash;&thinsp;the system learns what works for each user's memory patterns.</p>
+    <p class="section-intro reveal reveal-delay-1">The <code>ResonanceLearner</code> uses Thompson sampling<sup><a href="#ref-69">69</a></sup> to automatically optimize resonance parameters. No manual tuning&thinsp;&mdash;&thinsp;the system learns what works for each user's memory patterns.</p>
 
     <div class="tuning-grid reveal reveal-delay-2">
       <div class="tuning-card">
@@ -832,6 +832,22 @@
 </section>
 
 <!-- FOOTER -->
+<!-- BEGIN CITATIONS -->
+<section id="references" class="references">
+  <div class="container">
+  <h2 class="heading-section">References</h2>
+  <ol>
+    <li id="ref-1" value="1">John R. Anderson and Lael J. Schooler. Reflections of the Environment in Memory. Psychological Science 2(6), 396–408 (1991). <a href="https://doi.org/10.1111/j.1467-9280.1991.tb00174.x">https://doi.org/10.1111/j.1467-9280.1991.tb00174.x</a></li>
+    <li id="ref-4" value="4">Yu. A. Malkov and D. A. Yashunin. Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs. IEEE TPAMI 42(4), 824–836 (2020); arXiv:1603.09320 (2016). <a href="https://arxiv.org/abs/1603.09320">https://arxiv.org/abs/1603.09320</a> <a href="https://doi.org/10.1109/TPAMI.2018.2889473">https://doi.org/10.1109/TPAMI.2018.2889473</a></li>
+    <li id="ref-20" value="20">Gordon H. Bower. Mood and memory. American Psychologist 36(2), 129–148 (1981). <a href="https://doi.org/10.1037/0003-066X.36.2.129">https://doi.org/10.1037/0003-066X.36.2.129</a></li>
+    <li id="ref-24" value="24">Stephen Robertson and Hugo Zaragoza. The Probabilistic Relevance Framework: BM25 and Beyond. Foundations and Trends in Information Retrieval 3(4), 333–389 (2009). <a href="https://doi.org/10.1561/1500000019">https://doi.org/10.1561/1500000019</a></li>
+    <li id="ref-26" value="26">Donald O. Hebb. The Organization of Behavior: A Neuropsychological Theory. Wiley (1949); Psychology Press reissue (2002). <a href="https://www.routledge.com/The-Organization-of-Behavior-A-Neuropsychological-Theory/Hebb/p/book/9780415654531">https://www.routledge.com/The-Organization-of-Behavior-A-Neuropsychological-Theory/Hebb/p/book/9780415654531</a></li>
+    <li id="ref-69" value="69">William R. Thompson. On the likelihood that one unknown probability exceeds another in view of the evidence of two samples. Biometrika 25(3–4), 285–294 (1933). <a href="https://doi.org/10.1093/biomet/25.3-4.285">https://doi.org/10.1093/biomet/25.3-4.285</a></li>
+  </ol>
+  </div>
+</section>
+<!-- END CITATIONS -->
+
 <footer class="footer">
   <div class="container">
     <p class="footer-text">

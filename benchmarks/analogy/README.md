@@ -5,7 +5,7 @@
 It transfers the union of the stored directed predicates linking a→b to outgoing
 edges of c. Distinct answers rank by strongest edge weight, then edge start time
 (newest first), then deterministic symbol/ID ties. `score` is edge weight, not
-VSA similarity or a probability. Structural mode is rejected with an explanation.
+VSA [10](#ref-10) similarity or a probability. Structural mode is rejected with an explanation.
 The HDC organ remains available to other users.
 
 Top-level `mode`, `indexed`, and `results` remain. `indexed` reports organ entry
@@ -74,3 +74,9 @@ establish broad analogy performance.
 
 Validation: `python3 -m unittest discover -s benchmarks/analogy -p 'test_*.py'`
 and `ruff check benchmarks/analogy/*.py`.
+
+<!-- BEGIN CITATIONS -->
+## References
+
+- <a id="ref-10"></a>**[10]** Pentti Kanerva. Hyperdimensional Computing: An Introduction to Computing in Distributed Representation with High-Dimensional Random Vectors. Cognitive Computation 1, 139–159 (2009). [source](<https://doi.org/10.1007/s12559-009-9009-8>)
+<!-- END CITATIONS -->

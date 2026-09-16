@@ -16,15 +16,15 @@
   "evidence": [
     {
       "source": "https://doi.org/10.5281/zenodo.22730449",
-      "claim": "Paper provides only a title, no abstract or methodology text was retrievable"
+      "claim": "Citation check 2026-09-16: this DOI identifies Rolando Bosch's fidelis v0.0.97 software archive; its Zenodo description is available."
     },
     {
       "source": "https://doi.org/10.5281/zenodo.22730449",
-      "claim": "Chitta's distillation pipeline runs as native C++ (field_distill.cpp) with no LLM call, per inventory"
+      "claim": "The release description states that fidelis returns original passages verbatim instead of paraphrasing and runs locally. This external source does not document chitta's distillation pipeline."
     },
     {
       "source": "https://doi.org/10.5281/zenodo.22730449",
-      "claim": "Chitta's default recall strategy (hybrid) is RRF over semantic/typed/spreading/session lanes, also non-LLM at query time"
+      "claim": "The release description states that fidelis's default retrieval combines BM25, dense vectors and reciprocal rank fusion without an LLM call. This is evidence about fidelis, not chitta's recall implementation."
     }
   ],
   "source": "hypothesis",

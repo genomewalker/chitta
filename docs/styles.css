@@ -2708,3 +2708,8 @@ section {
 .removed { color: rgba(185,189,199,0.5); }
 /* .path used standalone outside .db-paths context */
 .path { color: var(--aura-300); font-family: var(--font-mono); }
+
+/* Bibliographic references share each page's existing type and container. */
+.references { font-size: var(--text-sm); line-height: 1.7; }
+.references ol { padding-left: 2rem; }
+.references li { margin: 0.75rem 0; overflow-wrap: anywhere; }

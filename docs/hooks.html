@@ -510,7 +510,7 @@
 <section class="tools-section" id="native-lifecycle">
   <div class="container">
     <h2>Native lifecycle and daemon ledger</h2>
-    <p>Since September 15, ordinary prompt, SessionStart and Stop paths use bash/jq and native <code>chitta</code> calls for query cleanup, RPC parsing, registration, heartbeats and task cards. Explicit RLM or opt-in background features can still use Python. Measured prompt median fell from 822 to 635 ms and SessionStart from 693 to 599 ms on the loaded test node; these are measurements, not fixed budgets.</p>
+    <p>Since September 15, ordinary prompt, SessionStart and Stop paths use bash/jq and native <code>chitta</code> calls for query cleanup, RPC parsing, registration, heartbeats and task cards. Explicit RLM<sup><a href="#ref-71">71</a></sup> or opt-in background features can still use Python. Measured prompt median fell from 822 to 635 ms and SessionStart from 693 to 599 ms on the loaded test node; these are measurements, not fixed budgets.</p>
     <p><code>ledger_op</code> owns task threads, inbox, artifacts, bindings and leases in the daemon WAL and snapshots. Hooks call <code>session_register</code>, <code>session_heartbeat</code> and <code>ledger_op</code> directly. Python registry and ledger modules remain compatibility clients. Failed heartbeats are queued in the private mind's <code>queue.jsonl</code>.</p>
     <p><code>CHITTA_SOCKET_PATH</code> selects the daemon. The default socket is derived from the mind path and runtime directory. Test runs must isolate HOME, runtime, mind, queue and socket together. See <a href="HOOKS.md">HOOKS.md</a> for routing, enforcement, environment variables and full latency evidence.</p>
   </div>
@@ -522,6 +522,17 @@
 </section>
 
 <!-- FOOTER -->
+<!-- BEGIN CITATIONS -->
+<section id="references" class="references">
+  <div class="container">
+  <h2 class="heading-section">References</h2>
+  <ol>
+    <li id="ref-71" value="71">Alex L. Zhang, Tim Kraska, and Omar Khattab. Recursive Language Models. arXiv:2512.24601 (2025; revised 2026). <a href="https://arxiv.org/abs/2512.24601">https://arxiv.org/abs/2512.24601</a></li>
+  </ol>
+  </div>
+</section>
+<!-- END CITATIONS -->
+
 <footer class="footer">
   <div class="container">
     <p class="footer-text">

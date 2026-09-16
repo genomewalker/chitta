@@ -151,7 +151,7 @@ clients. Explicit legacy import is the only normal use of SQLite in that client.
 
 Claude Code and Codex adapters share the backend. Routine prompt, SessionStart
 and Stop work uses bash/jq and native RPC calls rather than Python starts for
-cleanup, registry and ledger rendering. Explicit RLM and opt-in background paths
+cleanup, registry and ledger rendering. Explicit RLM [71](#ref-71) and opt-in background paths
 can still start Python. Realm detection maps linked worktrees to their main
 checkout. Topic lanes skip turns with no distinctive tokens; UNKNOWN-band
 admission requires distinctive-token support. [HOOKS.md](HOOKS.md) is the
@@ -185,3 +185,9 @@ The automatic-learning experiment recorded its official cohort cut at
 trials and two arms (120 runs). Planted-memory SMRITI results do not answer this
 causal question. See [EVALS.md](EVALS.md), [EVAL_REPLICA.md](EVAL_REPLICA.md) and
 the [experiment protocol](../benchmarks/learning/protocol.md).
+
+<!-- BEGIN CITATIONS -->
+## References
+
+- <a id="ref-71"></a>**[71]** Alex L. Zhang, Tim Kraska, and Omar Khattab. Recursive Language Models. arXiv:2512.24601 (2025; revised 2026). [source](<https://arxiv.org/abs/2512.24601>)
+<!-- END CITATIONS -->

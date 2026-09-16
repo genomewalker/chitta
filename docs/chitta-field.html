@@ -444,9 +444,9 @@
     <div class="reveal"><div class="section-divider"></div><h2 class="heading-section">Sparse associative codes</h2></div>
     <div class="two-col">
       <div class="cf-prose reveal reveal-delay-1">
-        <p>Each memory is encoded as a <strong>sparse code</strong>: exactly 64 of 16,384 feature dimensions activate. The rest are zero. This is the same principle behind sparse distributed representations in biological cortex — high capacity, collision-resistant, and inherently associative.</p>
+        <p>Each memory is encoded as a <strong>sparse code</strong>: exactly 64 of 16,384 feature dimensions activate. The rest are zero. This is the same principle behind sparse distributed representations<sup><a href="#ref-9">9</a></sup> in biological cortex — high capacity, collision-resistant, and inherently associative.</p>
         <p>Sparse codes are derived from the dense 768-dim BGE embedding by projecting through a learned sparse encoder. The result: two memories about the same concept share many active features. Two unrelated memories share almost none.</p>
-        <p>This makes retrieval geometric: <em>find memories whose active features overlap most with the query's active features</em>. No distance function. No HNSW graph traversal. Just intersection and counting.</p>
+        <p>This makes retrieval geometric: <em>find memories whose active features overlap most with the query's active features</em>. No distance function. No HNSW<sup><a href="#ref-4">4</a></sup> graph traversal. Just intersection and counting.</p>
         <p><strong>SSL NL gloss</strong>: SSL-encoded memories (compact triplet form) are passed through <code>gloss_ssl_content()</code> &mdash; a translation layer in <code>chitta/include/chitta/ssl_gloss.hpp</code> that converts triplets into readable English sentences <em>before</em> embedding. This closes the representation gap between compact SSL storage and natural-language BGE queries, so structured memories surface from prose questions.</p>
         <p><strong>Alias memories</strong>: every new SSL memory auto-creates a linked <code>kind=alias</code> NL counterpart, connected by an <code>alias-of</code> triplet. NL and SSL representations stay synchronised without content duplication: the alias carries the glossed sentence, the SSL row carries the canonical triplet.</p>
       </div>
@@ -586,7 +586,7 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
       <div class="cf-prose reveal reveal-delay-3">
         <p><strong>Why it's fast</strong>: each of the 64 query features maps to a pre-sorted posting list. Intersecting 64 small lists is O(k·log n) in the worst case, but in practice the lists are small because each feature is shared by only a fraction of all memories (sparsity guarantees this).</p>
         <p><strong>Associativity</strong>: two memories about the same topic will share many active features. When you recall one, the other lights up because it appears repeatedly in the posting lists being scanned. This is associative retrieval — not a similarity metric, but emergent from the index structure.</p>
-        <p><strong>Hybrid recall</strong>: the posting index handles semantic overlap. A BM25 keyword index handles exact term matches. Both scores are fused in the resonance pipeline's early phases.</p>
+        <p><strong>Hybrid recall</strong>: the posting index handles semantic overlap. A BM25<sup><a href="#ref-24">24</a></sup> keyword index handles exact term matches. Both scores are fused in the resonance pipeline's early phases.</p>
       </div>
       <div class="cf-code reveal reveal-delay-4">
 <span class="cm">// Posting index: feature → memories</span>
@@ -706,13 +706,13 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
 <section class="cf-page-section" id="fep">
   <div class="container">
     <div class="reveal"><div class="section-divider"></div><h2 class="heading-section">FEP attractor network</h2></div>
-    <p class="section-intro reveal reveal-delay-1">Memory representations self-organize according to the Free Energy Principle (Spisak &amp; Friston, Neurocomputing 2026). The encoder, prototype index, and association graph jointly minimize prediction error while controlling model complexity.</p>
+    <p class="section-intro reveal reveal-delay-1">Memory representations self-organize according to the Free Energy Principle (Spisak<sup><a href="#ref-19">19</a></sup> &amp; Friston, Neurocomputing 2026). The encoder, prototype index, and association graph jointly minimize prediction error while controlling model complexity.</p>
 
     <div class="cf-feature-grid reveal reveal-delay-2">
       <div class="cf-feature-card">
         <div class="cf-feature-icon">&#x2662;</div>
         <h3>Self-orthogonalizing encoder</h3>
-        <p>The FEP-derived learning rule replaces pure Hebbian updates. Each atom update includes a complexity penalty (&lambda;=10<sup>-4</sup>) that pushes unused weights toward zero, plus Gram-Schmidt decorrelation (1% per step) between co-active atoms. Over time, memory representations naturally become orthogonal &mdash; maximizing mutual information and resisting catastrophic forgetting.</p>
+        <p>The FEP-derived learning rule replaces pure Hebbian<sup><a href="#ref-26">26</a></sup> updates. Each atom update includes a complexity penalty (&lambda;=10<sup>-4</sup>) that pushes unused weights toward zero, plus Gram-Schmidt decorrelation (1% per step) between co-active atoms. Over time, memory representations naturally become orthogonal &mdash; maximizing mutual information and resisting catastrophic forgetting.</p>
       </div>
       <div class="cf-feature-card">
         <div class="cf-feature-icon">&#x21C4;</div>
@@ -731,7 +731,7 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
       </div>
       <div class="cf-feature-card">
         <div class="cf-feature-icon">&#x2B21;</div>
-        <h3>Hopfield network</h3>
+        <h3>Hopfield network<sup><a href="#ref-33">33</a></sup></h3>
         <p>An asymmetric energy-based network over memory co-activations. <code>settle()</code> propagates activation through multi-hop directed couplings with dynamic neighbor discovery. Seeds are clamped; connected memories activate via sigmoid gating. The result: given a few seed memories, the network completes the pattern.</p>
       </div>
       <div class="cf-feature-card">
@@ -757,7 +757,7 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
       </div>
       <div class="cf-card">
         <h4 class="cf-card-title">Relevance &ne; recency</h4>
-        <p class="cf-card-desc">A flat file is ordered by insertion time. chitta-field scores each candidate on 18 composable factors &mdash; semantic similarity, ACT-R base-level activation, memory strength, confidence, epistemic status, affect valence, surprise boost, mood congruence, frustration escalation, prediction boost, integration kernel weight, and more. A two-month-old memory that perfectly matches beats a five-minute-old memory that partially matches.</p>
+        <p class="cf-card-desc">A flat file is ordered by insertion time. chitta-field scores each candidate on 18 composable factors &mdash; semantic similarity, ACT-R<sup><a href="#ref-1">1</a></sup> base-level activation, memory strength, confidence, epistemic status, affect valence, surprise boost, mood congruence, frustration escalation, prediction boost, integration kernel weight, and more. A two-month-old memory that perfectly matches beats a five-minute-old memory that partially matches.</p>
       </div>
       <div class="cf-card">
         <h4 class="cf-card-title">Memory needs a lifecycle</h4>
@@ -840,7 +840,7 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
 
     <!-- CEC Organs sub-section -->
     <div class="reveal" style="margin-top:var(--space-7)"><div class="section-divider"></div><h3 class="heading-section" style="font-size:var(--text-xl)">Causal Episode Compiler organs <span style="font-size:var(--text-xs);color:var(--ash-400);font-weight:400;">v5.25&ndash;v5.38 &middot; Phases 1&ndash;14</span></h3></div>
-    <p class="section-intro reveal reveal-delay-1">A second, parallel memory substrate that indexes <strong>state transitions</strong> <code>(tool, entity, outcome)</code> instead of content. Runs alongside HNSW/BM25/HDC recall lanes, which are untouched. The atom of memory is a causal edge, not a document.</p>
+    <p class="section-intro reveal reveal-delay-1">A second, parallel memory substrate that indexes <strong>state transitions</strong> <code>(tool, entity, outcome)</code> instead of content. Runs alongside HNSW/BM25/HDC<sup><a href="#ref-10">10</a></sup> recall lanes, which are untouched. The atom of memory is a causal edge, not a document.</p>
 
     <div class="cf-feature-grid reveal reveal-delay-2">
 
@@ -853,19 +853,19 @@ posting_index: HashMap&lt;<span class="ty">u32</span>, Vec&lt;<span class="ty">u
       <div class="cf-feature-card">
         <div class="cf-feature-icon">&#x25C6;</div>
         <h3>CdawgOrgan</h3>
-        <p>Online Blumer CDAWG over packed <code>u64</code> symbols. O(1) amortized per <code>extend()</code>. Each state holds <code>RoaringBitmap</code> endpos, <code>fail_count</code>/<code>succ_count</code>, TD(&lambda;) credit, and Q-value. Rebuilt from EventTape at load (ephemeral, not in snapshot). Supports PPM prediction, counterfactual sibling-edge comparison, top-k Q-value motif retrieval, and TD credit propagation up suffix links weighted by <code>1/|endpos|</code>.</p>
+        <p>Online Blumer CDAWG<sup><a href="#ref-6">6</a></sup><sup><a href="#ref-67">67</a></sup> over packed <code>u64</code> symbols. O(1) amortized per <code>extend()</code>. Each state holds <code>RoaringBitmap</code> endpos, <code>fail_count</code>/<code>succ_count</code>, TD(&lambda;)<sup><a href="#ref-31">31</a></sup> credit, and Q-value. Rebuilt from EventTape at load (ephemeral, not in snapshot). Supports PPM<sup><a href="#ref-30">30</a></sup> prediction, counterfactual sibling-edge comparison, top-k Q-value motif retrieval, and TD credit propagation up suffix links weighted by <code>1/|endpos|</code>.</p>
       </div>
 
       <div class="cf-feature-card">
         <div class="cf-feature-icon">&#x2696;</div>
         <h3>RefutationLedger</h3>
-        <p>Tracks <code>support</code> (sym_a &rarr; expected sym_b) and <code>contradict</code> (sym_a &rarr; anything else) counts per Sequitur rule. Hysteresis: flip to <em>Refuted</em> at ratio &gt; 0.4, reinstate below 0.2. Antecedent index (<code>HashMap&lt;u64, Vec&lt;RefutEntry&gt;&gt;</code>) enables O(1) per-event checks. On refutation, writes a <code>refuted_by</code> triplet to the KG. Ephemeral; rebuilt from EventTape after each Sequitur pass.</p>
+        <p>Tracks <code>support</code> (sym_a &rarr; expected sym_b) and <code>contradict</code> (sym_a &rarr; anything else) counts per Sequitur<sup><a href="#ref-25">25</a></sup> rule. Hysteresis: flip to <em>Refuted</em> at ratio &gt; 0.4, reinstate below 0.2. Antecedent index (<code>HashMap&lt;u64, Vec&lt;RefutEntry&gt;&gt;</code>) enables O(1) per-event checks. On refutation, writes a <code>refuted_by</code> triplet to the KG. Ephemeral; rebuilt from EventTape after each Sequitur pass.</p>
       </div>
 
       <div class="cf-feature-card">
         <div class="cf-feature-icon">&#x1F4CA;</div>
         <h3>HypothesisMarket</h3>
-        <p>Wilson score CI (95%, z=1.96) + binary entropy per Sequitur rule. <code>probe_value = H(p&#x0302;) &times; (1 &minus; |p&#x0302; &minus; 0.5| &times; 2)</code> — maximized at p&#x0302;=0.5 (maximum uncertainty), zero at certainty. <code>top_probes(k)</code> returns rules the system is most uncertain about, ranked by expected information gain. Drives Phase 14 self-directed experimentation. Ephemeral; rebuilt after each <code>consolidation_pass()</code>.</p>
+        <p>Wilson<sup><a href="#ref-2">2</a></sup> score CI (95%, z=1.96) + binary entropy per Sequitur rule. <code>probe_value = H(p&#x0302;) &times; (1 &minus; |p&#x0302; &minus; 0.5| &times; 2)</code> — maximized at p&#x0302;=0.5 (maximum uncertainty), zero at certainty. <code>top_probes(k)</code> returns rules the system is most uncertain about, ranked by expected information gain. Drives Phase 14 self-directed experimentation. Ephemeral; rebuilt after each <code>consolidation_pass()</code>.</p>
       </div>
 
       <div class="cf-feature-card">
@@ -1015,20 +1015,6 @@ cmake --build chitta/build --parallel
 </section>
 
 
-<!-- REFERENCES -->
-<section class="cf-page-section" id="references">
-  <div class="container">
-    <div class="reveal"><div class="section-divider"></div><h2 class="heading-section">References</h2></div>
-    <p class="section-intro reveal reveal-delay-1">The chitta-field memory substrate draws on the following published work.</p>
-    <ul class="reveal reveal-delay-2" style="list-style:none;padding:0;line-height:2">
-      <li>
-        Spisak, T., &amp; Friston, K. J. (2026). <strong>Free-energy principle for memory: self-orthogonalizing sparse codes, asymmetric Hopfield attractors, and surprise-modulated plasticity.</strong> <em>Neurocomputing</em>.
-        <a href="https://doi.org/10.1016/j.neucom.2026.08696" target="_blank" rel="noopener">https://doi.org/10.1016/j.neucom.2026.08696</a>
-      </li>
-    </ul>
-  </div>
-</section>
-
 <!-- CLOSING -->
 <section class="closing">
   <div class="container">
@@ -1041,6 +1027,30 @@ cmake --build chitta/build --parallel
 </section>
 
 <!-- FOOTER -->
+<!-- BEGIN CITATIONS -->
+<section id="references" class="references">
+  <div class="container">
+  <h2 class="heading-section">References</h2>
+  <ol>
+    <li id="ref-1" value="1">John R. Anderson and Lael J. Schooler. Reflections of the Environment in Memory. Psychological Science 2(6), 396–408 (1991). <a href="https://doi.org/10.1111/j.1467-9280.1991.tb00174.x">https://doi.org/10.1111/j.1467-9280.1991.tb00174.x</a></li>
+    <li id="ref-2" value="2">Edwin B. Wilson. Probable Inference, the Law of Succession, and Statistical Inference. Journal of the American Statistical Association 22(158), 209–212 (1927). <a href="https://doi.org/10.1080/01621459.1927.10502953">https://doi.org/10.1080/01621459.1927.10502953</a></li>
+    <li id="ref-4" value="4">Yu. A. Malkov and D. A. Yashunin. Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs. IEEE TPAMI 42(4), 824–836 (2020); arXiv:1603.09320 (2016). <a href="https://arxiv.org/abs/1603.09320">https://arxiv.org/abs/1603.09320</a> <a href="https://doi.org/10.1109/TPAMI.2018.2889473">https://doi.org/10.1109/TPAMI.2018.2889473</a></li>
+    <li id="ref-6" value="6">A. Blumer, J. Blumer, D. Haussler, R. McConnell, and A. Ehrenfeucht. Complete inverted files for efficient text retrieval and analysis. Journal of the ACM 34(3), 578–595 (1987). <a href="https://doi.org/10.1145/28869.28873">https://doi.org/10.1145/28869.28873</a></li>
+    <li id="ref-9" value="9">Subutai Ahmad and Jeff Hawkins. Properties of Sparse Distributed Representations and their Application to Hierarchical Temporal Memory. arXiv:1503.07469 (2015). <a href="https://arxiv.org/abs/1503.07469">https://arxiv.org/abs/1503.07469</a></li>
+    <li id="ref-10" value="10">Pentti Kanerva. Hyperdimensional Computing: An Introduction to Computing in Distributed Representation with High-Dimensional Random Vectors. Cognitive Computation 1, 139–159 (2009). <a href="https://doi.org/10.1007/s12559-009-9009-8">https://doi.org/10.1007/s12559-009-9009-8</a></li>
+    <li id="ref-19" value="19">Tamas Spisak and Karl Friston. Self-orthogonalizing attractor neural networks emerging from the free energy principle. Neurocomputing, article 133472 (2026); arXiv:2505.22749 (2025). <a href="https://arxiv.org/abs/2505.22749">https://arxiv.org/abs/2505.22749</a> <a href="https://doi.org/10.1016/j.neucom.2026.133472">https://doi.org/10.1016/j.neucom.2026.133472</a></li>
+    <li id="ref-24" value="24">Stephen Robertson and Hugo Zaragoza. The Probabilistic Relevance Framework: BM25 and Beyond. Foundations and Trends in Information Retrieval 3(4), 333–389 (2009). <a href="https://doi.org/10.1561/1500000019">https://doi.org/10.1561/1500000019</a></li>
+    <li id="ref-25" value="25">Craig G. Nevill-Manning and Ian H. Witten. Identifying Hierarchical Structure in Sequences: A linear-time algorithm. Journal of Artificial Intelligence Research 7, 67–82 (1997); arXiv:cs/9709102. <a href="https://arxiv.org/abs/cs/9709102">https://arxiv.org/abs/cs/9709102</a></li>
+    <li id="ref-26" value="26">Donald O. Hebb. The Organization of Behavior: A Neuropsychological Theory. Wiley (1949); Psychology Press reissue (2002). <a href="https://www.routledge.com/The-Organization-of-Behavior-A-Neuropsychological-Theory/Hebb/p/book/9780415654531">https://www.routledge.com/The-Organization-of-Behavior-A-Neuropsychological-Theory/Hebb/p/book/9780415654531</a></li>
+    <li id="ref-30" value="30">John G. Cleary and Ian H. Witten. Data Compression Using Adaptive Coding and Partial String Matching. IEEE Transactions on Communications 32(4), 396–402 (1984). <a href="https://doi.org/10.1109/TCOM.1984.1096090">https://doi.org/10.1109/TCOM.1984.1096090</a></li>
+    <li id="ref-31" value="31">Richard S. Sutton. Learning to Predict by the Methods of Temporal Differences. Machine Learning 3, 9–44 (1988). <a href="https://doi.org/10.1023/A:1022633531479">https://doi.org/10.1023/A:1022633531479</a></li>
+    <li id="ref-33" value="33">John J. Hopfield. Neural networks and physical systems with emergent collective computational abilities. PNAS 79(8), 2554–2558 (1982). <a href="https://doi.org/10.1073/pnas.79.8.2554">https://doi.org/10.1073/pnas.79.8.2554</a></li>
+    <li id="ref-67" value="67">A. Blumer, J. Blumer, D. Haussler, A. Ehrenfeucht, M. T. Chen, and J. Seiferas. The smallest automaton recognizing the subwords of a text. Theoretical Computer Science 40, 31–55 (1985). <a href="https://doi.org/10.1016/0304-3975(85)90157-4">https://doi.org/10.1016/0304-3975(85)90157-4</a></li>
+  </ol>
+  </div>
+</section>
+<!-- END CITATIONS -->
+
 <footer class="footer">
   <div class="container">
     <p class="footer-text">

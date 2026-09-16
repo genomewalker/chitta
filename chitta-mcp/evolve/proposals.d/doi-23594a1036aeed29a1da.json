@@ -16,11 +16,11 @@
   "evidence": [
     {
       "source": "https://doi.org/10.1038/s41598-026-69002-7",
-      "claim": "Paper abstract/metadata only available (no fetched body text on multi-agent validation mechanism); title indicates multi-agent retrieval validation and knowledge reasoning for RAG"
+      "claim": "Citation check 2026-09-16: the fetched publisher abstract describes MARCO as four cooperative agents: Retriever, Reasoner, Validator and Synthesizer."
     },
     {
       "source": "https://doi.org/10.1038/s41598-026-69002-7",
-      "claim": "Fetched content contains no methods/results section, only journal metadata and unrelated Figshare dataset links"
+      "claim": "Citation check 2026-09-16: the publisher text describes cross-source consistency assessment and confidence-based filtering by the Validator, coordinated through a Shared Memory Pool and communication protocol; this does not verify the proposed gain for chitta."
     }
   ],
   "source": "hypothesis",

@@ -227,9 +227,9 @@ llama.cpp, and everything works without it running.
 chitta's memory lives in [chitta-field](https://github.com/genomewalker/chitta-field) — a pure Rust cognitive substrate designed to behave like memory, not a database.
 
 - **Sparse associative codes** — each memory activates 64 of 16,384 feature dimensions; recall driven by pattern overlap
-- **Self-orthogonalizing encoder** — FEP-derived learning rule; representations decorrelate naturally, resisting catastrophic forgetting
-- **Asymmetric Hopfield network** — directed couplings from co-retrieval order enable energy-based pattern completion
-- **HNSW semantic index** — activates above 2,000 memories; two-tier delta graph keeps insert cost at O(log N_delta) above 5,000 memories
+- **Self-orthogonalizing encoder** — FEP-derived learning rule [19](#ref-19); representations decorrelate naturally, resisting catastrophic forgetting
+- **Asymmetric Hopfield network** [19](#ref-19) [33](#ref-33) — directed couplings from co-retrieval order enable energy-based pattern completion
+- **HNSW [4](#ref-4) semantic index** — activates above 2,000 memories; two-tier delta graph keeps insert cost at O(log N_delta) above 5,000 memories
 - **Write-ahead log** — every operation durable before in-memory apply; full crash-recovery replay
 - **Multi-instance writes** — multiple Claude windows share the same field simultaneously; no locking
 - **Surprise-modulated decay** — unique memories resist forgetting; redundant ones fade naturally
@@ -314,24 +314,36 @@ condition: 23/27 passed cold, 27/27 with memory, at a paired median token ratio
 of 0.52. The corpus has since grown to 15 tasks and lane ablation is wired, but
 no live matrix has been run over the newer tasks yet.
 
-LongMemEval and LoCoMo harnesses also live under `benchmarks/`. The recorded
+LongMemEval [16](#ref-16) and LoCoMo [17](#ref-17) harnesses also live under `benchmarks/`. The recorded
 LongMemEval result is 0.780 on `longmemeval_s` over 50 single-session-user
 questions, from 2026-05-21. No LoCoMo result is recorded in this repository.
 
 Details: [recall pipeline](https://genomewalker.github.io/chitta/recall.html) ·
 [benchmarks](https://genomewalker.github.io/chitta/benchmarks.html).
 
-## References
-
-- Anderson & Schooler (1991). **Reflections of the environment in memory.** — ACT-R power-law decay.
-- Spisak & Friston (2026). **Free-energy principle for memory.** *Neurocomputing.* — FEP learning rule, surprise-modulated plasticity.
-- Bower (1981). **Mood and memory.** — Mood-congruent recall.
-- Brown & Kulik (1977). **Flashbulb memories.** — High-arousal memory boosting.
-- Malkov & Yashunin (2020). **HNSW.** *IEEE TPAMI.* — Semantic index.
-- Cormack et al. (2009). **Reciprocal Rank Fusion.** *SIGIR.* — Hybrid recall fusion.
-- Packer et al. (2023). **MemGPT.** — Context repository pattern.
-- Ramp Labs (2025). **Latent Briefing.** — Trajectory compaction.
-
 ## License
 
 MIT
+
+Citation context: the memory-design references include ACT-R activation
+[1](#ref-1), Spisak and Friston's attractor model [19](#ref-19), mood and
+flashbulb-memory research [20](#ref-20) [21](#ref-21), HNSW [4](#ref-4), RRF
+[3](#ref-3), and MemGPT [22](#ref-22). Ben Geist's Latent Briefing post
+(2026-04-10) concerns KV-cache memory sharing, not a validation of chitta's text
+compaction [23](#ref-23).
+
+<!-- BEGIN CITATIONS -->
+## References
+
+- <a id="ref-1"></a>**[1]** John R. Anderson and Lael J. Schooler. Reflections of the Environment in Memory. Psychological Science 2(6), 396–408 (1991). [source](<https://doi.org/10.1111/j.1467-9280.1991.tb00174.x>)
+- <a id="ref-3"></a>**[3]** Gordon V. Cormack, Charles L. A. Clarke, and Stefan Buettcher. Reciprocal rank fusion outperforms condorcet and individual rank learning methods. SIGIR, 758–759 (2009). [source](<https://doi.org/10.1145/1571941.1572114>)
+- <a id="ref-4"></a>**[4]** Yu. A. Malkov and D. A. Yashunin. Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs. IEEE TPAMI 42(4), 824–836 (2020); arXiv:1603.09320 (2016). [source](<https://arxiv.org/abs/1603.09320>) [source](<https://doi.org/10.1109/TPAMI.2018.2889473>)
+- <a id="ref-16"></a>**[16]** Di Wu, Hongwei Wang, Wenhao Yu, Yuwei Zhang, Kai-Wei Chang, and Dong Yu. LongMemEval: Benchmarking Chat Assistants on Long-Term Interactive Memory. ICLR (2025); arXiv:2410.10813 (2024). [source](<https://arxiv.org/abs/2410.10813>)
+- <a id="ref-17"></a>**[17]** Adyasha Maharana, Dong-Ho Lee, Sergey Tulyakov, Mohit Bansal, Francesco Barbieri, and Yuwei Fang. Evaluating Very Long-Term Conversational Memory of LLM Agents. ACL (2024); arXiv:2402.17753. [source](<https://arxiv.org/abs/2402.17753>) [source](<https://aclanthology.org/2024.acl-long.747/>)
+- <a id="ref-19"></a>**[19]** Tamas Spisak and Karl Friston. Self-orthogonalizing attractor neural networks emerging from the free energy principle. Neurocomputing, article 133472 (2026); arXiv:2505.22749 (2025). [source](<https://arxiv.org/abs/2505.22749>) [source](<https://doi.org/10.1016/j.neucom.2026.133472>)
+- <a id="ref-20"></a>**[20]** Gordon H. Bower. Mood and memory. American Psychologist 36(2), 129–148 (1981). [source](<https://doi.org/10.1037/0003-066X.36.2.129>)
+- <a id="ref-21"></a>**[21]** Roger Brown and James Kulik. Flashbulb memories. Cognition 5(1), 73–99 (1977). [source](<https://doi.org/10.1016/0010-0277(77)90018-X>)
+- <a id="ref-22"></a>**[22]** Charles Packer, Sarah Wooders, Kevin Lin, Vivian Fang, Shishir G. Patil, Ion Stoica, and Joseph E. Gonzalez. MemGPT: Towards LLMs as Operating Systems. arXiv:2310.08560 (2023). [source](<https://arxiv.org/abs/2310.08560>)
+- <a id="ref-23"></a>**[23]** Ben Geist. Latent Briefing: Efficient Memory Sharing for Multi-Agent Systems via KV Cache Compaction. Ramp Labs Research (2026-04-10). [source](<https://labs.ramp.com/research/latent-briefing-kv-cache/>)
+- <a id="ref-33"></a>**[33]** John J. Hopfield. Neural networks and physical systems with emergent collective computational abilities. PNAS 79(8), 2554–2558 (1982). [source](<https://doi.org/10.1073/pnas.79.8.2554>)
+<!-- END CITATIONS -->

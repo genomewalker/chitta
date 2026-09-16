@@ -16,7 +16,7 @@
   "evidence": [
     {
       "source": "https://doi.org/10.1145/3806774.3832787",
-      "claim": "Paper proposes slot-based memory for virtual agents to keep conversational fact state consistent (title/abstract only, no benchmark numbers available in fetched text)."
+      "claim": "Citation check 2026-09-16: the DOI registry and IVA 2026 accepted-poster list confirm the title and authors Erica Butts and Salam Daher. The title concerns slot-based memory and accurate fact retrieval; publisher body and abstract were not retrieved, so methods and results remain unverified."
     }
   ],
   "source": "hypothesis",

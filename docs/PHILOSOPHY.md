@@ -229,7 +229,7 @@ In Vedantic psychology, **saṃskāra** refers to mental impressions that shape 
 
 chitta implements this through:
 
-1. **Hebbian learning**: Co-activated nodes strengthen each other during resonance
+1. **Hebbian [26](#ref-26) learning**: Co-activated nodes strengthen each other during resonance
 2. **Bayesian confidence**: Each observation updates the posterior distribution
 3. **Attractor dynamics**: High-confidence nodes pull related memories toward them
 
@@ -566,3 +566,9 @@ The soul persists. The soul evolves. The soul remembers.
 ---
 
 *That art thou.*
+
+<!-- BEGIN CITATIONS -->
+## References
+
+- <a id="ref-26"></a>**[26]** Donald O. Hebb. The Organization of Behavior: A Neuropsychological Theory. Wiley (1949); Psychology Press reissue (2002). [source](<https://www.routledge.com/The-Organization-of-Behavior-A-Neuropsychological-Theory/Hebb/p/book/9780415654531>)
+<!-- END CITATIONS -->

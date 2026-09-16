@@ -214,7 +214,7 @@ List pinned memories
 
 ### `lookup` *(gateway)*
 
-Unified memory lookup. Classifies query intent, fans out to optimal backends (keyword/semantic/triplet/temporal/code), fuses with weighted RRF. Default entry point for memory search — use instead of recall/smart_recall/hybrid_recall.
+Unified memory lookup. Classifies query intent, fans out to optimal backends (keyword/semantic/triplet/temporal/code), fuses with weighted RRF [3](#ref-3). Default entry point for memory search — use instead of recall/smart_recall/hybrid_recall.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
@@ -387,7 +387,7 @@ Search memory by semantic similarity with realm filtering Routed by the chitta-m
 | `query` | string | yes | — | Search query |
 | `realm` | string | no | — | Filter by realm |
 | `separation_mode` | boolean | no | — | Diverse results via MMR (default: false) |
-| `strategy` | string | no | — | Retrieval lane: fused (default), keyword (BM25 only, realm-scoped), field (Hopfield/DAM) |
+| `strategy` | string | no | — | Retrieval lane: fused (default), keyword (BM25 [24](#ref-24) only, realm-scoped), field (Hopfield [7](#ref-7) [33](#ref-33)/DAM [8](#ref-8)) |
 | `tag` | string | no | — | Filter by tag |
 
 ### `reject_memory`
@@ -623,7 +623,7 @@ Query semantic claims
 
 ### `recall_analogy`
 
-Analogical recall over the triplet lane (vector-symbolic, no LLM/GPU). Two modes embedding similarity cannot express, because both are about structure rather than wording. 'proportional' solves a:b :: c:? — give three entities, get ranked fillers for the fourth. 'structural' finds memories whose relation graph has the same SHAPE as a probe memory, with entity names factored out, so a pattern learned in one project matches the same pattern in another; set exclude_realm (or cross_realm) for that cross-project transfer. Use when you want 'what else looks like this?', not 'what mentions these words?'.
+Analogical recall over the triplet lane (vector-symbolic [10](#ref-10), no LLM/GPU). Two modes embedding similarity cannot express, because both are about structure rather than wording. 'proportional' solves a:b :: c:? — give three entities, get ranked fillers for the fourth. 'structural' finds memories whose relation graph has the same SHAPE as a probe memory, with entity names factored out, so a pattern learned in one project matches the same pattern in another; set exclude_realm (or cross_realm) for that cross-project transfer. Use when you want 'what else looks like this?', not 'what mentions these words?'.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
@@ -661,7 +661,7 @@ PMI-ranked causal antecedents: what actions typically precede (tool, entity)?
 
 ### `recall_counterfactual` *(via advanced)*
 
-CDAWG sibling-edge counterfactual: what alternative tool/entity would have had a lower failure rate in this same context?
+CDAWG [6](#ref-6) sibling-edge counterfactual: what alternative tool/entity would have had a lower failure rate in this same context?
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
@@ -911,7 +911,7 @@ Show top co-activated memory associations for a given memory
 
 ### `graph_pagerank`
 
-Personalized PageRank over the triplet graph
+Personalized PageRank [70](#ref-70) over the triplet graph
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
@@ -1241,7 +1241,7 @@ Store an observation/learning (SSL v0.4)
 
 ### `smart_context` *(gateway)*
 
-Build intelligent context. Modes: fast (<80ms), full (<200ms), rlm (RLM-style dynamic exploration via soul_repl). With resolver_mode=true (default), prepends digest-node and decision memories before code symbols.
+Build intelligent context. Modes: fast (<80ms), full (<200ms), rlm (RLM [71](#ref-71)-style dynamic exploration via soul_repl). With resolver_mode=true (default), prepends digest-node and decision memories before code symbols.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
@@ -1749,7 +1749,7 @@ For a memory id: cosine of its STORED vector against a fresh single-prefix embed
 
 ### `flush_embeddings`
 
-Flush the pending embedding queue synchronously — call after remember_batch to ensure HNSW/semantic recall is available immediately. Returns {flushed: N}.
+Flush the pending embedding queue synchronously — call after remember_batch to ensure HNSW [4](#ref-4)/semantic recall is available immediately. Returns {flushed: N}.
 
 No parameters.
 
@@ -1832,7 +1832,7 @@ Merge near-duplicate memories — keeps stronger, soft-deletes weaker
 
 ### `consolidation_pass` *(via advanced)*
 
-Run Sequitur grammar consolidation: find frequent bigrams in EventTape and promote rules to the triplet KG (subject=rule:..., predicates: compresses/avg_outcome/support/tape_range).
+Run Sequitur [25](#ref-25) grammar consolidation: find frequent bigrams in EventTape and promote rules to the triplet KG (subject=rule:..., predicates: compresses/avg_outcome/support/tape_range).
 
 No parameters.
 
@@ -3365,7 +3365,7 @@ No parameters.
 
 ### `hypothesis_probes` *(via advanced)*
 
-Top-k Sequitur rules ranked by expected information gain (Wilson probe_value). Maximized at p_hat=0.5 — rules the system is most uncertain about. Run consolidation_pass first to populate.
+Top-k Sequitur rules ranked by expected information gain (Wilson [2](#ref-2) probe_value). Maximized at p_hat=0.5 — rules the system is most uncertain about. Run consolidation_pass first to populate.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
@@ -3842,3 +3842,20 @@ CEC Phase 17 candidate promotion: provide an outcome-witness to promote a candid
 
 - `--memory_id`: Memory ID to promote (required)
 - `--witness_kind`: Type: correction|outcome|hit_rate_delta (required)
+
+<!-- BEGIN CITATIONS -->
+## References
+
+- <a id="ref-2"></a>**[2]** Edwin B. Wilson. Probable Inference, the Law of Succession, and Statistical Inference. Journal of the American Statistical Association 22(158), 209–212 (1927). [source](<https://doi.org/10.1080/01621459.1927.10502953>)
+- <a id="ref-3"></a>**[3]** Gordon V. Cormack, Charles L. A. Clarke, and Stefan Buettcher. Reciprocal rank fusion outperforms condorcet and individual rank learning methods. SIGIR, 758–759 (2009). [source](<https://doi.org/10.1145/1571941.1572114>)
+- <a id="ref-4"></a>**[4]** Yu. A. Malkov and D. A. Yashunin. Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs. IEEE TPAMI 42(4), 824–836 (2020); arXiv:1603.09320 (2016). [source](<https://arxiv.org/abs/1603.09320>) [source](<https://doi.org/10.1109/TPAMI.2018.2889473>)
+- <a id="ref-6"></a>**[6]** A. Blumer, J. Blumer, D. Haussler, R. McConnell, and A. Ehrenfeucht. Complete inverted files for efficient text retrieval and analysis. Journal of the ACM 34(3), 578–595 (1987). [source](<https://doi.org/10.1145/28869.28873>)
+- <a id="ref-7"></a>**[7]** Hubert Ramsauer et al. Hopfield Networks is All You Need. arXiv:2008.02217 (2020). [source](<https://arxiv.org/abs/2008.02217>)
+- <a id="ref-8"></a>**[8]** Dmitry Krotov and John J. Hopfield. Dense Associative Memory for Pattern Recognition. NeurIPS 29 (2016); arXiv:1606.01164. [source](<https://arxiv.org/abs/1606.01164>)
+- <a id="ref-10"></a>**[10]** Pentti Kanerva. Hyperdimensional Computing: An Introduction to Computing in Distributed Representation with High-Dimensional Random Vectors. Cognitive Computation 1, 139–159 (2009). [source](<https://doi.org/10.1007/s12559-009-9009-8>)
+- <a id="ref-24"></a>**[24]** Stephen Robertson and Hugo Zaragoza. The Probabilistic Relevance Framework: BM25 and Beyond. Foundations and Trends in Information Retrieval 3(4), 333–389 (2009). [source](<https://doi.org/10.1561/1500000019>)
+- <a id="ref-25"></a>**[25]** Craig G. Nevill-Manning and Ian H. Witten. Identifying Hierarchical Structure in Sequences: A linear-time algorithm. Journal of Artificial Intelligence Research 7, 67–82 (1997); arXiv:cs/9709102. [source](<https://arxiv.org/abs/cs/9709102>)
+- <a id="ref-33"></a>**[33]** John J. Hopfield. Neural networks and physical systems with emergent collective computational abilities. PNAS 79(8), 2554–2558 (1982). [source](<https://doi.org/10.1073/pnas.79.8.2554>)
+- <a id="ref-70"></a>**[70]** Sergey Brin and Lawrence Page. The Anatomy of a Large-Scale Hypertextual Web Search Engine. Computer Networks 30, 107–117 (1998). [source](<https://research.google/pubs/the-anatomy-of-a-large-scale-hypertextual-web-search-engine/>)
+- <a id="ref-71"></a>**[71]** Alex L. Zhang, Tim Kraska, and Omar Khattab. Recursive Language Models. arXiv:2512.24601 (2025; revised 2026). [source](<https://arxiv.org/abs/2512.24601>)
+<!-- END CITATIONS -->
