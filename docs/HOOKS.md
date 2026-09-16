@@ -1099,20 +1099,20 @@ No event registration or install-manifest entry changes in this cleanup.
 
 | Script | Verdict | Evidence / purpose |
 |---|---|---|
-| `bridge-holes.sh` | Retain operator tool; relocation pending | Added by `013e909b` as G9 graph bridging; standalone `--dry-run`, `--realm`, `--max` interface, no lifecycle caller. |
-| `debug-recall.sh` | Retain operator tool; relocation pending | Added by `9a4efca6` as the G0 recall diagnostic; compares fetched candidates and final recall results for an explicit query. |
+| `bridge-holes.sh` | Moved to `scripts/` | Added by `013e909b` as G9 graph bridging; standalone `--dry-run`, `--realm`, `--max` interface, no lifecycle caller. |
+| `debug-recall.sh` | Moved to `scripts/` | Added by `9a4efca6` as the G0 recall diagnostic; compares fetched candidates and final recall results for an explicit query. |
 | `enrich-code.sh` | Delete | Old temp-file symbol enrichment adapter, last functional change `c820af65`; header claims a daemon caller, but no source reference remains. |
-| `evolve-topology.sh` | Retain operator tool; relocation pending | Added by `013e909b`, maintained in `33aacc65`; explicit topology mutation with ledger gate and `--dry-run`, not an event hook. |
+| `evolve-topology.sh` | Moved to `scripts/` | Added by `013e909b`, maintained in `33aacc65`; explicit topology mutation with ledger gate and `--dry-run`, not an event hook. |
 | `ledger-autosave.sh` | Delete | Old January/February ledger wrapper sends an obsolete combined `ledger` action; current lifecycle hooks use `ledger_save`/`ledger_load`. |
 | `post-edit-hook.sh` | Delete | Historical May CEC/reindex hook; no current event or install entry. Current file-change reindexing is handled by `file-changed-hook.sh`; no new Edit event is enabled. |
 | `reparse-transcripts.sh` | Delete | Old whole-history backfill, last maintenance `c9defdbe`; truncates the queue and duplicates current transcript registration/parsing. It also exits at its first zero-valued post-increment under `set -e`. |
-| `settle-predictions.sh` | Retain operator tool; relocation pending | Added by `cd8a7d1e` alongside distillation predictions; explicit expired-prediction sweep with realm and dry-run options. |
+| `settle-predictions.sh` | Moved to `scripts/` | Added by `cd8a7d1e` alongside distillation predictions; explicit expired-prediction sweep with realm and dry-run options. |
 | `yajna-batch.sh` | Delete | Old batch wrapper for absent `yajna_list`, with UUID-only result parsing and daemon autostart; last changes concern executable mode and historical startup safety. |
 
-The four retained operator tools remain at `hooks/<name>.sh` until a stream is
-authorized to write their proposed `scripts/<name>.sh` destinations. They are
-not installed or automatically invoked. Retaining them preserves their explicit
-operator interfaces while respecting this stream's `hooks/**` write boundary.
+The four retained operator tools now live at `scripts/<name>.sh`, with their
+executable modes and explicit operator interfaces preserved. They are not
+installed or automatically invoked; none sources `hooks/lib.sh` or appears in
+the install manifest.
 
 `lib.sh` now owns the identical JSON escaping, transcript-path decoding,
 lifecycle realm lookup, and DJB2 hashing implementations. The overwritten first
@@ -1131,7 +1131,8 @@ provenance, transcript snapshot, Stop saddle, lifecycle compatibility, or
 operator/background paths; they are not dead hot-path fallbacks.
 
 Shell inventory (`wc -l hooks/*.sh`, excluding tests): **46 scripts / 9,696 lines
-before**, **41 scripts / 9,166 lines after** (530 lines removed). The supplied
+before**, **37 scripts / 8,585 lines after** (530 lines removed, 581 lines moved
+to four operator tools in `scripts/`). The supplied
 9,744-line estimate differs from the checked-out `31e3a26a` baseline. One focused
 helper regression test was added; the existing 19 hook tests are unchanged.
 
@@ -1143,12 +1144,20 @@ immediate post-kill process-state assertion, then passed unchanged in isolation
 ` shellcheck -x --severity=warning` passed. MCP ran 136 tests with only the known
 `BoundedSessionManager._session_owners` error. Tests used the prescribed bioinfo
 CPython and isolated hook state. No native code changed or native build ran.
+After the operator relocation, all 20 hook tests and all 46 SMRITI tests passed;
+shell syntax and warning-level ShellCheck passed for all four moved tools.
+MCP again ran 136 tests with only the same pre-existing `_session_owners` error.
 
-**Contract check: failed on the untouched baseline and after cleanup.**
-`bash scripts/contract-snapshot.sh check` reports 122 frozen CLI-help files
-missing from its capture, such as `active_files.txt`, `object.txt`, and
-`params.txt`; the complete pre/post diff is identical. It does **not** print
-`contracts unchanged`. The contract extractor/baseline requires reconciliation
-outside this stream's scope. Independently, normalized `hooks.json` and the
-install manifest match their frozen contracts byte for byte; no `contracts/`
-file changed.
+**Contract check: `contracts unchanged`.** The original check failed because
+122 stale CLI-help snapshots remained in the baseline. Merging the orchestrator's
+`a28ead65` removed those snapshots; the check now passes with
+`CHITTA_PY=/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/bin/python3`.
+The install-manifest snapshot was regenerated and remains byte-identical because
+none of the relocated tools was listed. Hook registrations are unchanged.
+
+## Operator tools moved from hooks/ (2026-09-16)
+
+- `scripts/bridge-holes.sh`: Bridge sparsely connected memory-graph entities with suggested insights; supports `--dry-run`, `--realm`, and `--max`.
+- `scripts/debug-recall.sh`: Compare over-fetched candidates with final recall results for a query; supports `--limit` and `--fetch`.
+- `scripts/evolve-topology.sh`: Evolve conductor visibility matrices using archive fitness, ledger and stability gates; supports `--dry-run` and `--realm`.
+- `scripts/settle-predictions.sh`: Confirm expired open predictions without correction references; supports `--dry-run` and `--realm`.
