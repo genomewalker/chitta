@@ -146,6 +146,11 @@ measured improvement from this implementation. The proposal card's accepted-bet
 rate is not produced by the existing replica evaluator, so that metric cannot
 receive an acceptance without a dedicated evaluator.
 
+A pending hypothesis card (`rekursiv-qualification-stage`) proposes an
+independent qualification stage before any verdict is recorded, after the
+auto-autoresearch run described by rekursiv.ai [74](#ref-74), whose baselines
+inherit a named parent recipe and are scored at equal budget [75](#ref-75).
+
 ## Proposal sources and scoring
 
 * Telemetry reads `~/.claude/mind/outcome_ledger.jsonl`: empty recall divided by
@@ -380,4 +385,6 @@ inconclusive cycle cannot publish. No automatic merge or live deployment exists.
 
 - <a id="ref-2"></a>**[2]** Edwin B. Wilson. Probable Inference, the Law of Succession, and Statistical Inference. Journal of the American Statistical Association 22(158), 209–212 (1927). [source](<https://doi.org/10.1080/01621459.1927.10502953>)
 - <a id="ref-11"></a>**[11]** Jorma Rissanen. Modeling by shortest data description. Automatica 14(5), 465–471 (1978). [source](<https://doi.org/10.1016/0005-1098(78)90005-5>)
+- <a id="ref-74"></a>**[74]** rekursiv.ai. Auto-autoresearch: agents that improve how they do research. rekursiv.ai blog (2026-09). [source](<https://rekursiv.ai/blog/autoautoresearch/>)
+- <a id="ref-75"></a>**[75]** rekursiv.ai. priml: nanochat baseline (experiment factories, budgeted training loop, BPB vs parent at equal budget). GitHub repository rekursiv-ai/priml (2026). [source](<https://github.com/rekursiv-ai/priml/tree/main/priml/baselines/nanochat>)
 <!-- END CITATIONS -->

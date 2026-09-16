@@ -70,6 +70,27 @@
 - `scripts/bench-hook-parity.py` pins clock and session inputs, records per-process exit statuses (the current runner swallows them) and compares whole hook outputs before and after each move.
 - Exit gate: byte-identical outputs on the parity fixtures; `hooks/*.sh` under 3k lines; targets with measured attribution from today's baselines (prompt 608 ms, SessionStart 599 ms, Bash added 24 ms): prompt ≤ 400 ms, SessionStart ≤ 400 ms, Bash added ≤ 15 ms.
 
+## Backlog (owner-listed, not yet scheduled)
+
+- **Independent qualification stage for evolve verdicts** (card
+  `rekursiv-qualification-stage`, from rekursiv.ai's auto-autoresearch run):
+  a second agent re-measures a candidate on a fresh replica before a verdict
+  is recorded, with completion and qualification stamped separately; missing
+  or disagreeing qualification means "unqualified", never "accepted".
+- **One daemon per store across login nodes** (found 2026-09-16 15:0x): the
+  chittad user unit lives in the shared home, so every login node starts it;
+  units on two other nodes had retried the store lock every 10 s for ten days
+  (85,272 restarts on one) and took the lock the instant a restart here
+  released it. Installed today on this node: `<mind>/.daemon-node` names the
+  primary host and a `primary-node.conf` drop-in makes other nodes' units exit
+  75 without restarting; it takes effect on a node only after its systemd
+  reloads the unit. Phase 6 must add: `smart-install.sh` writes the marker and
+  drop-in; hooks and MCP on non-primary nodes reach the primary daemon over
+  the RPC port (7432) instead of a node-local socket; `report-runtime-incidents`
+  flags a lock holder on another host.
+- **Timestamps in `chittad.log`**: lines carry none, so incident reports and
+  the canary cannot date events; prefix each stderr line in the daemon.
+
 ## What we do not do
 - No new organs, lanes or tools until Phase 2 has retired what does not pay for itself.
 - No LLM in any recall path added by this plan.
