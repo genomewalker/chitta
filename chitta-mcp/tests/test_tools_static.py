@@ -49,7 +49,10 @@ class StaticToolsTests(unittest.TestCase):
         self.assertEqual(actual, (ROOT / "contracts/mcp-tools.json").read_text())
 
     def test_docs_use_current_policy_and_frozen_schemas_without_rpc(self):
-        import tool_policy
+        try:
+            import tool_policy
+        except ImportError as exc:
+            self.skipTest(f"MCP SDK unavailable: {exc}")
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

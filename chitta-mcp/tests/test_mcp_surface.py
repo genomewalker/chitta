@@ -12,9 +12,14 @@ from contextlib import redirect_stdout
 from pathlib import Path
 from unittest import mock
 
-import server
-import tool_policy
-from mcp.types import Tool
+try:
+    import server
+    import tool_policy
+    from mcp.types import Tool
+except ImportError as exc:
+    # The MCP SDK is present where the server runs; CI installs it only in the
+    # contract job, which runs this module explicitly.
+    raise unittest.SkipTest(f"MCP SDK unavailable: {exc}") from exc
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location("surface", ROOT / "scripts/check-mcp-surface.py")
