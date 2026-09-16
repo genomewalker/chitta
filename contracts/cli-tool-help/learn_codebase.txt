@@ -3,6 +3,8 @@ chitta learn_codebase - Learn codebase by extracting symbols. path can be a loca
 Parameters:
   --branch
       Branch, tag, or commit to clone (remote only)
+  --embed
+      Embed symbols synchronously (default false; use embed_symbols separately)
   --exclude
 
   --force

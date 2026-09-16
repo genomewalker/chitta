@@ -1729,11 +1729,16 @@ public:
     }
 
     std::vector<CfSymbolHit> symbols_in_file(const std::string& file_path) {
-        constexpr size_t MAX = 1024;
-        CfSymbolHit buf[MAX];
+        std::vector<CfSymbolHit> buf(1024);
         size_t written = 0;
-        cf_symbols_in_file(handle_, file_path.c_str(), buf, MAX, &written);
-        return std::vector<CfSymbolHit>(buf, buf + written);
+        for (;;) {
+            cf_symbols_in_file(handle_, file_path.c_str(), buf.data(), buf.size(), &written);
+            if (written < buf.size()) break;
+            if (buf.size() >= 1048576) throw std::runtime_error("symbol listing exceeds limit");
+            buf.resize(buf.size() * 2);
+        }
+        buf.resize(written);
+        return buf;
     }
 
     /// Name search restricted to file paths containing `path_filter`
@@ -2348,12 +2353,28 @@ public:
     // ── Query and management methods ────────────────────────────────────────
 
     std::string list_code_files(const std::string& project = "") {
+        // The FFI returns -2 without a required size. Retry instead of accepting
+        // an empty result once a repository exceeds the former 128 KiB cap.
         std::vector<uint8_t> buf(131072);
         size_t written = 0;
-        const char* proj_ptr = project.empty() ? nullptr : project.c_str();
-        int r = cf_list_code_files(handle_, proj_ptr, buf.data(), buf.size(), &written);
-        if (r != 0 && r != -2) return "[]";
-        return std::string(reinterpret_cast<char*>(buf.data()), written);
+        int rc;
+        while ((rc = cf_list_code_files(handle_, nullptr, buf.data(), buf.size(), &written)) == -2) {
+            if (buf.size() >= 256 * 1024 * 1024) throw std::runtime_error("code-file listing exceeds 256 MiB");
+            buf.resize(buf.size() * 2);
+        }
+        if (rc != 0) throw std::runtime_error("code-file listing failed");
+        auto files = nlohmann::json::parse(std::string(reinterpret_cast<char*>(buf.data()), written));
+        const auto canonical = [](const std::string& p) { return p.rfind("project:", 0) == 0 ? p.substr(8) : p; };
+        if (!project.empty()) {
+            const auto wanted = canonical(project);
+            files.erase(std::remove_if(files.begin(), files.end(), [&](const auto& f) {
+                return canonical(f.value("project", "")) != wanted;
+            }), files.end());
+        }
+        std::sort(files.begin(), files.end(), [](const auto& a, const auto& b) {
+            return a.at("path") < b.at("path");
+        });
+        return files.dump();
     }
 
     int clear_project(const std::string& project) {

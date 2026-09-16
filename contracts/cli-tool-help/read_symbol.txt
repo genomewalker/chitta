@@ -5,7 +5,11 @@ Parameters:
 
   --kind
 
+  --line
+
   --name
+
+  --path
 
   --project
 

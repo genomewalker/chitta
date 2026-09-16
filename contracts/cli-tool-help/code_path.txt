@@ -1,0 +1,14 @@
+chitta code_path - Find the shortest undirected connection between uniquely resolved code symbols. Use code_query IDs to disambiguate endpoints.
+
+Parameters:
+  --from (required)
+
+  --path
+
+  --realm
+
+  --to (required)
+
+
+Example:
+  chitta code_path --from "..." --to "..."

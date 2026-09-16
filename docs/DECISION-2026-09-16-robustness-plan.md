@@ -132,6 +132,27 @@
 - Languages (owner request 2026-09-16, follow-up in the same stream): the eleven compiled grammars (C, C++, C#, Go, Java, JavaScript, TypeScript, Python, Rust, Ruby, Lua, Swift) are extended with Bash, R, Julia, Fortran, Nextflow, Snakemake, Perl, Make/CMake, SQL first, then PHP, Kotlin, Scala, Zig, HCL, OCaml, Elixir, Haskell, Dockerfile for Graphify parity; each grammar ships with a fixture and an extraction test, or is skipped with the reason recorded.
 - Exit gate: index coverage ≥ 95% of `git ls-files` code files for the active repo within 60 s of session start; `code_query` p95 ≤ 300 ms; navigation benchmark ≥ 18/20 from the graph alone; bytes of file content read per benchmark task at least halved versus the no-graph arm; contracts regenerated for the new RPCs.
 
+- Status (2026-09-16): **the five navigation steps are complete and verified in the feat/code-nav worktree**.
+  Coverage increased from 39 files / 440 legacy symbols to 717/719 tracked
+  supported files (99.72%, including the initialized store submodule) in
+  48.927 s on a fresh empty scratch mind; 74,966,923 index/store bytes. The two
+  omitted tracked files are explicitly gitignored. Unique stored symbols:
+  C/C++ 2,587; Python 2,031; Rust 2,694; Markdown 1,875.
+  The fixed 20-question graph-only benchmark scored 18/20; 100 samples per run
+  gave code_query p95 140.946 ms before and 133.943 ms after restart. Complete
+  query JSON matched for 20/20 questions across restart. The conservative byte
+  proxy, including query/injection text and answer bodies even on misses, was
+  253,830 versus 604,946 bytes (58.04% less). The real session map is 17 lines.
+  Non-code hook parity matched all 30 measured paired fixtures; frozen-copy
+  chaos passed 9/9 and recall restart identity passed 20/20 across three
+  restarts without score deltas. New RPCs code_query/code_path and hook-install
+  contracts are regenerated; no recall scoring or snapshot/WAL format change.
+  See [benchmark protocol](../benchmarks/codenav/README.md) and
+  [implementation evidence](../Documentation.md). Binaries and hooks remain
+  subject to orchestrator review and deployment.
+- Language-expansion follow-up: pending; this qualification covers the existing
+  compiled grammars and Markdown.
+
 ## Backlog (owner-listed, not yet scheduled)
 
 - **Store: WAL compaction must never unlink the segment the writer holds open** (incident 2026-09-16 18:33Z: `WAL compact: deleted 1 segments`, then 20 minutes of `Stale file handle` on every write, shutdown snapshot failed, recovery only by restart onto the last family). Rotate to a new segment before deleting covered ones, treat ESTALE/ENOENT on the active segment as rotate-and-continue instead of retry-from-fd, and add a chaos case that unlinks the active segment under NFS semantics (the local filesystem keeps unlinked files readable, so the current case cannot reproduce this).

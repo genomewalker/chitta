@@ -262,6 +262,7 @@ All lifecycle hooks write JSON `hookSpecificOutput` schema on stdout. This is no
 | `resume-inject-hook.sh` | SessionStart:resume | Inject the recap capsule when a session resumes                                   |
 | `compact-restore-hook.sh` | SessionStart:compact | Restore context after a compaction                                             |
 | `subagent-stop-hook.sh` | SubagentStop     | Capture what a subagent learned, asynchronously                                      |
+| `code-nav.sh` | Read / SessionStart helper | Bounded symbol/edge injection, once-per-session repo map, uncapped background refresh |
 | `file-changed-hook.sh`  | FileChanged      | Re-index a changed file, asynchronously                                              |
 | `log-bash-history.sh`   | PostToolUse (async) | Append every Bash command to history for pattern learning                         |
 | `memory-intercept.sh`   | PostToolUse:Write (async) | Capture Write operations to learn what you build                           |
@@ -283,6 +284,31 @@ after a plugin update, which can replace those symlinks with a fresh clone.
 ## Hook Events
 
 ### SessionStart
+
+When the active Git repository has a navigation index, `code-nav.sh session`
+prints its repo map once per session: deterministic call-graph communities,
+highest-degree call nodes, and index age, in at most 40 lines. Markers use the
+existing hook runtime-state directory and a hash of repository/session identity.
+The map query runs before an asynchronous, flock-protected `learn_codebase`
+refresh. This replaces the legacy 200-file auto-index job. An uncapped pass
+repairs missing coverage and skips unchanged files; it does not request symbol
+embeddings. File-change events keep the same incremental indexing path.
+
+`scripts/dev-install.sh` invokes `scripts/install-code-nav-git-hooks.sh` to add
+background refreshes on `post-commit` and `post-checkout`. Installation preserves
+existing executable hooks and respects `core.hooksPath`; each refresh has a
+60-second deadline. The daemon honors `.gitignore` and `.chittaignore`, excludes
+build/dependency directories and symlinks, and includes initialized submodules.
+No hooks or binaries are installed merely by building or running these tests.
+
+The structural graph is an optional `code-navigation.json` sidecar. `code_query`
+ranks lexical matches and nearby graph nodes; `code_path` finds a shortest
+undirected connection. Calls, imports, inheritance and references retain AST
+evidence. Resolved symbol endpoints are `INFERRED`; unresolved syntax remains
+`EXTRACTED`, with ambiguity explicit. `code_context`/`read_symbol` provide file
+and symbol explanation without a duplicate `code_explain` RPC. The legacy
+repository-recall index refreshes only the requested realm at query time,
+avoiding startup walks over every historical checkout. Recall scoring is unchanged.
 
 Status 2026-09-13: SessionStart concurrent lanes preserve output order and enforce the hook budget; 10 isolated live-read runs improved median/p95 from 3116.5/4137 ms to 739.5/1573 ms (992 bytes each, 0 failures); the 300 ms/call stub completes in 1077 ms. [Attribution and gates](../hooks/tests/session_start_latency.md).
 
@@ -681,9 +707,25 @@ Detects trackable commands (`sbatch`, `srun`, `nohup`, python scripts, bash scri
 
 ### Read Matcher
 
+
+For supported files in an indexed Git repository, the one-line call to
+`code-nav.sh read` returns a single `additionalContext` block and completes the
+Read hook. It contains up to 20 symbols, signatures, one-line documentation,
+bounded incoming/outgoing edges, and precise `read_symbol` arguments. The block
+replaces the old code advisory and large-file/dedup handling for those indexed
+files. Other reads continue through the existing compatibility path below.
+
+Every file block says `index N minutes old`. A hash mismatch is marked `STALE`;
+`read_symbol` refuses stale cached bodies until `learn_codebase` refreshes them.
+Query failures/timeouts are visible when runtime state already identifies the
+repository as indexed. Unindexed repositories and non-code fixtures stay silent.
+The query budget defaults to 300 ms (maximum 1,000 ms, plus 50 ms kill grace),
+and output is capped at 12,000 bytes with explicit truncation notices. A scoped
+`code_query` question narrows files with more symbols than the block can show.
+
 1. **Per-turn dedup**: A sentinel file `$MIND/.soul_injected_<session>_<turn>` ensures soul recall is injected only once per turn, not on every Read call.
 2. **Realm detection**: Calls `chitta realm_detect` before injecting any recall. If realm detection fails, injection is skipped entirely to prevent cross-project memory bleed.
-3. **Code-intel advisory**: If the file is indexed in chitta, suggests using `read_symbol` or `smart_context` instead of reading the whole file. Advisory only appears if chitta has indexed the file.
+3. **Legacy code-intel fallback**: Used only when the structural navigation hook declines the read; indexed navigation blocks already returned above.
 4. **Large-file truncation**: Reads of files >200 lines are truncated to the first 150 lines. (Older docs said ">500 lines → head -200"; the actual thresholds are 200 and 150.)
 5. **Read dedup cache**: Tracks file reads by mtime hash at `$MIND/.read_cache_<session>`. Repeat reads of unchanged files return a 13-token `§ref:HASH§` reference via sqz instead of full content.
 6. **Strict-mode enforcement for indexed files**: When enforcement is active, reading a fully-indexed file is blocked with a suggestion to use symbol-level tools instead. Bypass for the session with `CHITTA_ALLOW_READ=1` or by creating the flag file `$MIND/.allow_read_<session_id>`.
@@ -771,11 +813,14 @@ The shadow log auto-rotates when it reaches **10 MB**. The current log is rename
 ## Environment Variables
 
 Every `CHITTA_*` variable below also works under its pre-rename `CC_SOUL_*`
-name, except the new explicit `CHITTA_ALLOW_MCP_KILL` bypass
+name, except the new code-navigation controls and explicit `CHITTA_ALLOW_MCP_KILL` bypass
 (see [docs/RENAME.md](RENAME.md)).
 
 | Variable                      | Default      | Description                                                              |
 |-------------------------------|--------------|--------------------------------------------------------------------------|
+| `CHITTA_CODE_NAV` | `1` | `0` disables structural Read/session injection and session refresh; no legacy alias. |
+| `CHITTA_CODE_NAV_BUDGET_MS` | `300` | Query deadline, clamped to 1–1,000 ms; invalid values use 300. No legacy alias. |
+| `CHITTA_CODE_NAV_REFRESH` | `1` | `0` disables the session's background index refresh (useful in isolated read-only probes); no legacy alias. |
 | `CHITTA_HOOK_ENFORCE`        | (auto)       | `1` = force enforce; `0` = force shadow only                             |
 | `CHITTA_ALLOW_READ`          | `0`          | `1` = bypass Read deny and indexed-large deny for this session           |
 | `CHITTA_ALLOW_MCP_KILL`      | `0`          | `1` in the hook environment bypasses the MCP transport kill guard; no legacy alias |

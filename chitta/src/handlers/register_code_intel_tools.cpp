@@ -7,6 +7,17 @@ namespace chitta {
 
 void FieldRpcHandler::register_code_intel_tools() {
     register_tool_table({
+        {"code_query", "Navigate indexed code with a natural-language question. Returns ranked symbols, file locations, typed AST/name-resolution edges and read_symbol invocations. Empty question plus path returns file context. Use before reading files.",
+            {{"type","object"},{"properties",{
+                {"question",{{"type","string"}}},{"realm",{{"type","string"}}},
+                {"path",{{"type","string"}}},{"limit",{{"type","integer"}}},
+                {"neighbors",{{"type","boolean"}}}
+            }}}, &FieldRpcHandler::tool_code_query, handlers_["code_query"]},
+        {"code_path", "Find the shortest undirected connection between uniquely resolved code symbols. Use code_query IDs to disambiguate endpoints.",
+            {{"type","object"},{"properties",{
+                {"from",{{"type","string"}}},{"to",{{"type","string"}}},
+                {"realm",{{"type","string"}}},{"path",{{"type","string"}}}
+            }},{"required",{"from","to"}}}, &FieldRpcHandler::tool_code_path, handlers_["code_path"]},
         {"extract_symbols", "Extract symbols from source file using tree-sitter",
             {{"type","object"},{"properties",{
                 {"path",{{"type","string"},{"description","File path to analyze"}}}
@@ -19,7 +30,8 @@ void FieldRpcHandler::register_code_intel_tools() {
                 {"project",{{"type","string"},{"description","Project name (defaults to repo/dir name)"}}},
                 {"branch",{{"type","string"},{"description","Branch, tag, or commit to clone (remote only)"}}},
                 {"max_files",{{"type","integer"}}},{"exclude",{{"type","string"}}},
-                {"incremental",{{"type","boolean"}}},{"force",{{"type","boolean"}}}
+                {"incremental",{{"type","boolean"}}},{"force",{{"type","boolean"}}},
+                {"embed",{{"type","boolean"},{"description","Embed symbols synchronously (default false; use embed_symbols separately)"}}}
             }},{"required",{"path"}}},
             &FieldRpcHandler::tool_learn_codebase, handlers_["learn_codebase"]},
 
@@ -47,7 +59,8 @@ void FieldRpcHandler::register_code_intel_tools() {
         {"read_symbol", "Read actual source code for a symbol",
             {{"type","object"},{"properties",{
                 {"name",{{"type","string"}}},{"id",{{"type","integer"}}},
-                {"kind",{{"type","string"}}},{"project",{{"type","string"}}}
+                {"kind",{{"type","string"}}},{"project",{{"type","string"}}},
+                {"path",{{"type","string"}}},{"line",{{"type","integer"}}}
             }}},
             &FieldRpcHandler::tool_read_symbol, handlers_["read_symbol"]},
 
@@ -82,6 +95,7 @@ void FieldRpcHandler::register_code_intel_tools() {
         {"codebase_overview", "Get full indexed codebase structure",
             {{"type","object"},{"properties",{
                 {"project",{{"type","string"}}},{"format",{{"type","string"}}},
+                {"path",{{"type","string"}}},
                 {"include_callsites",{{"type","boolean"}}}
             }}},
             &FieldRpcHandler::tool_codebase_overview, handlers_["codebase_overview"]},

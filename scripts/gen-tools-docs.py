@@ -55,7 +55,7 @@ CATEGORIES = [
         "cooccurrence_graph", "assoc_", "clear_triplets",
     ]),
     ("code", "Code Intelligence", [
-        "find_symbol", "read_symbol", "read_function", "symbol_", "code_context",
+        "find_symbol", "code_query", "code_path", "read_symbol", "read_function", "symbol_", "code_context",
         "codebase_overview", "learn_codebase", "embed_symbols", "dedupe_symbols",
         "describe_symbol", "extract_symbols", "type_hierarchy", "resolve_callsites",
         "file_imports", "file_dependents", "clear_codebase", "cleanup_code_wisdom",

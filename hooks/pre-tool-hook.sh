@@ -396,6 +396,7 @@ case "$MATCHER" in
         # previously referenced before assignment → flag-file path lost its suffix).
         _session_id=$(echo "$STDIN_DATA" | jq -r '.session_id // empty' 2>/dev/null || true)
 
+        HOOK_STATE_DIR="$HOOK_STATE_DIR" bash "$SCRIPT_DIR/code-nav.sh" read "$file_path" "$_session_id" && exit 0
         # Code intelligence advisory: if chitta has this file's directory indexed, suggest smart_context/read_symbol
         advisory=""
         if [[ -x "$CHITTA_BIN" ]] && daemon_available; then

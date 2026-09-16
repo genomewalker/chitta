@@ -89,3 +89,147 @@ to refresh citation usage locations, then rerun the read-only citations gate.
 The generated References blocks must remain intact inside the main landmark.
 
 Superproject main merge: retained both sides of the add/add `Documentation.md` conflict and both the chaos and current-truth additions in `docs/EVALS.md`. `docs/FIELD_PERF.md` merged automatically with References last. Refreshed only citation usage line numbers in `docs/CITATIONS.md` after the merge shifted documentation lines. The merged link gate passed (102 pages, 3,110 links), citation gate passed, and site structure passed (79 pages). Main introduced no further native, harness or public-contract changes relative to the tested pointer-update commit.
+
+## Phase 9 — complete code index (2026-09-16)
+
+The read-only live baseline was 39 files / 440 symbols under `chitta` and no
+files under `project:chitta`. Indexing stopped at 500 files by default; watcher
+incremental requests returned before extracting symbols; project labels were
+exact-string filtered; provenance spawned Git once per file; symbol embedding
+ran synchronously; and code-file JSON overflowed a fixed 128 KiB buffer.
+
+The structural pass now uses deterministic Git file selection, includes
+initialized submodules, honors `.gitignore` and `.chittaignore`, repairs missing
+coverage on incremental requests, and extracts symbols without embeddings by
+default. File listings accept bare/project-prefixed labels and grow buffers.
+The Git installer preserves existing hooks and starts background indexing on
+commit/checkout. Deployment is left to the orchestrator.
+
+An empty scratch mind indexed 709/711 tracked supported files (99.72%; 588/590
+without submodules), plus three untracked supported files, in 42.007 seconds.
+The two excluded tracked paths are under `.scripts/`, explicitly gitignored.
+The store held 9,139 unique symbols: C/C++ 2,553; Python 2,024; Rust 2,694;
+Markdown 1,868. There were 10,204 extraction records before the existing store's
+(kind, name, file) deduplication, and 70,615 callsites. Scratch mind files used
+26,021,158 bytes before shutdown (includes WAL/source registry, excludes logs).
+This is a code-only empty-mind test, not a frozen-replica recall evaluation.
+
+Validation: Rust 296 passed / 2 ignored; native CTest; MCP 159 tests; SMRITI 46
+tests; all hook shell fixtures; CI ruff check/format; bash syntax and shellcheck
+on changed scripts. Scratch lifecycle fixtures cover first-event full repair,
+project aliases, rename and deletion. Native collection fixtures cover >500
+files, tracked ignore rules, quoting, deterministic ordering and deletion.
+Git hook probes cover both events, preservation and idempotent installation.
+Contracts regenerated: existing `learn_codebase` gains optional `embed`; no new
+RPC in this step. Recall scoring and snapshot/WAL formats are unchanged.
+
+
+## Phase 9, step 2 — scoped navigation graph
+
+Added `code_query` and `code_path`; extended `read_symbol`, `code_context` and
+`codebase_overview` instead of introducing a duplicate explanation tool. The
+optional code-navigation.json sidecar stores AST evidence and symbol bodies;
+resolved named endpoints are INFERRED, unresolved/ambiguous syntax remains
+EXTRACTED with explicit resolution status. Query matching is lexical over code,
+identifiers and paths; it adds bounded graph neighbors. C++ method ownership,
+signatures, and Python docstrings come from the full AST extraction pass.
+The compact repo map uses deterministic call-graph label propagation and
+highest call-degree nodes. Hash checks make stale file queries/reads visible.
+No recall scoring, embedding identity, snapshot or WAL format changes.
+
+Fresh empty scratch mind: 711/713 tracked supported files (99.72%), 717 total
+eligible files including untracked development sources, 29.047 s wall time,
+74,867,533 mind bytes including the graph sidecar. The same two explicitly
+ignored tracked files are excluded. Store unique symbols by language:
+C/C++ 2,586; Python 2,027; Rust 2,694; Markdown 1,872 (the navigation graph
+also preserves overloads/definitions collapsed by the store's legacy identity).
+A forced incremental rebuild took 20.431 s. Twenty fixed development queries
+achieved 18/20 file:symbol hits; 100 samples per run gave p95 74.383 ms before
+and 66.677 ms after restart. All 20 complete query JSON responses matched
+across restart. The separate strict byte proxy counted 253,347 vs 604,760
+bytes (58.11% reduction), charging answer bodies even for retrieval misses.
+The question set and runner are reserved for the step 4 evaluation commit.
+
+Validation: Rust 296 passed / 2 ignored; CTest 36 passed (embedding-model test
+skipped); MCP 159 and SMRITI 46 tests; all hook fixtures; CI ruff check/format;
+changed generator lint and native graph tests covering confidence, receiver
+ambiguity, path scope, shortest connections, reload identity, stale reads and
+deletion. Contracts regenerated and checked against the private scratch daemon:
+new RPCs `code_query`, `code_path`; existing code tool extensions above. Core
+MCP surface is 55 tools / approximately 6,555 tokens, within its gate.
+
+
+## Phase 9, step 3 — bounded hook context
+
+Fetched and merged origin/main immediately before hook edits (merge 221b8353).
+Added one small code-nav.sh helper, a one-line Read call, and a one-line
+replacement for the obsolete capped session auto-index block. The install
+manifest includes the helper. Indexed reads receive symbols, signatures,
+caller/callee evidence and read_symbol arguments; file age and stale hashes
+are explicit. Unknown repositories stay silent; known-index transport failures
+are visible. Query processes have a 300 ms default deadline with 50 ms kill
+grace, and UTF-8-safe whole-line output is bounded to 12,000 bytes. Session
+maps appear once per session; uncapped refreshes run behind a per-repo flock.
+
+Complete code-file restoration exposed an existing eager startup scan of all
+historical repository roots, including a large shared dataset. Startup now
+loads the root registry without those walks; search already refreshes the
+requested realm before returning sources. Code-context compatibility counters
+are preserved, and clear_codebase now clears the derived navigation sidecar.
+
+Validation: real Read injection was 7,277 bytes; the real map was 17 lines and
+appeared exactly once. The focused regression covers stale context, timeout
+children, unindexed/non-code silence, session markers and uncapped refresh.
+All hook suites, MCP 159, SMRITI 46, Rust 296 (2 ignored), CI ruff, changed-shell
+syntax/shellcheck and the quick gate passed. Final CTest passed all 36 tests
+(the embedding-model test skipped), including real RPC counter/clear tests.
+An earlier cold subprocess-load timeout passed on the ordered rebuild/retest;
+the separate frozen-copy format probe also passed under embedding load.
+
+bench-hook-parity.py compared all 10 non-code fixtures for three measured
+repetitions (30 paired results), with identical stdout, stderr and status.
+The first cold warmup had unchanged prompt-lane deadline variance; the final
+run explicitly warmed those lanes before the unchanged paired comparison.
+Frozen-copy chaos passed 9/9. Restart-identity passed 20/20 ordered queries
+across three restarts, with no numeric score deltas. No recall scoring change.
+Contracts regenerated for the added install-manifest entry; RPC contracts
+unchanged in this step. All experiments used owned scratch processes.
+
+
+## Phase 9, step 4 — frozen navigation evaluation
+
+benchmarks/codenav fixes 20 source-verified file:symbol answers from 18444e02
+and store 089a056. Questions were fixed before retrieval measurements; their
+SHA-256 remains 49fb3d96acd9c7b966e489e9b3dc6c57535665b21c18e0d22a1f54ab419240a3.
+The runner selects answers from code_query alone. Independent byte accounting
+charges query text, full pre-read blocks (including truncation notices), and
+answer bodies even on misses. It conservatively charges lines the hook byte
+cap could omit. Two trust tests reject unstable repeated answers and prove
+that ground-truth body reads cannot convert a failed retrieval into a hit.
+The package and protocol are protected by EVAL_IMMUTABLE with owner approval.
+
+Final fresh empty-mind qualification with the benchmark package staged:
+717/719 tracked supported files (99.72%), 718 eligible including untracked
+Plan.md, 48.927 s wall index time, 74,966,923 mind bytes. The two missing tracked
+files are explicitly gitignored. Store symbols by language: C/C++ 2,587;
+Python 2,031; Rust 2,694; Markdown 1,875. Query score: 18/20 before and after
+restart. Each run sampled 100 RPCs; p95 was 140.946 ms before and 133.943 ms
+after restart. All 20 complete query responses matched across restart.
+The byte proxy was 253,830 versus 604,946 bytes, a 58.04% reduction.
+These are structural navigation measurements, not an LLM end-to-end trial.
+
+Per-commit gates: all hook suites, MCP 159, SMRITI 46, Rust 296 (2 ignored),
+CI ruff and shell checks passed. CTest passed 35 cases; the remaining existing
+daemon-isolation log-order assertion failed during the parallel run and passed
+in its isolated rerun (13.51 s). No test threshold or production behavior was
+changed to pass it. Benchmark trust tests passed. Contracts unchanged.
+
+
+Step 5 documents the hook contract/environment, navigation orientation,
+changelog and verified five-step Phase 9 status. API/static generation produced
+no further drift. The final quick gate (including documentation/site checks),
+Rust 296 tests, all 36 CTest cases (one model-dependent skip), all hook suites,
+MCP 159, SMRITI 46 and CI lint passed. The language-expansion follow-up added
+by the required main merge is marked pending, separately from the five steps
+in this work order. The benchmark approval trailer is carried forward because
+the immutable-eval checker reads the branch head message for the entire diff.

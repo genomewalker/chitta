@@ -4,6 +4,7 @@ hooks/grade-recall.py
 benchmarks/smriti/tasks/*/hidden/**
 benchmarks/smriti/split.json
 benchmarks/noise.json
+benchmarks/codenav/**
 benchmarks/current_truth/questions.json
 benchmarks/current_truth/run.py
 benchmarks/current_truth/test_current_truth.py

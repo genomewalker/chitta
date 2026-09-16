@@ -350,6 +350,7 @@ set(CHITTA_WARN_FLAGS -Wall -Wextra)
 add_executable(chittad
     src/simple_cli.cpp
     src/code_intel.cpp
+    src/code_navigation.cpp
     src/queue_processor.cpp
     src/daemon_lifecycle.cpp
     src/distillation.cpp
@@ -536,17 +537,17 @@ if(CHITTA_BUILD_TESTS)
     add_executable(task_ledger_test src/task_ledger_test.cpp)
     target_link_libraries(task_ledger_test PRIVATE chitta)
     add_test(NAME task_ledger_test COMMAND task_ledger_test)
-    add_executable(rpc_publication_test src/rpc_publication_test.cpp)
+    add_executable(rpc_publication_test src/rpc_publication_test.cpp src/code_navigation.cpp src/code_intel.cpp)
     target_include_directories(rpc_publication_test PRIVATE "${CHITTA_FIELD_INCLUDE}")
-    target_link_libraries(rpc_publication_test PRIVATE chitta)
+    target_link_libraries(rpc_publication_test PRIVATE chitta OpenSSL::Crypto)
     target_compile_options(rpc_publication_test PRIVATE -UNDEBUG ${CHITTA_WARN_FLAGS})
     add_test(NAME rpc_publication_test COMMAND rpc_publication_test)
     set_tests_properties(rpc_publication_test PROPERTIES TIMEOUT 15)
     if(UNIX AND NOT APPLE)
-        add_executable(global_lock_test src/global_lock_test.cpp)
+        add_executable(global_lock_test src/global_lock_test.cpp src/code_navigation.cpp src/code_intel.cpp)
         target_include_directories(global_lock_test PRIVATE "${CHITTA_FIELD_INCLUDE}")
         target_compile_options(global_lock_test PRIVATE -UNDEBUG ${CHITTA_WARN_FLAGS})
-        target_link_libraries(global_lock_test PRIVATE chitta "${CHITTA_FIELD_LIB}" dl pthread Python3::Python ${BLAS_LIBRARIES})
+        target_link_libraries(global_lock_test PRIVATE chitta OpenSSL::Crypto "${CHITTA_FIELD_LIB}" dl pthread Python3::Python ${BLAS_LIBRARIES})
         target_link_options(global_lock_test PRIVATE "-Wl,--wrap=cf_sync")
         add_test(NAME global_lock_on_test COMMAND global_lock_test 1)
         set_tests_properties(global_lock_on_test PROPERTIES ENVIRONMENT "CHITTA_GLOBAL_LOCK=1" TIMEOUT 15)
@@ -570,6 +571,17 @@ if(CHITTA_BUILD_TESTS)
     target_compile_options(repository_index_test PRIVATE -UNDEBUG)
     target_link_libraries(repository_index_test PRIVATE chitta OpenSSL::Crypto)
     add_test(NAME repository_index_test COMMAND repository_index_test)
+    add_executable(code_index_test src/code_index_test.cpp src/code_intel.cpp)
+    target_compile_options(code_index_test PRIVATE -UNDEBUG)
+    target_link_libraries(code_index_test PRIVATE chitta OpenSSL::Crypto)
+    add_test(NAME code_index_test COMMAND code_index_test)
+    add_executable(code_navigation_test src/code_navigation_test.cpp src/code_navigation.cpp src/code_intel.cpp)
+    target_compile_options(code_navigation_test PRIVATE -UNDEBUG)
+    target_link_libraries(code_navigation_test PRIVATE chitta OpenSSL::Crypto)
+    add_test(NAME code_navigation_test COMMAND code_navigation_test)
+    add_test(NAME code_index_integration_test
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/code_index_integration_test.py
+                $<TARGET_FILE:chittad> $<TARGET_FILE:chitta_tool>)
     add_executable(value_fact_extract_test
         src/value_fact_extract_test.cpp src/value_fact_extractor.cpp)
     add_test(NAME value_fact_extract_test COMMAND value_fact_extract_test)

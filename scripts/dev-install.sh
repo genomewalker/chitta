@@ -95,6 +95,7 @@ systemctl --user try-restart chitta-mcp-http 2>/dev/null || true
 echo "[dev-install] refreshing plugin cache + Codex cache (owner: sync-installed-hooks.sh):"
 "$REPO/scripts/sync-installed-hooks.sh"
 
+bash "$REPO/scripts/install-code-nav-git-hooks.sh" "$REPO"
 echo "[dev-install] DONE. Live plugin now loads from $REPO."
 echo "[dev-install] Binaries unchanged — rebuild+install them via the CLAUDE.md flow."
 echo "[dev-install] Revert: restore files from $BK and re-run smart-install.sh."

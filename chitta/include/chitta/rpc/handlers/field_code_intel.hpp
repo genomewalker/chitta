@@ -10,6 +10,9 @@
 
     // ── Symbol helper: convert CfSymbolHit to JSON ─────────────────────────
 
+    ToolResult tool_code_query(const json& params);
+    ToolResult tool_code_path(const json& params);
+
     struct ResolvedSymbol {
         uint64_t id;
         std::string kind;
@@ -184,49 +187,29 @@
     };
 
     static std::string git_repo_root(const std::string& path) {
-        std::string dir = std::filesystem::is_directory(path) ? path
-                        : std::filesystem::path(path).parent_path().string();
-        std::string cmd = "git -C \"" + dir + "\" rev-parse --show-toplevel 2>/dev/null";
-        FILE* fp = popen(cmd.c_str(), "r");
-        if (!fp) return "";
-        char buf[512] = {};
-        fgets(buf, sizeof(buf), fp);
-        pclose(fp);
-        std::string root(buf);
-        while (!root.empty() && (root.back() == '\n' || root.back() == '\r')) root.pop_back();
-        return root;
+        return RepositoryIndex::repository_root(path);
     }
 
     static std::unordered_map<std::string, GitProvenance>
-    git_batch_provenance(const std::string& repo_root,
-                         const std::unordered_set<std::string>& abs_paths) {
+    git_batch_provenance(const std::string& root,
+                         const std::unordered_set<std::string>& paths) {
         std::unordered_map<std::string, GitProvenance> result;
-        if (repo_root.empty() || abs_paths.empty()) return result;
-
-        for (const auto& abs : abs_paths) {
-            std::string rel;
-            if (abs.size() > repo_root.size() && abs.substr(0, repo_root.size()) == repo_root)
-                rel = abs.substr(repo_root.size() + 1);
-            else
-                rel = abs;
-            std::string cmd = "git -C \"" + repo_root + "\" log -1 --format=\"%H %ae %at\" -- \"" + rel + "\" 2>/dev/null";
-            FILE* fp = popen(cmd.c_str(), "r");
-            if (!fp) continue;
-            char buf[512];
-            std::string out;
-            while (fgets(buf, sizeof(buf), fp)) out += buf;
-            pclose(fp);
-            while (!out.empty() && (out.back() == '\n' || out.back() == '\r')) out.pop_back();
-            if (out.empty()) continue;
-            auto sp1 = out.find(' ');
-            if (sp1 == std::string::npos) continue;
-            auto sp2 = out.find(' ', sp1 + 1);
-            if (sp2 == std::string::npos) continue;
-            GitProvenance prov;
-            prov.commit = out.substr(0, sp1);
-            prov.author = out.substr(sp1 + 1, sp2 - sp1 - 1);
-            try { prov.timestamp_ms = std::stoll(out.substr(sp2 + 1)) * 1000; } catch (...) {}
-            result[abs] = prov;
+        if (root.empty() || paths.empty()) return result;
+        // One history walk, rather than one process and history walk per file.
+        auto output = CodeIntel::git_output({"-C", root, "log", "--format=%x1e%H %ae %at", "--name-only"});
+        std::istringstream input(output);
+        GitProvenance current;
+        for (std::string line; std::getline(input, line);) {
+            if (!line.empty() && line[0] == '\x1e') {
+                std::istringstream fields(line.substr(1));
+                int64_t seconds = 0;
+                fields >> current.commit >> current.author >> seconds;
+                current.timestamp_ms = seconds * 1000;
+            } else if (!line.empty()) {
+                auto absolute = (std::filesystem::path(root) / line).string();
+                if (paths.count(absolute)) result.emplace(absolute, current);
+            }
+            if (result.size() == paths.size()) break;
         }
         return result;
     }

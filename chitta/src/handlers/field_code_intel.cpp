@@ -5,6 +5,18 @@
 
 namespace chitta {
 
+ToolResult FieldRpcHandler::tool_code_query(const json& params) {
+    auto result = code_navigation_.query(params);
+    if (result.contains("error")) return ToolResult::error(result["error"]);
+    return ToolResult::ok(result.value("text", ""), result);
+}
+ToolResult FieldRpcHandler::tool_code_path(const json& params) {
+    auto result = code_navigation_.path(params);
+    if (result.contains("error")) return ToolResult::error(result["error"]);
+    return ToolResult::ok(result.value("text", ""), result);
+}
+
+
 ToolResult FieldRpcHandler::tool_enrichment_status(const json&) {
     size_t total_symbols = field_store_->symbol_count();
     // No direct "undescribed" count in FieldStore — report total only
@@ -147,6 +159,7 @@ ToolResult FieldRpcHandler::tool_extract_symbols(const json& params) {
 }
 
 ToolResult FieldRpcHandler::tool_learn_codebase(const json& params) {
+    const auto index_start = std::chrono::steady_clock::now();
     if (subconscious_) subconscious_->notify_query();
 
     std::string path = params.value("path", "");
@@ -172,6 +185,7 @@ ToolResult FieldRpcHandler::tool_learn_codebase(const json& params) {
             auto removed = field_store_->remove_symbols_by_file(path);
             field_store_->invalidate_triplets_by_source_file(path);
             repository_index_.index(path, project);
+            code_navigation_.remove(path);
             (void)field_store_->source_anchors({{"path", path}, {"realm", project}});
             return ToolResult::ok("Removed deleted source: " + path,
                 {{"path", path}, {"project", project}, {"symbols_stored", 0}, {"stale_removed", removed}});
@@ -191,22 +205,31 @@ ToolResult FieldRpcHandler::tool_learn_codebase(const json& params) {
     } guard{clone_tmpdir, cloned};
 
     std::string project = params.value("project", "");
-    if (project.empty()) {
-        project = cloned
-            ? project_from_url(params.value("path", path))
-            : std::filesystem::path(path).filename().string();
+    if (project.empty() && !cloned) {
+        // Keep an explicitly named repository stable across automatic git hooks.
+        // Worktree directory names and product names need not be the same.
+        const auto root = RepositoryIndex::repository_root(path);
+        std::map<std::string, size_t> projects;
+        if (!root.empty()) for (const auto& f : json::parse(field_store_->list_code_files())) {
+            const auto indexed = f.value("path", "");
+            if (indexed.rfind(root + "/", 0) == 0) ++projects[f.value("project", "")];
+        }
+        size_t best = 0;
+        for (const auto& [candidate, count] : projects)
+            if (count > best) { project = candidate; best = count; }
     }
+    if (project.empty()) project = cloned
+        ? project_from_url(params.value("path", path)) : CodeIntel::project_name(path);
 
-    size_t max_files = static_cast<size_t>(params.value("max_files", 500));
+    if (project.rfind("project:", 0) == 0) project.erase(0, 8);
+    path = std::filesystem::weakly_canonical(path).string();
+    size_t max_files = static_cast<size_t>(std::max(0, params.value("max_files", 0)));
     // The watcher path refreshes source knowledge without embedding symbols.
     // Full symbol extraction retains its independently throttled hook request.
     if (!cloned) {
         repository_index_.index(path, project);
         (void)field_store_->source_anchors({{"path", path}, {"realm", project}});
     }
-    if (params.value("incremental", false) && !cloned)
-        return ToolResult::ok("Source index refreshed: " + path,
-            {{"path", path}, {"project", project}, {"symbols_stored", 0}});
     // force=true re-extracts unchanged files (backfill after extractor fixes);
     // normal edits still flow through the content-hash gate.
     bool force = params.value("force", false);
@@ -239,14 +262,8 @@ ToolResult FieldRpcHandler::tool_learn_codebase(const json& params) {
                 }
             }
             if (!stale_paths.empty()) {
-                auto all_syms = field_store_->search_symbols_by_name("", 5000);
-                for (const auto& s : all_syms) {
-                    std::string sym_path(reinterpret_cast<const char*>(s.file_path));
-                    if (stale_paths.count(sym_path)) {
-                        field_store_->remove_symbol(s.symbol_id);
-                        stale_removed++;
-                    }
-                }
+                for (const auto& stale_path : stale_paths)
+                    stale_removed += field_store_->remove_symbols_by_file(stale_path);
             }
         }
     } catch (const std::exception& e) {
@@ -256,6 +273,17 @@ ToolResult FieldRpcHandler::tool_learn_codebase(const json& params) {
     }
 
     CodeIntel intel;
+    // A watcher may be the first contact with a checkout. Repair incomplete
+    // coverage with the same full pass, then restrict later events to one file.
+    const auto active_root = RepositoryIndex::repository_root(path);
+    if (params.value("incremental", false) && !active_root.empty()) {
+        const auto expected = intel.collect_source_files(active_root, exclude, 0);
+        auto indexed = json::parse(field_store_->list_code_files(project), nullptr, false);
+        std::unordered_set<std::string> present;
+        if (indexed.is_array()) for (const auto& f : indexed) present.insert(f.value("path", ""));
+        if (std::any_of(expected.begin(), expected.end(), [&](const auto& f) { return !present.count(f); }))
+            path = active_root;
+    }
 
     // Pass 1: collect source file paths (no tree-sitter parsing yet)
     auto all_files = intel.collect_source_files(path, exclude, max_files);
@@ -290,16 +318,13 @@ ToolResult FieldRpcHandler::tool_learn_codebase(const json& params) {
         auto [file_id, was_updated] = field_store_->upsert_code_file_v2(
             fp, project, mtime, hash, commit, author, git_ts);
 
-        if (was_updated || force) {
+        if (was_updated || force || (!cloned && !code_navigation_.has_file(fp))) {
             changed_files.insert(fp);
         }
     }
 
     // Pass 3: parse only changed files with tree-sitter
     auto result = intel.extract_files(changed_files);
-    if (result.symbols.empty() && changed_files.empty()) {
-        return ToolResult::ok("No symbols found in " + path, {{"stored", 0}});
-    }
 
     // Per-file invalidation: a changed file's previous symbols are stale
     // (moved/renamed/deleted definitions) — remove them before re-inserting,
@@ -307,6 +332,7 @@ ToolResult FieldRpcHandler::tool_learn_codebase(const json& params) {
     size_t symbols_invalidated = 0;
     for (const auto& fp : changed_files) {
         symbols_invalidated += field_store_->remove_symbols_by_file(fp);
+        field_store_->invalidate_triplets_by_source_file(fp);
     }
 
     // Store symbols (all are from changed files — parsed only those)
@@ -314,7 +340,7 @@ ToolResult FieldRpcHandler::tool_learn_codebase(const json& params) {
     size_t symbols_skipped = seen_files.size() - changed_files.size();
     for (const auto& sym : result.symbols) {
         std::vector<float> emb;
-        if (yantra_) {
+        if (yantra_ && params.value("embed", false)) {
             std::string text = sym.kind + " " + sym.name;
             if (!sym.signature.empty()) text += " " + sym.signature;
             emb = embed_text(text);
@@ -328,17 +354,16 @@ ToolResult FieldRpcHandler::tool_learn_codebase(const json& params) {
     }
 
     // Invalidate old callsite triplets for changed files, then insert new ones
-    std::unordered_set<std::string> invalidated_files;
     size_t callsites_stored = 0;
     for (const auto& cs : result.callsites) {
-        if (invalidated_files.insert(cs.file_path).second) {
-            field_store_->invalidate_triplets_by_source_file(cs.file_path);
-        }
         std::string caller_key = cs.file_path + ":" + std::to_string(cs.line);
         field_store_->add_triplet_with_source(caller_key, "calls", cs.callee_leaf,
                                               1.0f, 0, cs.file_path);
         callsites_stored++;
     }
+
+    if (!cloned) code_navigation_.update(active_root.empty() ? path : active_root, project,
+        all_files, changed_files, result, std::filesystem::is_directory(path) && path == active_root);
 
     // Project triplet
     field_store_->add_triplet(project, "contains",
@@ -361,6 +386,9 @@ ToolResult FieldRpcHandler::tool_learn_codebase(const json& params) {
     if (stale_removed > 0) ss << "  Stale symbols removed: " << stale_removed << "\n";
     if (!stale_cleanup_warning.empty()) ss << "  Warning: " << stale_cleanup_warning << "\n";
 
+    std::map<std::string, size_t> by_language;
+    for (const auto& fp : seen_files)
+        by_language[intel.detect_language(fp)] += field_store_->symbols_in_file(fp).size();
     std::unordered_map<std::string, size_t> by_kind;
     for (const auto& sym : result.symbols) {
         if (changed_files.count(sym.file_path)) by_kind[sym.kind]++;
@@ -380,6 +408,9 @@ ToolResult FieldRpcHandler::tool_learn_codebase(const json& params) {
         {"callsites_stored", callsites_stored},
         {"files_changed", changed_files.size()},
         {"files_total", seen_files.size()},
+        {"symbols_by_language", by_language},
+        {"elapsed_ms", std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - index_start).count()},
         {"stale_removed", stale_removed},
         {"warning", stale_cleanup_warning}
     });
@@ -558,6 +589,13 @@ ToolResult FieldRpcHandler::tool_symbol_callees(const json& params) {
 }
 
 ToolResult FieldRpcHandler::tool_read_symbol(const json& params) {
+    if (params.contains("path") || params.contains("line")) {
+        auto result = code_navigation_.read(params);
+        if (!result.is_null()) {
+            if (result.contains("error")) return ToolResult::error(result["error"]);
+            return ToolResult::ok(result.value("text", ""), result);
+        }
+    }
     if (subconscious_) subconscious_->notify_query();
 
     auto sym_opt = resolve_symbol_field(params);
@@ -709,6 +747,18 @@ ToolResult FieldRpcHandler::tool_search_symbols(const json& params) {
 }
 
 ToolResult FieldRpcHandler::tool_code_context(const json& params) {
+    if (!params.value("path", "").empty()) {
+        auto navigation = code_navigation_.query(params);
+        if (navigation.value("indexed", false)) {
+            navigation["total_symbols"] = field_store_->symbol_count();
+            navigation["code_files"] = field_store_->code_file_count();
+            auto scope = std::filesystem::weakly_canonical(params.value("path", "")).string();
+            if (std::filesystem::is_regular_file(scope))
+                navigation["file_symbols"] = field_store_->symbols_in_file(scope).size();
+            else navigation["dir_symbols"] = code_navigation_.overview(params).value("symbols", size_t(0));
+            return ToolResult::ok(navigation.value("text", ""), navigation);
+        }
+    }
     if (subconscious_) subconscious_->notify_query();
 
     std::string path = params.value("path", "");
@@ -899,6 +949,8 @@ ToolResult FieldRpcHandler::tool_smart_context(const json& params) {
 }
 
 ToolResult FieldRpcHandler::tool_codebase_overview(const json& params) {
+    auto navigation = code_navigation_.overview(params);
+    if (navigation.value("indexed", false)) return ToolResult::ok(navigation.value("text", ""), navigation);
     std::string project = params.value("project", "");
 
     std::string files_json_str = field_store_->list_code_files(project);
@@ -940,6 +992,8 @@ ToolResult FieldRpcHandler::tool_codebase_overview(const json& params) {
     result["files"] = files.size();
     result["symbols"] = total_symbols;
     result["project"] = project;
+    result["indexed_files"] = json::array();
+    for (const auto& f : files) result["indexed_files"].push_back(f.value("path", ""));
 
     return ToolResult::ok(ss.str(), result);
 }
@@ -975,6 +1029,7 @@ ToolResult FieldRpcHandler::tool_clear_codebase(const json& params) {
     } catch (...) {}
 
     int rc = field_store_->clear_project(project);
+    if (rc == 0) code_navigation_.clear_project(project);
     std::ostringstream ss;
     ss << "Cleared codebase: " << project << " (rc=" << rc
        << ", callsite triplets invalidated for " << triplets_invalidated << " files)";

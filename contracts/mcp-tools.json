@@ -912,6 +912,62 @@
   "name": "code_context"
  },
  {
+  "description": "Find the shortest undirected connection between uniquely resolved code symbols. Use code_query IDs to disambiguate endpoints.",
+  "inputSchema": {
+   "properties": {
+    "from": {
+     "type": "string"
+    },
+    "path": {
+     "type": "string"
+    },
+    "realm": {
+     "type": "string"
+    },
+    "to": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "from",
+    "to"
+   ],
+   "type": "object"
+  },
+  "name": "code_path"
+ },
+ {
+  "description": "Navigate indexed code with a natural-language question. Returns ranked symbols, file locations, typed AST/name-resolution edges and read_symbol invocations. Empty question plus path returns file context. Use before reading files.",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "neighbors": {
+     "type": "boolean"
+    },
+    "path": {
+     "type": "string"
+    },
+    "question": {
+     "type": "string"
+    },
+    "realm": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "code_query"
+ },
+ {
   "description": "Get full indexed codebase structure",
   "inputSchema": {
    "properties": {
@@ -920,6 +976,9 @@
     },
     "include_callsites": {
      "type": "boolean"
+    },
+    "path": {
+     "type": "string"
     },
     "project": {
      "type": "string"
@@ -3217,6 +3276,10 @@
     "branch": {
      "description": "Branch, tag, or commit to clone (remote only)",
      "type": "string"
+    },
+    "embed": {
+     "description": "Embed symbols synchronously (default false; use embed_symbols separately)",
+     "type": "boolean"
     },
     "exclude": {
      "type": "string"
@@ -5647,7 +5710,20 @@
     "kind": {
      "type": "string"
     },
+    "line": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
     "name": {
+     "type": "string"
+    },
+    "path": {
      "type": "string"
     },
     "project": {
@@ -5670,8 +5746,16 @@
      "description": "Symbol kind filter: class, function, method (optional)",
      "type": "string"
     },
+    "line": {
+     "description": "Definition line from code_query",
+     "type": "integer"
+    },
     "name": {
      "description": "Symbol name to read (e.g., 'DuckDBStore', 'daemon_call')",
+     "type": "string"
+    },
+    "path": {
+     "description": "Exact path from code_query",
      "type": "string"
     },
     "project": {

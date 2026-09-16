@@ -133,6 +133,7 @@ v2.1.0 only works while a pre-V23 snapshot family is still on disk, and
 
 | | Path |
 |---|---|
+| Code navigation | Navigate code with code_query before reading files |
 | Daemon | `chitta/src/simple_cli.cpp` |
 | RPC | `chitta/include/chitta/rpc/field_handler.hpp` |
 | Store | `chitta-field/src/store.rs` |

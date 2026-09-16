@@ -5,6 +5,12 @@
 #include <map>
 #include <regex>
 #include <openssl/sha.h>
+#include <spawn.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+extern char** environ;
 
 namespace chitta {
 namespace {
@@ -58,6 +64,98 @@ std::string numeric_id(const std::string& identity) {
     for (unsigned char c : identity) { hash ^= c; hash *= 1099511628211ULL; }
     return std::to_string(hash);
 }
+}
+
+std::string CodeIntel::git_output(const std::vector<std::string>& args) {
+    int fds[2];
+    if (pipe(fds) != 0) return {};
+    posix_spawn_file_actions_t actions;
+    posix_spawn_file_actions_init(&actions);
+    posix_spawn_file_actions_adddup2(&actions, fds[1], STDOUT_FILENO);
+    posix_spawn_file_actions_addopen(&actions, STDIN_FILENO, "/dev/null", O_RDONLY, 0);
+    posix_spawn_file_actions_addopen(&actions, STDERR_FILENO, "/dev/null", O_WRONLY, 0);
+    posix_spawn_file_actions_addclose(&actions, fds[0]);
+    posix_spawn_file_actions_addclose(&actions, fds[1]);
+    std::vector<char*> argv{const_cast<char*>("git")};
+    for (const auto& arg : args) argv.push_back(const_cast<char*>(arg.c_str()));
+    argv.push_back(nullptr);
+    pid_t pid;
+    int rc = posix_spawnp(&pid, "git", &actions, nullptr, argv.data(), environ);
+    posix_spawn_file_actions_destroy(&actions);
+    close(fds[1]);
+    std::string output;
+    if (rc == 0) {
+        char buffer[8192];
+        ssize_t n;
+        while ((n = read(fds[0], buffer, sizeof(buffer))) > 0) output.append(buffer, n);
+    }
+    close(fds[0]);
+    if (rc != 0) return {};
+    int status = 0;
+    while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {}
+    return WIFEXITED(status) && WEXITSTATUS(status) == 0 ? output : std::string{};
+}
+
+std::string CodeIntel::project_name(const std::string& path) {
+    auto root = RepositoryIndex::repository_root(path);
+    if (root.empty()) root = std::filesystem::absolute(path).string();
+    auto common = git_output({"-C", root, "rev-parse", "--path-format=absolute", "--git-common-dir"});
+    while (!common.empty() && (common.back() == '\n' || common.back() == '\r')) common.pop_back();
+    // All worktrees share the main checkout's project identity.
+    if (!common.empty() && std::filesystem::path(common).filename() == ".git")
+        return std::filesystem::path(common).parent_path().filename().string();
+    return std::filesystem::path(root).filename().string();
+}
+
+std::vector<std::string> CodeIntel::collect_source_files(
+    const std::string& path, const std::vector<std::string>& exclude, size_t max_files) {
+    namespace fs = std::filesystem;
+    std::vector<std::string> files;
+    std::error_code ec;
+    auto scope = fs::weakly_canonical(path, ec);
+    if (ec) return files;
+    auto root = RepositoryIndex::repository_root(scope.string());
+    auto add = [&](const fs::path& candidate) {
+        if (!fs::is_regular_file(candidate, ec) || fs::is_symlink(candidate, ec) ||
+            detect_language(candidate.string()).empty()) return;
+        if (candidate != scope && !inside(candidate, scope)) return;
+        const auto relative = candidate.lexically_relative(root.empty() ? scope : fs::path(root));
+        for (const auto& part : relative)
+            if (std::find(exclude.begin(), exclude.end(), part.string()) != exclude.end()) return;
+        files.push_back(candidate.string());
+    };
+    if (!root.empty()) {
+        auto listed = git_output({"-C", root, "ls-files", "-z", "--cached", "--others", "--exclude-standard"});
+        std::vector<std::string> ignored_args = {"-C", root, "ls-files", "-z", "--cached", "--others", "--ignored", "--exclude-standard"};
+        if (fs::is_regular_file(fs::path(root) / ".chittaignore"))
+            ignored_args.push_back("--exclude-from=" + (fs::path(root) / ".chittaignore").string());
+        std::unordered_set<std::string> ignored;
+        std::istringstream excluded(git_output(ignored_args));
+        for (std::string rel; std::getline(excluded, rel, '\0');) ignored.insert(rel);
+        std::istringstream input(listed);
+        for (std::string rel; std::getline(input, rel, '\0');) {
+            if (ignored.count(rel)) continue;
+            auto candidate = fs::path(root) / rel;
+            if (fs::is_directory(candidate, ec) && fs::exists(candidate / ".git") &&
+                (candidate == scope || inside(candidate, scope))) {
+                auto nested = collect_source_files(candidate.string(), exclude, 0);
+                files.insert(files.end(), nested.begin(), nested.end());
+            } else add(candidate);
+        }
+    } else if (fs::is_regular_file(scope, ec)) add(scope);
+    else {
+        fs::recursive_directory_iterator it(scope, fs::directory_options::skip_permission_denied, ec), end;
+        for (; !ec && it != end; it.increment(ec)) {
+            if (it->is_symlink(ec)) { it.disable_recursion_pending(); continue; }
+            if (it->is_directory(ec) && std::find(exclude.begin(), exclude.end(), it->path().filename()) != exclude.end())
+                it.disable_recursion_pending();
+            else if (it->is_regular_file(ec)) add(it->path());
+        }
+    }
+    std::sort(files.begin(), files.end());
+    files.erase(std::unique(files.begin(), files.end()), files.end());
+    if (max_files && files.size() > max_files) files.resize(max_files);
+    return files;
 }
 
 std::string RepositoryIndex::content_hash(const std::string& bytes) {
@@ -161,8 +259,9 @@ void RepositoryIndex::open(const std::string& sidecar, const std::string& known_
             if (!root.empty()) roots_[realm] = root;
         }
     }
-    // No trusted cached chunks: restart validates every discovered source.
-    for (const auto& [realm, root] : roots_) refresh(realm);
+    // search() refreshes the requested realm before returning any source.
+    // Do not eagerly walk every historical root at daemon startup: restored
+    // stores can name abandoned checkouts or entire shared data directories.
 }
 
 void RepositoryIndex::index(const std::string& path, const std::string& realm) {

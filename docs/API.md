@@ -2,9 +2,9 @@
 
 Status as of 2026-09-16.
 
-Generated from frozen contracts on 2026-09-16, 340 tools — regenerate with `python3 scripts/gen-tools-static.py --docs`.
+Generated from frozen contracts on 2026-09-16, 342 tools — regenerate with `python3 scripts/gen-tools-static.py --docs`.
 
-54 tools are listed in `tools/list` by default. The other 286 are hidden to keep the model's tool list small, and stay callable through the `advanced` gateway:
+55 tools are listed in `tools/list` by default. The other 287 are hidden to keep the model's tool list small, and stay callable through the `advanced` gateway:
 
 ```json
 {"tool": "pin_memory", "arguments": {"id": 123}}
@@ -19,7 +19,7 @@ Tools marked **gateway** are composed in `chitta-mcp/server.py` rather than serv
 - [Core Memory](#core) — 53
 - [Recall & Search](#recall) — 26
 - [Graph & Triplets](#graph) — 15
-- [Code Intelligence](#code) — 10
+- [Code Intelligence](#code) — 12
 - [Context & Status](#context) — 16
 - [Realms](#realm) — 9
 - [Sessions & Continuity](#session) — 19
@@ -1019,6 +1019,29 @@ Get code context summary
 |---|---|---|---|---|
 | `path` | string | no | — |  |
 
+### `code_path` *(via advanced)*
+
+Find the shortest undirected connection between uniquely resolved code symbols. Use code_query IDs to disambiguate endpoints.
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `from` | string | yes | — |  |
+| `path` | string | no | — |  |
+| `realm` | string | no | — |  |
+| `to` | string | yes | — |  |
+
+### `code_query`
+
+Navigate indexed code with a natural-language question. Returns ranked symbols, file locations, typed AST/name-resolution edges and read_symbol invocations. Empty question plus path returns file context. Use before reading files.
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `limit` | any | no | — |  |
+| `neighbors` | boolean | no | — |  |
+| `path` | string | no | — |  |
+| `question` | string | no | — |  |
+| `realm` | string | no | — |  |
+
 ### `codebase_overview`
 
 Get full indexed codebase structure
@@ -1027,6 +1050,7 @@ Get full indexed codebase structure
 |---|---|---|---|---|
 | `format` | string | no | — |  |
 | `include_callsites` | boolean | no | — |  |
+| `path` | string | no | — |  |
 | `project` | string | no | — |  |
 
 ### `embed_symbols` *(via advanced)*
@@ -1057,6 +1081,7 @@ Learn codebase by extracting symbols. path can be a local directory or a remote 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `branch` | string | no | — | Branch, tag, or commit to clone (remote only) |
+| `embed` | boolean | no | — | Embed symbols synchronously (default false; use embed_symbols separately) |
 | `exclude` | string | no | — |  |
 | `force` | boolean | no | — |  |
 | `incremental` | boolean | no | — |  |
@@ -1082,7 +1107,9 @@ Read just a symbol's code, not entire file. ~10x token savings vs full file read
 |---|---|---|---|---|
 | `context` | integer | no | — | Lines of context before symbol (default: 3) |
 | `kind` | string | no | — | Symbol kind filter: class, function, method (optional) |
+| `line` | integer | no | — | Definition line from code_query |
 | `name` | string | yes | — | Symbol name to read (e.g., 'DuckDBStore', 'daemon_call') |
+| `path` | string | no | — | Exact path from code_query |
 | `project` | string | no | — | Project name filter (optional) |
 
 ### `symbol_callees` *(gateway, via advanced)*
