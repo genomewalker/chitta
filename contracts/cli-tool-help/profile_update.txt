@@ -1,0 +1,12 @@
+chitta profile_update - Update profile field
+
+Parameters:
+  --field (required)
+
+  --user_id
+
+  --value (required)
+
+
+Example:
+  chitta profile_update --field "..." --value "..."

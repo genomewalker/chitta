@@ -1,0 +1,18 @@
+chitta long_task_start - Start a long-running task
+
+Parameters:
+  --goal (required)
+
+  --hard_checks
+
+  --realm
+
+  --soft_checks
+
+  --task_id (required)
+
+  --work_items
+
+
+Example:
+  chitta long_task_start --task_id "..." --goal "..."

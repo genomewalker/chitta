@@ -1,0 +1,24 @@
+chitta record_surprise - Record a prediction error event — what was expected vs what actually happened
+
+Parameters:
+  --action
+      What action was taken
+  --actual (required)
+      What actually happened (required)
+  --context_sketch
+      What was happening when the surprise occurred
+  --domain
+      Domain: recall, tool, user_correction, constraint (default general)
+  --expected
+      What was predicted/expected (optional)
+  --realm
+      Realm filter (default global)
+  --session_id
+      Session ID (optional)
+  --source_memory_id
+      Related memory ID (optional)
+  --surprise_magnitude
+      How surprising [0-1] (default 0.5)
+
+Example:
+  chitta record_surprise --actual "..."

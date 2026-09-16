@@ -1,0 +1,12 @@
+chitta long_task_snapshot - Get synthesized task context
+
+Parameters:
+  --max_tokens
+
+  --mode
+
+  --task_id (required)
+
+
+Example:
+  chitta long_task_snapshot --task_id "..."

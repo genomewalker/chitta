@@ -1,0 +1,12 @@
+chitta file_restore - Restore file version (stub)
+
+Parameters:
+  --file_path (required)
+
+  --preview
+
+  --version_id
+
+
+Example:
+  chitta file_restore --file_path "..."

@@ -1,0 +1,8 @@
+chitta memory_lock_status - Check lock status
+
+Parameters:
+  --id (required)
+
+
+Example:
+  chitta memory_lock_status --id "..."

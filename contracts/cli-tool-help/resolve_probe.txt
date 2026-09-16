@@ -1,0 +1,12 @@
+chitta resolve_probe - Resolve a pending probe — mark as Answered (1) or Dismissed (2) and optionally record the answer
+
+Parameters:
+  --answer
+      Optional answer text
+  --probe_id (required)
+      Probe ID
+  --status (required)
+      1=Answered 2=Dismissed
+
+Example:
+  chitta resolve_probe --probe_id "..." --status "..."

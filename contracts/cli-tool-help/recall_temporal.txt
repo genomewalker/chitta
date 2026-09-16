@@ -1,18 +1,18 @@
-chitta recall_temporal - Search memories within a time window
+chitta recall_temporal - Search memories within a time window (defaults to last 7 days)
 
 Parameters:
+  --end
+      End date
+  --include_global
+      Include global memories
+  --limit
+      Max results (default 20)
   --query
       Optional semantic search query
-  --start
-      Start date (ISO8601 or YYYY-MM-DD)
-  --end
-      End date (ISO8601 or YYYY-MM-DD)
-  --limit [default: 20]
-      Max results
   --realm
       Filter by realm
-  --include_global [default: true]
-      Include global memories
+  --start
+      Start date (ISO8601 or YYYY-MM-DD)
 
 Example:
   chitta recall_temporal

@@ -1,18 +1,18 @@
-chitta log_decision - Log a decision point to the DecisionTape: chosen action + rejected alternatives
+chitta log_decision - Log a decision point to the DecisionTape: chosen action + alternatives considered and rejected. Enables recall_true_counterfactual.
 
 Parameters:
-  --chosen_tool (required)
-      Tool that was chosen
   --chosen_entity (required)
-      Entity for the chosen tool
-  --chosen_outcome [default: 0]
-      Outcome class for the chosen action
-  --rejected_json [default: []]
-      JSON array of [sym_u64, reason_u8] pairs
-  --confidence_delta [default: 0]
+
+  --chosen_outcome
+      0=success 1=fail 2=error 3=partial
+  --chosen_tool (required)
+
+  --confidence_delta
       chosen_confidence - best_alternative_confidence
-  --ts_ms [default: 0]
-      Timestamp ms (0=now)
+  --rejected_json
+      JSON array of [sym_u64, rejection_reason_u8] pairs
+  --ts_ms
+
 
 Example:
   chitta log_decision --chosen_tool "..." --chosen_entity "..."

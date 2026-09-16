@@ -1,0 +1,10 @@
+chitta get_fragile_decisions - List open epistemic debts sorted by fragility — decisions most likely to be wrong
+
+Parameters:
+  --limit
+      Max results (default 20)
+  --threshold
+      Minimum fragility threshold (default 0.5)
+
+Example:
+  chitta get_fragile_decisions

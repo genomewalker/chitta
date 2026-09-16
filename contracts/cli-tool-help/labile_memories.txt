@@ -1,0 +1,14 @@
+chitta labile_memories - List memories recalled multiple times recently — candidates for reconsolidation (excludes freshly-written hook memories)
+
+Parameters:
+  --limit
+      Max results (default 20)
+  --min_access
+      Min recall count to qualify (default 2)
+  --realm
+      Filter by realm
+  --window_hours
+      Recency window in hours (default 48)
+
+Example:
+  chitta labile_memories

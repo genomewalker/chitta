@@ -1,8 +1,3 @@
-chitta seed_hdc_geometry - CEC Phase 17 Part D: seed HDC codebook from vocab_geometry harvest JSON. Binarizes f32 PCA directions from open-weight embedding matrix into HdcVec entries, replacing random hash projections for harvested tokens.
+chitta seed_hdc_geometry - Legacy daemon handler
 
-Parameters:
-  --json_path (required)
-      Path to qwen2.5-7b_vocab_geometry.json produced by harvest_ow.py --mode vocab_geometry
-
-Example:
-  chitta seed_hdc_geometry --json_path "..."
+  Legacy handler; parameters are validated by the daemon.

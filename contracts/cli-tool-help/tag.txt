@@ -1,12 +1,12 @@
 chitta tag - Add or remove tags from a node
 
 Parameters:
-  --id (required)
-      Node ID
   --add
-      Tag to add
+
+  --id (required)
+
   --remove
-      Tag to remove
+
 
 Example:
   chitta tag --id "..."

@@ -1,10 +1,10 @@
-chitta realm_visibility - Set realm visibility for a memory
+chitta realm_visibility - Set visibility level (stub)
 
 Parameters:
   --id (required)
-      Memory ID
+
   --visibility (required)
-      Visibility: private|shared|global
+
 
 Example:
   chitta realm_visibility --id "..." --visibility "..."

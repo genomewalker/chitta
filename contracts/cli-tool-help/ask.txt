@@ -1,0 +1,12 @@
+chitta ask - Natural language insight query: retrieves and synthesizes memories to answer a question about the user, session, or project
+
+Parameters:
+  --limit
+
+  --question (required)
+
+  --realm
+
+
+Example:
+  chitta ask --question "..."

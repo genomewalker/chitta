@@ -1,0 +1,8 @@
+chitta approve_memory - Approve a Proposed memory, promoting it to Active
+
+Parameters:
+  --id (required)
+      Memory ID to approve
+
+Example:
+  chitta approve_memory --id "..."

@@ -1,18 +1,18 @@
-chitta log_exposure - Log memory exposure events for SUS metrics
+chitta log_exposure - Log memory exposure (SUS)
 
 Parameters:
-  --session_id (required)
-      Session ID
-  --turn_id (required)
-      Turn index (integer)
   --hook_type (required)
-      Hook type: session_start or user_prompt
+
   --memory_ids (required)
-      JSON array of memory IDs e.g. [1,2,3]
+
   --ranks
-      JSON array of rank positions e.g. [1,2,3]
+
   --resonance_scores
-      JSON array of scores e.g. [0.8,0.7]
+
+  --session_id (required)
+
+  --turn_id (required)
+
 
 Example:
   chitta log_exposure --session_id "..." --turn_id "..." --hook_type "..." --memory_ids "..."

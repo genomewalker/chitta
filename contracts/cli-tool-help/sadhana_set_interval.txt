@@ -1,0 +1,10 @@
+chitta sadhana_set_interval - Change tick interval
+
+Parameters:
+  --id (required)
+
+  --interval (required)
+
+
+Example:
+  chitta sadhana_set_interval --id "..." --interval "..."

@@ -1,3 +1,3 @@
-chitta fep_status - CEC Phase 15 FEP prior organ: obs_count, states_modeled, ewma_drift (context_drift if >0.5), ewma_shock (emission_shock if >0.3). Context drift = world-model silently degrading; emission shock = known context, novel outcome.
+chitta fep_status - Legacy daemon handler
 
-  No parameters required.
+  Legacy handler; parameters are validated by the daemon.

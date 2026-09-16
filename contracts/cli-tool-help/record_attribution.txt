@@ -1,0 +1,24 @@
+chitta record_attribution - Attribute a closed intervention to a causal class — routes feedback to the appropriate learning subsystem
+
+Parameters:
+  --confidence_delta
+      Magnitude of the learning signal (0.0-1.0)
+  --debt_ids
+      Linked epistemic debt IDs
+  --intervention_id (required)
+      Intervention ID
+  --note
+      Optional human-readable note
+  --primary_class (required)
+      0=MemoryRecallError 1=SourceTrustError 2=ProcedureError 3=ToolExecutionError 4=EnvironmentShift 5=HiddenPrecondition 6=AmbiguousState 7=GoalSpecError 8=UserOverride 9=ExternalNondeterminism
+  --secondary_class
+      Optional secondary attribution class (same enum)
+  --skill_memory_ids
+      Skill memory IDs that were applied
+  --source_memory_ids
+      Memory IDs that contributed to this outcome
+  --surprise_id
+      Linked surprise event ID if available
+
+Example:
+  chitta record_attribution --intervention_id "..." --primary_class "..."

@@ -1,0 +1,12 @@
+chitta symbol_event_log - Query the symbol-keyed event log. Filter by symbol_name and/or file_path.
+
+Parameters:
+  --file_path
+      Filter by file path
+  --limit
+      Max events to return (default 50)
+  --symbol_name
+      Filter by symbol name
+
+Example:
+  chitta symbol_event_log

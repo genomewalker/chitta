@@ -1,0 +1,10 @@
+chitta explore_recall - Lightweight recall - titles/scores only
+
+Parameters:
+  --limit
+      Max results (default 10)
+  --query (required)
+      Search query
+
+Example:
+  chitta explore_recall --query "..."

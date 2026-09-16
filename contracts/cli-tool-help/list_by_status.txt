@@ -1,0 +1,12 @@
+chitta list_by_status - List memories filtered by lifecycle status (active/superseded/contradicted/archived)
+
+Parameters:
+  --limit [default: 50]
+      Max results
+  --realm
+      Filter by realm
+  --status [default: superseded]
+      Filter: active, superseded, contradicted, archived, or all
+
+Example:
+  chitta list_by_status

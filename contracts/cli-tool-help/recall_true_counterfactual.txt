@@ -1,14 +1,14 @@
-chitta recall_true_counterfactual - Return DecisionTape entries where (tool, entity) was explicitly rejected. True counterfactual data vs CDAWG sibling inference.
+chitta recall_true_counterfactual - Return decision points where (tool, entity) was explicitly considered and rejected. Uses the DecisionTape (Phase 10), not CDAWG sibling inference. Requires prior log_event_ex or log_decision calls.
 
 Parameters:
-  --tool (required)
-      Tool name
   --entity (required)
-      Entity name
-  --outcome [default: 0]
-      Outcome class (0=success, default)
-  --k [default: 5]
-      Max results
+
+  --k
+      Max results (default 5)
+  --outcome
+      0=success 1=fail 2=error (default 0)
+  --tool (required)
+
 
 Example:
   chitta recall_true_counterfactual --tool "..." --entity "..."

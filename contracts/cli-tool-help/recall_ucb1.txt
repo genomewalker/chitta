@@ -1,0 +1,16 @@
+chitta recall_ucb1 - Recall with UCB1 exploration bonus — surfaces novel under-accessed memories alongside relevant ones
+
+Parameters:
+  --exploration
+      Exploration weight sqrt(2)≈1.414 (default)
+  --fetch_k
+      Candidate pool size before re-ranking (default 40)
+  --limit
+      Max results (default 10)
+  --query (required)
+      Search query
+  --realm
+      Filter by realm
+
+Example:
+  chitta recall_ucb1 --query "..."

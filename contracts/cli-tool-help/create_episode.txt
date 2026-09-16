@@ -1,0 +1,18 @@
+chitta create_episode - Create dialogue episode for conversation tracking
+
+Parameters:
+  --end_turn
+
+  --episode_type
+
+  --realm
+
+  --session_id (required)
+
+  --start_turn (required)
+
+  --title (required)
+
+
+Example:
+  chitta create_episode --session_id "..." --title "..." --start_turn "..."

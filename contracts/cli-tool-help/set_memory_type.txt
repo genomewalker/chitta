@@ -1,0 +1,10 @@
+chitta set_memory_type - Set memory semantic type
+
+Parameters:
+  --memory_id (required)
+
+  --type (required)
+
+
+Example:
+  chitta set_memory_type --memory_id "..." --type "..."

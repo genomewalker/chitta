@@ -1,0 +1,8 @@
+chitta retract_fact - Soft-retract a constraint fact (preserves history)
+
+Parameters:
+  --fact_id (required)
+      Fact ID to retract
+
+Example:
+  chitta retract_fact --fact_id "..."

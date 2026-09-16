@@ -1,0 +1,12 @@
+chitta resolve_merge - Resolve merge proposal
+
+Parameters:
+  --merge_id (required)
+
+  --resolution
+
+  --status (required)
+
+
+Example:
+  chitta resolve_merge --merge_id "..." --status "..."

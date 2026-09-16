@@ -1,0 +1,12 @@
+chitta record_feedback - Record whether a recall source was useful — updates learned source weights
+
+Parameters:
+  --query_domain
+      Domain of the query (default general)
+  --source (required)
+      Source: semantic, keyword, temporal, artifact, association (required)
+  --was_useful
+      Whether the source's results were useful (default true)
+
+Example:
+  chitta record_feedback --source "..."

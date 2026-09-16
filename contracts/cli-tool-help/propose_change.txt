@@ -1,0 +1,12 @@
+chitta propose_change - Propose change to memory
+
+Parameters:
+  --content (required)
+
+  --id (required)
+
+  --proposed_by (required)
+
+
+Example:
+  chitta propose_change --id "..." --content "..." --proposed_by "..."

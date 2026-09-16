@@ -1,0 +1,10 @@
+chitta query_chain - Follow predicate chain: A→B→C through constraint facts
+
+Parameters:
+  --predicates (required)
+      Ordered list of predicates to follow
+  --subject (required)
+      Starting entity
+
+Example:
+  chitta query_chain --subject "..." --predicates "..."

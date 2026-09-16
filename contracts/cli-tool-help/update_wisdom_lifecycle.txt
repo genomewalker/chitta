@@ -1,0 +1,10 @@
+chitta update_wisdom_lifecycle - Advance a wisdom candidate through lifecycle stages: candidate→provisional→trusted→demoted
+
+Parameters:
+  --candidate_id (required)
+      Wisdom candidate ID
+  --new_state (required)
+      0=candidate, 1=provisional, 2=trusted, 3=demoted
+
+Example:
+  chitta update_wisdom_lifecycle --candidate_id "..." --new_state "..."

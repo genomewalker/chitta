@@ -1,0 +1,12 @@
+chitta memory_revert - Revert memory to previous version
+
+Parameters:
+  --id (required)
+
+  --reason
+
+  --version (required)
+
+
+Example:
+  chitta memory_revert --id "..." --version "..."

@@ -1,10 +1,3 @@
-chitta type_hierarchy - Get type hierarchy (base classes, implemented interfaces) for a type
+chitta type_hierarchy - Legacy daemon handler
 
-Parameters:
-  --name (required)
-      Type name to query
-  --direction [default: both]
-      ancestors, descendants, or both (default: both)
-
-Example:
-  chitta type_hierarchy --name "..."
+  Legacy handler; parameters are validated by the daemon.

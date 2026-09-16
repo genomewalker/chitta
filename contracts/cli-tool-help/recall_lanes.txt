@@ -1,18 +1,18 @@
 chitta recall_lanes - Fan-in prompt recall lanes over one daemon RPC
 
 Parameters:
-  --query (required)
-      Prompt query
-  --ctx_query
-      Optional context query (defaults to query)
-  --realm
-      Filter by realm
-  --limits
-      JSON object of sem/ctx/hyb/kw/corr limits
-  --lanes
-      JSON array or comma-separated lane names
   --budget_ms
-      Per-lane wall-clock budget override
+      Per-lane wall-clock budget override; capped by CHITTA_RPC_BUDGET_MS
+  --ctx_query
+      Optional context query; defaults to query
+  --lanes
+      Subset of sem, ctx, hyb, kw, corr, corrk (default all)
+  --limits
+      Per-lane result limits (sem, ctx, hyb, kw, corr)
+  --query (required)
+      Prompt query shared by sem, hyb, kw, corr, and corrk
+  --realm
+      Realm for sem, ctx, hyb, and kw
 
 Example:
   chitta recall_lanes --query "..."

@@ -1,0 +1,14 @@
+chitta set_criterion - Upsert a completion criterion for a task — creates if new, updates if existing criterion text matches
+
+Parameters:
+  --criterion (required)
+      Criterion description
+  --evidence_note
+      Optional evidence supporting the criterion check
+  --is_met
+      Whether criterion is met (default false)
+  --task_id (required)
+      Task ID
+
+Example:
+  chitta set_criterion --task_id "..." --criterion "..."

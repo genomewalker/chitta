@@ -1,8 +1,8 @@
-chitta calibration_score - Get calibration score for a domain
+chitta calibration_score - Get accuracy score
 
 Parameters:
-  --domain (required)
-      Domain to check
+  --domain
+
 
 Example:
-  chitta calibration_score --domain "..."
+  chitta calibration_score

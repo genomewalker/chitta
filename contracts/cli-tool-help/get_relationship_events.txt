@@ -1,0 +1,12 @@
+chitta get_relationship_events - Get relationship events
+
+Parameters:
+  --event_type
+
+  --limit
+
+  --session_id
+
+
+Example:
+  chitta get_relationship_events

@@ -1,0 +1,20 @@
+chitta trajectory_compact - Attention-weighted turn selection from a transcript. Embeds each turn, scores by cosine similarity to the task description, applies MAD adaptive threshold, enforces token budget. Returns a lossless subset of the most task-relevant turns.
+
+Parameters:
+  --budget_tokens
+      Target token budget (default 4000)
+  --include_system
+      Include system turns (default false)
+  --mad_k
+      MAD threshold multiplier (default 1.5, lower=more turns)
+  --path
+      Direct path to JSONL transcript
+  --role_filter
+      Filter by role: user, assistant, or empty for all
+  --session_id
+      Session ID (auto-finds transcript)
+  --task (required)
+      What the downstream agent needs to accomplish
+
+Example:
+  chitta trajectory_compact --task "..."

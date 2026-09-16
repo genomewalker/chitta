@@ -1,0 +1,14 @@
+chitta add_probe - Add a pending probe — an open question that must be answered to unblock or complete a task
+
+Parameters:
+  --expected_answerer
+      Agent or role expected to answer
+  --priority
+      Priority 1-10 (default 5)
+  --question (required)
+      Open question to be answered
+  --task_id (required)
+      Task ID
+
+Example:
+  chitta add_probe --task_id "..." --question "..."

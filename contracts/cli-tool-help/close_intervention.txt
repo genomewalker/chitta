@@ -1,0 +1,10 @@
+chitta close_intervention - Close an intervention with its final outcome status
+
+Parameters:
+  --intervention_id (required)
+      Intervention ID to close
+  --status (required)
+      0=Open 1=Succeeded 2=Failed 3=Partial 4=Aborted
+
+Example:
+  chitta close_intervention --intervention_id "..." --status "..."

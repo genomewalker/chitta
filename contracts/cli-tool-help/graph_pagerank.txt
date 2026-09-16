@@ -1,0 +1,16 @@
+chitta graph_pagerank - Personalized PageRank over the triplet graph
+
+Parameters:
+  --damping
+      Damping factor (default 0.85)
+  --edge_types
+      Predicate filter (empty = all)
+  --iterations
+      PPR iterations (default 20)
+  --seeds (required)
+      Seed nodes
+  --top_k
+      Nodes to return (default 20)
+
+Example:
+  chitta graph_pagerank --seeds "..."

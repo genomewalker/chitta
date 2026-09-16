@@ -1,0 +1,8 @@
+chitta skill_deprecate - Deprecate a skill
+
+Parameters:
+  --skill_id (required)
+
+
+Example:
+  chitta skill_deprecate --skill_id "..."

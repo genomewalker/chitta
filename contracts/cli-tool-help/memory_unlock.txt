@@ -1,0 +1,10 @@
+chitta memory_unlock - Release memory lock
+
+Parameters:
+  --holder_id (required)
+
+  --id (required)
+
+
+Example:
+  chitta memory_unlock --id "..." --holder_id "..."

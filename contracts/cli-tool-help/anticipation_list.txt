@@ -1,0 +1,12 @@
+chitta anticipation_list - List learned anticipation patterns
+
+Parameters:
+  --limit
+
+  --realm
+
+  --sort_by
+
+
+Example:
+  chitta anticipation_list

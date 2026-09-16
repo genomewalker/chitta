@@ -1,14 +1,16 @@
-chitta symbol_callees - Find all symbols that the given symbol calls (forward call graph)
+chitta symbol_callees - Find all symbols that the given symbol calls
 
 Parameters:
-  --name
-      Symbol name to find callees for
   --id
-      Symbol ID (alternative to name)
+
   --kind
-      Filter by symbol kind when using name
+
+  --name
+
+  --path
+      Path substring to disambiguate duplicate names
   --project
-      Project name to disambiguate
+
 
 Example:
   chitta symbol_callees

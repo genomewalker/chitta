@@ -1,0 +1,10 @@
+chitta memory_status - Get effective status of a memory: active, superseded, or contradicted — checks incoming supersedes triplets
+
+Parameters:
+  --id
+
+  --memory_id
+
+
+Example:
+  chitta memory_status

@@ -1,0 +1,10 @@
+chitta list_merge_queue - List pending merge proposals
+
+Parameters:
+  --limit
+
+  --status
+
+
+Example:
+  chitta list_merge_queue

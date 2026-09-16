@@ -1,0 +1,10 @@
+chitta set_priority_tier - Set memory priority tier
+
+Parameters:
+  --memory_id (required)
+
+  --tier (required)
+
+
+Example:
+  chitta set_priority_tier --memory_id "..." --tier "..."

@@ -1,12 +1,3 @@
-chitta recall_temporal_events - Bridge query: find entities active in a time window via EventTape, then recall their memories. Use when you don't know the realm — EventTape discovers which realms had activity.
+chitta recall_temporal_events - Legacy daemon handler
 
-Parameters:
-  --start
-      Start date (ISO8601 or YYYY-MM-DD)
-  --end
-      End date (ISO8601 or YYYY-MM-DD)
-  --limit [default: 20]
-      Max results
-
-Example:
-  chitta recall_temporal_events
+  Legacy handler; parameters are validated by the daemon.

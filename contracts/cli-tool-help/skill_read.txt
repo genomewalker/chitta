@@ -1,0 +1,10 @@
+chitta skill_read - Read a skill version (0=latest)
+
+Parameters:
+  --skill_id (required)
+
+  --version
+
+
+Example:
+  chitta skill_read --skill_id "..."

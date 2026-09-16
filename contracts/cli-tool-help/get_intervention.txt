@@ -1,0 +1,8 @@
+chitta get_intervention - Get a single intervention record by ID
+
+Parameters:
+  --intervention_id (required)
+      Intervention ID
+
+Example:
+  chitta get_intervention --intervention_id "..."

@@ -1,10 +1,3 @@
-chitta session_heartbeat - Update session heartbeat
+chitta session_heartbeat - Legacy daemon handler
 
-Parameters:
-  --session_id (required)
-      Session ID
-  --metadata
-      Updated JSON metadata
-
-Example:
-  chitta session_heartbeat --session_id "..."
+  Legacy handler; parameters are validated by the daemon.

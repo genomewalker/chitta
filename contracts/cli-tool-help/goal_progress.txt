@@ -1,12 +1,12 @@
-chitta goal_progress - Update goal progress (0-1 float)
+chitta goal_progress - Update goal progress
 
 Parameters:
   --id (required)
-      Goal ID
-  --progress (required)
-      Progress 0-1 (e.g., 0.5 = 50%)
+
   --milestone
-      Milestone name to mark complete
+
+  --progress (required)
+
 
 Example:
   chitta goal_progress --id "..." --progress "..."

@@ -1,12 +1,10 @@
-chitta msg_history - List recent cross-session messages
+chitta msg_history - Get message history
 
 Parameters:
+  --limit
+
   --session_id
-      Session ID (default: current)
-  --direction [default: both]
-      sent|received|both
-  --limit [default: 50]
-      Max messages
+
 
 Example:
   chitta msg_history

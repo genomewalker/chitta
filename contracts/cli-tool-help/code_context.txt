@@ -2,7 +2,7 @@ chitta code_context - Get code context summary
 
 Parameters:
   --path
-      File path
+
 
 Example:
   chitta code_context

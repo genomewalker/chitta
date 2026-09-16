@@ -1,0 +1,10 @@
+chitta pin_memory - Pin memory to keep hot
+
+Parameters:
+  --id (required)
+
+  --reason
+
+
+Example:
+  chitta pin_memory --id "..."

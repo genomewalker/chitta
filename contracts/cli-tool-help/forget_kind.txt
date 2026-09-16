@@ -1,12 +1,12 @@
-chitta forget_kind - Bulk-delete all memories of a given kind (e.g. habit, unknown)
+chitta forget_kind - Bulk-delete all memories of a given kind (e.g. 'habit'). Optionally filter by realm.
 
 Parameters:
   --kind (required)
-      Memory kind to delete
+      Memory kind to delete (e.g. habit, unknown)
+  --limit
+      Max to delete (default 5000)
   --realm
       Optional realm filter
-  --limit [default: 5000]
-      Max to delete (default 5000)
 
 Example:
   chitta forget_kind --kind "..."

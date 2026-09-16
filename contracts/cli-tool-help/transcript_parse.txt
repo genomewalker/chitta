@@ -1,10 +1,3 @@
-chitta transcript_parse - Parse new turns from a transcript JSONL file
+chitta transcript_parse - Legacy daemon handler
 
-Parameters:
-  --session_id (required)
-      Session ID to parse
-  --min_turns [default: 4]
-      Minimum turns to return
-
-Example:
-  chitta transcript_parse --session_id "..."
+  Legacy handler; parameters are validated by the daemon.

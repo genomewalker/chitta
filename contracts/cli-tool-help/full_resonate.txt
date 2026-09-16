@@ -1,16 +1,20 @@
-chitta full_resonate - Semantic search with full context (for hooks)
+chitta full_resonate - Semantic search with full context
 
 Parameters:
+  --exclude_kinds
+
+  --include_global
+
+  --k
+
+  --partnership_only
+
   --query (required)
-      Search query
-  --k [default: 10]
-      Max results
+
   --realm
-      Filter by realm (empty = all visible)
-  --exclude-kinds
-      Comma-separated kinds to exclude
-  --partnership-only [default: false]
-      Exclude code intel (symbol, projectessence, modulestate, patternstate)
+
+  --separation_mode
+
 
 Example:
   chitta full_resonate --query "..."

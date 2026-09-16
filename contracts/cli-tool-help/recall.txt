@@ -1,20 +1,30 @@
-chitta recall - Search memory by semantic similarity
+chitta recall - Search memory by semantic similarity with realm filtering
 
 Parameters:
+  --explain
+      Include score decomposition per hit (default: false)
+  --gwt_mode
+      Global Workspace Theory mode (default: false)
+  --include_global
+      Include global memories (default: true)
+  --limit
+      Max results (default 10)
+  --min_confidence
+      Minimum confidence threshold
+  --pool
+      Candidate pool depth before the recall-biased pre-filter (default 60, max 160; env CHITTA_RECALL_POOL)
+  --prefilter
+      Recall-biased pre-filter (default true; false or CHITTA_RECALL_PREFILTER=0 restores the narrow-pool path)
   --query (required)
       Search query
-  --limit [default: 10]
-      Max results
+  --realm
+      Filter by realm
+  --separation_mode
+      Diverse results via MMR (default: false)
+  --strategy
+      Retrieval lane: fused (default), keyword (BM25 only, realm-scoped), field (Hopfield/DAM)
   --tag
       Filter by tag
-  --realm
-      Filter by realm (empty = all visible)
-  --strategy
-      Retrieval lane: fused (default), keyword (BM25 only, realm-scoped), field
-  --pool [default: 60]
-      Candidate pool depth before the recall-biased pre-filter (max 160)
-  --prefilter [default: true]
-      Recall-biased pre-filter (false = narrow-pool legacy path)
 
 Example:
   chitta recall --query "..."

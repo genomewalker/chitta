@@ -1,0 +1,3 @@
+chitta skill_list - List all skills
+
+  No parameters required.

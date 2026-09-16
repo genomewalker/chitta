@@ -1,0 +1,12 @@
+chitta query_wisdom_candidates - Query wisdom candidates by lifecycle stage and/or domain
+
+Parameters:
+  --domain
+      Filter by domain
+  --lifecycle
+      Filter by lifecycle: 0=candidate, 1=provisional, 2=trusted, 3=demoted
+  --limit
+      Max results (default 50)
+
+Example:
+  chitta query_wisdom_candidates

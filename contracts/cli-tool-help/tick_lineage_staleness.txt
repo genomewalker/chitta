@@ -1,0 +1,3 @@
+chitta tick_lineage_staleness - Manually trigger a staleness tick — grows staleness mass on lineages with no recent support. Normally called by the subconscious cycle.
+
+  No parameters required.

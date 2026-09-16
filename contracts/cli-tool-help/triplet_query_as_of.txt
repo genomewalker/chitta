@@ -1,0 +1,10 @@
+chitta triplet_query_as_of - Query triplets for a subject valid at a given world timestamp, excluding superseded entries
+
+Parameters:
+  --subject (required)
+      Subject node to query
+  --world_ms
+      World-time epoch ms (default: now)
+
+Example:
+  chitta triplet_query_as_of --subject "..."

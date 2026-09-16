@@ -1,10 +1,10 @@
 chitta weaken - Decrease confidence of a memory
 
 Parameters:
+  --amount
+
   --id (required)
-      Node ID
-  --amount [default: 0.1]
-      Amount to weaken (0-1)
+
 
 Example:
   chitta weaken --id "..."

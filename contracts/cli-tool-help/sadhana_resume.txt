@@ -1,0 +1,8 @@
+chitta sadhana_resume - Resume a paused sadhana
+
+Parameters:
+  --id (required)
+
+
+Example:
+  chitta sadhana_resume --id "..."

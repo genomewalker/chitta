@@ -1,8 +1,10 @@
-chitta theme_list - List all themes with stats
+chitta theme_list - List all themes with statistics
 
 Parameters:
+  --limit
+
   --realm
-      Filter by realm
+
 
 Example:
   chitta theme_list

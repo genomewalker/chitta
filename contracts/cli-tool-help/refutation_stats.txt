@@ -1,8 +1,8 @@
-chitta refutation_stats - Show Sequitur rules being falsified: antecedent appears but expected consequent does not. Reports live/refuted counts and top-k by refutation ratio.
+chitta refutation_stats - Show Sequitur rules that are being falsified: rules whose antecedent appears but is NOT followed by the expected consequent. Returns live/refuted counts and top-k by refutation ratio.
 
 Parameters:
-  --k [default: 10]
-      Max rules to show
+  --k
+      Max rules to show (default 10)
 
 Example:
   chitta refutation_stats

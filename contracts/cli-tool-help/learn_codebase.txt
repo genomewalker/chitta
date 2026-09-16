@@ -1,16 +1,20 @@
-chitta learn_codebase - Learn codebase by extracting all symbols
+chitta learn_codebase - Learn codebase by extracting symbols. path can be a local directory or a remote git URL (https://github.com/..., git@github.com:...). Remote repos are shallow-cloned into a temp dir, indexed, then deleted.
 
 Parameters:
-  --path (required)
-      Directory path to analyze
-  --project
-      Project name (auto-detected if empty)
-  --max_files [default: 500]
-      Max files to process
+  --branch
+      Branch, tag, or commit to clone (remote only)
   --exclude
-      Comma-separated directories to exclude
-  --force [default: false]
-      Reprocess all files even if unchanged (repopulates callsites)
+
+  --force
+
+  --incremental
+
+  --max_files
+
+  --path (required)
+      Local path or remote git URL
+  --project
+      Project name (defaults to repo/dir name)
 
 Example:
   chitta learn_codebase --path "..."

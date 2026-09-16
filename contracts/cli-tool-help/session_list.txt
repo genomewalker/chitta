@@ -1,10 +1,14 @@
 chitta session_list - List active sessions
 
 Parameters:
+  --active_only
+
   --realm
-      Filter by realm
-  --status [default: active]
-      Filter by status
+
+  --status
+
+  --ttl_seconds
+
 
 Example:
   chitta session_list

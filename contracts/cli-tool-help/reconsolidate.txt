@@ -1,0 +1,12 @@
+chitta reconsolidate - Update content of a memory during its labile window (reconsolidation)
+
+Parameters:
+  --content (required)
+      New/corrected content
+  --id (required)
+      Memory ID to update
+  --reason
+      Optional reason for reconsolidation
+
+Example:
+  chitta reconsolidate --id "..." --content "..."

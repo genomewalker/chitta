@@ -1,8 +1,8 @@
-chitta session_sync - Sync session registry with running Claude processes and transcript files
+chitta session_sync - Sync session registry
 
 Parameters:
   --projects_dir
-      Claude projects directory (default: ~/.claude/projects)
+
 
 Example:
   chitta session_sync

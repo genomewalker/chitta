@@ -1,10 +1,3 @@
-chitta import_soul - Import .soul file (SSL format)
+chitta import_soul - Legacy daemon handler
 
-Parameters:
-  --file
-      Path to .soul file
-  --content
-      SSL content (alternative to file)
-
-Example:
-  chitta import_soul
+  Legacy handler; parameters are validated by the daemon.

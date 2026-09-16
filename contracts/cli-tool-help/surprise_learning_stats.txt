@@ -1,0 +1,3 @@
+chitta surprise_learning_stats - Rolling surprise credit stats — tracked memories, gates passed, strength adjustments
+
+  No parameters required.

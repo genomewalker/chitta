@@ -1,0 +1,12 @@
+chitta agent_upsert - Register or update an agent
+
+Parameters:
+  --agent_id (required)
+
+  --description
+
+  --display_name
+
+
+Example:
+  chitta agent_upsert --agent_id "..."

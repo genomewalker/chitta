@@ -1,0 +1,16 @@
+chitta long_task_event - Append event to task log
+
+Parameters:
+  --kind (required)
+
+  --payload
+
+  --related_entities
+
+  --tags
+
+  --task_id (required)
+
+
+Example:
+  chitta long_task_event --task_id "..." --kind "..."

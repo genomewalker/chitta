@@ -1,0 +1,10 @@
+chitta get_entities - Get tracked entities
+
+Parameters:
+  --limit
+
+  --type
+
+
+Example:
+  chitta get_entities

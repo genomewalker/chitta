@@ -1,8 +1,8 @@
-chitta dream_force_woke - Force a stuck dream to woke status (marks complete, stops sadhana)
+chitta dream_force_woke - Force stuck dream to woke
 
 Parameters:
   --id (required)
-      Dream ID
+
 
 Example:
   chitta dream_force_woke --id "..."

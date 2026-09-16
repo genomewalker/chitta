@@ -1,8 +1,3 @@
-chitta cycle - Run maintenance cycle (decay, cleanup)
+chitta cycle - Legacy daemon handler
 
-Parameters:
-  --force [default: false]
-      Force full cycle
-
-Example:
-  chitta cycle
+  Legacy handler; parameters are validated by the daemon.

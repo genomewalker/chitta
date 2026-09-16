@@ -1,0 +1,14 @@
+chitta compact_context - Memory-aware context compaction. Scores conversation messages by recency, semantic relevance to query, and memory coverage (content already in memory is safer to drop). Returns a subset of messages fitting the target token budget.
+
+Parameters:
+  --distill_novel
+      Reserved for future use
+  --messages (required)
+      Conversation messages [{role,content}]
+  --query
+      Upcoming task hint for semantic scoring
+  --target_ratio
+      Fraction of tokens to KEEP (default 0.4)
+
+Example:
+  chitta compact_context --messages "..."

@@ -1,0 +1,14 @@
+chitta skill_upload - Upload a new skill version
+
+Parameters:
+  --content (required)
+
+  --skill_id (required)
+
+  --tags
+
+  --uploaded_by
+
+
+Example:
+  chitta skill_upload --skill_id "..." --content "..."

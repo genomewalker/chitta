@@ -1,0 +1,3 @@
+chitta write_gate_stats - Show write-gate admission stats: staged memory count and oldest staged memory age
+
+  No parameters required.

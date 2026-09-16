@@ -1,14 +1,16 @@
-chitta goal_set - Set a new goal
+chitta goal_set - Define a long-term goal
 
 Parameters:
-  --title (required)
-      Short goal name
-  --description
-      Detailed description
   --deadline
-      Optional deadline (Unix timestamp)
+
+  --description
+
+  --milestones
+
   --realm
-      Realm
+
+  --title (required)
+
 
 Example:
   chitta goal_set --title "..."

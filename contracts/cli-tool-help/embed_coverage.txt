@@ -1,0 +1,3 @@
+chitta embed_coverage - Semantic-index coverage: how many memories SHOULD have a vector vs how many DO. pending_count cannot answer this — the embed queue drains on failure as well as success, so a lost embedding leaves the queue empty.
+
+  No parameters required.

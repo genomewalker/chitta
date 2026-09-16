@@ -1,3 +1,3 @@
-chitta harvest_scope - CEC Phase 17 open-weight harvest targeting: derive scope from current Turīya anomalies + router miss patterns. Output JSON used by scripts/harvest_ow.py for demand-driven extraction.
+chitta harvest_scope - Legacy daemon handler
 
-  No parameters required.
+  Legacy handler; parameters are validated by the daemon.

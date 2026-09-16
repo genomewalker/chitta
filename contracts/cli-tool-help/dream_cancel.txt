@@ -1,8 +1,8 @@
-chitta dream_cancel - Cancel an active dream (stops sadhana, marks cancelled)
+chitta dream_cancel - Cancel a dream
 
 Parameters:
   --id (required)
-      Dream ID
+
 
 Example:
   chitta dream_cancel --id "..."

@@ -1,0 +1,14 @@
+chitta memory_lock - Acquire memory lock
+
+Parameters:
+  --duration
+
+  --holder_id (required)
+
+  --holder_type
+
+  --id (required)
+
+
+Example:
+  chitta memory_lock --id "..." --holder_id "..."

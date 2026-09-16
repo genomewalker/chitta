@@ -1,0 +1,10 @@
+chitta long_task_complete - Mark task as completed
+
+Parameters:
+  --outcome (required)
+
+  --task_id (required)
+
+
+Example:
+  chitta long_task_complete --task_id "..." --outcome "..."

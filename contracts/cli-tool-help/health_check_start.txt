@@ -1,12 +1,3 @@
-chitta health_check_start - Start autonomous health-check sadhana
+chitta health_check_start - Legacy daemon handler
 
-Parameters:
-  --interval_seconds [default: 3600]
-      Check interval in seconds
-  --realm [default: brahman]
-      Realm to monitor
-  --max_turns [default: 0]
-      Max check cycles (0 = unlimited)
-
-Example:
-  chitta health_check_start
+  Legacy handler; parameters are validated by the daemon.

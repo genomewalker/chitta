@@ -1,3 +1,0 @@
-chitta background_status - Get background processing and embedding scheduler status
-
-  No parameters required.

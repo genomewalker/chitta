@@ -1,0 +1,3 @@
+chitta debt_stats - Summary statistics for epistemic debt: counts by status, avg fragility
+
+  No parameters required.

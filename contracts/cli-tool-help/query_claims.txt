@@ -1,0 +1,16 @@
+chitta query_claims - Query semantic claims
+
+Parameters:
+  --active_only
+
+  --limit
+
+  --predicate
+
+  --scope
+
+  --subject
+
+
+Example:
+  chitta query_claims

@@ -1,0 +1,12 @@
+chitta structured_recall - Three-lens recall: facts, context, and temporal agents merged for high-fidelity retrieval
+
+Parameters:
+  --limit
+
+  --query (required)
+
+  --realm
+
+
+Example:
+  chitta structured_recall --query "..."

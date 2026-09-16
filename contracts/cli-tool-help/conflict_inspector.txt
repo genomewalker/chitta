@@ -1,0 +1,12 @@
+chitta conflict_inspector - Semantic search + show status and contradiction partners for each hit
+
+Parameters:
+  --limit
+      Max memories to scan (default 10)
+  --query (required)
+      Search query
+  --realm
+      Filter by realm
+
+Example:
+  chitta conflict_inspector --query "..."

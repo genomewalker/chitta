@@ -1,4 +1,4 @@
-chitta span_backfill - Backfill the span lane over all transcripts (incremental, idempotent).
+chitta span_backfill - Backfill the span lane over all transcripts under projects_dir (default ~/.claude/projects). Incremental + idempotent via per-file watermarks. Reports unique atoms, new atoms, redaction count.
 
 Parameters:
   --projects_dir

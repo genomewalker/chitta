@@ -1,0 +1,18 @@
+chitta connect_temporal - Create triplet with temporal validity
+
+Parameters:
+  --context_date
+
+  --object (required)
+
+  --predicate (required)
+
+  --subject (required)
+
+  --valid_from
+
+  --valid_to
+
+
+Example:
+  chitta connect_temporal --subject "..." --predicate "..." --object "..."

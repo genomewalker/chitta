@@ -1,0 +1,10 @@
+chitta set_evidence_type - Tag a memory with its epistemological evidence class (observation/inference/hearsay/authoritative/prediction)
+
+Parameters:
+  --evidence_type (required)
+      One of: observation, inference, hearsay, authoritative, prediction
+  --id (required)
+      Memory ID
+
+Example:
+  chitta set_evidence_type --id "..." --evidence_type "..."

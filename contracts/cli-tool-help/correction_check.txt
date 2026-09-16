@@ -1,8 +1,8 @@
-chitta correction_check - Deterministic durable-correction check (capability #2): does a stored [correction] trigger recur in this turn? Exact keyed bigram probe — reserves an injection slot, bypasses fuzzy recall.
+chitta correction_check - Deterministic durable-correction check (capability #2): does any stored [correction] trigger recur in this turn? Exact keyed bigram probe of the turn text against corrected-mistake phrases — reserves an injection slot, bypassing fuzzy recall (which loses corrections on cosine similarity ~99% of the time). Returns found + the correction(s), newest first (latest-wins).
 
 Parameters:
   --text (required)
-      Turn/context text to scan for a recurring corrected mistake
+      Turn / context text to scan for a recurring corrected mistake
 
 Example:
   chitta correction_check --text "..."

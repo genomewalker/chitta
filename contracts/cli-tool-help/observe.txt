@@ -1,24 +1,30 @@
-chitta observe - Store observation (used by hooks for [LEARN] extraction)
+chitta observe - Store an observation/learning (SSL v0.4)
 
 Parameters:
-  --title (required)
-      Short title
-  --content (required)
-      Full content
-  --category [default: episode]
-      Category: wisdom|insight|signal|episode
-  --tags
-      Comma-separated tags
-  --realm
-      Primary realm (default: brahman)
-  --source [default: mcp_tool]
-      Source: hook_regex|hook_compliance|distillation|mcp_tool
+  --arousal
+      Affect arousal: 0.0 to 1.0
+  --category
+
   --confidence
-      Override confidence (0.0-1.0)
-  --evidence
-      What triggered this observation
-  --force_supersede_ids
-      Comma-separated memory IDs to explicitly supersede
+
+  --content (required)
+
+  --derivation
+      SSL v0.4 <=@ provenance: comma-separated source memory IDs this was abstracted from (required at G:1+)
+  --flags
+      Structural flags: ORIGIN,CORE,PIVOT,GENESIS,TURNING
+  --granularity
+      SSL v0.4 granularity tier: 0=atom,1=episode,2=claim,3=operator,4=boundary
+  --refs
+      Cross-references: comma-separated tag names or memory IDs
+  --source_loc
+      SSL v0.4 src: external source grounding, e.g. file:line or doc section
+  --tags
+
+  --title (required)
+
+  --valence
+      Affect valence: -1.0 to +1.0
 
 Example:
   chitta observe --title "..." --content "..."

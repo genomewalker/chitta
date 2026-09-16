@@ -1,0 +1,3 @@
+chitta lineage_expiry_check - List Inflamed lineages whose re-derivation TTL has expired — these should be demoted or re-derived urgently
+
+  No parameters required.

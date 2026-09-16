@@ -1,0 +1,3 @@
+chitta agent_protocol_stats - Show agent protocol memory statistics — total tasks, delegations, evidence links, probes, criteria counts
+
+  No parameters required.

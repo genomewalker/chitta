@@ -1,12 +1,12 @@
-chitta habit_observe - Record a trigger→response pattern
+chitta habit_observe - Record trigger->response pattern
 
 Parameters:
-  --trigger (required)
-      What triggers the habit
-  --response (required)
-      What should happen when triggered
   --realm
-      Realm
+
+  --response (required)
+
+  --trigger (required)
+
 
 Example:
   chitta habit_observe --trigger "..." --response "..."

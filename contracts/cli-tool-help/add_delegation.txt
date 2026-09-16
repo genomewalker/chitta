@@ -1,0 +1,14 @@
+chitta add_delegation - Record a delegation edge — tracks which agent handed off to which, with optional handoff note
+
+Parameters:
+  --from_agent (required)
+      Delegating agent name
+  --handoff_note
+      Optional context passed at handoff
+  --task_id (required)
+      Task ID
+  --to_agent (required)
+      Receiving agent name
+
+Example:
+  chitta add_delegation --task_id "..." --from_agent "..." --to_agent "..."

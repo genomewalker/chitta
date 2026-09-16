@@ -1,14 +1,20 @@
 chitta smart_context - Build intelligent context combining memories, code, and graph
 
 Parameters:
-  --task (required)
-      Task description
-  --mode
-      Context mode
+  --code
+
   --limit
-      Max results
+
+  --memories
+
+  --mode
+
+  --neighbors
+
   --realm
-      Realm filter
+
+  --task (required)
+
 
 Example:
   chitta smart_context --task "..."

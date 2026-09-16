@@ -1,0 +1,14 @@
+chitta query_unify - Pattern-match query against constraint store (unification with wildcards)
+
+Parameters:
+  --object
+      Object filter
+  --predicate
+      Predicate filter
+  --scope
+      Scope filter
+  --subject
+      Subject filter (omit for wildcard)
+
+Example:
+  chitta query_unify

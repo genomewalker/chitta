@@ -1,14 +1,14 @@
-chitta list_memories_brief - List memories with full content, realm, and tags (JSON-per-line). Used by enrichers.
+chitta list_memories_brief - Fast memory index
 
 Parameters:
-  --limit [default: 200]
-      Max memories to return (default 200)
-  --offset [default: 0]
-      Pagination offset
-  --realm [default: ]
-      Filter by realm
-  --kind [default: ]
-      Filter by kind
+  --kind
+
+  --limit
+
+  --priority_tier
+
+  --realm
+
 
 Example:
   chitta list_memories_brief

@@ -1,10 +1,10 @@
-chitta realm_remove - Remove memory from realm
+chitta realm_remove - Remove memory from a shared realm (stub)
 
 Parameters:
   --id (required)
-      Memory ID
+
   --realm (required)
-      Realm name to remove
+
 
 Example:
   chitta realm_remove --id "..." --realm "..."

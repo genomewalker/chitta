@@ -1,0 +1,10 @@
+chitta expand_memory - Expand a memory to full hierarchical context
+
+Parameters:
+  --depth
+
+  --id (required)
+
+
+Example:
+  chitta expand_memory --id "..."

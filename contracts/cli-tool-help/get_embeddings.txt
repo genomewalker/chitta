@@ -1,8 +1,8 @@
-chitta get_embeddings - Batch-fetch raw embedding vectors for memory IDs (for S-entropy / Gram matrix)
+chitta get_embeddings - Batch-fetch raw embedding vectors for memory IDs. Returns JSON object mapping id→vector. Used for computing S-entropy (Gram matrix effective rank) over recall candidates.
 
 Parameters:
   --ids (required)
-      JSON array of memory ID strings
+      Array of memory ID strings
 
 Example:
   chitta get_embeddings --ids "..."

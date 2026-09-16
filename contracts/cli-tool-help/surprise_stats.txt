@@ -1,0 +1,3 @@
+chitta surprise_stats - Summary statistics for surprise memory: counts, avg magnitude, domain breakdown
+
+  No parameters required.

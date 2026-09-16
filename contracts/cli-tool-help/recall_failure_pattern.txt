@@ -1,8 +1,8 @@
-chitta recall_failure_pattern - Return top-k CDAWG states with high failure rates
+chitta recall_failure_pattern - Return top-k CDAWG states with high failure rates (fail_ratio > 0.6, fail_count >= 3)
 
 Parameters:
-  --k [default: 5]
-      Max results
+  --k
+
 
 Example:
   chitta recall_failure_pattern

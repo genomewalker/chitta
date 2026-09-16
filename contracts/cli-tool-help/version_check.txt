@@ -1,3 +1,3 @@
-chitta version_check - Get version information
+chitta version_check - Legacy daemon handler
 
-  No parameters required.
+  Legacy handler; parameters are validated by the daemon.

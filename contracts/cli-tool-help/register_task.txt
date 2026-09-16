@@ -1,0 +1,24 @@
+chitta register_task - Register a task contract — records goal, constraints, acceptance criteria, priority, and optional deadline for an ongoing agent task
+
+Parameters:
+  --acceptance_criteria
+      Criteria for task completion
+  --constraints
+      Constraints that must be respected
+  --deadline_ms
+      Optional deadline as Unix ms timestamp
+  --goal (required)
+      Task goal description
+  --parent_task_id
+      Parent task ID for subtasks
+  --priority
+      Priority 1-10 (default 5)
+  --realm
+      Realm: coding, research, planning (default: coding)
+  --session_id
+      Session this task belongs to
+  --tags
+      Optional tags
+
+Example:
+  chitta register_task --goal "..."

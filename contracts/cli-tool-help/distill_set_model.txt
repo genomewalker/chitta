@@ -1,0 +1,10 @@
+chitta distill_set_model - Change distillation model
+
+Parameters:
+  --enabled
+
+  --model (required)
+
+
+Example:
+  chitta distill_set_model --model "..."

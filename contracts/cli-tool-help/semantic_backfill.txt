@@ -1,12 +1,12 @@
-chitta semantic_backfill - Dense-kNN SemanticNeighbor edge backfill: link each memory to its top-k realm-scoped HNSW neighbors (cosine>=min_cos) with bidirectional similarity edges. First real memory<->memory knowledge relation. Dry-run by default (counts, no writes).
+chitta semantic_backfill - Dense-kNN SemanticNeighbor edge backfill: for each non-deleted memory, link its top-k realm-scoped HNSW neighbors (cosine>=min_cos) with bidirectional similarity edges (wire 6). The first genuine memory<->memory knowledge relation in the assoc graph, distinct from CoRetrieved's retrieval-history prior. apply=false is a dry run (counts candidate edges, no writes). apply=true creates them (idempotent; rollback via remove_assoc_edges_by_type edge_type=6).
 
 Parameters:
-  --apply [default: false]
-      Create the edges (default false = dry-run count only)
-  --k [default: 6]
-      Neighbors per memory (default 6)
-  --min_cos [default: 0.6]
-      Minimum cosine to link (default 0.6)
+  --apply
+
+  --k
+
+  --min_cos
+
 
 Example:
   chitta semantic_backfill

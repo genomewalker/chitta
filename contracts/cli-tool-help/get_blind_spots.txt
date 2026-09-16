@@ -1,0 +1,10 @@
+chitta get_blind_spots - Identify recurring surprise patterns — domains/actions where predictions consistently fail
+
+Parameters:
+  --limit
+      Max blind spots (default 10)
+  --realm
+      Filter by realm
+
+Example:
+  chitta get_blind_spots

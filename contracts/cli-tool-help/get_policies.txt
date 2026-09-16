@@ -1,0 +1,12 @@
+chitta get_policies - Get active policies
+
+Parameters:
+  --limit
+
+  --scope
+
+  --type
+
+
+Example:
+  chitta get_policies

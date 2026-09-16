@@ -1,0 +1,12 @@
+chitta triplet_supersede - Mark one triplet as superseded by another (bi-temporal update)
+
+Parameters:
+  --at_ms
+      Ingestion-time of supersession (default: now)
+  --new_id (required)
+      Replacing triplet ID
+  --old_id (required)
+      Triplet ID being superseded
+
+Example:
+  chitta triplet_supersede --old_id "..." --new_id "..."

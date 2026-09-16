@@ -1,0 +1,12 @@
+chitta get_turns - Get conversation turns for a session
+
+Parameters:
+  --limit
+
+  --session_id
+
+  --start_index
+
+
+Example:
+  chitta get_turns

@@ -1,0 +1,16 @@
+chitta query_surprises - Query recorded surprise/prediction-error events with filters
+
+Parameters:
+  --domain
+      Filter by domain
+  --limit
+      Max results (default 50)
+  --min_magnitude
+      Minimum surprise magnitude
+  --realm
+      Filter by realm
+  --since_ms
+      Only events after this timestamp (ms)
+
+Example:
+  chitta query_surprises

@@ -1,3 +1,3 @@
-chitta probe_status - Show how many exemplars exist per behavioral class
+chitta probe_status - Show how many exemplars exist per behavioral class. Use to verify the probe is seeded before running behavioral_probe.
 
   No parameters required.

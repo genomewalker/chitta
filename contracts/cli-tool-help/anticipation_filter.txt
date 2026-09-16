@@ -1,0 +1,10 @@
+chitta anticipation_filter - Get predictions passing annoyance gate
+
+Parameters:
+  --max
+
+  --session_id
+
+
+Example:
+  chitta anticipation_filter

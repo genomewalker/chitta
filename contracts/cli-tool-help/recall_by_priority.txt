@@ -1,0 +1,14 @@
+chitta recall_by_priority - Budget-aware recall
+
+Parameters:
+  --budget_tokens
+
+  --include_global
+
+  --query
+
+  --realm
+
+
+Example:
+  chitta recall_by_priority

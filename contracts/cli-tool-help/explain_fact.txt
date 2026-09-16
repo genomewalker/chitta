@@ -1,0 +1,8 @@
+chitta explain_fact - Explain a fact: provenance chain + supporting/conflicting facts
+
+Parameters:
+  --fact_id (required)
+      Fact ID to explain
+
+Example:
+  chitta explain_fact --fact_id "..."
