@@ -1,0 +1,14 @@
+chitta recall_counterfactual - CDAWG sibling-edge counterfactual: what alternative tool/entity would have had a lower failure rate in the same context?
+
+Parameters:
+  --tool (required)
+      Tool name that was used
+  --entity (required)
+      Entity that was acted on
+  --outcome [default: 1]
+      Outcome class (0=success 1=fail 2=error 3=partial)
+  --k [default: 5]
+      Max alternatives
+
+Example:
+  chitta recall_counterfactual --tool "..." --entity "..."

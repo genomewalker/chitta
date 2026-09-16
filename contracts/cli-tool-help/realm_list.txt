@@ -1,0 +1,3 @@
+chitta realm_list - List all known realms
+
+  No parameters required.

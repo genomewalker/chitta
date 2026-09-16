@@ -1,0 +1,12 @@
+chitta query - Query triplets with flexible filters
+
+Parameters:
+  --subject
+      Subject filter
+  --predicate
+      Predicate filter
+  --object
+      Object filter
+
+Example:
+  chitta query

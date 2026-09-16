@@ -1,0 +1,10 @@
+chitta calibration_record - Record a prediction outcome for calibration
+
+Parameters:
+  --domain (required)
+      Domain: code|architecture|debugging|etc
+  --success (required)
+      Did the prediction succeed? true|false
+
+Example:
+  chitta calibration_record --domain "..." --success "..."

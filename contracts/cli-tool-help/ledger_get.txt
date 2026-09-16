@@ -1,0 +1,8 @@
+chitta ledger_get - Get specific checkpoint by ID
+
+Parameters:
+  --id (required)
+      Checkpoint ID
+
+Example:
+  chitta ledger_get --id "..."

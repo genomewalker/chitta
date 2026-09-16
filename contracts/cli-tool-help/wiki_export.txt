@@ -1,0 +1,12 @@
+chitta wiki_export - Export memories as Obsidian-compatible .md wiki with backlinks
+
+Parameters:
+  --output_dir
+      Output directory
+  --realm
+      Filter to specific realm
+  --max_memories [default: 5000]
+      Max memories per realm
+
+Example:
+  chitta wiki_export

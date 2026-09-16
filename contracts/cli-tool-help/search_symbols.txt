@@ -1,0 +1,14 @@
+chitta search_symbols - Semantic search for code symbols
+
+Parameters:
+  --query (required)
+      Search query
+  --kind
+      Symbol kind filter
+  --limit [default: 10]
+      Max results
+  --project
+      Project name to disambiguate
+
+Example:
+  chitta search_symbols --query "..."

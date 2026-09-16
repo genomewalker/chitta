@@ -1,0 +1,8 @@
+chitta forget - Remove a memory
+
+Parameters:
+  --id (required)
+      Node ID to forget
+
+Example:
+  chitta forget --id "..."

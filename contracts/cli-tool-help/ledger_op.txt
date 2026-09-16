@@ -1,0 +1,10 @@
+chitta ledger_op - Daemon-owned task ledger operation
+
+Parameters:
+  --op (required)
+      Operation name
+  --args [default: {}]
+      Operation arguments JSON
+
+Example:
+  chitta ledger_op --op "..."

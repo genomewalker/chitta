@@ -1,0 +1,8 @@
+chitta ledger_delete - Delete checkpoint
+
+Parameters:
+  --id (required)
+      Checkpoint ID to delete
+
+Example:
+  chitta ledger_delete --id "..."

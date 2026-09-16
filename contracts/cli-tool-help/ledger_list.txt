@@ -1,0 +1,10 @@
+chitta ledger_list - List recent checkpoints
+
+Parameters:
+  --project
+      Project filter (optional)
+  --limit [default: 10]
+      Max entries to return
+
+Example:
+  chitta ledger_list

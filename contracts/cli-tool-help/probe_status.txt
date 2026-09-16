@@ -1,0 +1,3 @@
+chitta probe_status - Show how many exemplars exist per behavioral class
+
+  No parameters required.

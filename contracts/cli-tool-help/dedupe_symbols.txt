@@ -1,0 +1,12 @@
+chitta dedupe_symbols - GC the symbol index: stale-line duplicates, excluded paths, dead files
+
+Parameters:
+  --dry_run [default: true]
+      Count only, remove nothing (default true)
+  --check_fs [default: true]
+      Treat symbols whose file no longer exists as dead
+  --exclude [default: plugins/cache,_deps,node_modules,__pycache__,.venv]
+      Comma-separated path substrings to purge
+
+Example:
+  chitta dedupe_symbols

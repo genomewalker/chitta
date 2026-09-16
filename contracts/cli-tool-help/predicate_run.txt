@@ -1,0 +1,3 @@
+chitta predicate_run - v7.0 Falsifiable memories: run all predicates for a memory; returns passed/failed counts and epistemic_status. Decays confidence on failure.
+
+  No parameters required.

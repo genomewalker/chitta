@@ -1,0 +1,8 @@
+chitta why_active - Explain why a memory is active: status, epistemic source, confirmations, contradictions
+
+Parameters:
+  --id (required)
+      Memory ID
+
+Example:
+  chitta why_active --id "..."

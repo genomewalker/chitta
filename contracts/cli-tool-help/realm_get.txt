@@ -1,0 +1,8 @@
+chitta realm_get - Get realm for a memory
+
+Parameters:
+  --id (required)
+      Memory ID
+
+Example:
+  chitta realm_get --id "..."

@@ -1,0 +1,25 @@
+# Canonical user-level hook install set. Keep adapters and their shared cores
+# together so ~/.claude/hooks never runs a wrapper from one revision with a
+# core/library from another.
+lib.sh
+subconscious.sh
+session-start-hook.sh
+compact-restore-hook.sh
+resume-inject-hook.sh
+prompt-hook.sh
+prompt-core.sh
+stop-hook.sh
+stop-core.sh
+stop-transcript-snapshot.py
+span-capture.sh
+session-end-hook.sh
+pre-compact-hook.sh
+subagent-stop-hook.sh
+file-changed-hook.sh
+pre-tool-hook.sh
+post-bash-hook.sh
+log-bash-history.sh
+memory-intercept.sh
+outcome-ledger.sh
+distill.sh
+artifact-trace.sh

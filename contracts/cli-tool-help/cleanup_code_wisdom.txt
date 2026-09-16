@@ -1,0 +1,8 @@
+chitta cleanup_code_wisdom - Migration: delete [code] wisdom memories and clear orphaned symbol.memory_id
+
+Parameters:
+  --dry-run [default: true]
+      Preview only without changes (default: true)
+
+Example:
+  chitta cleanup_code_wisdom

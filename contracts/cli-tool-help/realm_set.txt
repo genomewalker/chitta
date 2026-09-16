@@ -1,0 +1,10 @@
+chitta realm_set - Set primary realm for a memory
+
+Parameters:
+  --id (required)
+      Memory ID
+  --realm (required)
+      Realm name
+
+Example:
+  chitta realm_set --id "..." --realm "..."

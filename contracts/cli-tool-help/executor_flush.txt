@@ -1,0 +1,3 @@
+chitta executor_flush - Promote shadow CEC policies past the 20-event/lift>0.15 gate and demote policies whose source rule is refuted. Reports promoted/demoted ids and store stats.
+
+  No parameters required.

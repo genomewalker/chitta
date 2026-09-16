@@ -1,0 +1,10 @@
+chitta msg_ack - Acknowledge a cross-session message
+
+Parameters:
+  --message_id (required)
+      Message ID
+  --session_id
+      Session ID (default: current)
+
+Example:
+  chitta msg_ack --message_id "..."

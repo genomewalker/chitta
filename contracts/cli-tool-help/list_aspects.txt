@@ -1,0 +1,3 @@
+chitta list_aspects - List available semantic aspects
+
+  No parameters required.

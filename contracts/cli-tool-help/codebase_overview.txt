@@ -1,0 +1,10 @@
+chitta codebase_overview - Get full indexed codebase structure
+
+Parameters:
+  --project
+      Project name
+  --format
+      Output format
+
+Example:
+  chitta codebase_overview

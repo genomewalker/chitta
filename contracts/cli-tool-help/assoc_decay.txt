@@ -1,0 +1,14 @@
+chitta assoc_decay - Gate B: decay + floor-prune one assoc EdgeType. Every edge weight is multiplied by factor; edges below prune_below are removed. Dry-run by default. One-shot saturation migration: factor=1.0, prune_below=0.2. Snapshot before apply.
+
+Parameters:
+  --edge_type [default: 3]
+      Wire numbering 0-5 (default 3=CoRetrieved)
+  --factor [default: 1.0]
+      Weight multiplier in (0,1] (default 1.0 = no decay)
+  --prune_below [default: 0.0]
+      Remove edges below this weight (default 0.0 = keep all)
+  --apply [default: false]
+      Perform the mutation (default false = dry-run count only)
+
+Example:
+  chitta assoc_decay

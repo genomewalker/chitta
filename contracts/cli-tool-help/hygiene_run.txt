@@ -1,0 +1,14 @@
+chitta hygiene_run - Run memory hygiene: decay, prune, consolidate
+
+Parameters:
+  --prune-threshold [default: 0.1]
+      Confidence below which to prune
+  --min-age-days [default: 7]
+      Minimum age for pruning
+  --consolidation-threshold [default: 0.85]
+      Similarity threshold for consolidation
+  --max-consolidations [default: 10]
+      Max consolidations per run
+
+Example:
+  chitta hygiene_run

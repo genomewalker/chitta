@@ -1,0 +1,10 @@
+chitta witness_memory - CEC Phase 17 candidate promotion: provide an outcome-witness to promote a candidate-band memory to established. Witnesses: correction|outcome|hit_rate_delta. Open-weight-generated writes start in candidate band until witnessed.
+
+Parameters:
+  --memory_id (required)
+      Memory ID to promote
+  --witness_kind (required)
+      Type: correction|outcome|hit_rate_delta
+
+Example:
+  chitta witness_memory --memory_id "..." --witness_kind "..."

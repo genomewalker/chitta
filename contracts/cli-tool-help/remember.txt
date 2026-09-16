@@ -1,0 +1,20 @@
+chitta remember - Store text in memory with optional tags
+
+Parameters:
+  --content (required)
+      Text to remember
+  --type [default: episode]
+      Node type: wisdom|belief|episode
+  --kind
+      Alias for --type
+  --tags
+      Comma-separated tags
+  --realm
+      Primary realm (default: brahman)
+  --visibility [default: 0]
+      0=Private, 1=Shared, 2=Global
+  --source_session
+      Session ID for grouping (used by recall_session)
+
+Example:
+  chitta remember --content "..."

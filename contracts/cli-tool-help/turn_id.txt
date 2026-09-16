@@ -1,0 +1,47 @@
+Unknown option: turn_id
+Usage:
+  chitta <tool> --param value ...   Invoke tool
+  chitta <tool> --help              Show tool parameters
+  chitta [options]                  Interactive mode (JSON-RPC)
+
+Examples:
+  chitta recall --query "search terms"
+  chitta soul_context
+  chitta observe --title "Decision" --content "Chose X over Y"
+  chitta grow --type wisdom --content "Pattern discovered"
+  chitta learn_codebase --path /path/to/project
+
+Tool categories:
+  Memory:      remember, recall, grow, get, update, forget, strengthen, weaken, tag
+  Triplets:    connect, query, query_graph
+  Hooks:       observe, full_resonate
+  Explore:     explore_recall, explore_peek, explore_expand, explore_neighbors
+  Context:     soul_context, health_check, version_check, lookup
+  Maintenance: cycle, cleanup, hygiene_stats, hygiene_run
+  Import/Export: import_soul, export_soul
+  Code Intel:  extract_symbols, learn_codebase, find_symbol, search_symbols, code_context
+  Call Graph:  symbol_callers, symbol_callees, resolve_callsites
+  Type/Import: type_hierarchy, file_imports, file_dependents, read_symbol, read_function
+  Realm:       realm_detect, realm_list, realm_get, realm_set, realm_add, realm_remove, realm_visibility
+  Ledger:      ledger_save, ledger_load, ledger_list, ledger_get, ledger_delete
+  Transcript:  read_transcript, transcript_register, transcript_get, transcript_list, transcript_update, transcript_remove
+  Learning:    learn_outcome, episode_cluster_status, calibration_record, calibration_score
+  Theme:       theme_list, theme_get, theme_recall, theme_stats, theme_maintain, theme_assign_orphans
+  Bulk ops:    forget_kind, list_memories_brief
+  CEC events:  log_event, log_event_ex, log_decision
+  CEC recall:  recall_last_action, recall_causal_antecedent, recall_failure_pattern,
+               recall_counterfactual, recall_true_counterfactual, recall_motif_value
+  CEC market:  hypothesis_probes, refutation_stats
+  CEC exec:    executor_flush, list_policies, consolidation_pass
+  CEC witness: turiya_status, tape_stats, verbalize_rules
+  CEC experiment: queue_experiments
+  CEC phase15: fep_status
+  CEC phase16: routed_recall
+  CEC phase17: witness_memory, reconcile_pass, harvest_scope, seed_hdc_geometry
+
+Global options:
+  --socket-path PATH  Unix socket path
+  --json              Output raw JSON instead of text
+  --toon              Output TOON format (compact, ~40% fewer tokens)
+  --text-only         Output only text content (for piping/hooks)
+  --help              Show this help message

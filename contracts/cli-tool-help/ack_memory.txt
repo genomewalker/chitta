@@ -1,0 +1,8 @@
+chitta ack_memory - Record a positive ack signal for a memory (raises its recall score)
+
+Parameters:
+  --id (required)
+      Node ID to ack
+
+Example:
+  chitta ack_memory --id "..."

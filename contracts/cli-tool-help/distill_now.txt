@@ -1,0 +1,12 @@
+chitta distill_now - Synchronously distill ONE session now and return the counts (learnings + value-facts)
+
+Parameters:
+  --session_id (required)
+      Session ID to distill
+  --transcript_path
+      Optional JSONL path; registers it if given, else resolves durable register
+  --realm
+      Optional realm (default brahman or the registered realm)
+
+Example:
+  chitta distill_now --session_id "..."

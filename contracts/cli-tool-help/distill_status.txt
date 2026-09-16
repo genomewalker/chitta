@@ -1,0 +1,3 @@
+chitta distill_status - Get distillation system status: transcripts, realms, pending work
+
+  No parameters required.

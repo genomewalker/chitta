@@ -1,0 +1,12 @@
+chitta probe_seed - Store an exemplar text as a centroid for a behavioral class
+
+Parameters:
+  --class (required)
+      Behavioral class: sycophantic|hedging|shallow|direct
+  --text (required)
+      Exemplar text for this class
+  --note
+      Optional annotation
+
+Example:
+  chitta probe_seed --class "..." --text "..."

@@ -1,0 +1,22 @@
+chitta log_event_ex - Log a CEC event with regret-shaping telemetry (token_cost, latency_ms, retry_count)
+
+Parameters:
+  --tool (required)
+      Tool name
+  --entity (required)
+      Entity acted on (file, URL, command)
+  --outcome [default: 0]
+      0=success 1=fail 2=error 3=partial
+  --session_id [default: 0]
+      Session ID (optional)
+  --ts_ms [default: 0]
+      Timestamp ms (0=now)
+  --token_cost [default: 0]
+      Tokens consumed (0=unknown)
+  --latency_ms [default: 0]
+      Wall-clock ms (0=unknown)
+  --retry_count [default: 0]
+      Retries before this outcome
+
+Example:
+  chitta log_event_ex --tool "..." --entity "..."

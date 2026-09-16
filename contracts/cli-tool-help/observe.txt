@@ -1,0 +1,24 @@
+chitta observe - Store observation (used by hooks for [LEARN] extraction)
+
+Parameters:
+  --title (required)
+      Short title
+  --content (required)
+      Full content
+  --category [default: episode]
+      Category: wisdom|insight|signal|episode
+  --tags
+      Comma-separated tags
+  --realm
+      Primary realm (default: brahman)
+  --source [default: mcp_tool]
+      Source: hook_regex|hook_compliance|distillation|mcp_tool
+  --confidence
+      Override confidence (0.0-1.0)
+  --evidence
+      What triggered this observation
+  --force_supersede_ids
+      Comma-separated memory IDs to explicitly supersede
+
+Example:
+  chitta observe --title "..." --content "..."

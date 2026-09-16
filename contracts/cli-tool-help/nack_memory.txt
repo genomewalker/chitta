@@ -1,0 +1,8 @@
+chitta nack_memory - Record a negative nack signal for a memory (lowers its recall score)
+
+Parameters:
+  --id (required)
+      Node ID to nack
+
+Example:
+  chitta nack_memory --id "..."

@@ -1,0 +1,8 @@
+chitta behavioral_probe - Score text against behavioral centroid clusters
+
+Parameters:
+  --text (required)
+      Text to probe (e.g. a Claude response)
+
+Example:
+  chitta behavioral_probe --text "..."

@@ -1,0 +1,14 @@
+chitta symbol_callers - Find all symbols that call the given symbol (reverse call graph)
+
+Parameters:
+  --name
+      Symbol name to find callers for
+  --id
+      Symbol ID (alternative to name)
+  --kind
+      Filter by symbol kind when using name
+  --project
+      Project name to disambiguate
+
+Example:
+  chitta symbol_callers

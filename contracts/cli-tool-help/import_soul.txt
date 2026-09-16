@@ -1,0 +1,10 @@
+chitta import_soul - Import .soul file (SSL format)
+
+Parameters:
+  --file
+      Path to .soul file
+  --content
+      SSL content (alternative to file)
+
+Example:
+  chitta import_soul

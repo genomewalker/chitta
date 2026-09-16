@@ -1,0 +1,16 @@
+chitta ingest_source - Ingest external content (URL, file, directory) into memory via SSL distillation
+
+Parameters:
+  --source (required)
+      URL, file path, or directory path
+  --realm [default: brahman]
+      Target realm
+  --type [default: auto]
+      Source type: auto|url|file|directory
+  --model
+      LLM model for distillation
+  --max_chunks [default: 30]
+      Max chunks to process
+
+Example:
+  chitta ingest_source --source "..."

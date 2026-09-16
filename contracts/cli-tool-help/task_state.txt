@@ -1,0 +1,8 @@
+chitta task_state - Deterministic task-state check (capability #3): what is the current state of task X? Exact keyed lookup of the LATEST stored [task] record by its slug — bypasses fuzzy recall.
+
+Parameters:
+  --id (required)
+      Task slug (the id: token of the [task] record)
+
+Example:
+  chitta task_state --id "..."

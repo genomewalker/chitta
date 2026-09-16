@@ -1,0 +1,12 @@
+chitta export_soul - Export memories to SSL format
+
+Parameters:
+  --file
+      Output file path
+  --tag
+      Filter by tag
+  --limit [default: 100]
+      Max nodes to export
+
+Example:
+  chitta export_soul

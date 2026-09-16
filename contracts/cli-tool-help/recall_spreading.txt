@@ -1,0 +1,12 @@
+chitta recall_spreading - Retrieve memories via entity graph spreading activation
+
+Parameters:
+  --query (required)
+      Query; capitalized words/@refs/quoted strings used as entity seeds
+  --limit [default: 10]
+      Max results
+  --realm
+      Memory realm
+
+Example:
+  chitta recall_spreading --query "..."

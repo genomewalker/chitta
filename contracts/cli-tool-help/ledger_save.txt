@@ -1,0 +1,30 @@
+chitta ledger_save - Save session checkpoint for continuity
+
+Parameters:
+  --session_id (required)
+      Session identifier
+  --project [default: default]
+      Project scope
+  --mood
+      Current feeling: confident|uncertain|flowing|frustrated
+  --coherence
+      Coherence score 0-1
+  --confidence
+      Confidence score 0-1
+  --todos
+      JSON array of {content, status} objects
+  --active_files
+      JSON array of file paths
+  --decisions
+      JSON array of key decisions
+  --next_steps
+      JSON array of next steps
+  --blockers
+      JSON array of blockers
+  --discoveries
+      JSON array of discoveries
+  --snapshot
+      Full checkpoint text for reconstruction
+
+Example:
+  chitta ledger_save --session_id "..."

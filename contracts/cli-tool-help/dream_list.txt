@@ -1,0 +1,10 @@
+chitta dream_list - List recent dreams
+
+Parameters:
+  --limit [default: 10]
+      Max results
+  --realm
+      Filter by realm
+
+Example:
+  chitta dream_list

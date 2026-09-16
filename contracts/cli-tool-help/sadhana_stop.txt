@@ -1,0 +1,8 @@
+chitta sadhana_stop - Stop a running sadhana permanently
+
+Parameters:
+  --id (required)
+      Sadhana ID
+
+Example:
+  chitta sadhana_stop --id "..."

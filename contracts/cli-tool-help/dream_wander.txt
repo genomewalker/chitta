@@ -1,0 +1,8 @@
+chitta dream_wander - Auto-pick a topic from curiosity gaps and start dreaming
+
+Parameters:
+  --realm
+      Realm
+
+Example:
+  chitta dream_wander

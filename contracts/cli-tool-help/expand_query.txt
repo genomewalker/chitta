@@ -1,0 +1,8 @@
+chitta expand_query - Expand a query into typed variants for hybrid retrieval
+
+Parameters:
+  --query (required)
+      Query to expand
+
+Example:
+  chitta expand_query --query "..."

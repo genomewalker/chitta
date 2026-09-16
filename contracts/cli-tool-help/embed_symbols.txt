@@ -1,0 +1,10 @@
+chitta embed_symbols - Fast embed symbol metadata (~100/sec, no LLM needed)
+
+Parameters:
+  --batch_size [default: 100]
+      Symbols per batch
+  --reset [default: false]
+      Clear all embeddings first
+
+Example:
+  chitta embed_symbols

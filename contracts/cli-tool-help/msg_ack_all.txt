@@ -1,0 +1,8 @@
+chitta msg_ack_all - Acknowledge all unread messages
+
+Parameters:
+  --session_id
+      Session ID (default: current)
+
+Example:
+  chitta msg_ack_all

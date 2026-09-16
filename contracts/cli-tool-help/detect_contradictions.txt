@@ -1,0 +1,10 @@
+chitta detect_contradictions - Detect contradictions for a stored memory against realm peers
+
+Parameters:
+  --memory_id (required)
+      Memory ID to check
+  --realm
+      Realm to scan
+
+Example:
+  chitta detect_contradictions --memory_id "..."

@@ -1,0 +1,8 @@
+chitta span_backfill - Backfill the span lane over all transcripts (incremental, idempotent).
+
+Parameters:
+  --projects_dir
+      Transcript root (default ~/.claude/projects)
+
+Example:
+  chitta span_backfill

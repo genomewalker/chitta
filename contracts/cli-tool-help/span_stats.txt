@@ -1,0 +1,3 @@
+chitta span_stats - Span lane size: unique atoms, disk bytes, redactions.
+
+  No parameters required.

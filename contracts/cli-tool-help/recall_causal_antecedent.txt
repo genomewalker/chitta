@@ -1,0 +1,12 @@
+chitta recall_causal_antecedent - PMI-ranked causal antecedents: what actions typically precede (tool, entity)?
+
+Parameters:
+  --tool (required)
+      Tool name
+  --entity (required)
+      Entity name
+  --k [default: 5]
+      Max results
+
+Example:
+  chitta recall_causal_antecedent --tool "..." --entity "..."

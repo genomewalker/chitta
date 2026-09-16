@@ -1,0 +1,12 @@
+chitta epiplexity_check - Compute epiplexity (ε) score for a seed - measures reconstruction quality
+
+Parameters:
+  --original (required)
+      Original full text
+  --seed (required)
+      Compressed SSL seed
+  --reconstructed (required)
+      Text reconstructed from seed
+
+Example:
+  chitta epiplexity_check --original "..." --seed "..." --reconstructed "..."

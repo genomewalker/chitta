@@ -1,0 +1,28 @@
+{
+  "author": {
+    "name": "Antonio Fernandez-Guerra",
+    "url": "https://github.com/genomewalker"
+  },
+  "compatibility": {
+    "chitta-field": ">=2.1.0",
+    "chitta-research": ">=1.0.0"
+  },
+  "description": "Persistent memory and code intelligence for Claude Code, Codex, and OpenCode. Learns your preferences, remembers your codebase, anticipates your needs, and gets smarter over time. 150+ tools. Local-first. Zero configuration.",
+  "keywords": [
+    "memory",
+    "persistence",
+    "code-intelligence",
+    "mcp",
+    "local-first",
+    "learning",
+    "identity",
+    "wisdom",
+    "continuity",
+    "soul"
+  ],
+  "license": "MIT",
+  "name": "chitta",
+  "repository": "https://github.com/genomewalker/chitta",
+  "skills": "./skills/",
+  "version": "5.72.0"
+}

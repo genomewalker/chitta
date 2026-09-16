@@ -1,0 +1,14 @@
+chitta recall_hdcbind - Heteroassociative HDC query: given known_role=known_val, infer query_role. Roles: tool, entity, outcome.
+
+Parameters:
+  --known_role (required)
+      Known role (tool|entity|outcome)
+  --known_val (required)
+      Value for the known role
+  --query_role (required)
+      Role to infer (tool|entity|outcome)
+  --k [default: 5]
+      Max results
+
+Example:
+  chitta recall_hdcbind --known_role "..." --known_val "..." --query_role "..."

@@ -1,0 +1,294 @@
+{
+  "description": "cc-soul hooks for persistent memory and realm-scoped recall",
+  "hooks": {
+    "FileChanged": [
+      {
+        "hooks": [
+          {
+            "async": true,
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/file-changed-hook.sh",
+            "statusMessage": "re-indexing…",
+            "timeout": 15,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "async": true,
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/log-bash-history.sh",
+            "statusMessage": "logging command…",
+            "timeout": 5,
+            "type": "command"
+          },
+          {
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/post-bash-hook.sh",
+            "statusMessage": "checking result…",
+            "timeout": 5,
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      },
+      {
+        "hooks": [
+          {
+            "async": true,
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/memory-intercept.sh",
+            "statusMessage": "syncing memory…",
+            "timeout": 10,
+            "type": "command"
+          },
+          {
+            "async": true,
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/artifact-trace.sh",
+            "statusMessage": "registering artifact…",
+            "timeout": 5,
+            "type": "command"
+          }
+        ],
+        "matcher": "Write"
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/post-bash-hook.sh",
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-compact-hook.sh",
+            "statusMessage": "consolidating memory…",
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "${HOME}/.claude/hooks/pre-tool-hook.sh Bash",
+            "statusMessage": "checking command patterns…",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      },
+      {
+        "hooks": [
+          {
+            "command": "${HOME}/.claude/hooks/pre-tool-hook.sh Read",
+            "statusMessage": "checking read budget…",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Read"
+      },
+      {
+        "hooks": [
+          {
+            "command": "${HOME}/.claude/hooks/pre-tool-hook.sh Grep",
+            "statusMessage": "checking grep budget…",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Grep"
+      },
+      {
+        "hooks": [
+          {
+            "command": "${HOME}/.claude/hooks/pre-tool-hook.sh Glob",
+            "statusMessage": "checking glob budget…",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Glob"
+      },
+      {
+        "hooks": [
+          {
+            "command": "${HOME}/.claude/hooks/pre-tool-hook.sh Edit",
+            "statusMessage": "checking edit strategy…",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Edit"
+      },
+      {
+        "hooks": [
+          {
+            "command": "${HOME}/.claude/hooks/pre-tool-hook.sh Write",
+            "statusMessage": "checking write strategy…",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Write"
+      },
+      {
+        "hooks": [
+          {
+            "command": "${HOME}/.claude/hooks/pre-tool-hook.sh Agent",
+            "statusMessage": "checking agent budget…",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Agent"
+      },
+      {
+        "hooks": [
+          {
+            "command": "${HOME}/.claude/hooks/pre-tool-hook.sh ScheduleWakeup",
+            "statusMessage": "checking loop budget…",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "ScheduleWakeup"
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/session-end-hook.sh",
+            "statusMessage": "releasing session…",
+            "timeout": 5,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/subconscious.sh start",
+            "statusMessage": "awakening…",
+            "timeout": 8,
+            "type": "command"
+          },
+          {
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/session-start-hook.sh",
+            "statusMessage": "recalling context…",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "startup"
+      },
+      {
+        "hooks": [
+          {
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/compact-restore-hook.sh",
+            "statusMessage": "restoring context…",
+            "timeout": 5,
+            "type": "command"
+          }
+        ],
+        "matcher": "compact"
+      },
+      {
+        "hooks": [
+          {
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/subconscious.sh start",
+            "statusMessage": "awakening…",
+            "timeout": 8,
+            "type": "command"
+          },
+          {
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/session-start-hook.sh",
+            "statusMessage": "resuming…",
+            "timeout": 10,
+            "type": "command"
+          },
+          {
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/resume-inject-hook.sh",
+            "statusMessage": "preparing recap…",
+            "timeout": 3,
+            "type": "command"
+          }
+        ],
+        "matcher": "resume"
+      },
+      {
+        "hooks": [
+          {
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/subconscious.sh start",
+            "statusMessage": "awakening…",
+            "timeout": 8,
+            "type": "command"
+          },
+          {
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/session-start-hook.sh",
+            "statusMessage": "recalling context…",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "clear"
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/stop-hook.sh",
+            "statusMessage": "preserving state…",
+            "timeout": 30,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "async": true,
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/subagent-stop-hook.sh",
+            "statusMessage": "capturing learnings…",
+            "timeout": 5,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/prompt-hook.sh",
+            "statusMessage": "resonating…",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ]
+  }
+}

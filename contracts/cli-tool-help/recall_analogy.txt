@@ -1,0 +1,14 @@
+chitta recall_analogy - Relation transfer a:b :: c:? over the triplet organ
+
+Parameters:
+  --a (required)
+      Source entity
+  --b (required)
+      Source relation target
+  --c (required)
+      Entity to transfer the relation to
+  --limit [default: 8]
+      Max answers (default 8)
+
+Example:
+  chitta recall_analogy --a "..." --b "..." --c "..."

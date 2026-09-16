@@ -1,0 +1,3 @@
+chitta rebuild_fts_index - Rebuild FTS index for BM25 keyword search on memory
+
+  No parameters required.

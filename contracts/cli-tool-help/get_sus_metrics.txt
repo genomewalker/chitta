@@ -1,0 +1,8 @@
+chitta get_sus_metrics - Get Soul Utility Score metrics (SUS): R, P, D components and composite
+
+Parameters:
+  --days
+      Lookback window in days (default: 7)
+
+Example:
+  chitta get_sus_metrics

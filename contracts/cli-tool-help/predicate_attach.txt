@@ -1,0 +1,3 @@
+chitta predicate_attach - v7.0 Falsifiable memories: attach an executable shell predicate to a memory. check_cmd is run to verify the memory is still true.
+
+  No parameters required.

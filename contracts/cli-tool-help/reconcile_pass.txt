@@ -1,0 +1,3 @@
+chitta reconcile_pass - CEC Phase 17 R0 reconcile operator: scan all assoc_edges for MemoryKind legality violations and content contradictions. Model-free and deterministic. Reports illegal_edges, contradictions, unresolved counts.
+
+  No parameters required.

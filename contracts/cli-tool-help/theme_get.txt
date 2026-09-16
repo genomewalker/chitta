@@ -1,0 +1,8 @@
+chitta theme_get - Get theme details with representatives
+
+Parameters:
+  --id (required)
+      Theme ID
+
+Example:
+  chitta theme_get --id "..."

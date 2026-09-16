@@ -1,0 +1,8 @@
+chitta theme_maintain - Force theme maintenance: split, merge, reassign
+
+Parameters:
+  --realm
+      Filter by realm
+
+Example:
+  chitta theme_maintain

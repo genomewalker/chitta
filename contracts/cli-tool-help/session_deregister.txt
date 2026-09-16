@@ -1,0 +1,8 @@
+chitta session_deregister - Remove session from registry
+
+Parameters:
+  --session_id (required)
+      Session ID
+
+Example:
+  chitta session_deregister --session_id "..."

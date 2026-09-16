@@ -1,0 +1,8 @@
+chitta transcript_get - Get transcript state for a session
+
+Parameters:
+  --session_id (required)
+      Session ID to look up
+
+Example:
+  chitta transcript_get --session_id "..."

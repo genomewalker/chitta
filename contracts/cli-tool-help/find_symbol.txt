@@ -1,0 +1,16 @@
+chitta find_symbol - Search for symbols by name
+
+Parameters:
+  --name (required)
+      Symbol name to search
+  --kind
+      Symbol kind filter (function, class, method)
+  --path
+      Only symbols whose file path contains this substring (repo/dir scoping)
+  --lang
+      Language filter by extension (cpp, c, python, rust, js, go, java, ruby)
+  --limit [default: 20]
+      Max results
+
+Example:
+  chitta find_symbol --name "..."

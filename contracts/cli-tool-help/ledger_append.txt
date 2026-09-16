@@ -1,0 +1,16 @@
+chitta ledger_append - v6.0 Interaction Ledger: record a retrieve/inject/outcome/override event. Pass full InteractionEvent JSON.
+
+Parameters:
+  --kind (required)
+      Event kind: Retrieve | Inject | Outcome | Override
+  --session_id (required)
+      Session UUID
+  --payload (required)
+      Typed payload JSON matching EventPayload variant
+  --thread_id [default: ]
+      Optional thread ID
+  --causal_parent [default: ]
+      Optional parent event_id
+
+Example:
+  chitta ledger_append --kind "..." --session_id "..." --payload "..."

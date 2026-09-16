@@ -1,0 +1,8 @@
+chitta file_dependents - Get all files that import/include the given module
+
+Parameters:
+  --name (required)
+      Module/file name to find dependents for
+
+Example:
+  chitta file_dependents --name "..."

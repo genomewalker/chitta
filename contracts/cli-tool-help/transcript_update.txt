@@ -1,0 +1,10 @@
+chitta transcript_update - Update transcript processing progress
+
+Parameters:
+  --session_id (required)
+      Session ID
+  --last_line (required)
+      Last processed line number
+
+Example:
+  chitta transcript_update --session_id "..." --last_line "..."

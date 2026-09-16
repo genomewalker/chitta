@@ -1,0 +1,3 @@
+chitta queue_status - Live work-queue depth: pending (in-flight + unclaimed), processed, distilled, failed, pending embeddings, dead-letters.
+
+  No parameters required.

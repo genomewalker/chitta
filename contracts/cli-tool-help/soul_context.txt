@@ -1,0 +1,3 @@
+chitta soul_context - Get current soul state and statistics
+
+  No parameters required.

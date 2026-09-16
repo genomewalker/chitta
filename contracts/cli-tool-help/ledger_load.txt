@@ -1,0 +1,10 @@
+chitta ledger_load - Load most recent checkpoint
+
+Parameters:
+  --session_id
+      Session identifier (optional)
+  --project
+      Project filter (optional)
+
+Example:
+  chitta ledger_load

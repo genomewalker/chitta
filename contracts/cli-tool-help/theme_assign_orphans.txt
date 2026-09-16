@@ -1,0 +1,10 @@
+chitta theme_assign_orphans - Assign orphan memories to themes in batches
+
+Parameters:
+  --batch_size [default: 100]
+      Memories per batch
+  --realm
+      Filter by realm
+
+Example:
+  chitta theme_assign_orphans

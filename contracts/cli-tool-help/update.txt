@@ -1,0 +1,10 @@
+chitta update - Update node content
+
+Parameters:
+  --id (required)
+      Node ID
+  --content (required)
+      New content
+
+Example:
+  chitta update --id "..." --content "..."

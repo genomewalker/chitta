@@ -1,0 +1,12 @@
+chitta recall_session - Session-level recall: groups chunk evidence by source session using noisy-OR aggregation
+
+Parameters:
+  --query (required)
+      Natural language query
+  --limit [default: 10]
+      Max sessions to return
+  --realm
+      Filter by realm
+
+Example:
+  chitta recall_session --query "..."

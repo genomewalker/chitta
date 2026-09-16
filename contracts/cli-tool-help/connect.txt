@@ -1,0 +1,12 @@
+chitta connect - Create triplet: subject → predicate → object
+
+Parameters:
+  --subject (required)
+      Subject entity
+  --predicate (required)
+      Relationship type
+  --object (required)
+      Object entity
+
+Example:
+  chitta connect --subject "..." --predicate "..." --object "..."

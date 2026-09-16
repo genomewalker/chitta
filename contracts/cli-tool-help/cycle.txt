@@ -1,0 +1,8 @@
+chitta cycle - Run maintenance cycle (decay, cleanup)
+
+Parameters:
+  --force [default: false]
+      Force full cycle
+
+Example:
+  chitta cycle

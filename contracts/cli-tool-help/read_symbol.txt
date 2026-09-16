@@ -1,0 +1,14 @@
+chitta read_symbol - Read the actual source code for a symbol by name or ID
+
+Parameters:
+  --name
+      Symbol name to read
+  --id
+      Symbol ID (alternative to name)
+  --kind
+      Filter by symbol kind (function, class, method)
+  --project
+      Project name to disambiguate
+
+Example:
+  chitta read_symbol

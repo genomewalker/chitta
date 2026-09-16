@@ -1,0 +1,12 @@
+chitta span_query - Retrieve verbatim transcript atoms (paths, URLs, file:line, bash commands, errors). Exact-substring, no LLM/GPU, realm-scoped.
+
+Parameters:
+  --query (required)
+      Substring/token to match
+  --realm
+      Restrict to realm (empty = unscoped)
+  --k [default: 6]
+      Max atoms
+
+Example:
+  chitta span_query --query "..."

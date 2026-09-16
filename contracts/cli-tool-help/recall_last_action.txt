@@ -1,0 +1,12 @@
+chitta recall_last_action - Return last k occurrences of (tool, entity) from the CEC event tape
+
+Parameters:
+  --tool (required)
+      Tool name
+  --entity (required)
+      Entity name
+  --k [default: 5]
+      Max results
+
+Example:
+  chitta recall_last_action --tool "..." --entity "..."

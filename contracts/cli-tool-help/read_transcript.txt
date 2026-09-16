@@ -1,0 +1,14 @@
+chitta read_transcript - Read JSONL transcript file directly with pagination
+
+Parameters:
+  --path
+      Path to .jsonl transcript file (or use session_id)
+  --session_id
+      Session ID to find transcript for
+  --start_turn [default: 0]
+      Starting turn index
+  --limit [default: 20]
+      Maximum turns to return
+
+Example:
+  chitta read_transcript

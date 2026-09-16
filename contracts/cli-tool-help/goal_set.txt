@@ -1,0 +1,14 @@
+chitta goal_set - Set a new goal
+
+Parameters:
+  --title (required)
+      Short goal name
+  --description
+      Detailed description
+  --deadline
+      Optional deadline (Unix timestamp)
+  --realm
+      Realm
+
+Example:
+  chitta goal_set --title "..."

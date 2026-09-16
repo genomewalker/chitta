@@ -1,0 +1,10 @@
+chitta session_heartbeat - Update session heartbeat
+
+Parameters:
+  --session_id (required)
+      Session ID
+  --metadata
+      Updated JSON metadata
+
+Example:
+  chitta session_heartbeat --session_id "..."

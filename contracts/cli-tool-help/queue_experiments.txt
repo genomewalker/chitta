@@ -1,0 +1,8 @@
+chitta queue_experiments - CEC Phase 14 Self-directed experimentation: file OpenTask interventions for the k most uncertain Sequitur rules (probe_value > 0.4). Skips rules with refutation_ratio >= 0.3 (adversarial gate). Also triggered automatically by consolidation_pass when turiya_status reports high_uncertainty.
+
+Parameters:
+  --k [default: 5]
+      Max experiments to queue
+
+Example:
+  chitta queue_experiments

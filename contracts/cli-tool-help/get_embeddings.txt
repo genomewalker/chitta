@@ -1,0 +1,8 @@
+chitta get_embeddings - Batch-fetch raw embedding vectors for memory IDs (for S-entropy / Gram matrix)
+
+Parameters:
+  --ids (required)
+      JSON array of memory ID strings
+
+Example:
+  chitta get_embeddings --ids "..."

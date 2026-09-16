@@ -1,0 +1,16 @@
+chitta dream_start - Start a dream: autonomous web exploration on a topic
+
+Parameters:
+  --topic (required)
+      Topic to explore
+  --realm
+      Realm
+  --brain_provider [default: local]
+      Brain provider (claude/local)
+  --brain_model [default: gemma4:26b]
+      Brain model name
+  --max_concurrent [default: 2]
+      Max concurrent dreams allowed
+
+Example:
+  chitta dream_start --topic "..."

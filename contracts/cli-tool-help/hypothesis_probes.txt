@@ -1,0 +1,8 @@
+chitta hypothesis_probes - Top-k Sequitur rules by Wilson probe_value (expected info gain). Highest = most uncertain — best candidates for deliberate disambiguation.
+
+Parameters:
+  --k [default: 10]
+      Max rules to return
+
+Example:
+  chitta hypothesis_probes

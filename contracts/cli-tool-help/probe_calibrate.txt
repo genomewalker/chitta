@@ -1,0 +1,10 @@
+chitta probe_calibrate - Add a confirmed exemplar to a behavioral class to refine its centroid
+
+Parameters:
+  --class (required)
+      Behavioral class to update
+  --text (required)
+      Confirmed exemplar text
+
+Example:
+  chitta probe_calibrate --class "..." --text "..."

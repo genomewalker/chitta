@@ -1,0 +1,20 @@
+chitta msg_send - Send a message to another session, a realm, or all sessions
+
+Parameters:
+  --target (required)
+      Target: session_id, realm name, or '*' for all
+  --content (required)
+      Message content
+  --target_type
+      direct|realm|global (auto-detected if omitted)
+  --priority [default: 1]
+      0=info, 1=normal, 2=important, 3=urgent
+  --content_type [default: text]
+      text|json|ssl
+  --ttl [default: 3600]
+      TTL in seconds (0 = no expiry)
+  --session_id
+      Sender session ID
+
+Example:
+  chitta msg_send --target "..." --content "..."

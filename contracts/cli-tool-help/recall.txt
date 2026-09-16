@@ -1,0 +1,20 @@
+chitta recall - Search memory by semantic similarity
+
+Parameters:
+  --query (required)
+      Search query
+  --limit [default: 10]
+      Max results
+  --tag
+      Filter by tag
+  --realm
+      Filter by realm (empty = all visible)
+  --strategy
+      Retrieval lane: fused (default), keyword (BM25 only, realm-scoped), field
+  --pool [default: 60]
+      Candidate pool depth before the recall-biased pre-filter (max 160)
+  --prefilter [default: true]
+      Recall-biased pre-filter (false = narrow-pool legacy path)
+
+Example:
+  chitta recall --query "..."

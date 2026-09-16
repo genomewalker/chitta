@@ -1,0 +1,12 @@
+chitta show_conflicts - Semantic search + show contradiction pairs for matching memories
+
+Parameters:
+  --query (required)
+      Search query
+  --limit [default: 20]
+      Max results
+  --realm
+      Filter by realm
+
+Example:
+  chitta show_conflicts --query "..."

@@ -1,0 +1,12 @@
+chitta transcript_register - Register a transcript file for distillation tracking
+
+Parameters:
+  --session_id (required)
+      Claude session ID
+  --transcript_path (required)
+      Path to .jsonl transcript file
+  --realm [default: default]
+      Project/realm isolation
+
+Example:
+  chitta transcript_register --session_id "..." --transcript_path "..."

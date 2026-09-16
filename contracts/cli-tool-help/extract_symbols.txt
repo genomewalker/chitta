@@ -1,0 +1,8 @@
+chitta extract_symbols - Extract symbols from source file using tree-sitter
+
+Parameters:
+  --path (required)
+      File path to analyze
+
+Example:
+  chitta extract_symbols --path "..."

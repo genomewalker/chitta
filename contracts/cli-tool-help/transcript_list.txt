@@ -1,0 +1,3 @@
+chitta transcript_list - List all registered transcripts
+
+  No parameters required.

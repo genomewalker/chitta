@@ -1,0 +1,3 @@
+chitta assoc_census - Read-only assoc-graph census: per-EdgeType directed-edge count plus weight histogram. Measure-first gate for plasticity levers.
+
+  No parameters required.

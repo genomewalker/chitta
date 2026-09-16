@@ -1,0 +1,8 @@
+chitta transcript_remove - Remove transcript from tracking
+
+Parameters:
+  --session_id (required)
+      Session ID to remove
+
+Example:
+  chitta transcript_remove --session_id "..."

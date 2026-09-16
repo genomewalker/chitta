@@ -1,0 +1,8 @@
+chitta densify_backfill - #13 retro-backfill of SameSession edges over existing session-tagged memories. Dry-run by default (counts sibling pairs + group-size histogram, no writes).
+
+Parameters:
+  --apply [default: false]
+      Create the edges (default false = dry-run count only)
+
+Example:
+  chitta densify_backfill

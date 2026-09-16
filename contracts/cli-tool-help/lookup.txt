@@ -1,0 +1,16 @@
+chitta lookup - Unified memory lookup — intent-routing search across keyword/semantic/triplet/temporal/code backends
+
+Parameters:
+  --query (required)
+      Search query
+  --limit [default: 10]
+      Max results
+  --realm
+      Filter by realm
+  --mode [default: auto]
+      Search mode: auto|fast|deep
+  --explain [default: false]
+      Include intent classification and score breakdown
+
+Example:
+  chitta lookup --query "..."

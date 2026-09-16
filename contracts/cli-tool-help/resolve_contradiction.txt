@@ -1,0 +1,12 @@
+chitta resolve_contradiction - Resolve a contradiction: declare winner supersedes loser
+
+Parameters:
+  --winner_id (required)
+      Memory ID that is correct
+  --loser_id (required)
+      Memory ID to demote
+  --reason [default: manual resolution]
+      Explanation for the resolution
+
+Example:
+  chitta resolve_contradiction --winner_id "..." --loser_id "..."

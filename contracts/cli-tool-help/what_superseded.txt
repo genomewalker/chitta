@@ -1,0 +1,8 @@
+chitta what_superseded - Show the full supersession chain for a memory
+
+Parameters:
+  --id (required)
+      Memory ID
+
+Example:
+  chitta what_superseded --id "..."

@@ -1,0 +1,8 @@
+chitta file_imports - Get all imports/includes for a source file
+
+Parameters:
+  --path (required)
+      File path to get imports for
+
+Example:
+  chitta file_imports --path "..."

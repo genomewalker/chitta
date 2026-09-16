@@ -1,0 +1,8 @@
+chitta resolve_callsites - Resolve callsites to symbols and populate call_edge table
+
+Parameters:
+  --project
+      Filter to specific project path
+
+Example:
+  chitta resolve_callsites

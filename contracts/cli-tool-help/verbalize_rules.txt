@@ -1,0 +1,8 @@
+chitta verbalize_rules - CEC Phase 13 Verbalization: convert top-k Sequitur rules to natural language using a deterministic template. No LLM. Shows what the agent has learned as readable heuristics.
+
+Parameters:
+  --k [default: 10]
+      Max rules to return
+
+Example:
+  chitta verbalize_rules

@@ -1,0 +1,10 @@
+chitta transcript_parse - Parse new turns from a transcript JSONL file
+
+Parameters:
+  --session_id (required)
+      Session ID to parse
+  --min_turns [default: 4]
+      Minimum turns to return
+
+Example:
+  chitta transcript_parse --session_id "..."

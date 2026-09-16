@@ -1,0 +1,10 @@
+chitta provenance_check - Deterministic anti-reprocessing check (capability #1): has this file/task already been processed? Exact keyed lookup of a prior [done] record by content-hash and/or input path — bypasses fuzzy recall.
+
+Parameters:
+  --sha
+      Content hash of the input (tried first — content identity)
+  --input
+      Input path (fallback handle)
+
+Example:
+  chitta provenance_check

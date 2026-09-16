@@ -1,0 +1,9480 @@
+[
+ {
+  "description": "Multi-dimensional semantic search across who/what/when/where/why axes",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max results (default 10)"
+    },
+    "realm": {
+     "description": "Filter by realm",
+     "type": "string"
+    },
+    "what": {
+     "description": "What is happening/topic",
+     "type": "string"
+    },
+    "when": {
+     "description": "Temporal description",
+     "type": "string"
+    },
+    "where": {
+     "description": "Location or context",
+     "type": "string"
+    },
+    "who": {
+     "description": "Who is involved",
+     "type": "string"
+    },
+    "why": {
+     "description": "Motivation or reason",
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "5w_search"
+ },
+ {
+  "description": "Record a positive ack signal for a memory (raises its recall score)",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "description": "Node ID to ack",
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "ack_memory"
+ },
+ {
+  "description": "Increment ack signal for a memory. Records [ack] memory:<id> score:+1 with tag ack-signal.",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "description": "Memory ID to ack",
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "ack_memory"
+ },
+ {
+  "description": "Record a delegation edge \u2014 tracks which agent handed off to which, with optional handoff note",
+  "inputSchema": {
+   "properties": {
+    "from_agent": {
+     "description": "Delegating agent name",
+     "type": "string"
+    },
+    "handoff_note": {
+     "description": "Optional context passed at handoff",
+     "type": "string"
+    },
+    "task_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Task ID"
+    },
+    "to_agent": {
+     "description": "Receiving agent name",
+     "type": "string"
+    }
+   },
+   "required": [
+    "task_id",
+    "from_agent",
+    "to_agent"
+   ],
+   "type": "object"
+  },
+  "name": "add_delegation"
+ },
+ {
+  "description": "Record an observation during an open intervention (stdout, test result, file diff, etc.)",
+  "inputSchema": {
+   "properties": {
+    "confidence": {
+     "description": "Confidence in this observation (0.0-1.0)",
+     "type": "number"
+    },
+    "evidence_refs": {
+     "description": "Memory IDs that constitute evidence",
+     "items": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "string"
+       }
+      ]
+     },
+     "type": "array"
+    },
+    "intervention_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Intervention ID from start_intervention"
+    },
+    "kind": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "0=Stdout 1=Stderr 2=FileDiff 3=TestResult 4=EnvState 5=UserFeedback"
+    },
+    "summary": {
+     "description": "Human-readable observation summary",
+     "type": "string"
+    }
+   },
+   "required": [
+    "intervention_id",
+    "summary"
+   ],
+   "type": "object"
+  },
+  "name": "add_observation"
+ },
+ {
+  "description": "Add a pending probe \u2014 an open question that must be answered to unblock or complete a task",
+  "inputSchema": {
+   "properties": {
+    "expected_answerer": {
+     "description": "Agent or role expected to answer",
+     "type": "string"
+    },
+    "priority": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Priority 1-10 (default 5)"
+    },
+    "question": {
+     "description": "Open question to be answered",
+     "type": "string"
+    },
+    "task_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Task ID"
+    }
+   },
+   "required": [
+    "task_id",
+    "question"
+   ],
+   "type": "object"
+  },
+  "name": "add_probe"
+ },
+ {
+  "description": "Gateway to hidden/advanced tools. Use action='list' to see every hidden tool (about 250), or call directly with tool='<name>' and arguments={...}. Example: {\"tool\": \"pin_memory\", \"arguments\": {\"id\": 123}}",
+  "inputSchema": {
+   "properties": {
+    "action": {
+     "description": "Action: 'list' to show available tools",
+     "type": "string"
+    },
+    "arguments": {
+     "description": "Arguments to pass to the hidden tool",
+     "type": "object"
+    },
+    "category": {
+     "description": "Filter list by category: 'advanced' or 'internal'",
+     "type": "string"
+    },
+    "tool": {
+     "description": "Hidden tool name to call",
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "advanced"
+ },
+ {
+  "description": "Disable an agent",
+  "inputSchema": {
+   "properties": {
+    "agent_id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "agent_id"
+   ],
+   "type": "object"
+  },
+  "name": "agent_disable"
+ },
+ {
+  "description": "Disable (revoke) an agent.",
+  "inputSchema": {
+   "properties": {
+    "agent_id": {
+     "description": "Agent identifier to disable",
+     "type": "string"
+    }
+   },
+   "required": [
+    "agent_id"
+   ],
+   "type": "object"
+  },
+  "name": "agent_disable"
+ },
+ {
+  "description": "Get agent record",
+  "inputSchema": {
+   "properties": {
+    "agent_id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "agent_id"
+   ],
+   "type": "object"
+  },
+  "name": "agent_get"
+ },
+ {
+  "description": "Get an agent's identity record.",
+  "inputSchema": {
+   "properties": {
+    "agent_id": {
+     "description": "Agent identifier",
+     "type": "string"
+    }
+   },
+   "required": [
+    "agent_id"
+   ],
+   "type": "object"
+  },
+  "name": "agent_get"
+ },
+ {
+  "description": "List all agents",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "agent_list"
+ },
+ {
+  "description": "List all registered agents.",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "agent_list"
+ },
+ {
+  "description": "Show agent protocol memory statistics \u2014 total tasks, delegations, evidence links, probes, criteria counts",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "agent_protocol_stats"
+ },
+ {
+  "description": "Register or update an agent",
+  "inputSchema": {
+   "properties": {
+    "agent_id": {
+     "type": "string"
+    },
+    "description": {
+     "type": "string"
+    },
+    "display_name": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "agent_id"
+   ],
+   "type": "object"
+  },
+  "name": "agent_upsert"
+ },
+ {
+  "description": "Register or update an agent identity in the multi-agent registry.",
+  "inputSchema": {
+   "properties": {
+    "agent_id": {
+     "description": "Unique agent identifier",
+     "type": "string"
+    },
+    "description": {
+     "description": "What this agent does",
+     "type": "string"
+    },
+    "display_name": {
+     "description": "Human-readable name",
+     "type": "string"
+    }
+   },
+   "required": [
+    "agent_id"
+   ],
+   "type": "object"
+  },
+  "name": "agent_upsert"
+ },
+ {
+  "description": "Get predictions passing annoyance gate",
+  "inputSchema": {
+   "properties": {
+    "max": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "session_id": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "anticipation_filter"
+ },
+ {
+  "description": "List learned anticipation patterns",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "realm": {
+     "type": "string"
+    },
+    "sort_by": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "anticipation_list"
+ },
+ {
+  "description": "Record context->action pattern",
+  "inputSchema": {
+   "properties": {
+    "action": {
+     "type": "string"
+    },
+    "context": {
+     "type": "string"
+    },
+    "realm": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "context",
+    "action"
+   ],
+   "type": "object"
+  },
+  "name": "anticipation_observe"
+ },
+ {
+  "description": "Predict likely actions",
+  "inputSchema": {
+   "properties": {
+    "context": {
+     "type": "string"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "min_confidence": {
+     "type": "number"
+    },
+    "realm": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "context"
+   ],
+   "type": "object"
+  },
+  "name": "anticipation_predict"
+ },
+ {
+  "description": "Mark prediction as successful",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "anticipation_success"
+ },
+ {
+  "description": "Approve a Proposed memory, promoting it to Active",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "description": "Memory ID to approve",
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "approve_memory"
+ },
+ {
+  "description": "Natural language insight query: retrieves and synthesizes memories to answer a question about the user, session, or project",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "question": {
+     "type": "string"
+    },
+    "realm": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "question"
+   ],
+   "type": "object"
+  },
+  "name": "ask"
+ },
+ {
+  "description": "Assert a constraint fact (subject-predicate-object) with provenance and scope. Auto-detects conflicts and creates rival branches.",
+  "inputSchema": {
+   "properties": {
+    "branch_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Branch to assert into (0=trunk)"
+    },
+    "confidence": {
+     "description": "Confidence 0-1 (default 0.8)",
+     "type": "number"
+    },
+    "confidence_basis": {
+     "description": "Basis: stated, observed, derived, corrected",
+     "type": "string"
+    },
+    "object": {
+     "description": "Value (e.g. 'Rust', 'vim', 'Copenhagen')",
+     "type": "string"
+    },
+    "predicate": {
+     "description": "Relation (e.g. 'prefers', 'uses', 'located-in')",
+     "type": "string"
+    },
+    "provenance_source": {
+     "description": "Source: user, tool, distillation, inference",
+     "type": "string"
+    },
+    "scope": {
+     "description": "Scope: global, realm name, or session (default: global)",
+     "type": "string"
+    },
+    "subject": {
+     "description": "Entity (e.g. 'user', 'project-X')",
+     "type": "string"
+    }
+   },
+   "required": [
+    "subject",
+    "predicate",
+    "object"
+   ],
+   "type": "object"
+  },
+  "name": "assert_fact"
+ },
+ {
+  "description": "Attach supporting evidence to an epistemic debt \u2014 memory IDs + confidence",
+  "inputSchema": {
+   "properties": {
+    "confidence": {
+     "description": "Evidence confidence 0-1 (default 0.5)",
+     "type": "number"
+    },
+    "debt_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Epistemic debt ID"
+    },
+    "memory_ids": {
+     "description": "Memory IDs that serve as evidence",
+     "items": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "string"
+       }
+      ]
+     },
+     "type": "array"
+    },
+    "note": {
+     "description": "Optional note about the evidence",
+     "type": "string"
+    }
+   },
+   "required": [
+    "debt_id"
+   ],
+   "type": "object"
+  },
+  "name": "attach_debt_evidence"
+ },
+ {
+  "description": "Score text against behavioral centroid clusters. Returns per-class similarity scores (sycophantic/hedging/shallow/direct) and overall quality estimate. Requires prior probe_seed calls.",
+  "inputSchema": {
+   "properties": {
+    "text": {
+     "description": "Text to probe (e.g. a Claude response)",
+     "type": "string"
+    }
+   },
+   "required": [
+    "text"
+   ],
+   "type": "object"
+  },
+  "name": "behavioral_probe"
+ },
+ {
+  "description": "Fork a rival branch for conflicting interpretations",
+  "inputSchema": {
+   "properties": {
+    "parent_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Parent branch ID (0=trunk)"
+    },
+    "scope": {
+     "description": "Branch scope (default: global)",
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "branch_create"
+ },
+ {
+  "description": "Resolve a branch conflict: winner stays, loser abandoned",
+  "inputSchema": {
+   "properties": {
+    "loser_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Branch ID to abandon"
+    },
+    "winner_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Branch ID that wins"
+    }
+   },
+   "required": [
+    "winner_id",
+    "loser_id"
+   ],
+   "type": "object"
+  },
+  "name": "branch_resolve"
+ },
+ {
+  "description": "Record prediction outcome",
+  "inputSchema": {
+   "properties": {
+    "domain": {
+     "type": "string"
+    },
+    "success": {
+     "type": "boolean"
+    }
+   },
+   "required": [
+    "domain",
+    "success"
+   ],
+   "type": "object"
+  },
+  "name": "calibration_record"
+ },
+ {
+  "description": "Get accuracy score",
+  "inputSchema": {
+   "properties": {
+    "domain": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "calibration_score"
+ },
+ {
+  "description": "Save session state",
+  "inputSchema": {
+   "properties": {
+    "active_files": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "discoveries": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "mood": {
+     "type": "string"
+    },
+    "next_steps": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "realm": {
+     "type": "string"
+    },
+    "summary": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "checkpoint"
+ },
+ {
+  "description": "Close an intervention with its final outcome status",
+  "inputSchema": {
+   "properties": {
+    "intervention_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Intervention ID to close"
+    },
+    "status": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "0=Open 1=Succeeded 2=Failed 3=Partial 4=Aborted"
+    }
+   },
+   "required": [
+    "intervention_id",
+    "status"
+   ],
+   "type": "object"
+  },
+  "name": "close_intervention"
+ },
+ {
+  "description": "Close a re-derivation contract for an Inflamed wisdom lineage. Actions: reaffirm (0), narrow (1), split (2), demote (3).",
+  "inputSchema": {
+   "properties": {
+    "action": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "0=reaffirm 1=narrow 2=split 3=demote"
+    },
+    "fork_claim": {
+     "description": "Claim for the forked lineage (action=split)",
+     "type": "string"
+    },
+    "fork_lineage_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Pre-enrolled fork lineage ID (action=split)"
+    },
+    "lineage_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Lineage ID"
+    },
+    "new_envelope": {
+     "description": "Narrowed applicability envelope (for action=narrow/split)",
+     "type": "object"
+    }
+   },
+   "required": [
+    "lineage_id",
+    "action"
+   ],
+   "type": "object"
+  },
+  "name": "close_rederive"
+ },
+ {
+  "description": "Get code context summary",
+  "inputSchema": {
+   "properties": {
+    "path": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "code_context"
+ },
+ {
+  "description": "Get full indexed codebase structure",
+  "inputSchema": {
+   "properties": {
+    "format": {
+     "type": "string"
+    },
+    "include_callsites": {
+     "type": "boolean"
+    },
+    "project": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "codebase_overview"
+ },
+ {
+  "description": "Memory-aware context compaction. Scores conversation messages by recency, semantic relevance to query, and memory coverage (content already in memory is safer to drop). Returns a subset of messages fitting the target token budget.",
+  "inputSchema": {
+   "properties": {
+    "distill_novel": {
+     "description": "Reserved for future use",
+     "type": "boolean"
+    },
+    "messages": {
+     "description": "Conversation messages [{role,content}]",
+     "items": {
+      "type": "object"
+     },
+     "type": "array"
+    },
+    "query": {
+     "description": "Upcoming task hint for semantic scoring",
+     "type": "string"
+    },
+    "target_ratio": {
+     "description": "Fraction of tokens to KEEP (default 0.4)",
+     "type": "number"
+    }
+   },
+   "required": [
+    "messages"
+   ],
+   "type": "object"
+  },
+  "name": "compact_context"
+ },
+ {
+  "description": "Compact WAL: save full snapshot then delete covered segments",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "compact_wal"
+ },
+ {
+  "description": "Semantic search + show status and contradiction partners for each hit",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max memories to scan (default 10)"
+    },
+    "query": {
+     "description": "Search query",
+     "type": "string"
+    },
+    "realm": {
+     "description": "Filter by realm",
+     "type": "string"
+    }
+   },
+   "required": [
+    "query"
+   ],
+   "type": "object"
+  },
+  "name": "conflict_inspector"
+ },
+ {
+  "description": "Create a triplet relationship",
+  "inputSchema": {
+   "properties": {
+    "object": {
+     "description": "Object entity",
+     "type": "string"
+    },
+    "predicate": {
+     "description": "Relationship type",
+     "type": "string"
+    },
+    "subject": {
+     "description": "Subject entity",
+     "type": "string"
+    }
+   },
+   "required": [
+    "subject",
+    "predicate",
+    "object"
+   ],
+   "type": "object"
+  },
+  "name": "connect"
+ },
+ {
+  "description": "Create triplet with temporal validity",
+  "inputSchema": {
+   "properties": {
+    "context_date": {
+     "type": "string"
+    },
+    "object": {
+     "type": "string"
+    },
+    "predicate": {
+     "type": "string"
+    },
+    "subject": {
+     "type": "string"
+    },
+    "valid_from": {
+     "type": "string"
+    },
+    "valid_to": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "subject",
+    "predicate",
+    "object"
+   ],
+   "type": "object"
+  },
+  "name": "connect_temporal"
+ },
+ {
+  "description": "Merge near-duplicate memories \u2014 keeps stronger, soft-deletes weaker",
+  "inputSchema": {
+   "properties": {
+    "dry_run": {
+     "description": "Preview without deleting (default true)",
+     "type": "boolean"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max pairs to merge (default 10)"
+    },
+    "realm": {
+     "description": "Filter by realm",
+     "type": "string"
+    },
+    "threshold": {
+     "description": "Similarity threshold (default 0.92)",
+     "type": "number"
+    }
+   },
+   "type": "object"
+  },
+  "name": "consolidate_similar"
+ },
+ {
+  "description": "Run Sequitur grammar consolidation: find frequent bigrams in EventTape and promote rules to the triplet KG (subject=rule:..., predicates: compresses/avg_outcome/support/tape_range).",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "consolidation_pass"
+ },
+ {
+  "description": "Show top co-activated memory associations for a given memory",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "description": "Memory ID",
+     "type": "string"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max edges to return (default 10)"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "cooccurrence_graph"
+ },
+ {
+  "description": "Deterministic durable-correction check (capability #2): does any stored [correction] trigger recur in this turn? Exact keyed bigram probe of the turn text against corrected-mistake phrases \u2014 bypasses fuzzy recall (which loses corrections on cosine similarity ~99% of the time). Returns found + the correction(s), newest first (latest-wins).",
+  "inputSchema": {
+   "properties": {
+    "text": {
+     "description": "Turn / context text to scan for a recurring corrected mistake",
+     "type": "string"
+    }
+   },
+   "required": [
+    "text"
+   ],
+   "type": "object"
+  },
+  "name": "correction_check"
+ },
+ {
+  "description": "Create dialogue episode for conversation tracking",
+  "inputSchema": {
+   "properties": {
+    "end_turn": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "episode_type": {
+     "type": "string"
+    },
+    "realm": {
+     "type": "string"
+    },
+    "session_id": {
+     "type": "string"
+    },
+    "start_turn": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "title": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "session_id",
+    "title",
+    "start_turn"
+   ],
+   "type": "object"
+  },
+  "name": "create_episode"
+ },
+ {
+  "description": "Find memories where claude-code and codex harnesses disagree on the same topic",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max conflict pairs to return (default 20)"
+    },
+    "min_disagreement_score": {
+     "description": "Minimum 1-cosine_similarity threshold (default 0.3)",
+     "type": "number"
+    },
+    "realm": {
+     "description": "Realm filter (default: all)",
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "cross_harness_conflicts"
+ },
+ {
+  "description": "List knowledge gaps",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "realm": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "curiosity_gaps"
+ },
+ {
+  "description": "Record a knowledge gap",
+  "inputSchema": {
+   "properties": {
+    "context": {
+     "type": "string"
+    },
+    "gap": {
+     "type": "string"
+    },
+    "realm": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "gap"
+   ],
+   "type": "object"
+  },
+  "name": "curiosity_note_gap"
+ },
+ {
+  "description": "Mark gap as resolved",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "learned": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "curiosity_resolve"
+ },
+ {
+  "description": "Summary statistics for epistemic debt: counts by status, avg fragility",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "debt_stats"
+ },
+ {
+  "description": "Defer an epistemic debt for later investigation",
+  "inputSchema": {
+   "properties": {
+    "debt_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Debt ID to defer"
+    }
+   },
+   "required": [
+    "debt_id"
+   ],
+   "type": "object"
+  },
+  "name": "defer_debt"
+ },
+ {
+  "description": "Detect contradictions for a stored memory against realm peers",
+  "inputSchema": {
+   "properties": {
+    "memory_id": {
+     "description": "Memory ID to check",
+     "type": "string"
+    },
+    "realm": {
+     "description": "Realm to scan (default global)",
+     "type": "string"
+    }
+   },
+   "required": [
+    "memory_id"
+   ],
+   "type": "object"
+  },
+  "name": "detect_contradictions"
+ },
+ {
+  "description": "Add a source to the deny-list via triplet",
+  "inputSchema": {
+   "properties": {
+    "source": {
+     "description": "Source identifier to deny",
+     "type": "string"
+    }
+   },
+   "required": [
+    "source"
+   ],
+   "type": "object"
+  },
+  "name": "disable_source"
+ },
+ {
+  "description": "Change distillation model",
+  "inputSchema": {
+   "properties": {
+    "enabled": {
+     "type": "boolean"
+    },
+    "model": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "model"
+   ],
+   "type": "object"
+  },
+  "name": "distill_set_model"
+ },
+ {
+  "description": "Cancel a dream",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "dream_cancel"
+ },
+ {
+  "description": "Force stuck dream to woke",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "dream_force_woke"
+ },
+ {
+  "description": "List recent dreams",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "realm": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "dream_list"
+ },
+ {
+  "description": "Start an autonomous dream",
+  "inputSchema": {
+   "properties": {
+    "brain_model": {
+     "description": "Model name, e.g. gemma4:26b or sonnet",
+     "type": "string"
+    },
+    "brain_provider": {
+     "description": "Brain provider: claude or local",
+     "type": "string"
+    },
+    "publish_path": {
+     "type": "string"
+    },
+    "realm": {
+     "type": "string"
+    },
+    "topic": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "topic"
+   ],
+   "type": "object"
+  },
+  "name": "dream_start"
+ },
+ {
+  "description": "Get dream details",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "dream_status"
+ },
+ {
+  "description": "Auto-select topic and dream",
+  "inputSchema": {
+   "properties": {
+    "publish_path": {
+     "type": "string"
+    },
+    "realm": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "dream_wander"
+ },
+ {
+  "description": "Show effective scoring weights \u2014 baseline + learned deltas for all factors",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "effective_scorer_weights"
+ },
+ {
+  "description": "Fast embed symbol metadata",
+  "inputSchema": {
+   "properties": {
+    "batch_size": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "reset": {
+     "type": "boolean"
+    }
+   },
+   "type": "object"
+  },
+  "name": "embed_symbols"
+ },
+ {
+  "description": "Enroll a Trusted wisdom candidate into the Wisdom Homeostasis layer \u2014 creates a living WisdomLineage record that tracks belief integrity over time",
+  "inputSchema": {
+   "properties": {
+    "ancestor_lineage_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Parent lineage ID if this is a fork/split"
+    },
+    "claim": {
+     "description": "The claim this wisdom encodes",
+     "type": "string"
+    },
+    "derivation_relation": {
+     "description": "Relation to ancestor: supersedes|branches_from|narrows|splits_from",
+     "type": "string"
+    },
+    "envelope": {
+     "description": "Applicability envelope: {domain, action_types, preconditions, source_families}",
+     "type": "object"
+    },
+    "seed_debt_ids": {
+     "description": "Epistemic debt IDs",
+     "items": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "string"
+       }
+      ]
+     },
+     "type": "array"
+    },
+    "seed_episode_ids": {
+     "description": "Episode IDs that seeded this wisdom",
+     "items": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "string"
+       }
+      ]
+     },
+     "type": "array"
+    },
+    "seed_intervention_ids": {
+     "description": "Intervention IDs",
+     "items": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "string"
+       }
+      ]
+     },
+     "type": "array"
+    },
+    "seed_surprise_ids": {
+     "description": "Surprise event IDs",
+     "items": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "string"
+       }
+      ]
+     },
+     "type": "array"
+    },
+    "wisdom_candidate_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "ID of the WisdomCandidate to enroll"
+    }
+   },
+   "required": [
+    "wisdom_candidate_id",
+    "claim",
+    "envelope"
+   ],
+   "type": "object"
+  },
+  "name": "enroll_wisdom_lineage"
+ },
+ {
+  "description": "Find similar episode clusters",
+  "inputSchema": {
+   "properties": {
+    "min_occurrences": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "similarity_threshold": {
+     "type": "number"
+    }
+   },
+   "type": "object"
+  },
+  "name": "episode_cluster_status"
+ },
+ {
+  "description": "Promote shadow intervention policies that have passed the 20-event / lift>0.15 gate, demote policies whose source rule is refuted, and report active policy stats. Safe to call any time; idempotent.",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "executor_flush"
+ },
+ {
+  "description": "Expand a memory to full hierarchical context",
+  "inputSchema": {
+   "properties": {
+    "depth": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "expand_memory"
+ },
+ {
+  "description": "Expand query into typed variants",
+  "inputSchema": {
+   "properties": {
+    "query": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "query"
+   ],
+   "type": "object"
+  },
+  "name": "expand_query"
+ },
+ {
+  "description": "Explain a fact: provenance chain + supporting/conflicting facts",
+  "inputSchema": {
+   "properties": {
+    "fact_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Fact ID to explain"
+    }
+   },
+   "required": [
+    "fact_id"
+   ],
+   "type": "object"
+  },
+  "name": "explain_fact"
+ },
+ {
+  "description": "Get full content of a memory",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "description": "Memory ID",
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "explore_expand"
+ },
+ {
+  "description": "Get nodes connected via triplets",
+  "inputSchema": {
+   "properties": {
+    "direction": {
+     "description": "outgoing, incoming, or both",
+     "type": "string"
+    },
+    "node": {
+     "description": "Node name",
+     "type": "string"
+    }
+   },
+   "required": [
+    "node"
+   ],
+   "type": "object"
+  },
+  "name": "explore_neighbors"
+ },
+ {
+  "description": "Get summary of a memory (first 200 chars)",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "description": "Memory ID",
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "explore_peek"
+ },
+ {
+  "description": "Lightweight recall - titles/scores only",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max results (default 10)"
+    },
+    "query": {
+     "description": "Search query",
+     "type": "string"
+    }
+   },
+   "required": [
+    "query"
+   ],
+   "type": "object"
+  },
+  "name": "explore_recall"
+ },
+ {
+  "description": "Export query-passage pairs as JSONL for BGE embedding fine-tuning. Generates positives from memories and hard negatives.",
+  "inputSchema": {
+   "properties": {
+    "include_negatives": {
+     "description": "Generate hard negatives (default: true)",
+     "type": "boolean"
+    },
+    "max_pairs": {
+     "description": "Max pairs to export (default: 10000)",
+     "type": "integer"
+    },
+    "min_confidence": {
+     "description": "Min confidence threshold (default: 0.5)",
+     "type": "number"
+    },
+    "output_path": {
+     "description": "Output JSONL path (default: ~/.claude/training/pairs.jsonl)",
+     "type": "string"
+    },
+    "realm": {
+     "description": "Filter to specific realm (default: all)",
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "export_training_pairs"
+ },
+ {
+  "description": "Get file content at time (stub)",
+  "inputSchema": {
+   "properties": {
+    "file_path": {
+     "type": "string"
+    },
+    "session_id": {
+     "type": "string"
+    },
+    "show_diff": {
+     "type": "boolean"
+    },
+    "time": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "file_path"
+   ],
+   "type": "object"
+  },
+  "name": "file_at_time"
+ },
+ {
+  "description": "Restore file version (stub)",
+  "inputSchema": {
+   "properties": {
+    "file_path": {
+     "type": "string"
+    },
+    "preview": {
+     "type": "boolean"
+    },
+    "version_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "file_path"
+   ],
+   "type": "object"
+  },
+  "name": "file_restore"
+ },
+ {
+  "description": "Show files modified in time range",
+  "inputSchema": {
+   "properties": {
+    "cross_session": {
+     "type": "boolean"
+    },
+    "file_pattern": {
+     "type": "string"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "path": {
+     "type": "string"
+    },
+    "query": {
+     "type": "string"
+    },
+    "session_id": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "file_timeline"
+ },
+ {
+  "description": "Find memory pairs with high semantic similarity (near-duplicates)",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max pairs to return (default 20)"
+    },
+    "realm": {
+     "description": "Filter by realm",
+     "type": "string"
+    },
+    "threshold": {
+     "description": "Cosine similarity threshold (default 0.90)",
+     "type": "number"
+    }
+   },
+   "type": "object"
+  },
+  "name": "find_near_duplicates"
+ },
+ {
+  "description": "Search for symbols by name. Scope with path (substring the file path must contain, e.g. a repo dir) and lang (cpp|c|python|rust|js|go|java|ruby).",
+  "inputSchema": {
+   "properties": {
+    "kind": {
+     "type": "string"
+    },
+    "lang": {
+     "type": "string"
+    },
+    "limit": {
+     "type": "integer"
+    },
+    "name": {
+     "type": "string"
+    },
+    "path": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "name"
+   ],
+   "type": "object"
+  },
+  "name": "find_symbol"
+ },
+ {
+  "description": "Flush the pending embedding queue synchronously \u2014 call after remember_batch to ensure HNSW/semantic recall is available immediately. Returns {flushed: N}.",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "flush_embeddings"
+ },
+ {
+  "description": "Remove a memory",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "description": "Node ID to forget",
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "forget"
+ },
+ {
+  "description": "Bulk-delete all memories of a given kind (e.g. 'habit'). Optionally filter by realm.",
+  "inputSchema": {
+   "properties": {
+    "kind": {
+     "description": "Memory kind to delete (e.g. habit, unknown)",
+     "type": "string"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max to delete (default 5000)"
+    },
+    "realm": {
+     "description": "Optional realm filter",
+     "type": "string"
+    }
+   },
+   "required": [
+    "kind"
+   ],
+   "type": "object"
+  },
+  "name": "forget_kind"
+ },
+ {
+  "description": "Semantic search with full context",
+  "inputSchema": {
+   "properties": {
+    "exclude_kinds": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "include_global": {
+     "type": "boolean"
+    },
+    "k": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "partnership_only": {
+     "type": "boolean"
+    },
+    "query": {
+     "type": "string"
+    },
+    "realm": {
+     "type": "string"
+    },
+    "separation_mode": {
+     "type": "boolean"
+    }
+   },
+   "required": [
+    "query"
+   ],
+   "type": "object"
+  },
+  "name": "full_resonate"
+ },
+ {
+  "description": "Get a node by ID",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "get"
+ },
+ {
+  "description": "Identify recurring surprise patterns \u2014 domains/actions where predictions consistently fail",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max blind spots (default 10)"
+    },
+    "realm": {
+     "description": "Filter by realm",
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "get_blind_spots"
+ },
+ {
+  "description": "Batch-fetch raw embedding vectors for memory IDs. Returns JSON object mapping id\u2192vector. Used for computing S-entropy (Gram matrix effective rank) over recall candidates.",
+  "inputSchema": {
+   "properties": {
+    "ids": {
+     "description": "Array of memory ID strings",
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "ids"
+   ],
+   "type": "object"
+  },
+  "name": "get_embeddings"
+ },
+ {
+  "description": "Get tracked entities",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "type": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "get_entities"
+ },
+ {
+  "description": "Retrieve the evidence type tag of a memory",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "description": "Memory ID",
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "get_evidence_type"
+ },
+ {
+  "description": "List open epistemic debts sorted by fragility \u2014 decisions most likely to be wrong",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max results (default 20)"
+    },
+    "threshold": {
+     "description": "Minimum fragility threshold (default 0.5)",
+     "type": "number"
+    }
+   },
+   "type": "object"
+  },
+  "name": "get_fragile_decisions"
+ },
+ {
+  "description": "Get a single intervention record by ID",
+  "inputSchema": {
+   "properties": {
+    "intervention_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Intervention ID"
+    }
+   },
+   "required": [
+    "intervention_id"
+   ],
+   "type": "object"
+  },
+  "name": "get_intervention"
+ },
+ {
+  "description": "Get active policies",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "scope": {
+     "type": "string"
+    },
+    "type": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "get_policies"
+ },
+ {
+  "description": "Get relationship events",
+  "inputSchema": {
+   "properties": {
+    "event_type": {
+     "type": "string"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "session_id": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "get_relationship_events"
+ },
+ {
+  "description": "View learned recall source weights \u2014 how much each source is trusted per domain",
+  "inputSchema": {
+   "properties": {
+    "domain": {
+     "description": "Filter by domain (omit for all)",
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "get_source_weights"
+ },
+ {
+  "description": "Get Soul Utility Score metrics",
+  "inputSchema": {
+   "properties": {
+    "days": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "type": "object"
+  },
+  "name": "get_sus_metrics"
+ },
+ {
+  "description": "Get full task view \u2014 contract, delegations, evidence links, pending probes, and completion criteria",
+  "inputSchema": {
+   "properties": {
+    "task_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Task ID"
+    }
+   },
+   "required": [
+    "task_id"
+   ],
+   "type": "object"
+  },
+  "name": "get_task"
+ },
+ {
+  "description": "Get conversation turns for a session",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "session_id": {
+     "type": "string"
+    },
+    "start_index": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "type": "object"
+  },
+  "name": "get_turns"
+ },
+ {
+  "description": "Get full details of a wisdom lineage by ID, including challenger evidence and state history",
+  "inputSchema": {
+   "properties": {
+    "lineage_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Lineage ID"
+    }
+   },
+   "required": [
+    "lineage_id"
+   ],
+   "type": "object"
+  },
+  "name": "get_wisdom_lineage"
+ },
+ {
+  "description": "Mark goal completed",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "outcome": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "id",
+    "outcome"
+   ],
+   "type": "object"
+  },
+  "name": "goal_complete"
+ },
+ {
+  "description": "Get goal by ID",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "goal_get"
+ },
+ {
+  "description": "List goals",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "realm": {
+     "type": "string"
+    },
+    "sort_by": {
+     "type": "string"
+    },
+    "status": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "goal_list"
+ },
+ {
+  "description": "Update goal progress",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "milestone": {
+     "type": "string"
+    },
+    "progress": {
+     "type": "number"
+    }
+   },
+   "required": [
+    "id",
+    "progress"
+   ],
+   "type": "object"
+  },
+  "name": "goal_progress"
+ },
+ {
+  "description": "Define a long-term goal",
+  "inputSchema": {
+   "properties": {
+    "deadline": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "description": {
+     "type": "string"
+    },
+    "milestones": {
+     "type": "string"
+    },
+    "realm": {
+     "type": "string"
+    },
+    "title": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "title"
+   ],
+   "type": "object"
+  },
+  "name": "goal_set"
+ },
+ {
+  "description": "Personalized PageRank over the triplet graph",
+  "inputSchema": {
+   "properties": {
+    "damping": {
+     "description": "Damping factor (default 0.85)",
+     "type": "number"
+    },
+    "edge_types": {
+     "description": "Predicate filter (empty = all)",
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "iterations": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "PPR iterations (default 20)"
+    },
+    "seeds": {
+     "description": "Seed nodes",
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "top_k": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Nodes to return (default 20)"
+    }
+   },
+   "required": [
+    "seeds"
+   ],
+   "type": "object"
+  },
+  "name": "graph_pagerank"
+ },
+ {
+  "description": "BFS graph traversal from a start node over triplet edges",
+  "inputSchema": {
+   "properties": {
+    "direction": {
+     "description": "Edge direction (default outgoing)",
+     "enum": [
+      "outgoing",
+      "incoming",
+      "both"
+     ],
+     "type": "string"
+    },
+    "edge_types": {
+     "description": "Predicate filter (empty = all)",
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "max_hops": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max BFS depth (default 3)"
+    },
+    "max_results": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max nodes returned (default 50)"
+    },
+    "start": {
+     "description": "Starting node",
+     "type": "string"
+    }
+   },
+   "required": [
+    "start"
+   ],
+   "type": "object"
+  },
+  "name": "graph_traverse"
+ },
+ {
+  "description": "Add wisdom, belief, failure, aspiration, or dream",
+  "inputSchema": {
+   "properties": {
+    "content": {
+     "type": "string"
+    },
+    "tags": {
+     "type": "string"
+    },
+    "title": {
+     "type": "string"
+    },
+    "type": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "type",
+    "content"
+   ],
+   "type": "object"
+  },
+  "name": "grow"
+ },
+ {
+  "description": "List formed habits",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "min_strength": {
+     "type": "number"
+    },
+    "realm": {
+     "type": "string"
+    },
+    "sort_by": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "habit_list"
+ },
+ {
+  "description": "Find matching habits",
+  "inputSchema": {
+   "properties": {
+    "context": {
+     "type": "string"
+    },
+    "min_strength": {
+     "type": "number"
+    },
+    "realm": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "context"
+   ],
+   "type": "object"
+  },
+  "name": "habit_match"
+ },
+ {
+  "description": "Record trigger->response pattern",
+  "inputSchema": {
+   "properties": {
+    "realm": {
+     "type": "string"
+    },
+    "response": {
+     "type": "string"
+    },
+    "trigger": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "trigger",
+    "response"
+   ],
+   "type": "object"
+  },
+  "name": "habit_observe"
+ },
+ {
+  "description": "Strengthen a habit",
+  "inputSchema": {
+   "properties": {
+    "amount": {
+     "type": "number"
+    },
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "habit_strengthen"
+ },
+ {
+  "description": "Weaken a habit",
+  "inputSchema": {
+   "properties": {
+    "amount": {
+     "type": "number"
+    },
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "habit_weaken"
+ },
+ {
+  "description": "Check daemon health",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "health_check"
+ },
+ {
+  "description": "Start autonomous health-check sadhana that monitors memory quality, dedup ratio, and embedding coverage",
+  "inputSchema": {
+   "properties": {
+    "interval_seconds": {
+     "description": "Check interval in seconds (default: 3600)",
+     "type": "integer"
+    },
+    "max_turns": {
+     "description": "Max check cycles (default: 0 = unlimited)",
+     "type": "integer"
+    },
+    "realm": {
+     "description": "Realm to monitor (default: brahman)",
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "health_check_start"
+ },
+ {
+  "description": "Combined vector + BM25 + graph recall",
+  "inputSchema": {
+   "properties": {
+    "bm25_weight": {
+     "type": "number"
+    },
+    "explain": {
+     "description": "Include score decomposition per hit (default: False)",
+     "type": "boolean"
+    },
+    "graph_weight": {
+     "type": "number"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "query": {
+     "type": "string"
+    },
+    "realm": {
+     "type": "string"
+    },
+    "recency_weight": {
+     "type": "number"
+    },
+    "tag": {
+     "type": "string"
+    },
+    "vector_weight": {
+     "type": "number"
+    }
+   },
+   "required": [
+    "query"
+   ],
+   "type": "object"
+  },
+  "name": "hybrid_recall"
+ },
+ {
+  "description": "Get memory hygiene statistics",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "hygiene_stats"
+ },
+ {
+  "description": "Top-k Sequitur rules ranked by expected information gain (Wilson probe_value). Maximized at p_hat=0.5 \u2014 rules the system is most uncertain about. Run consolidation_pass first to populate.",
+  "inputSchema": {
+   "properties": {
+    "k": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max rules to return (default 10)"
+    }
+   },
+   "type": "object"
+  },
+  "name": "hypothesis_probes"
+ },
+ {
+  "description": "Start self-improvement implementation sadhana",
+  "inputSchema": {
+   "properties": {
+    "interval_seconds": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "max_turns": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "realm": {
+     "type": "string"
+    },
+    "repo": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "impl_start"
+ },
+ {
+  "description": "Ingest external content (URL, file, directory) into memory via SSL distillation. Fetches content, chunks it, runs LLM distillation, stores learnings + triplets.",
+  "inputSchema": {
+   "properties": {
+    "max_chunks": {
+     "description": "Max chunks to process (default: 30)",
+     "type": "integer"
+    },
+    "model": {
+     "description": "LLM model for distillation",
+     "type": "string"
+    },
+    "realm": {
+     "description": "Target realm (default: brahman)",
+     "type": "string"
+    },
+    "source": {
+     "description": "URL, file path, or directory path to ingest",
+     "type": "string"
+    },
+    "type": {
+     "description": "Source type: auto|url|file|directory (default: auto)",
+     "type": "string"
+    }
+   },
+   "required": [
+    "source"
+   ],
+   "type": "object"
+  },
+  "name": "ingest_source"
+ },
+ {
+  "description": "List global insights",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "tag": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "insight_global"
+ },
+ {
+  "description": "Promote memory to global",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "reason": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "insight_promote"
+ },
+ {
+  "description": "Per-source success rates and learned weights across all domains",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "integration_stats"
+ },
+ {
+  "description": "Show intervention ledger statistics \u2014 total, open, succeeded, failed, aborted counts",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "intervention_stats"
+ },
+ {
+  "description": "List memories recalled multiple times recently \u2014 candidates for reconsolidation (excludes freshly-written hook memories)",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max results (default 20)"
+    },
+    "min_access": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Min recall count to qualify (default 2)"
+    },
+    "realm": {
+     "description": "Filter by realm",
+     "type": "string"
+    },
+    "window_hours": {
+     "description": "Recency window in hours (default 48)",
+     "type": "number"
+    }
+   },
+   "type": "object"
+  },
+  "name": "labile_memories"
+ },
+ {
+  "description": "List the most-accessed (most labile) memories \u2014 candidates for reconsolidation",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max results (default 20)"
+    },
+    "realm": {
+     "description": "Filter by realm",
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "labile_memories_top"
+ },
+ {
+  "description": "Store learning in soul memory. Types: correction (wrong\u2192right fix), preference (user style), insight (generalizable wisdom), approach (what worked in a state), outcome (did suggestion help?), milestone (achievement), analysis (reproducible analysis with data/scripts)",
+  "inputSchema": {
+   "properties": {
+    "approach": {
+     "description": "Approach text (approach)",
+     "type": "string"
+    },
+    "category": {
+     "description": "Category (preference)",
+     "type": "string"
+    },
+    "context": {
+     "description": "Context for the learning",
+     "type": "string"
+    },
+    "correct": {
+     "description": "What is correct (correction)",
+     "type": "string"
+    },
+    "data_paths": {
+     "description": "Data paths (analysis)",
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "description": {
+     "description": "Description (analysis)",
+     "type": "string"
+    },
+    "details": {
+     "description": "Details (outcome)",
+     "type": "string"
+    },
+    "domain": {
+     "description": "Domain (insight/analysis)",
+     "type": "string"
+    },
+    "findings": {
+     "description": "Findings (analysis)",
+     "type": "string"
+    },
+    "helped": {
+     "description": "Did it help? (outcome)",
+     "type": "boolean"
+    },
+    "insight": {
+     "description": "Insight text (insight)",
+     "type": "string"
+    },
+    "milestone": {
+     "description": "Milestone text (milestone)",
+     "type": "string"
+    },
+    "name": {
+     "description": "Analysis name (analysis)",
+     "type": "string"
+    },
+    "outcome": {
+     "description": "Outcome (approach)",
+     "type": "string"
+    },
+    "preference": {
+     "description": "Preference text (preference)",
+     "type": "string"
+    },
+    "project": {
+     "description": "Project (analysis)",
+     "type": "string"
+    },
+    "script_paths": {
+     "description": "Script paths (analysis)",
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "state": {
+     "description": "State/mood (approach)",
+     "type": "string"
+    },
+    "suggestion": {
+     "description": "Suggestion (outcome)",
+     "type": "string"
+    },
+    "type": {
+     "description": "correction|preference|insight|approach|outcome|milestone|analysis",
+     "type": "string"
+    },
+    "wrong": {
+     "description": "What was wrong (correction)",
+     "type": "string"
+    }
+   },
+   "required": [
+    "type"
+   ],
+   "type": "object"
+  },
+  "name": "learn"
+ },
+ {
+  "description": "Record an analysis with data and script locations. Makes analyses reproducible and findable later. Use after completing any significant analysis.",
+  "inputSchema": {
+   "properties": {
+    "data_paths": {
+     "description": "Paths to input data files/directories",
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "description": {
+     "description": "What the analysis does/investigates",
+     "type": "string"
+    },
+    "findings": {
+     "description": "Key findings or results (optional)",
+     "type": "string"
+    },
+    "name": {
+     "description": "Short name for the analysis (e.g., 'AGP codon optimization', 'bin_28 damage patterns')",
+     "type": "string"
+    },
+    "project": {
+     "description": "Project name for organization (optional)",
+     "type": "string"
+    },
+    "script_paths": {
+     "description": "Paths to analysis scripts",
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "name"
+   ],
+   "type": "object"
+  },
+  "name": "learn_analysis"
+ },
+ {
+  "description": "Store what approach worked when in a particular state/mood. Builds emotional memory for adapting to session dynamics.",
+  "inputSchema": {
+   "properties": {
+    "approach": {
+     "description": "What helped in this state (e.g., 'step back and reread requirements')",
+     "type": "string"
+    },
+    "outcome": {
+     "description": "What happened after (optional)",
+     "type": "string"
+    },
+    "state": {
+     "description": "State/mood: stuck, debugging, exploring, flowing, frustrated, uncertain, rushing",
+     "type": "string"
+    }
+   },
+   "required": [
+    "state",
+    "approach"
+   ],
+   "type": "object"
+  },
+  "name": "learn_approach"
+ },
+ {
+  "description": "Learn codebase by extracting symbols. path can be a local directory or a remote git URL (https://github.com/..., git@github.com:...). Remote repos are shallow-cloned into a temp dir, indexed, then deleted.",
+  "inputSchema": {
+   "properties": {
+    "branch": {
+     "description": "Branch, tag, or commit to clone (remote only)",
+     "type": "string"
+    },
+    "exclude": {
+     "type": "string"
+    },
+    "force": {
+     "type": "boolean"
+    },
+    "incremental": {
+     "type": "boolean"
+    },
+    "max_files": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "path": {
+     "description": "Local path or remote git URL",
+     "type": "string"
+    },
+    "project": {
+     "description": "Project name (defaults to repo/dir name)",
+     "type": "string"
+    }
+   },
+   "required": [
+    "path"
+   ],
+   "type": "object"
+  },
+  "name": "learn_codebase"
+ },
+ {
+  "description": "Store a correction when I was wrong. Creates high-confidence counter-memory with 'corrects' triplet linking to original mistake.",
+  "inputSchema": {
+   "properties": {
+    "context": {
+     "description": "Context where this applies (optional)",
+     "type": "string"
+    },
+    "correct": {
+     "description": "The correct information/approach",
+     "type": "string"
+    },
+    "wrong": {
+     "description": "What I said/did that was incorrect",
+     "type": "string"
+    }
+   },
+   "required": [
+    "wrong",
+    "correct"
+   ],
+   "type": "object"
+  },
+  "name": "learn_correction"
+ },
+ {
+  "description": "Store a generalizable insight that applies across projects. Use for patterns, techniques, and wisdom not tied to specific codebase.",
+  "inputSchema": {
+   "properties": {
+    "domain": {
+     "description": "Domain: programming, debugging, architecture, testing, performance, security, communication",
+     "type": "string"
+    },
+    "insight": {
+     "description": "The generalizable insight or pattern",
+     "type": "string"
+    },
+    "learned_from": {
+     "description": "Context where this was learned (optional, for future reference)",
+     "type": "string"
+    }
+   },
+   "required": [
+    "domain",
+    "insight"
+   ],
+   "type": "object"
+  },
+  "name": "learn_insight"
+ },
+ {
+  "description": "Record a relationship milestone - achievements, personal context, significant moments worth remembering.",
+  "inputSchema": {
+   "properties": {
+    "date": {
+     "description": "When it happened (optional, defaults to now)",
+     "type": "string"
+    },
+    "milestone": {
+     "description": "What happened (e.g., 'shipped v1.0', 'first successful release')",
+     "type": "string"
+    },
+    "significance": {
+     "description": "Why it matters (optional)",
+     "type": "string"
+    }
+   },
+   "required": [
+    "milestone"
+   ],
+   "type": "object"
+  },
+  "name": "learn_milestone"
+ },
+ {
+  "description": "Record memory usage outcome",
+  "inputSchema": {
+   "properties": {
+    "context": {
+     "type": "string"
+    },
+    "memory_id": {
+     "type": "string"
+    },
+    "outcome": {
+     "enum": [
+      "positive",
+      "negative",
+      "neutral"
+     ],
+     "type": "string"
+    }
+   },
+   "required": [
+    "memory_id",
+    "outcome"
+   ],
+   "type": "object"
+  },
+  "name": "learn_outcome"
+ },
+ {
+  "description": "Record whether a suggestion/approach actually helped. Builds feedback loop for improving future suggestions.",
+  "inputSchema": {
+   "properties": {
+    "details": {
+     "description": "Why it helped or didn't (optional but valuable)",
+     "type": "string"
+    },
+    "helped": {
+     "description": "Did it help? true/false",
+     "type": "boolean"
+    },
+    "suggestion": {
+     "description": "What was suggested or tried",
+     "type": "string"
+    }
+   },
+   "required": [
+    "suggestion",
+    "helped"
+   ],
+   "type": "object"
+  },
+  "name": "learn_outcome"
+ },
+ {
+  "description": "Store a user preference for adapting communication/behavior. Global visibility so it applies across all projects.",
+  "inputSchema": {
+   "properties": {
+    "category": {
+     "description": "Preference category: communication, detail, autonomy, style, workflow",
+     "type": "string"
+    },
+    "example": {
+     "description": "Example demonstrating this preference (optional)",
+     "type": "string"
+    },
+    "preference": {
+     "description": "The preference to remember (e.g., 'prefers concise responses')",
+     "type": "string"
+    }
+   },
+   "required": [
+    "category",
+    "preference"
+   ],
+   "type": "object"
+  },
+  "name": "learn_preference"
+ },
+ {
+  "description": "Current learned scoring model \u2014 version, factor count, loss, outcome count",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "learned_scorer_stats"
+ },
+ {
+  "description": "Delete checkpoint",
+  "inputSchema": {
+   "properties": {
+    "key": {
+     "description": "Canonical checkpoint key (session:project)",
+     "type": "string"
+    },
+    "project": {
+     "type": "string"
+    },
+    "session_id": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "ledger_delete"
+ },
+ {
+  "description": "Get checkpoint by key or session/project",
+  "inputSchema": {
+   "properties": {
+    "include_snapshot": {
+     "description": "Include snapshot preview (truncated) in response",
+     "type": "boolean"
+    },
+    "key": {
+     "description": "Canonical checkpoint key (session:project)",
+     "type": "string"
+    },
+    "project": {
+     "type": "string"
+    },
+    "session_id": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "ledger_get"
+ },
+ {
+  "description": "Get ledger event counts by kind and queue health metrics",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "ledger_health"
+ },
+ {
+  "description": "List recent checkpoints",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "project": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "ledger_list"
+ },
+ {
+  "description": "Load most recent checkpoint",
+  "inputSchema": {
+   "properties": {
+    "include_snapshot": {
+     "description": "Include snapshot preview (truncated) in response",
+     "type": "boolean"
+    },
+    "project": {
+     "type": "string"
+    },
+    "session_id": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "ledger_load"
+ },
+ {
+  "description": "Save session checkpoint",
+  "inputSchema": {
+   "properties": {
+    "active_files": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "blockers": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "coherence": {
+     "type": "number"
+    },
+    "confidence": {
+     "type": "number"
+    },
+    "decisions": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "discoveries": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "mood": {
+     "type": "string"
+    },
+    "next_steps": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "project": {
+     "type": "string"
+    },
+    "session_id": {
+     "type": "string"
+    },
+    "snapshot": {
+     "type": "string"
+    },
+    "todos": {
+     "type": "array"
+    },
+    "transcript_path": {
+     "type": "string"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "name": "ledger_save"
+ },
+ {
+  "description": "List Inflamed lineages whose re-derivation TTL has expired \u2014 these should be demoted or re-derived urgently",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "lineage_expiry_check"
+ },
+ {
+  "description": "Link a memory to a task as evidence \u2014 records which agent produced it and evidence kind",
+  "inputSchema": {
+   "properties": {
+    "evidence_kind": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "0=Observation 1=Artifact 2=Result 3=Analysis 4=UserFeedback"
+    },
+    "memory_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Memory ID to link"
+    },
+    "produced_by": {
+     "description": "Agent that produced this evidence",
+     "type": "string"
+    },
+    "relevance": {
+     "description": "Relevance score 0-1 (default 1.0)",
+     "type": "number"
+    },
+    "task_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Task ID"
+    }
+   },
+   "required": [
+    "task_id",
+    "memory_id"
+   ],
+   "type": "object"
+  },
+  "name": "link_evidence"
+ },
+ {
+  "description": "List available semantic aspects",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "list_aspects"
+ },
+ {
+  "description": "List memories by semantic aspect",
+  "inputSchema": {
+   "properties": {
+    "aspect": {
+     "type": "string"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "min_confidence": {
+     "type": "number"
+    }
+   },
+   "required": [
+    "aspect"
+   ],
+   "type": "object"
+  },
+  "name": "list_by_aspect"
+ },
+ {
+  "description": "List memories filtered by lifecycle status (active/superseded/contradicted/archived)",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "default": 50,
+     "description": "Max results"
+    },
+    "realm": {
+     "description": "Filter by realm",
+     "type": "string"
+    },
+    "status": {
+     "default": "superseded",
+     "description": "Filter: active, superseded, contradicted, archived, or all",
+     "type": "string"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "name": "list_by_status"
+ },
+ {
+  "description": "Fast memory index",
+  "inputSchema": {
+   "properties": {
+    "kind": {
+     "type": "string"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "priority_tier": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "realm": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "list_memories_brief"
+ },
+ {
+  "description": "List pending merge proposals",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "status": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "list_merge_queue"
+ },
+ {
+  "description": "List all currently open (in-progress) interventions",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "list_open_interventions"
+ },
+ {
+  "description": "List pinned memories",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "realm": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "list_pinned"
+ },
+ {
+  "description": "List CEC intervention policies (shadow and active). Each entry shows rule source, kind (OpenTask/TurnInjection/GuardPolicy), shadow event count, lift, and fire count.",
+  "inputSchema": {
+   "properties": {
+    "active_only": {
+     "description": "If true, only return active (promoted) policies",
+     "type": "boolean"
+    }
+   },
+   "type": "object"
+  },
+  "name": "list_policies"
+ },
+ {
+  "description": "Log a decision point to the DecisionTape: chosen action + alternatives considered and rejected. Enables recall_true_counterfactual.",
+  "inputSchema": {
+   "properties": {
+    "chosen_entity": {
+     "type": "string"
+    },
+    "chosen_outcome": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "0=success 1=fail 2=error 3=partial"
+    },
+    "chosen_tool": {
+     "type": "string"
+    },
+    "confidence_delta": {
+     "description": "chosen_confidence - best_alternative_confidence",
+     "type": "number"
+    },
+    "rejected_json": {
+     "description": "JSON array of [sym_u64, rejection_reason_u8] pairs",
+     "type": "string"
+    },
+    "ts_ms": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "chosen_tool",
+    "chosen_entity"
+   ],
+   "type": "object"
+  },
+  "name": "log_decision"
+ },
+ {
+  "description": "Log a structured action event to the CEC tape and CDAWG (tool, entity, outcome: 0=success 1=fail 2=error 3=partial)",
+  "inputSchema": {
+   "properties": {
+    "entity": {
+     "type": "string"
+    },
+    "outcome": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "session_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "tool": {
+     "type": "string"
+    },
+    "ts_ms": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "tool",
+    "entity"
+   ],
+   "type": "object"
+  },
+  "name": "log_event"
+ },
+ {
+  "description": "Log a CEC event with regret-shaping telemetry (token_cost, latency_ms, retry_count). Updates Q-values with utility = outcome_reward - 0.001*token_cost - 0.00001*latency_ms - 0.1*retry_count.",
+  "inputSchema": {
+   "properties": {
+    "entity": {
+     "type": "string"
+    },
+    "latency_ms": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Wall-clock ms (0=unknown)"
+    },
+    "outcome": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "0=success 1=fail 2=error 3=partial"
+    },
+    "retry_count": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Retries before this outcome"
+    },
+    "session_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "token_cost": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Tokens consumed (0=unknown)"
+    },
+    "tool": {
+     "type": "string"
+    },
+    "ts_ms": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "tool",
+    "entity"
+   ],
+   "type": "object"
+  },
+  "name": "log_event_ex"
+ },
+ {
+  "description": "Log memory exposure (SUS)",
+  "inputSchema": {
+   "properties": {
+    "hook_type": {
+     "type": "string"
+    },
+    "memory_ids": {
+     "items": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "string"
+       }
+      ]
+     },
+     "type": "array"
+    },
+    "ranks": {
+     "items": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "string"
+       }
+      ]
+     },
+     "type": "array"
+    },
+    "resonance_scores": {
+     "items": {
+      "type": "number"
+     },
+     "type": "array"
+    },
+    "session_id": {
+     "type": "string"
+    },
+    "turn_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "session_id",
+    "turn_id",
+    "hook_type",
+    "memory_ids"
+   ],
+   "type": "object"
+  },
+  "name": "log_exposure"
+ },
+ {
+  "description": "Get active long-running task",
+  "inputSchema": {
+   "properties": {
+    "realm": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "long_task_active"
+ },
+ {
+  "description": "Mark task as completed",
+  "inputSchema": {
+   "properties": {
+    "outcome": {
+     "type": "string"
+    },
+    "task_id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "task_id",
+    "outcome"
+   ],
+   "type": "object"
+  },
+  "name": "long_task_complete"
+ },
+ {
+  "description": "Evaluate task completion",
+  "inputSchema": {
+   "properties": {
+    "task_id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "task_id"
+   ],
+   "type": "object"
+  },
+  "name": "long_task_evaluate"
+ },
+ {
+  "description": "Append event to task log",
+  "inputSchema": {
+   "properties": {
+    "kind": {
+     "type": "string"
+    },
+    "payload": {
+     "type": "string"
+    },
+    "related_entities": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "tags": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "task_id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "task_id",
+    "kind"
+   ],
+   "type": "object"
+  },
+  "name": "long_task_event"
+ },
+ {
+  "description": "Get a long-running task by ID",
+  "inputSchema": {
+   "properties": {
+    "task_id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "task_id"
+   ],
+   "type": "object"
+  },
+  "name": "long_task_get"
+ },
+ {
+  "description": "Get synthesized task context",
+  "inputSchema": {
+   "properties": {
+    "max_tokens": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "mode": {
+     "type": "string"
+    },
+    "task_id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "task_id"
+   ],
+   "type": "object"
+  },
+  "name": "long_task_snapshot"
+ },
+ {
+  "description": "Start a long-running task",
+  "inputSchema": {
+   "properties": {
+    "goal": {
+     "type": "string"
+    },
+    "hard_checks": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "realm": {
+     "type": "string"
+    },
+    "soft_checks": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "task_id": {
+     "type": "string"
+    },
+    "work_items": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "task_id",
+    "goal"
+   ],
+   "type": "object"
+  },
+  "name": "long_task_start"
+ },
+ {
+  "description": "Update long-running task progress",
+  "inputSchema": {
+   "properties": {
+    "blockers": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "completed_summary": {
+     "type": "string"
+    },
+    "task_id": {
+     "type": "string"
+    },
+    "work_items": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "task_id"
+   ],
+   "type": "object"
+  },
+  "name": "long_task_update"
+ },
+ {
+  "description": "Unified memory lookup. Classifies intent, fans out to keyword/semantic/triplet/temporal/code backends, fuses with weighted RRF. Use this as the default memory search.",
+  "inputSchema": {
+   "properties": {
+    "explain": {
+     "type": "boolean"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "mode": {
+     "enum": [
+      "auto",
+      "fast",
+      "deep"
+     ],
+     "type": "string"
+    },
+    "query": {
+     "type": "string"
+    },
+    "realm": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "query"
+   ],
+   "type": "object"
+  },
+  "name": "lookup"
+ },
+ {
+  "description": "Unified memory lookup. Classifies query intent, fans out to optimal backends (keyword/semantic/triplet/temporal/code), fuses with weighted RRF. Default entry point for memory search \u2014 use instead of recall/smart_recall/hybrid_recall.",
+  "inputSchema": {
+   "properties": {
+    "explain": {
+     "description": "Include intent classification and score breakdown",
+     "type": "boolean"
+    },
+    "limit": {
+     "description": "Max results (default: 10)",
+     "type": "integer"
+    },
+    "mode": {
+     "description": "auto=escalate if low confidence; fast=skip deep search; deep=force full resonate",
+     "enum": [
+      "auto",
+      "fast",
+      "deep"
+     ],
+     "type": "string"
+    },
+    "query": {
+     "description": "Search query",
+     "type": "string"
+    },
+    "realm": {
+     "description": "Filter by realm",
+     "type": "string"
+    }
+   },
+   "required": [
+    "query"
+   ],
+   "type": "object"
+  },
+  "name": "lookup"
+ },
+ {
+  "description": "Mark a memory as invalidated by a commit hash or symbol-change ID.",
+  "inputSchema": {
+   "properties": {
+    "memory_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Memory ID to mark"
+    },
+    "reason": {
+     "description": "Commit hash or change ID causing invalidation",
+     "type": "string"
+    }
+   },
+   "required": [
+    "memory_id"
+   ],
+   "type": "object"
+  },
+  "name": "mark_memory_invalidated"
+ },
+ {
+  "description": "Edit memory metadata. Actions: set_type (change memory type), set_priority (change priority tier)",
+  "inputSchema": {
+   "properties": {
+    "action": {
+     "description": "set_type|set_priority",
+     "type": "string"
+    },
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Memory ID"
+    },
+    "tier": {
+     "description": "New priority tier (for set_priority)",
+     "type": "string"
+    },
+    "type": {
+     "description": "New type (for set_type)",
+     "type": "string"
+    }
+   },
+   "required": [
+    "action",
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "memory_edit"
+ },
+ {
+  "description": "View memory version history",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "memory_history"
+ },
+ {
+  "description": "Acquire memory lock",
+  "inputSchema": {
+   "properties": {
+    "duration": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "holder_id": {
+     "type": "string"
+    },
+    "holder_type": {
+     "type": "string"
+    },
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "id",
+    "holder_id"
+   ],
+   "type": "object"
+  },
+  "name": "memory_lock"
+ },
+ {
+  "description": "Check lock status",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "memory_lock_status"
+ },
+ {
+  "description": "Show why a memory exists: source, evidence, superseded_by, supersedes relations",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "description": "Memory ID to inspect",
+     "type": "string"
+    },
+    "memory_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Memory ID (numeric)"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "name": "memory_provenance"
+ },
+ {
+  "description": "Revert memory to previous version",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "reason": {
+     "type": "string"
+    },
+    "version": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "id",
+    "version"
+   ],
+   "type": "object"
+  },
+  "name": "memory_revert"
+ },
+ {
+  "description": "Get effective status of a memory: active, superseded, or contradicted \u2014 checks incoming supersedes triplets",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "type": "string"
+    },
+    "memory_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "name": "memory_status"
+ },
+ {
+  "description": "Get memory type statistics",
+  "inputSchema": {
+   "properties": {
+    "realm": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "memory_type_stats"
+ },
+ {
+  "description": "Release memory lock",
+  "inputSchema": {
+   "properties": {
+    "holder_id": {
+     "type": "string"
+    },
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "id",
+    "holder_id"
+   ],
+   "type": "object"
+  },
+  "name": "memory_unlock"
+ },
+ {
+  "description": "Self-evaluate learning effectiveness",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "metacognition_evaluate"
+ },
+ {
+  "description": "Acknowledge all messages",
+  "inputSchema": {
+   "properties": {
+    "session_id": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "msg_ack_all"
+ },
+ {
+  "description": "Get message history",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "session_id": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "msg_history"
+ },
+ {
+  "description": "Check unread messages",
+  "inputSchema": {
+   "properties": {
+    "auto_ack": {
+     "type": "boolean"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "min_priority": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "session_id": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "msg_inbox"
+ },
+ {
+  "description": "Reply to a message using the original sender/target from the event",
+  "inputSchema": {
+   "properties": {
+    "content": {
+     "description": "Reply content",
+     "type": "string"
+    },
+    "message_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Event ID of the message to reply to"
+    },
+    "session_id": {
+     "description": "Override sender session_id (defaults to original target)",
+     "type": "string"
+    }
+   },
+   "required": [
+    "message_id",
+    "content"
+   ],
+   "type": "object"
+  },
+  "name": "msg_respond"
+ },
+ {
+  "description": "Send message to another session",
+  "inputSchema": {
+   "properties": {
+    "content": {
+     "type": "string"
+    },
+    "content_type": {
+     "type": "string"
+    },
+    "priority": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "session_id": {
+     "type": "string"
+    },
+    "target": {
+     "type": "string"
+    },
+    "target_type": {
+     "type": "string"
+    },
+    "ttl": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "target",
+    "content"
+   ],
+   "type": "object"
+  },
+  "name": "msg_send"
+ },
+ {
+  "description": "Record a negative nack signal for a memory (lowers its recall score)",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "description": "Node ID to nack",
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "nack_memory"
+ },
+ {
+  "description": "Decrement nack signal for a memory. Records [nack] memory:<id> score:-1 with tag nack-signal.",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "description": "Memory ID to nack",
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "nack_memory"
+ },
+ {
+  "description": "Get work mode segment history",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "session_id": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "narrative_history"
+ },
+ {
+  "description": "Append event to session log",
+  "inputSchema": {
+   "properties": {
+    "files_mentioned": {
+     "type": "string"
+    },
+    "kind": {
+     "type": "string"
+    },
+    "payload": {
+     "type": "string"
+    },
+    "session_id": {
+     "type": "string"
+    },
+    "success": {
+     "type": "boolean"
+    },
+    "summary": {
+     "type": "string"
+    },
+    "tool_name": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "kind",
+    "summary"
+   ],
+   "type": "object"
+  },
+  "name": "narrative_log"
+ },
+ {
+  "description": "Get work mode and segment summary",
+  "inputSchema": {
+   "properties": {
+    "session_id": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "narrative_status"
+ },
+ {
+  "description": "Store an observation/learning (SSL v0.4)",
+  "inputSchema": {
+   "properties": {
+    "arousal": {
+     "description": "Affect arousal: 0.0 to 1.0",
+     "type": "number"
+    },
+    "category": {
+     "type": "string"
+    },
+    "confidence": {
+     "type": "number"
+    },
+    "content": {
+     "type": "string"
+    },
+    "derivation": {
+     "description": "SSL v0.4 <=@ provenance: comma-separated source memory IDs this was abstracted from (required at G:1+)",
+     "type": "string"
+    },
+    "flags": {
+     "description": "Structural flags: ORIGIN,CORE,PIVOT,GENESIS,TURNING",
+     "type": "string"
+    },
+    "granularity": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "SSL v0.4 granularity tier: 0=atom,1=episode,2=claim,3=operator,4=boundary"
+    },
+    "refs": {
+     "description": "Cross-references: comma-separated tag names or memory IDs",
+     "type": "string"
+    },
+    "source_loc": {
+     "description": "SSL v0.4 src: external source grounding, e.g. file:line or doc section",
+     "type": "string"
+    },
+    "tags": {
+     "type": "string"
+    },
+    "title": {
+     "type": "string"
+    },
+    "valence": {
+     "description": "Affect valence: -1.0 to +1.0",
+     "type": "number"
+    }
+   },
+   "required": [
+    "title",
+    "content"
+   ],
+   "type": "object"
+  },
+  "name": "observe"
+ },
+ {
+  "description": "Return IDs of memories awaiting embedding (stuck embed queue)",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "pending_embed_ids"
+ },
+ {
+  "description": "Pin memory to keep hot",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "reason": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "pin_memory"
+ },
+ {
+  "description": "Get predicted next-needed memories from the Markov chain access predictor",
+  "inputSchema": {
+   "properties": {
+    "k": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Number of predictions (default 8)"
+    }
+   },
+   "type": "object"
+  },
+  "name": "predict_needed"
+ },
+ {
+  "description": "Add a confirmed exemplar to a behavioral class to refine its centroid. Use when you have a clear example of the behavior.",
+  "inputSchema": {
+   "properties": {
+    "class": {
+     "description": "Behavioral class to update",
+     "type": "string"
+    },
+    "text": {
+     "description": "Confirmed exemplar text",
+     "type": "string"
+    }
+   },
+   "required": [
+    "class",
+    "text"
+   ],
+   "type": "object"
+  },
+  "name": "probe_calibrate"
+ },
+ {
+  "description": "Store an exemplar text as a centroid for a behavioral class (sycophantic/hedging/shallow/direct). Bootstrap the probe with representative examples.",
+  "inputSchema": {
+   "properties": {
+    "class": {
+     "description": "Behavioral class: sycophantic | hedging | shallow | direct",
+     "type": "string"
+    },
+    "note": {
+     "description": "Optional annotation",
+     "type": "string"
+    },
+    "text": {
+     "description": "Exemplar text for this class",
+     "type": "string"
+    }
+   },
+   "required": [
+    "class",
+    "text"
+   ],
+   "type": "object"
+  },
+  "name": "probe_seed"
+ },
+ {
+  "description": "Show how many exemplars exist per behavioral class. Use to verify the probe is seeded before running behavioral_probe.",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "probe_status"
+ },
+ {
+  "description": "Get user profile",
+  "inputSchema": {
+   "properties": {
+    "user_id": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "profile_get"
+ },
+ {
+  "description": "Record user observation",
+  "inputSchema": {
+   "properties": {
+    "observation_type": {
+     "type": "string"
+    },
+    "user_id": {
+     "type": "string"
+    },
+    "value": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "observation_type",
+    "value"
+   ],
+   "type": "object"
+  },
+  "name": "profile_observe"
+ },
+ {
+  "description": "Update profile field",
+  "inputSchema": {
+   "properties": {
+    "field": {
+     "type": "string"
+    },
+    "user_id": {
+     "type": "string"
+    },
+    "value": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "field",
+    "value"
+   ],
+   "type": "object"
+  },
+  "name": "profile_update"
+ },
+ {
+  "description": "Promote a memory one tier: Proposed\u2192Observed\u2192Verified\u2192Active",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "description": "Memory ID",
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "promote_memory"
+ },
+ {
+  "description": "Propose change to memory",
+  "inputSchema": {
+   "properties": {
+    "content": {
+     "type": "string"
+    },
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "proposed_by": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "id",
+    "content",
+    "proposed_by"
+   ],
+   "type": "object"
+  },
+  "name": "propose_change"
+ },
+ {
+  "description": "Deterministic anti-reprocessing check: has this file/task already been processed? Exact keyed lookup of a prior [done] record by content-hash and/or input path \u2014 bypasses fuzzy recall. Returns found + the record.",
+  "inputSchema": {
+   "properties": {
+    "input": {
+     "description": "Input path (fallback handle)",
+     "type": "string"
+    },
+    "sha": {
+     "description": "Content hash of the input (tried first \u2014 content identity)",
+     "type": "string"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "name": "provenance_check"
+ },
+ {
+  "description": "Prune old/excess episode memories. Deletes episodes older than max_age_days (strength<0.3) and caps total count at max_count.",
+  "inputSchema": {
+   "properties": {
+    "max_age_days": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Delete episodes older than this (default 90)"
+    },
+    "max_count": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Cap total episode count at this (default 10000)"
+    }
+   },
+   "type": "object"
+  },
+  "name": "prune_episodes"
+ },
+ {
+  "description": "Query triplets with flexible filters",
+  "inputSchema": {
+   "properties": {
+    "object": {
+     "type": "string"
+    },
+    "predicate": {
+     "type": "string"
+    },
+    "subject": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "query"
+ },
+ {
+  "description": "Follow predicate chain: A\u2192B\u2192C through constraint facts",
+  "inputSchema": {
+   "properties": {
+    "predicates": {
+     "description": "Ordered list of predicates to follow",
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "subject": {
+     "description": "Starting entity",
+     "type": "string"
+    }
+   },
+   "required": [
+    "subject",
+    "predicates"
+   ],
+   "type": "object"
+  },
+  "name": "query_chain"
+ },
+ {
+  "description": "Query semantic claims",
+  "inputSchema": {
+   "properties": {
+    "active_only": {
+     "type": "boolean"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "predicate": {
+     "type": "string"
+    },
+    "scope": {
+     "type": "string"
+    },
+    "subject": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "query_claims"
+ },
+ {
+  "description": "Query epistemic debts with filters",
+  "inputSchema": {
+   "properties": {
+    "domain": {
+     "description": "Filter by domain",
+     "type": "string"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max results (default 50)"
+    },
+    "min_fragility": {
+     "description": "Minimum fragility score",
+     "type": "number"
+    },
+    "realm": {
+     "description": "Filter by realm",
+     "type": "string"
+    },
+    "status": {
+     "description": "Filter: open, resolved, deferred",
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "query_debts"
+ },
+ {
+  "description": "Query triplets by subject or object",
+  "inputSchema": {
+   "properties": {
+    "object": {
+     "description": "Query by object",
+     "type": "string"
+    },
+    "subject": {
+     "description": "Query by subject",
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "query_graph"
+ },
+ {
+  "description": "Query the intervention ledger with optional filters",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max results (default 50)"
+    },
+    "realm": {
+     "description": "Filter by realm",
+     "type": "string"
+    },
+    "session_id": {
+     "description": "Filter by session ID",
+     "type": "string"
+    },
+    "status": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Filter by status (0-4)"
+    }
+   },
+   "type": "object"
+  },
+  "name": "query_interventions"
+ },
+ {
+  "description": "Query recorded surprise/prediction-error events with filters",
+  "inputSchema": {
+   "properties": {
+    "domain": {
+     "description": "Filter by domain",
+     "type": "string"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max results (default 50)"
+    },
+    "min_magnitude": {
+     "description": "Minimum surprise magnitude",
+     "type": "number"
+    },
+    "realm": {
+     "description": "Filter by realm",
+     "type": "string"
+    },
+    "since_ms": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Only events after this timestamp (ms)"
+    }
+   },
+   "type": "object"
+  },
+  "name": "query_surprises"
+ },
+ {
+  "description": "Query task contracts \u2014 filter by realm, session, status, or tag",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max results (default 50)"
+    },
+    "realm": {
+     "description": "Filter by realm",
+     "type": "string"
+    },
+    "session_id": {
+     "description": "Filter by session ID",
+     "type": "string"
+    },
+    "status": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Filter by status (0-4)"
+    },
+    "tag": {
+     "description": "Filter by tag",
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "query_tasks"
+ },
+ {
+  "description": "Query triplets at a point in time",
+  "inputSchema": {
+   "properties": {
+    "at_date": {
+     "description": "YYYY-MM-DD",
+     "type": "string"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "object": {
+     "type": "string"
+    },
+    "predicate": {
+     "type": "string"
+    },
+    "subject": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "query_triplets_temporal"
+ },
+ {
+  "description": "Pattern-match query against constraint store (unification with wildcards)",
+  "inputSchema": {
+   "properties": {
+    "object": {
+     "description": "Object filter",
+     "type": "string"
+    },
+    "predicate": {
+     "description": "Predicate filter",
+     "type": "string"
+    },
+    "scope": {
+     "description": "Scope filter",
+     "type": "string"
+    },
+    "subject": {
+     "description": "Subject filter (omit for wildcard)",
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "query_unify"
+ },
+ {
+  "description": "Query wisdom candidates by lifecycle stage and/or domain",
+  "inputSchema": {
+   "properties": {
+    "domain": {
+     "description": "Filter by domain",
+     "type": "string"
+    },
+    "lifecycle": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Filter by lifecycle: 0=candidate, 1=provisional, 2=trusted, 3=demoted"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max results (default 50)"
+    }
+   },
+   "type": "object"
+  },
+  "name": "query_wisdom_candidates"
+ },
+ {
+  "description": "List wisdom lineages filtered by state and/or domain",
+  "inputSchema": {
+   "properties": {
+    "domain": {
+     "description": "Filter by domain",
+     "type": "string"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max results (default 50)"
+    },
+    "state": {
+     "description": "Filter: trusted|watch|inflamed|demoted",
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "query_wisdom_lineages"
+ },
+ {
+  "description": "Live work-queue depth (pending in-flight + unclaimed), processed/distilled/failed counters, pending embeddings, dead-letters",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "queue_status"
+ },
+ {
+  "description": "Read source of a function/method by name",
+  "inputSchema": {
+   "properties": {
+    "name": {
+     "type": "string"
+    },
+    "project": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "name"
+   ],
+   "type": "object"
+  },
+  "name": "read_function"
+ },
+ {
+  "description": "Read a function's code. Convenience wrapper for read_symbol with kind=function.",
+  "inputSchema": {
+   "properties": {
+    "context": {
+     "description": "Lines of context before function (default: 3)",
+     "type": "integer"
+    },
+    "name": {
+     "description": "Function name to read",
+     "type": "string"
+    },
+    "project": {
+     "description": "Project name filter (optional)",
+     "type": "string"
+    }
+   },
+   "required": [
+    "name"
+   ],
+   "type": "object"
+  },
+  "name": "read_function"
+ },
+ {
+  "description": "Read actual source code for a symbol",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "kind": {
+     "type": "string"
+    },
+    "name": {
+     "type": "string"
+    },
+    "project": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "read_symbol"
+ },
+ {
+  "description": "Read just a symbol's code, not entire file. ~10x token savings vs full file read. Returns [kind name @ file:line-line] + code.",
+  "inputSchema": {
+   "properties": {
+    "context": {
+     "description": "Lines of context before symbol (default: 3)",
+     "type": "integer"
+    },
+    "kind": {
+     "description": "Symbol kind filter: class, function, method (optional)",
+     "type": "string"
+    },
+    "name": {
+     "description": "Symbol name to read (e.g., 'DuckDBStore', 'daemon_call')",
+     "type": "string"
+    },
+    "project": {
+     "description": "Project name filter (optional)",
+     "type": "string"
+    }
+   },
+   "required": [
+    "name"
+   ],
+   "type": "object"
+  },
+  "name": "read_symbol"
+ },
+ {
+  "description": "Read JSONL transcript with pagination",
+  "inputSchema": {
+   "properties": {
+    "keyword": {
+     "type": "string"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "max_chars_per_turn": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "metadata_only": {
+     "type": "boolean"
+    },
+    "path": {
+     "type": "string"
+    },
+    "role_filter": {
+     "type": "string"
+    },
+    "session_id": {
+     "type": "string"
+    },
+    "start_turn": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "type": "object"
+  },
+  "name": "read_transcript"
+ },
+ {
+  "description": "Add memory to a shared realm (stub)",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "type": "string"
+    },
+    "realm": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "id",
+    "realm"
+   ],
+   "type": "object"
+  },
+  "name": "realm_add"
+ },
+ {
+  "description": "Detect current realm from environment",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "realm_detect"
+ },
+ {
+  "description": "Get all realms a memory belongs to",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "realm_get"
+ },
+ {
+  "description": "List all known realms",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "realm_list"
+ },
+ {
+  "description": "Remove memory from a shared realm (stub)",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "type": "string"
+    },
+    "realm": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "id",
+    "realm"
+   ],
+   "type": "object"
+  },
+  "name": "realm_remove"
+ },
+ {
+  "description": "Set primary realm for a memory",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "type": "string"
+    },
+    "realm": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "id",
+    "realm"
+   ],
+   "type": "object"
+  },
+  "name": "realm_set"
+ },
+ {
+  "description": "Set visibility level (stub)",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "type": "string"
+    },
+    "visibility": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "id",
+    "visibility"
+   ],
+   "type": "object"
+  },
+  "name": "realm_visibility"
+ },
+ {
+  "description": "Rebuild FTS index for BM25 search",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "rebuild_fts_index"
+ },
+ {
+  "description": "Search memory by semantic similarity with realm filtering",
+  "inputSchema": {
+   "properties": {
+    "explain": {
+     "description": "Include score decomposition per hit (default: False)",
+     "type": "boolean"
+    },
+    "gwt_mode": {
+     "description": "Global Workspace Theory mode (default: False)",
+     "type": "boolean"
+    },
+    "include_global": {
+     "description": "Include global memories (default: True)",
+     "type": "boolean"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max results (default 10)"
+    },
+    "min_confidence": {
+     "description": "Minimum confidence threshold",
+     "type": "number"
+    },
+    "query": {
+     "description": "Search query",
+     "type": "string"
+    },
+    "realm": {
+     "description": "Filter by realm",
+     "type": "string"
+    },
+    "separation_mode": {
+     "description": "Diverse results via MMR (default: False)",
+     "type": "boolean"
+    },
+    "tag": {
+     "description": "Filter by tag",
+     "type": "string"
+    }
+   },
+   "required": [
+    "query"
+   ],
+   "type": "object"
+  },
+  "name": "recall"
+ },
+ {
+  "description": "Budget-aware recall",
+  "inputSchema": {
+   "properties": {
+    "budget_tokens": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "include_global": {
+     "type": "boolean"
+    },
+    "query": {
+     "type": "string"
+    },
+    "realm": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "recall_by_priority"
+ },
+ {
+  "description": "PMI-ranked causal antecedents: what actions typically precede (tool, entity)?",
+  "inputSchema": {
+   "properties": {
+    "entity": {
+     "type": "string"
+    },
+    "k": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "tool": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "tool",
+    "entity"
+   ],
+   "type": "object"
+  },
+  "name": "recall_causal_antecedent"
+ },
+ {
+  "description": "CDAWG sibling-edge counterfactual: what alternative tool/entity would have had a lower failure rate in this same context?",
+  "inputSchema": {
+   "properties": {
+    "entity": {
+     "type": "string"
+    },
+    "k": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "outcome": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "0=success 1=fail 2=error 3=partial (default 1)"
+    },
+    "tool": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "tool",
+    "entity"
+   ],
+   "type": "object"
+  },
+  "name": "recall_counterfactual"
+ },
+ {
+  "description": "Return top-k CDAWG states with high failure rates (fail_ratio > 0.6, fail_count >= 3)",
+  "inputSchema": {
+   "properties": {
+    "k": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "type": "object"
+  },
+  "name": "recall_failure_pattern"
+ },
+ {
+  "description": "Heteroassociative HDC query: given known_role=known_val, infer query_role. Roles: tool, entity, outcome.",
+  "inputSchema": {
+   "properties": {
+    "k": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "known_role": {
+     "type": "string"
+    },
+    "known_val": {
+     "type": "string"
+    },
+    "query_role": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "known_role",
+    "known_val",
+    "query_role"
+   ],
+   "type": "object"
+  },
+  "name": "recall_hdcbind"
+ },
+ {
+  "description": "BM25 keyword search",
+  "inputSchema": {
+   "properties": {
+    "explain": {
+     "description": "Include score decomposition per hit (default: False)",
+     "type": "boolean"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max results (default 10)"
+    },
+    "query": {
+     "description": "Search query",
+     "type": "string"
+    }
+   },
+   "required": [
+    "query"
+   ],
+   "type": "object"
+  },
+  "name": "recall_keyword"
+ },
+ {
+  "description": "Return last k occurrences of (tool, entity) from the CEC event tape",
+  "inputSchema": {
+   "properties": {
+    "entity": {
+     "type": "string"
+    },
+    "k": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "tool": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "tool",
+    "entity"
+   ],
+   "type": "object"
+  },
+  "name": "recall_last_action"
+ },
+ {
+  "description": "Return top-k CDAWG motif states reachable from (tool, entity) ranked by Q-value: which action sequences have the highest expected success rate from this context?",
+  "inputSchema": {
+   "properties": {
+    "entity": {
+     "type": "string"
+    },
+    "k": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max states to return (default 5)"
+    },
+    "tool": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "tool",
+    "entity"
+   ],
+   "type": "object"
+  },
+  "name": "recall_motif_value"
+ },
+ {
+  "description": "Session-level recall: groups chunk evidence by source session using noisy-OR aggregation. Returns ranked sessions with best evidence.",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max sessions to return (default 10)"
+    },
+    "query": {
+     "description": "Natural language query",
+     "type": "string"
+    },
+    "realm": {
+     "description": "Realm filter (optional)",
+     "type": "string"
+    }
+   },
+   "required": [
+    "query"
+   ],
+   "type": "object"
+  },
+  "name": "recall_session"
+ },
+ {
+  "description": "Multi-lane retrieval planner: uses a fast LLM call to extract entities and speech-act type, then fans out to semantic, typed, spreading-activation, and session-level lanes, merging results with Reciprocal Rank Fusion. Best for complex queries.",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "default": 10,
+     "description": "Max results",
+     "type": "integer"
+    },
+    "query": {
+     "description": "Natural language query",
+     "type": "string"
+    },
+    "realm": {
+     "description": "Memory realm",
+     "type": "string"
+    },
+    "skip_llm_plan": {
+     "default": false,
+     "description": "Skip LLM planning step (faster)",
+     "type": "boolean"
+    }
+   },
+   "required": [
+    "query"
+   ],
+   "type": "object"
+  },
+  "name": "recall_smart"
+ },
+ {
+  "description": "Retrieve memories via entity graph spreading activation",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max results (default 10)"
+    },
+    "query": {
+     "description": "Query; entity seeds extracted automatically",
+     "type": "string"
+    },
+    "realm": {
+     "description": "Realm filter (optional)",
+     "type": "string"
+    }
+   },
+   "required": [
+    "query"
+   ],
+   "type": "object"
+  },
+  "name": "recall_spreading"
+ },
+ {
+  "description": "Retrieve memories via entity graph spreading activation. Extracts capitalized words, @refs, and quoted strings from the query as entity seeds, then traverses the triplet graph (BFS depth 2, decay 0.6) to find related memories.",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "default": 10,
+     "description": "Max results",
+     "type": "integer"
+    },
+    "query": {
+     "description": "Query; entity seeds extracted automatically",
+     "type": "string"
+    },
+    "realm": {
+     "description": "Memory realm",
+     "type": "string"
+    }
+   },
+   "required": [
+    "query"
+   ],
+   "type": "object"
+  },
+  "name": "recall_spreading"
+ },
+ {
+  "description": "Search memories within a time window (defaults to last 7 days)",
+  "inputSchema": {
+   "properties": {
+    "end": {
+     "description": "End date",
+     "type": "string"
+    },
+    "include_global": {
+     "description": "Include global memories",
+     "type": "boolean"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max results (default 20)"
+    },
+    "query": {
+     "description": "Optional semantic search query",
+     "type": "string"
+    },
+    "realm": {
+     "description": "Filter by realm",
+     "type": "string"
+    },
+    "start": {
+     "description": "Start date (ISO8601 or YYYY-MM-DD)",
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "recall_temporal"
+ },
+ {
+  "description": "Return decision points where (tool, entity) was explicitly considered and rejected. Uses the DecisionTape (Phase 10), not CDAWG sibling inference. Requires prior log_event_ex or log_decision calls.",
+  "inputSchema": {
+   "properties": {
+    "entity": {
+     "type": "string"
+    },
+    "k": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max results (default 5)"
+    },
+    "outcome": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "0=success 1=fail 2=error (default 0)"
+    },
+    "tool": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "tool",
+    "entity"
+   ],
+   "type": "object"
+  },
+  "name": "recall_true_counterfactual"
+ },
+ {
+  "description": "Recall with UCB1 exploration bonus \u2014 surfaces novel under-accessed memories alongside relevant ones",
+  "inputSchema": {
+   "properties": {
+    "exploration": {
+     "description": "Exploration weight sqrt(2)\u22481.414 (default)",
+     "type": "number"
+    },
+    "fetch_k": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Candidate pool size before re-ranking (default 40)"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max results (default 10)"
+    },
+    "query": {
+     "description": "Search query",
+     "type": "string"
+    },
+    "realm": {
+     "description": "Filter by realm",
+     "type": "string"
+    }
+   },
+   "required": [
+    "query"
+   ],
+   "type": "object"
+  },
+  "name": "recall_ucb1"
+ },
+ {
+  "description": "Update content of a memory during its labile window (reconsolidation)",
+  "inputSchema": {
+   "properties": {
+    "content": {
+     "description": "New/corrected content",
+     "type": "string"
+    },
+    "id": {
+     "description": "Memory ID to update",
+     "type": "string"
+    },
+    "reason": {
+     "description": "Optional reason for reconsolidation",
+     "type": "string"
+    }
+   },
+   "required": [
+    "id",
+    "content"
+   ],
+   "type": "object"
+  },
+  "name": "reconsolidate"
+ },
+ {
+  "description": "Attribute a closed intervention to a causal class \u2014 routes feedback to the appropriate learning subsystem",
+  "inputSchema": {
+   "properties": {
+    "confidence_delta": {
+     "description": "Magnitude of the learning signal (0.0-1.0)",
+     "type": "number"
+    },
+    "debt_ids": {
+     "description": "Linked epistemic debt IDs",
+     "items": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "string"
+       }
+      ]
+     },
+     "type": "array"
+    },
+    "intervention_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Intervention ID"
+    },
+    "note": {
+     "description": "Optional human-readable note",
+     "type": "string"
+    },
+    "primary_class": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "0=MemoryRecallError 1=SourceTrustError 2=ProcedureError 3=ToolExecutionError 4=EnvironmentShift 5=HiddenPrecondition 6=AmbiguousState 7=GoalSpecError 8=UserOverride 9=ExternalNondeterminism"
+    },
+    "secondary_class": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Optional secondary attribution class (same enum)"
+    },
+    "skill_memory_ids": {
+     "description": "Skill memory IDs that were applied",
+     "items": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "string"
+       }
+      ]
+     },
+     "type": "array"
+    },
+    "source_memory_ids": {
+     "description": "Memory IDs that contributed to this outcome",
+     "items": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "string"
+       }
+      ]
+     },
+     "type": "array"
+    },
+    "surprise_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Linked surprise event ID if available"
+    }
+   },
+   "required": [
+    "intervention_id",
+    "primary_class"
+   ],
+   "type": "object"
+  },
+  "name": "record_attribution"
+ },
+ {
+  "description": "Record whether a recall source was useful \u2014 updates learned source weights",
+  "inputSchema": {
+   "properties": {
+    "query_domain": {
+     "description": "Domain of the query (default general)",
+     "type": "string"
+    },
+    "source": {
+     "description": "Source: semantic, keyword, temporal, artifact, association (required)",
+     "type": "string"
+    },
+    "was_useful": {
+     "description": "Whether the source's results were useful (default true)",
+     "type": "boolean"
+    }
+   },
+   "required": [
+    "source"
+   ],
+   "type": "object"
+  },
+  "name": "record_feedback"
+ },
+ {
+  "description": "Record a prediction error event \u2014 what was expected vs what actually happened",
+  "inputSchema": {
+   "properties": {
+    "action": {
+     "description": "What action was taken",
+     "type": "string"
+    },
+    "actual": {
+     "description": "What actually happened (required)",
+     "type": "string"
+    },
+    "context_sketch": {
+     "description": "What was happening when the surprise occurred",
+     "type": "string"
+    },
+    "domain": {
+     "description": "Domain: recall, tool, user_correction, constraint (default general)",
+     "type": "string"
+    },
+    "expected": {
+     "description": "What was predicted/expected (optional)",
+     "type": "string"
+    },
+    "realm": {
+     "description": "Realm filter (default global)",
+     "type": "string"
+    },
+    "session_id": {
+     "description": "Session ID (optional)",
+     "type": "string"
+    },
+    "source_memory_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Related memory ID (optional)"
+    },
+    "surprise_magnitude": {
+     "description": "How surprising [0-1] (default 0.5)",
+     "type": "number"
+    }
+   },
+   "required": [
+    "actual"
+   ],
+   "type": "object"
+  },
+  "name": "record_surprise"
+ },
+ {
+  "description": "Show Sequitur rules that are being falsified: rules whose antecedent appears but is NOT followed by the expected consequent. Returns live/refuted counts and top-k by refutation ratio.",
+  "inputSchema": {
+   "properties": {
+    "k": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max rules to show (default 10)"
+    }
+   },
+   "type": "object"
+  },
+  "name": "refutation_stats"
+ },
+ {
+  "description": "Register an epistemic uncertainty \u2014 competing hypotheses that need resolution",
+  "inputSchema": {
+   "properties": {
+    "competing_hypotheses": {
+     "description": "Competing explanations",
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "discriminating_test": {
+     "description": "How to distinguish between hypotheses",
+     "type": "string"
+    },
+    "domain": {
+     "description": "Domain (default general)",
+     "type": "string"
+    },
+    "fragility_score": {
+     "description": "How fragile this belief is [0-1] (default 0.5)",
+     "type": "number"
+    },
+    "pattern": {
+     "description": "The uncertain pattern/belief (required)",
+     "type": "string"
+    },
+    "realm": {
+     "description": "Realm (default global)",
+     "type": "string"
+    },
+    "session_id": {
+     "description": "Session ID (optional)",
+     "type": "string"
+    }
+   },
+   "required": [
+    "pattern"
+   ],
+   "type": "object"
+  },
+  "name": "register_debt"
+ },
+ {
+  "description": "Register a task contract \u2014 records goal, constraints, acceptance criteria, priority, and optional deadline for an ongoing agent task",
+  "inputSchema": {
+   "properties": {
+    "acceptance_criteria": {
+     "description": "Criteria for task completion",
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "constraints": {
+     "description": "Constraints that must be respected",
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "deadline_ms": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Optional deadline as Unix ms timestamp"
+    },
+    "goal": {
+     "description": "Task goal description",
+     "type": "string"
+    },
+    "parent_task_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Parent task ID for subtasks"
+    },
+    "priority": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Priority 1-10 (default 5)"
+    },
+    "realm": {
+     "description": "Realm: coding, research, planning (default: coding)",
+     "type": "string"
+    },
+    "session_id": {
+     "description": "Session this task belongs to",
+     "type": "string"
+    },
+    "tags": {
+     "description": "Optional tags",
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "goal"
+   ],
+   "type": "object"
+  },
+  "name": "register_task"
+ },
+ {
+  "description": "Reject a Proposed memory, archiving it",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "description": "Memory ID to reject",
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "reject_memory"
+ },
+ {
+  "description": "Store text in memory with optional tags and realm",
+  "inputSchema": {
+   "properties": {
+    "confidence": {
+     "description": "Initial confidence 0-1 (default: 0.8)",
+     "type": "number"
+    },
+    "content": {
+     "description": "Text to remember",
+     "type": "string"
+    },
+    "realm": {
+     "description": "Primary realm (default: brahman)",
+     "type": "string"
+    },
+    "shared_realms": {
+     "description": "Additional realms",
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "tags": {
+     "description": "Optional tags",
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "type": {
+     "description": "Node type (wisdom, insight, signal, episode)",
+     "type": "string"
+    },
+    "visibility": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "0=Private, 1=Shared, 2=Global (default: 0)"
+    }
+   },
+   "required": [
+    "content"
+   ],
+   "type": "object"
+  },
+  "name": "remember"
+ },
+ {
+  "description": "Store multiple memories in a single round-trip (high-throughput bulk ingest)",
+  "inputSchema": {
+   "properties": {
+    "items": {
+     "description": "Array of memory objects (same fields as remember)",
+     "items": {
+      "properties": {
+       "content": {
+        "type": "string"
+       },
+       "realm": {
+        "type": "string"
+       },
+       "source_session": {
+        "type": "string"
+       },
+       "tags": {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       "valid_from": {
+        "type": "string"
+       },
+       "visibility": {
+        "anyOf": [
+         {
+          "type": "integer"
+         },
+         {
+          "type": "string"
+         }
+        ]
+       }
+      },
+      "required": [
+       "content"
+      ],
+      "type": "object"
+     },
+     "type": "array"
+    },
+    "realm": {
+     "description": "Default realm for all items",
+     "type": "string"
+    }
+   },
+   "required": [
+    "items"
+   ],
+   "type": "object"
+  },
+  "name": "remember_batch"
+ },
+ {
+  "description": "Store a typed memory node (digest-node, decision, open-question, etc.) with optional graph links (supersedes, invalidated-by, anchors-to).",
+  "inputSchema": {
+   "properties": {
+    "content": {
+     "description": "SSL triplet content for the memory",
+     "type": "string"
+    },
+    "links": {
+     "description": "Graph links to other memories",
+     "items": {
+      "properties": {
+       "predicate": {
+        "enum": [
+         "supersedes",
+         "invalidated-by",
+         "anchors-to"
+        ],
+        "type": "string"
+       },
+       "target_id": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "predicate",
+       "target_id"
+      ],
+      "type": "object"
+     },
+     "type": "array"
+    },
+    "node_type": {
+     "description": "Type of memory node",
+     "enum": [
+      "digest-node",
+      "symbol-summary",
+      "decision",
+      "open-question",
+      "rollup",
+      "working-brief"
+     ],
+     "type": "string"
+    },
+    "realm": {
+     "description": "Realm to store in (default: brahman)",
+     "type": "string"
+    },
+    "subject": {
+     "description": "What this memory is about",
+     "type": "string"
+    }
+   },
+   "required": [
+    "node_type",
+    "content",
+    "subject"
+   ],
+   "type": "object"
+  },
+  "name": "remember_typed"
+ },
+ {
+  "description": "Curiosity-driven research. Actions: cycle (get topic to research), topics (list research topics), store (save findings)",
+  "inputSchema": {
+   "properties": {
+    "action": {
+     "description": "cycle|topics|store",
+     "type": "string"
+    },
+    "findings": {
+     "description": "Findings (store)",
+     "type": "string"
+    },
+    "gap_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Gap ID to resolve (store)"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max results"
+    },
+    "realm": {
+     "description": "Filter by realm",
+     "type": "string"
+    },
+    "source": {
+     "description": "Topic source: gaps|weak|suggest (topics)",
+     "type": "string"
+    },
+    "sources": {
+     "description": "URLs (store)",
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "topic": {
+     "description": "Topic (store)",
+     "type": "string"
+    }
+   },
+   "required": [
+    "action"
+   ],
+   "type": "object"
+  },
+  "name": "research"
+ },
+ {
+  "description": "Run one curiosity-driven research cycle. Returns a topic to research with context. After calling this, use WebSearch to find information, then call research_store with results.",
+  "inputSchema": {
+   "properties": {
+    "realm": {
+     "description": "Filter by realm/project",
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "research_cycle"
+ },
+ {
+  "description": "Store research results as memories with source attribution. Call after using WebSearch to learn about a topic.",
+  "inputSchema": {
+   "properties": {
+    "confidence": {
+     "description": "Confidence in findings 0-1 (default: 0.7)",
+     "type": "number"
+    },
+    "findings": {
+     "description": "Key learnings in SSL format",
+     "type": "string"
+    },
+    "gap_id": {
+     "description": "Curiosity gap ID to resolve (optional)",
+     "type": "integer"
+    },
+    "sources": {
+     "description": "URLs or references",
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "topic": {
+     "description": "What was researched",
+     "type": "string"
+    }
+   },
+   "required": [
+    "topic",
+    "findings"
+   ],
+   "type": "object"
+  },
+  "name": "research_store"
+ },
+ {
+  "description": "Get topics that need research. Returns curiosity gaps, low-confidence memories, or suggested topics. Use WebSearch to research these, then store results with research_store.",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "description": "Max topics to return (default: 3)",
+     "type": "integer"
+    },
+    "realm": {
+     "description": "Filter by realm/project",
+     "type": "string"
+    },
+    "source": {
+     "description": "Where to get topics: gaps (curiosity gaps), weak (low-confidence memories), suggest (AI-suggested based on recent work)",
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "research_topics"
+ },
+ {
+  "description": "Resolve a contradiction: declare winner supersedes loser, store CORRECTION memory",
+  "inputSchema": {
+   "properties": {
+    "loser_id": {
+     "description": "Memory ID to demote",
+     "type": "string"
+    },
+    "reason": {
+     "description": "Explanation for the resolution",
+     "type": "string"
+    },
+    "winner_id": {
+     "description": "Memory ID that is correct",
+     "type": "string"
+    }
+   },
+   "required": [
+    "winner_id",
+    "loser_id"
+   ],
+   "type": "object"
+  },
+  "name": "resolve_contradiction"
+ },
+ {
+  "description": "Mark an epistemic debt as resolved with a resolution",
+  "inputSchema": {
+   "properties": {
+    "debt_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Debt ID to resolve"
+    },
+    "resolution": {
+     "description": "How the uncertainty was resolved",
+     "type": "string"
+    }
+   },
+   "required": [
+    "debt_id",
+    "resolution"
+   ],
+   "type": "object"
+  },
+  "name": "resolve_debt"
+ },
+ {
+  "description": "Resolve merge proposal",
+  "inputSchema": {
+   "properties": {
+    "merge_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "resolution": {
+     "type": "string"
+    },
+    "status": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "merge_id",
+    "status"
+   ],
+   "type": "object"
+  },
+  "name": "resolve_merge"
+ },
+ {
+  "description": "Resolve a pending probe \u2014 mark as Answered (1) or Dismissed (2) and optionally record the answer",
+  "inputSchema": {
+   "properties": {
+    "answer": {
+     "description": "Optional answer text",
+     "type": "string"
+    },
+    "probe_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Probe ID"
+    },
+    "status": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "1=Answered 2=Dismissed"
+    }
+   },
+   "required": [
+    "probe_id",
+    "status"
+   ],
+   "type": "object"
+  },
+  "name": "resolve_probe"
+ },
+ {
+  "description": "Show ResonanceLearner Bayesian bandit stats",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "resonance_stats"
+ },
+ {
+  "description": "Soft-retract a constraint fact (preserves history)",
+  "inputSchema": {
+   "properties": {
+    "fact_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Fact ID to retract"
+    }
+   },
+   "required": [
+    "fact_id"
+   ],
+   "type": "object"
+  },
+  "name": "retract_fact"
+ },
+ {
+  "description": "Show route learner status and arm configuration for smart_recall",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "route_stats"
+ },
+ {
+  "description": "Generate retrieval hints for unprocessed memories using chitta-hint-tuned. Reads memories without a retrieval_hint tag, calls the local hint model, stores each hint as a derived memory (kind=hint, tags=retrieval_hint), and marks the source memory with hint:done. Run after a session to enrich new memories for better recall.",
+  "inputSchema": {
+   "properties": {
+    "dry_run": {
+     "default": false,
+     "description": "Preview hints without writing to memory (default: false)",
+     "type": "boolean"
+    },
+    "limit": {
+     "default": 100,
+     "description": "Max memories to enrich per run (default: 100)",
+     "type": "integer"
+    },
+    "model": {
+     "default": "chitta-hint-tuned",
+     "description": "Ollama model to use (default: chitta-hint-tuned)",
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "run_hint_enricher"
+ },
+ {
+  "description": "Autonomous background learning loop control. Actions: start, stop, pause, resume, status, list, checkpoint, set_goal, set_interval, set_model",
+  "inputSchema": {
+   "properties": {
+    "action": {
+     "description": "start|stop|pause|resume|status|list|checkpoint|set_goal|set_interval|set_model",
+     "type": "string"
+    },
+    "goal": {
+     "description": "Goal text (for set_goal)",
+     "type": "string"
+    },
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Sadhana ID (for stop/pause/resume/status/checkpoint)"
+    },
+    "interval": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Interval in seconds (for set_interval)"
+    },
+    "max_turns": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max turns (for start)"
+    },
+    "model": {
+     "description": "Model name (for set_model/start)",
+     "type": "string"
+    }
+   },
+   "required": [
+    "action"
+   ],
+   "type": "object"
+  },
+  "name": "sadhana"
+ },
+ {
+  "description": "Report mid-cycle checkpoint",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "status": {
+     "enum": [
+      "progressed",
+      "achieved",
+      "blocked"
+     ],
+     "type": "string"
+    },
+    "summary": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "id",
+    "status",
+    "summary"
+   ],
+   "type": "object"
+  },
+  "name": "sadhana_checkpoint"
+ },
+ {
+  "description": "List sadhanas",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "realm": {
+     "type": "string"
+    },
+    "state": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "sadhana_list"
+ },
+ {
+  "description": "Pause a sadhana",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "sadhana_pause"
+ },
+ {
+  "description": "Resume a paused sadhana",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "sadhana_resume"
+ },
+ {
+  "description": "Change sadhana goal",
+  "inputSchema": {
+   "properties": {
+    "goal": {
+     "type": "string"
+    },
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "id",
+    "goal"
+   ],
+   "type": "object"
+  },
+  "name": "sadhana_set_goal"
+ },
+ {
+  "description": "Change tick interval",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "interval": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "id",
+    "interval"
+   ],
+   "type": "object"
+  },
+  "name": "sadhana_set_interval"
+ },
+ {
+  "description": "Set max turns per cycle",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "max_turns": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "id",
+    "max_turns"
+   ],
+   "type": "object"
+  },
+  "name": "sadhana_set_max_turns"
+ },
+ {
+  "description": "Change brain model",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "model": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "id",
+    "model"
+   ],
+   "type": "object"
+  },
+  "name": "sadhana_set_model"
+ },
+ {
+  "description": "Create and start an autonomous agent",
+  "inputSchema": {
+   "properties": {
+    "brain_model": {
+     "type": "string"
+    },
+    "brain_provider": {
+     "type": "string"
+    },
+    "goal": {
+     "type": "string"
+    },
+    "goal_dsl": {
+     "type": "object"
+    },
+    "interval_seconds": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "max_turns": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "realm": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "goal"
+   ],
+   "type": "object"
+  },
+  "name": "sadhana_start"
+ },
+ {
+  "description": "Get sadhana status",
+  "inputSchema": {
+   "properties": {
+    "history_limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "sadhana_status"
+ },
+ {
+  "description": "Stop a sadhana",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "reason": {
+     "type": "string"
+    },
+    "success": {
+     "type": "boolean"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "sadhana_stop"
+ },
+ {
+  "description": "Save spectral stats snapshot for drift tracking",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "save_spectral_snapshot"
+ },
+ {
+  "description": "Background scan: find contradiction candidates across all memories in a realm",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max candidates to return (default 50)"
+    },
+    "realm": {
+     "description": "Realm to scan",
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "scan_contradictions"
+ },
+ {
+  "description": "Semantic search for code symbols",
+  "inputSchema": {
+   "properties": {
+    "kind": {
+     "type": "string"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "project": {
+     "type": "string"
+    },
+    "query": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "query"
+   ],
+   "type": "object"
+  },
+  "name": "search_symbols"
+ },
+ {
+  "description": "List active sessions",
+  "inputSchema": {
+   "properties": {
+    "realm": {
+     "type": "string"
+    },
+    "status": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "session_list"
+ },
+ {
+  "description": "Sync session registry",
+  "inputSchema": {
+   "properties": {
+    "projects_dir": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "session_sync"
+ },
+ {
+  "description": "Set affect dimensions (valence, arousal) on a memory",
+  "inputSchema": {
+   "properties": {
+    "arousal": {
+     "description": "Emotional arousal: 0.0 to 1.0",
+     "type": "number"
+    },
+    "id": {
+     "type": "string"
+    },
+    "valence": {
+     "description": "Emotional valence: -1.0 to +1.0",
+     "type": "number"
+    }
+   },
+   "required": [
+    "id",
+    "valence",
+    "arousal"
+   ],
+   "type": "object"
+  },
+  "name": "set_affect"
+ },
+ {
+  "description": "Upsert a completion criterion for a task \u2014 creates if new, updates if existing criterion text matches",
+  "inputSchema": {
+   "properties": {
+    "criterion": {
+     "description": "Criterion description",
+     "type": "string"
+    },
+    "evidence_note": {
+     "description": "Optional evidence supporting the criterion check",
+     "type": "string"
+    },
+    "is_met": {
+     "description": "Whether criterion is met (default false)",
+     "type": "boolean"
+    },
+    "task_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Task ID"
+    }
+   },
+   "required": [
+    "task_id",
+    "criterion"
+   ],
+   "type": "object"
+  },
+  "name": "set_criterion"
+ },
+ {
+  "description": "Tag a memory with its epistemological evidence class (observation/inference/hearsay/authoritative/prediction)",
+  "inputSchema": {
+   "properties": {
+    "evidence_type": {
+     "description": "One of: observation, inference, hearsay, authoritative, prediction",
+     "type": "string"
+    },
+    "id": {
+     "description": "Memory ID",
+     "type": "string"
+    }
+   },
+   "required": [
+    "id",
+    "evidence_type"
+   ],
+   "type": "object"
+  },
+  "name": "set_evidence_type"
+ },
+ {
+  "description": "Set memory semantic type",
+  "inputSchema": {
+   "properties": {
+    "memory_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "type": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "memory_id",
+    "type"
+   ],
+   "type": "object"
+  },
+  "name": "set_memory_type"
+ },
+ {
+  "description": "Set memory priority tier",
+  "inputSchema": {
+   "properties": {
+    "memory_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "tier": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "memory_id",
+    "tier"
+   ],
+   "type": "object"
+  },
+  "name": "set_priority_tier"
+ },
+ {
+  "description": "Semantic search + show contradiction pairs for matching memories",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max memories to scan (default 20)"
+    },
+    "query": {
+     "description": "Search query",
+     "type": "string"
+    },
+    "realm": {
+     "description": "Filter by realm",
+     "type": "string"
+    }
+   },
+   "required": [
+    "query"
+   ],
+   "type": "object"
+  },
+  "name": "show_conflicts"
+ },
+ {
+  "description": "Deprecate a skill",
+  "inputSchema": {
+   "properties": {
+    "skill_id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "skill_id"
+   ],
+   "type": "object"
+  },
+  "name": "skill_deprecate"
+ },
+ {
+  "description": "Deprecate a skill (marks latest version as deprecated).",
+  "inputSchema": {
+   "properties": {
+    "skill_id": {
+     "description": "Skill identifier to deprecate",
+     "type": "string"
+    }
+   },
+   "required": [
+    "skill_id"
+   ],
+   "type": "object"
+  },
+  "name": "skill_deprecate"
+ },
+ {
+  "description": "List all skills",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "skill_list"
+ },
+ {
+  "description": "List all registered skills with their latest version number.",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "skill_list"
+ },
+ {
+  "description": "Read a skill version (0=latest)",
+  "inputSchema": {
+   "properties": {
+    "skill_id": {
+     "type": "string"
+    },
+    "version": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "skill_id"
+   ],
+   "type": "object"
+  },
+  "name": "skill_read"
+ },
+ {
+  "description": "Read a skill version. version=0 means latest.",
+  "inputSchema": {
+   "properties": {
+    "skill_id": {
+     "description": "Skill identifier",
+     "type": "string"
+    },
+    "version": {
+     "description": "Version number (0=latest)",
+     "type": "integer"
+    }
+   },
+   "required": [
+    "skill_id"
+   ],
+   "type": "object"
+  },
+  "name": "skill_read"
+ },
+ {
+  "description": "Search skills by query",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "query": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "query"
+   ],
+   "type": "object"
+  },
+  "name": "skill_search"
+ },
+ {
+  "description": "Search skills by text match on id, tags, or content.",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "description": "Max results (default: 20)",
+     "type": "integer"
+    },
+    "query": {
+     "description": "Search query",
+     "type": "string"
+    }
+   },
+   "required": [
+    "query"
+   ],
+   "type": "object"
+  },
+  "name": "skill_search"
+ },
+ {
+  "description": "Upload a new skill version",
+  "inputSchema": {
+   "properties": {
+    "content": {
+     "type": "string"
+    },
+    "skill_id": {
+     "type": "string"
+    },
+    "tags": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "uploaded_by": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "skill_id",
+    "content"
+   ],
+   "type": "object"
+  },
+  "name": "skill_upload"
+ },
+ {
+  "description": "Upload a new version of a reusable skill. Skills are immutable versioned text blobs (prompts, templates, procedures).",
+  "inputSchema": {
+   "properties": {
+    "content": {
+     "description": "Skill content (prompt, template, procedure)",
+     "type": "string"
+    },
+    "skill_id": {
+     "description": "Unique skill identifier",
+     "type": "string"
+    },
+    "tags": {
+     "description": "Tags for search",
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "uploaded_by": {
+     "description": "Agent or user who uploaded",
+     "type": "string"
+    }
+   },
+   "required": [
+    "skill_id",
+    "content"
+   ],
+   "type": "object"
+  },
+  "name": "skill_upload"
+ },
+ {
+  "description": "Build intelligent context combining memories, code, and graph",
+  "inputSchema": {
+   "properties": {
+    "code": {
+     "type": "boolean"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "memories": {
+     "type": "boolean"
+    },
+    "mode": {
+     "type": "string"
+    },
+    "neighbors": {
+     "type": "boolean"
+    },
+    "realm": {
+     "type": "string"
+    },
+    "task": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "task"
+   ],
+   "type": "object"
+  },
+  "name": "smart_context"
+ },
+ {
+  "description": "Build intelligent context. Modes: fast (<80ms), full (<200ms), rlm (RLM-style dynamic exploration via soul_repl). With resolver_mode=true (default), prepends digest-node and decision memories before code symbols.",
+  "inputSchema": {
+   "properties": {
+    "code": {
+     "description": "Include code symbols (default: true)",
+     "type": "boolean"
+    },
+    "limit": {
+     "description": "Token limit (default: 300)",
+     "type": "integer"
+    },
+    "memories": {
+     "description": "Include semantic memories (default: true)",
+     "type": "boolean"
+    },
+    "mode": {
+     "description": "fast: <80ms (vector + BM25), full: <200ms (full_resonate), rlm: dynamic exploration via soul_repl",
+     "enum": [
+      "fast",
+      "full",
+      "rlm"
+     ],
+     "type": "string"
+    },
+    "neighbors": {
+     "description": "Include triplet neighbors (default: true)",
+     "type": "boolean"
+    },
+    "realm": {
+     "description": "Filter by realm",
+     "type": "string"
+    },
+    "resolver_mode": {
+     "description": "Prepend digest-node and decision memories before code symbols (default: true)",
+     "type": "boolean"
+    },
+    "task": {
+     "description": "Query to find context for",
+     "type": "string"
+    }
+   },
+   "required": [
+    "task"
+   ],
+   "type": "object"
+  },
+  "name": "smart_context"
+ },
+ {
+  "description": "Intelligent memory recall with hierarchical expansion",
+  "inputSchema": {
+   "properties": {
+    "expand_top": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "gwt_mode": {
+     "type": "boolean"
+    },
+    "include_global": {
+     "type": "boolean"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "query": {
+     "type": "string"
+    },
+    "realm": {
+     "type": "string"
+    },
+    "separation_mode": {
+     "type": "boolean"
+    }
+   },
+   "required": [
+    "query"
+   ],
+   "type": "object"
+  },
+  "name": "smart_recall"
+ },
+ {
+  "description": "Get current soul state and statistics",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "soul_context"
+ },
+ {
+  "description": "RLM-style Python REPL for programmatic memory exploration. Write code with soul.* methods: search(), recall(), expand(), triplets(), recent(), remember(), symbols(). Supports persistent sessions via session_id. Call with no code for API reference.",
+  "inputSchema": {
+   "properties": {
+    "code": {
+     "description": "Python code to execute. Has access to soul.search(), soul.recall(), soul.expand(), etc.",
+     "type": "string"
+    },
+    "reset": {
+     "description": "Reset namespace before execution (default: false)",
+     "type": "boolean"
+    },
+    "session_id": {
+     "description": "Session name for persistent state \u2014 variables survive across calls with the same session_id",
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "soul_repl"
+ },
+ {
+  "description": "Backfill the span lane over all transcripts under projects_dir (default ~/.claude/projects). Incremental + idempotent via per-file watermarks. Reports unique atoms, new atoms, redaction count.",
+  "inputSchema": {
+   "properties": {
+    "projects_dir": {
+     "description": "Transcript root (default ~/.claude/projects)",
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "span_backfill"
+ },
+ {
+  "description": "Backfill the memory\u2194span edge: run the atom extractor over every live memory's text so distilled beliefs link to the verbatim paths/commands/ids they mention. Idempotent (per-memory content hash); superseded memories relink. Reports memories linked + new spans.",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "span_backfill_memories"
+ },
+ {
+  "description": "Retrieve verbatim transcript atoms (file paths, URLs, file:line locators, bash commands, error signatures) captured across all sessions. No LLM/GPU: exact-substring recall over a deduplicated span index. Realm-scoped by default to prevent cross-project bleed. Use when you need an exact locator you saw before, not a paraphrase.",
+  "inputSchema": {
+   "properties": {
+    "k": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max atoms to return (default 6)"
+    },
+    "query": {
+     "description": "Substring or token to match against stored atoms",
+     "type": "string"
+    },
+    "realm": {
+     "description": "Restrict to this realm (project); empty = unscoped",
+     "type": "string"
+    }
+   },
+   "required": [
+    "query"
+   ],
+   "type": "object"
+  },
+  "name": "span_query"
+ },
+ {
+  "description": "Report span lane size: unique atoms, on-disk bytes, total redactions.",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "span_stats"
+ },
+ {
+  "description": "Compare current embedding geometry with last snapshot",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "spectral_drift"
+ },
+ {
+  "description": "Begin tracking an agent intervention \u2014 records intent, action, preconditions and expected observables before execution",
+  "inputSchema": {
+   "properties": {
+    "action_ref": {
+     "description": "Reference to the action (tool name, file path, command)",
+     "type": "string"
+    },
+    "action_type": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "0=ToolCall 1=MultiStepPlan 2=Delegation 3=Edit 4=Command"
+    },
+    "agent_id": {
+     "description": "Agent performing the action",
+     "type": "string"
+    },
+    "domain": {
+     "description": "Domain area (e.g. git, filesystem, testing, compiler)",
+     "type": "string"
+    },
+    "expected_observables": {
+     "description": "What success looks like",
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "intent": {
+     "description": "What the agent intends to achieve",
+     "type": "string"
+    },
+    "preconditions": {
+     "description": "Known preconditions",
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "realm": {
+     "description": "Realm: coding, research, planning (default: coding)",
+     "type": "string"
+    },
+    "reversal_cost": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "0=None 1=Low 2=Medium 3=High"
+    },
+    "session_id": {
+     "description": "Current session ID",
+     "type": "string"
+    },
+    "task_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Optional task ID"
+    }
+   },
+   "required": [
+    "intent",
+    "action_ref"
+   ],
+   "type": "object"
+  },
+  "name": "start_intervention"
+ },
+ {
+  "description": "Increase confidence of a memory",
+  "inputSchema": {
+   "properties": {
+    "amount": {
+     "description": "Amount (default 0.1)",
+     "type": "number"
+    },
+    "id": {
+     "description": "Node ID",
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "strengthen"
+ },
+ {
+  "description": "Three-lens recall: facts, context, and temporal agents merged for high-fidelity retrieval",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "query": {
+     "type": "string"
+    },
+    "realm": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "query"
+   ],
+   "type": "object"
+  },
+  "name": "structured_recall"
+ },
+ {
+  "description": "Rolling surprise credit stats \u2014 tracked memories, gates passed, strength adjustments",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "surprise_learning_stats"
+ },
+ {
+  "description": "Summary statistics for surprise memory: counts, avg magnitude, domain breakdown",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "surprise_stats"
+ },
+ {
+  "description": "Find all symbols that the given symbol calls",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "kind": {
+     "type": "string"
+    },
+    "name": {
+     "type": "string"
+    },
+    "project": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "symbol_callees"
+ },
+ {
+  "description": "Find all symbols that a symbol calls. Queries triplets where predicate=calls and subject=symbol.",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "description": "Max results (default: 20)",
+     "type": "integer"
+    },
+    "name": {
+     "description": "Symbol name to find callees for",
+     "type": "string"
+    }
+   },
+   "required": [
+    "name"
+   ],
+   "type": "object"
+  },
+  "name": "symbol_callees"
+ },
+ {
+  "description": "Find all symbols that call the given symbol",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "kind": {
+     "type": "string"
+    },
+    "name": {
+     "type": "string"
+    },
+    "project": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "symbol_callers"
+ },
+ {
+  "description": "Find all callers of a symbol without grep. Queries triplets where predicate=calls and object=symbol.",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "description": "Max results (default: 20)",
+     "type": "integer"
+    },
+    "name": {
+     "description": "Symbol name to find callers for",
+     "type": "string"
+    }
+   },
+   "required": [
+    "name"
+   ],
+   "type": "object"
+  },
+  "name": "symbol_callers"
+ },
+ {
+  "description": "Query the symbol-keyed event log. Filter by symbol_name and/or file_path.",
+  "inputSchema": {
+   "properties": {
+    "file_path": {
+     "description": "Filter by file path",
+     "type": "string"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max events to return (default 50)"
+    },
+    "symbol_name": {
+     "description": "Filter by symbol name",
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "symbol_event_log"
+ },
+ {
+  "description": "Add or remove tags from a node",
+  "inputSchema": {
+   "properties": {
+    "add": {
+     "type": "string"
+    },
+    "id": {
+     "type": "string"
+    },
+    "remove": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "tag"
+ },
+ {
+  "description": "Deterministic task-state check (capability #3): what is the current state of task X? Exact keyed lookup of the LATEST stored [task] record by its slug \u2014 bypasses fuzzy recall so an agent resuming a discontinuous session gets the durable status/next-step. Returns found + the record.",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "description": "Task slug (the id: token of the [task] record)",
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "task_state"
+ },
+ {
+  "description": "Get theme details",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "theme_get"
+ },
+ {
+  "description": "List all themes with statistics",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "realm": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "theme_list"
+ },
+ {
+  "description": "Two-stage theme-based retrieval",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "query": {
+     "type": "string"
+    },
+    "realm": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "query"
+   ],
+   "type": "object"
+  },
+  "name": "theme_recall"
+ },
+ {
+  "description": "Get theme organization statistics",
+  "inputSchema": {
+   "properties": {
+    "realm": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "theme_stats"
+ },
+ {
+  "description": "Trigger internal memory synthesis",
+  "inputSchema": {
+   "properties": {
+    "realm": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "think_wander"
+ },
+ {
+  "description": "Manually trigger a staleness tick \u2014 grows staleness mass on lineages with no recent support. Normally called by the subconscious cycle.",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "tick_lineage_staleness"
+ },
+ {
+  "description": "Attention-weighted turn selection from a transcript. Embeds each turn, scores by cosine similarity to the task description, applies MAD adaptive threshold, enforces token budget. Returns a lossless subset of the most task-relevant turns.",
+  "inputSchema": {
+   "properties": {
+    "budget_tokens": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Target token budget (default 4000)"
+    },
+    "include_system": {
+     "description": "Include system turns (default false)",
+     "type": "boolean"
+    },
+    "mad_k": {
+     "description": "MAD threshold multiplier (default 1.5, lower=more turns)",
+     "type": "number"
+    },
+    "path": {
+     "description": "Direct path to JSONL transcript",
+     "type": "string"
+    },
+    "role_filter": {
+     "description": "Filter by role: user, assistant, or empty for all",
+     "type": "string"
+    },
+    "session_id": {
+     "description": "Session ID (auto-finds transcript)",
+     "type": "string"
+    },
+    "task": {
+     "description": "What the downstream agent needs to accomplish",
+     "type": "string"
+    }
+   },
+   "required": [
+    "task"
+   ],
+   "type": "object"
+  },
+  "name": "trajectory_compact"
+ },
+ {
+  "description": "Manually transition a wisdom lineage state (Trusted/Watch/Inflamed/Demoted). Normally automatic \u2014 use for overrides.",
+  "inputSchema": {
+   "properties": {
+    "lineage_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Lineage ID"
+    },
+    "new_state": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "0=Trusted 1=Watch 2=Inflamed 3=Demoted"
+    },
+    "reason": {
+     "description": "Why this transition is happening",
+     "type": "string"
+    },
+    "rederive_task_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Task contract ID if opening re-derivation"
+    }
+   },
+   "required": [
+    "lineage_id",
+    "new_state"
+   ],
+   "type": "object"
+  },
+  "name": "transition_wisdom_lineage"
+ },
+ {
+  "description": "Create a trigger automaton (prospective memory). Arms on creation, fires when conditions met or tension exceeds threshold.",
+  "inputSchema": {
+   "properties": {
+    "action": {
+     "description": "Action on fire (Notify, InjectMemory, EmitEvent, RememberFact)",
+     "type": "object"
+    },
+    "condition": {
+     "description": "Trigger condition (TimeAfter, ConstraintMatch, EventMatch, AllOf, AnyOf)",
+     "type": "object"
+    },
+    "deadline_ms": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Deadline timestamp ms (0=no deadline)"
+    },
+    "gain": {
+     "description": "Emotional importance 0-1 (default 0.5)",
+     "type": "number"
+    },
+    "name": {
+     "description": "Human-readable trigger name",
+     "type": "string"
+    },
+    "realm": {
+     "description": "Realm scope (default: global)",
+     "type": "string"
+    },
+    "tension_threshold": {
+     "description": "Tension level to auto-fire (default 0.8)",
+     "type": "number"
+    }
+   },
+   "required": [
+    "name",
+    "condition",
+    "action"
+   ],
+   "type": "object"
+  },
+  "name": "trigger_add"
+ },
+ {
+  "description": "Expire/dismiss a trigger without firing",
+  "inputSchema": {
+   "properties": {
+    "trigger_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Trigger ID to dismiss"
+    }
+   },
+   "required": [
+    "trigger_id"
+   ],
+   "type": "object"
+  },
+  "name": "trigger_dismiss"
+ },
+ {
+  "description": "Manually fire a trigger",
+  "inputSchema": {
+   "properties": {
+    "trigger_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Trigger ID to fire"
+    }
+   },
+   "required": [
+    "trigger_id"
+   ],
+   "type": "object"
+  },
+  "name": "trigger_fire"
+ },
+ {
+  "description": "List all triggers with their status",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "trigger_list"
+ },
+ {
+  "description": "Fix realm names with trailing whitespace/newlines",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "trim_realm_names"
+ },
+ {
+  "description": "Get history of a subject-predicate relationship",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    },
+    "predicate": {
+     "type": "string"
+    },
+    "subject": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "subject",
+    "predicate"
+   ],
+   "type": "object"
+  },
+  "name": "triplet_history"
+ },
+ {
+  "description": "Query triplets for a subject valid at a given world timestamp, excluding superseded entries",
+  "inputSchema": {
+   "properties": {
+    "subject": {
+     "description": "Subject node to query",
+     "type": "string"
+    },
+    "world_ms": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "World-time epoch ms (default: now)"
+    }
+   },
+   "required": [
+    "subject"
+   ],
+   "type": "object"
+  },
+  "name": "triplet_query_as_of"
+ },
+ {
+  "description": "Mark one triplet as superseded by another (bi-temporal update)",
+  "inputSchema": {
+   "properties": {
+    "at_ms": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Ingestion-time of supersession (default: now)"
+    },
+    "new_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Replacing triplet ID"
+    },
+    "old_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Triplet ID being superseded"
+    }
+   },
+   "required": [
+    "old_id",
+    "new_id"
+   ],
+   "type": "object"
+  },
+  "name": "triplet_supersede"
+ },
+ {
+  "description": "Knowledge graph operations. Actions: connect (create temporal triplet), query (query temporal triplets), history (triplet history for a subject/object)",
+  "inputSchema": {
+   "properties": {
+    "action": {
+     "description": "connect|query|history",
+     "type": "string"
+    },
+    "limit": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max results"
+    },
+    "object": {
+     "description": "Object entity",
+     "type": "string"
+    },
+    "predicate": {
+     "description": "Relationship type",
+     "type": "string"
+    },
+    "subject": {
+     "description": "Subject entity",
+     "type": "string"
+    }
+   },
+   "required": [
+    "action"
+   ],
+   "type": "object"
+  },
+  "name": "triplets"
+ },
+ {
+  "description": "Unpin a memory",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ]
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "unpin_memory"
+ },
+ {
+  "description": "Update node content",
+  "inputSchema": {
+   "properties": {
+    "content": {
+     "type": "string"
+    },
+    "id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "id",
+    "content"
+   ],
+   "type": "object"
+  },
+  "name": "update"
+ },
+ {
+  "description": "Apply learned weight deltas to the scoring model from outcome calibration",
+  "inputSchema": {
+   "properties": {
+    "mean_loss": {
+     "description": "EWMA loss from calibration",
+     "type": "number"
+    },
+    "model_version": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Monotonic version number"
+    },
+    "outcome_count": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Total outcomes used for calibration"
+    },
+    "weights": {
+     "description": "Factor name \u2192 {delta, min_delta, max_delta} learned adjustments",
+     "type": "object"
+    }
+   },
+   "type": "object"
+  },
+  "name": "update_scorer_model"
+ },
+ {
+  "description": "Manually override a recall source weight",
+  "inputSchema": {
+   "properties": {
+    "domain": {
+     "description": "Domain (default general)",
+     "type": "string"
+    },
+    "source": {
+     "description": "Source name (required)",
+     "type": "string"
+    },
+    "weight": {
+     "description": "New weight [0-2] (default 1.0)",
+     "type": "number"
+    }
+   },
+   "required": [
+    "source"
+   ],
+   "type": "object"
+  },
+  "name": "update_source_weight"
+ },
+ {
+  "description": "Update task status (Active=0, Blocked=1, Completed=2, Failed=3, Abandoned=4), optionally attach an intervention ID or add a tag",
+  "inputSchema": {
+   "properties": {
+    "add_intervention_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Attach intervention to task"
+    },
+    "add_tag": {
+     "description": "Add a tag to the task",
+     "type": "string"
+    },
+    "status": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "0=Active 1=Blocked 2=Completed 3=Failed 4=Abandoned"
+    },
+    "task_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Task ID"
+    }
+   },
+   "required": [
+    "task_id",
+    "status"
+   ],
+   "type": "object"
+  },
+  "name": "update_task"
+ },
+ {
+  "description": "Advance a wisdom candidate through lifecycle stages: candidate\u2192provisional\u2192trusted\u2192demoted",
+  "inputSchema": {
+   "properties": {
+    "candidate_id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Wisdom candidate ID"
+    },
+    "new_state": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "0=candidate, 1=provisional, 2=trusted, 3=demoted"
+    }
+   },
+   "required": [
+    "candidate_id",
+    "new_state"
+   ],
+   "type": "object"
+  },
+  "name": "update_wisdom_lifecycle"
+ },
+ {
+  "description": "Create or update a wisdom candidate from clustered surprise patterns",
+  "inputSchema": {
+   "properties": {
+    "action": {
+     "description": "Action or behavior pattern",
+     "type": "string"
+    },
+    "cluster_key": {
+     "description": "Unique key for this pattern cluster (domain+action+sig)",
+     "type": "string"
+    },
+    "cross_session_count": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Number of distinct sessions with evidence"
+    },
+    "debt_ids": {
+     "description": "Resolved debt IDs linked to this candidate",
+     "items": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "string"
+       }
+      ]
+     },
+     "type": "array"
+    },
+    "domain": {
+     "description": "Knowledge domain",
+     "type": "string"
+    },
+    "episode_ids": {
+     "description": "Surprise event IDs supporting this candidate",
+     "items": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "string"
+       }
+      ]
+     },
+     "type": "array"
+    },
+    "mean_surprise": {
+     "description": "Average surprise magnitude across episodes",
+     "type": "number"
+    },
+    "promotion_score": {
+     "description": "Computed promotion readiness score 0-1",
+     "type": "number"
+    },
+    "summary": {
+     "description": "Human-readable summary of the wisdom",
+     "type": "string"
+    },
+    "support_count": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Number of supporting episodes"
+    }
+   },
+   "required": [
+    "cluster_key"
+   ],
+   "type": "object"
+  },
+  "name": "upsert_wisdom_candidate"
+ },
+ {
+  "description": "Mark a correction memory as verified at a specific code locus. Stores a verification record and updates the original correction's tags.",
+  "inputSchema": {
+   "properties": {
+    "evidence_locus": {
+     "description": "Location of evidence, e.g. 'sadhana_manager.cpp:299'",
+     "type": "string"
+    },
+    "id": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Memory/triplet ID of the correction to verify"
+    }
+   },
+   "required": [
+    "id",
+    "evidence_locus"
+   ],
+   "type": "object"
+  },
+  "name": "verify_correction"
+ },
+ {
+  "description": "Decrease confidence of a memory",
+  "inputSchema": {
+   "properties": {
+    "amount": {
+     "type": "number"
+    },
+    "id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "weaken"
+ },
+ {
+  "description": "Introspection: return claims + provenance + staleness + contradictions for a topic",
+  "inputSchema": {
+   "properties": {
+    "confidence_min": {
+     "description": "Minimum confidence threshold (default 0.0)",
+     "type": "number"
+    },
+    "include_contradictions": {
+     "description": "Include contradiction info (default true)",
+     "type": "boolean"
+    },
+    "include_stale": {
+     "description": "Include stale memories (default true)",
+     "type": "boolean"
+    },
+    "k": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      }
+     ],
+     "description": "Max claims to return (default 10)"
+    },
+    "realm": {
+     "description": "Realm filter",
+     "type": "string"
+    },
+    "topic": {
+     "description": "Topic or question to introspect",
+     "type": "string"
+    }
+   },
+   "required": [
+    "topic"
+   ],
+   "type": "object"
+  },
+  "name": "what_do_i_know_about"
+ },
+ {
+  "description": "Show the full supersession chain for a memory",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "description": "Memory ID to trace",
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "what_superseded"
+ },
+ {
+  "description": "Explain why a memory is active: status, epistemic source, confirmations, contradictions",
+  "inputSchema": {
+   "properties": {
+    "id": {
+     "description": "Memory ID to inspect",
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "name": "why_active"
+ },
+ {
+  "description": "Export memories as Obsidian-compatible .md wiki with backlinks. Groups by realm and kind, generates index pages.",
+  "inputSchema": {
+   "properties": {
+    "max_memories": {
+     "description": "Max memories per realm (default: 5000)",
+     "type": "integer"
+    },
+    "output_dir": {
+     "description": "Output directory (default: ~/.claude/wiki/)",
+     "type": "string"
+    },
+    "realm": {
+     "description": "Filter to specific realm (default: all)",
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "name": "wiki_export"
+ },
+ {
+  "description": "Show wisdom homeostasis statistics \u2014 counts by state, mean staleness, support/contradiction mass totals",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "wisdom_lineage_stats"
+ },
+ {
+  "description": "Overview of wisdom promotion pipeline \u2014 total candidates by lifecycle stage",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "wisdom_promotion_stats"
+ },
+ {
+  "description": "Show write-gate admission stats: staged memory count and oldest staged memory age",
+  "inputSchema": {
+   "properties": {},
+   "type": "object"
+  },
+  "name": "write_gate_stats"
+ }
+]

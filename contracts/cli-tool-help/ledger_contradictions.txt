@@ -1,0 +1,3 @@
+chitta ledger_contradictions - v6.0 Interaction Ledger: list contested (subject, predicate) pairs with >1 active assertion.
+
+  No parameters required.

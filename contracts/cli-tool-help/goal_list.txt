@@ -1,0 +1,12 @@
+chitta goal_list - List goals with optional status filter
+
+Parameters:
+  --status [default: active]
+      Filter: active, completed, abandoned (default: active)
+  --realm
+      Filter by realm
+  --limit [default: 20]
+      Max results
+
+Example:
+  chitta goal_list

@@ -1,0 +1,10 @@
+chitta realm_add - Add memory to additional realm
+
+Parameters:
+  --id (required)
+      Memory ID
+  --realm (required)
+      Realm name to add
+
+Example:
+  chitta realm_add --id "..." --realm "..."

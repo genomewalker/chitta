@@ -1,0 +1,10 @@
+chitta consolidation_pass - Run Sequitur grammar consolidation: promote frequent bigrams to triplet KG. Use --preview 1 for dry run.
+
+Parameters:
+  --preview [default: 0]
+      If 1, dry run — show rules without writing
+  --k [default: 5]
+      Rules to show in preview
+
+Example:
+  chitta consolidation_pass

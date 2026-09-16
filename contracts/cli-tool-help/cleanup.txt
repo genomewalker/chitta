@@ -1,0 +1,8 @@
+chitta cleanup - Remove weak/garbage nodes
+
+Parameters:
+  --dry_run [default: true]
+      Preview only
+
+Example:
+  chitta cleanup

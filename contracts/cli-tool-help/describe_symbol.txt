@@ -1,0 +1,10 @@
+chitta describe_symbol - Set description for a code symbol (stores directly in symbol table)
+
+Parameters:
+  --symbol-id (required)
+      Symbol ID to describe
+  --description (required)
+      Semantic description of the symbol
+
+Example:
+  chitta describe_symbol --symbol-id "..." --description "..."
