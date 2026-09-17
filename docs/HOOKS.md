@@ -890,6 +890,8 @@ name, except the new code-navigation controls and explicit `CHITTA_ALLOW_MCP_KIL
 | `CHITTA_AGENT_LIMIT`         | `50`         | Subagent count at which a hard advisory fires                            |
 | `CHITTA_LOOP_WARN`           | `10`         | ScheduleWakeup iterations before warning                                 |
 | `CHITTA_LOOP_LIMIT`          | `20`         | ScheduleWakeup iterations before block                                   |
+| `CHITTA_CONTEXT_HARD_STOP`   | `200000`     | `pre-tool-hook` denies every tool call once the transcript's last assistant usage (input + cache read + cache creation) exceeds this many tokens, except `mcp__chitta__checkpoint`, `mcp__chitta__remember` and Bash matching `^chitta (remember\|checkpoint\|ledger_op)`; keeps denying until a compaction or fresh session brings the last usage back under the limit. `0` disables |
+| `CHITTA_CONTEXT_BUDGET`      | `150000`     | Stop hook prints one `[budget]` advisory line to stderr, once per session (marker in the runtime state dir), when the session's mean context per turn (from the Stop snapshot's `token_usage`) exceeds this. Advisory only — does not block. `0` disables |
 | `CHITTA_SUBAGENT_BASH_RECALL`| `0`          | `1` = run Bash recall for subagent calls (adds ~2s per call, default off)|
 | `CHITTA_MAX_WAIT`            | `5`          | Max seconds to wait for daemon responses                                 |
 | `CHITTA_CACHE_TTL_MIN`       | `60`         | Prompt-cache TTL in minutes; the `[cache-expired]` banner fires only past it (was a fixed 5 min) |

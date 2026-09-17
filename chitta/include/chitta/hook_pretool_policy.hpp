@@ -57,6 +57,30 @@ inline json pretool(const json& a, const Invoke& invoke) {
             result["stdout"] = json{{"hookSpecificOutput", output}}.dump() + "\n";
         return result;
     };
+    // Hard stop: deny every tool call once the last request's context (input +
+    // cache read + cache creation) crosses CHITTA_CONTEXT_HARD_STOP, until a
+    // compaction or fresh session brings the transcript's last usage back down.
+    // A small allowlist keeps the handoff path itself usable while denied.
+    const auto hard_stop_limit = integer("CONTEXT_HARD_STOP", 200000);
+    if (hard_stop_limit > 0) {
+        const auto usage = a.value("last_usage", json::object());
+        const long long total = usage.value("input_tokens", 0LL) +
+                                 usage.value("cache_read_input_tokens", 0LL) +
+                                 usage.value("cache_creation_input_tokens", 0LL);
+        bool allowlisted = tool == "mcp__chitta__checkpoint" || tool == "mcp__chitta__remember";
+        if (!allowlisted && tool == "Bash")
+            allowlisted = match(str(tool_input, "command"),
+                                R"(^\s*chitta\s+(remember|checkpoint|ledger_op)(\s|$))");
+        if (!allowlisted && total > hard_stop_limit) {
+            output["permissionDecision"] = "deny";
+            output["permissionDecisionReason"] =
+                "[hard-stop] context " + std::to_string(total / 1000) + "k per request exceeds " +
+                std::to_string(hard_stop_limit / 1000) +
+                "k: write the handoff (chitta remember ... --tags handoff) and /compact or start "
+                "a fresh session";
+            return finish();
+        }
+    }
     if (tool == "Bash") {
         const auto command = str(tool_input, "command");
         if (command.empty()) return result;
