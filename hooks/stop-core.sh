@@ -222,7 +222,11 @@ fi
 # Decode the shared snapshot once; shell consumers reuse these local fields.
 jq -j '.response,"\u0000",.last_user,"\u0000",((.tools // []) | join("\n")),"\u0000",
     ((.files // [])|tojson),"\u0000",((.counts.assistant // 0)|tostring),"\u0000",
-    ((.counts.user // 0)|tostring),"\u0000",((.tools // [])|tojson),"\u0000",((.tool_spans // []|length)|tostring),"\u0000"' \
+    ((.counts.user // 0)|tostring),"\u0000",((.tools // [])|tojson),"\u0000",((.tool_spans // []|length)|tostring),"\u0000",
+    ((.token_usage.total_input_tokens // 0)|tostring),"\u0000",
+    ((.token_usage.total_cache_read // 0)|tostring),"\u0000",
+    ((.token_usage.total_cache_creation // 0)|tostring),"\u0000",
+    ((.token_usage.n_messages // 0)|tostring),"\u0000"' \
     "$_SNAPSHOT_FILE" > "$_TCACHE/fields"
 {
     IFS= read -r -d '' _SNAP_RESPONSE
@@ -233,7 +237,26 @@ jq -j '.response,"\u0000",.last_user,"\u0000",((.tools // []) | join("\n")),"\u0
     IFS= read -r -d '' _SNAP_USER_COUNT
     IFS= read -r -d '' TOOLS_JSON
     IFS= read -r -d '' _SNAP_SPAN_COUNT
+    IFS= read -r -d '' _SNAP_TOTAL_INPUT
+    IFS= read -r -d '' _SNAP_TOTAL_CACHE_READ
+    IFS= read -r -d '' _SNAP_TOTAL_CACHE_CREATION
+    IFS= read -r -d '' _SNAP_N_MESSAGES
 } < "$_TCACHE/fields"
+
+# ─── [budget] advisory: once per session, when mean context/turn exceeds
+# CHITTA_CONTEXT_BUDGET this reports it and points at /compact or a fresh
+# session. Purely informational -- nothing here blocks the turn.
+_budget_advisory() {
+    local budget=${CHITTA_CONTEXT_BUDGET:-${CC_SOUL_CONTEXT_BUDGET:-150000}}
+    [[ "$budget" -gt 0 && "${_SNAP_N_MESSAGES:-0}" -gt 0 ]] || return 0
+    local ctx_per_turn=$(( (_SNAP_TOTAL_INPUT + _SNAP_TOTAL_CACHE_READ + _SNAP_TOTAL_CACHE_CREATION) / _SNAP_N_MESSAGES ))
+    [[ "$ctx_per_turn" -gt "$budget" ]] || return 0
+    local marker="${HOOK_STATE_DIR}/.budget_advised_${SESSION_ID}"
+    [[ -f "$marker" ]] && return 0
+    touch "$marker" 2>/dev/null || true
+    echo "[budget] context $(( ctx_per_turn / 1000 ))k/turn over ${_SNAP_N_MESSAGES} turns; /compact now or start a fresh session" >&2
+}
+_budget_advisory
 transcript_role_text() {
     case "$1" in
         assistant) printf '%s\n' "$_SNAP_RESPONSE" ;;
