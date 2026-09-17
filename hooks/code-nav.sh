@@ -41,7 +41,9 @@ if [[ "$mode" == session && "${CHITTA_CODE_NAV_REFRESH:-1}" != 0 ]]; then
     ( flock -n 9 || exit 0; timeout --foreground 60 "$bin" learn_codebase --path "$root" >/dev/null 2>&1 </dev/null ) 9>"$state/.code_nav_refresh_$repo_key" >/dev/null 2>&1 &
 fi
 if (( rc != 0 )) || ! jq -e 'type == "object" and (.indexed | type == "boolean")' >/dev/null 2>&1 <<< "$reply"; then
-    [[ -e "$indexed_marker" ]] || exit 1
+    # The session map is best effort: say nothing rather than print a stale-index
+    # warning into every session start when the query is slow or unavailable.
+    [[ "$mode" == read && -e "$indexed_marker" ]] || exit 1
     text="[code-nav] index status unavailable (query failed or exceeded ${budget} ms); run code_query before reading files."
 else
     jq -e '.indexed' >/dev/null <<< "$reply" || exit 1
