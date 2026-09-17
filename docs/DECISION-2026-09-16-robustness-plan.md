@@ -218,3 +218,7 @@
 
 ## Tooling this plan adds
 `benchmarks/current_truth/run.py`, `scripts/chaos-replica.py`, `scripts/nightly-replica-canary.sh`, `scripts/stress-embed-recall.py`, `scripts/report-runtime-incidents.py`, `scripts/stress-rpc.py`, `scripts/ablate-organs.py`, `scripts/check-mcp-surface.py`, `scripts/bench-hook-parity.py`, Cargo/CTest in the build CI job.
+
+### Phase 12 — Multi-agent coordination and context economy (2026-09-17)
+
+Chitta must never refuse work by default. Keep the optional hard stop disabled (`CHITTA_CONTEXT_HARD_STOP=0`), preserving its coordination allowlist for explicit opt-in. Finish work through short sessions, capsules, capped output, code maps, exclusive stream claims and completion messages. Both launchers supervise real worker PIDs, renew claims on handoff writes, and release on completion or failure. Validate a trivial worker against a private frozen-copy replica and measure claim/message overhead and worker token cost. See [the decision](DECISION-2026-09-17-multi-agent.md); no context ceiling is an exit gate.

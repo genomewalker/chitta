@@ -891,7 +891,7 @@ name, except the new code-navigation controls and explicit `CHITTA_ALLOW_MCP_KIL
 | `CHITTA_AGENT_LIMIT`         | `50`         | Subagent count at which a hard advisory fires                            |
 | `CHITTA_LOOP_WARN`           | `10`         | ScheduleWakeup iterations before warning                                 |
 | `CHITTA_LOOP_LIMIT`          | `20`         | ScheduleWakeup iterations before block                                   |
-| `CHITTA_CONTEXT_HARD_STOP`   | `0` (off)    | Opt-in. When set, `pre-tool-hook` denies every tool call once the transcript's last assistant usage (input + cache read + cache creation) exceeds this many tokens, except `mcp__chitta__checkpoint`, `mcp__chitta__remember` and Bash matching `^chitta (remember\|checkpoint\|ledger_op)`; keeps denying until a compaction or fresh session brings the last usage back under the limit. `0` disables |
+| `CHITTA_CONTEXT_HARD_STOP` | `0` (off) | Optional context guard. When enabled, permits checkpoint/handoff writes, ledger operations, messages, session discovery and fresh non-fork Agent launches so coordination can continue. Ordinary calls resume after compaction or a fresh session. Default operation economises context without refusing work. |
 | `CHITTA_CONTEXT_BUDGET`      | `150000`     | Stop hook prints one `[budget]` advisory line to stderr, once per session (marker in the runtime state dir), when the session's mean context per turn (from the Stop snapshot's `token_usage`) exceeds this. Advisory only — does not block. `0` disables |
 | `CHITTA_SUBAGENT_BASH_RECALL`| `0`          | `1` = run Bash recall for subagent calls (adds ~2s per call, default off)|
 | `CHITTA_MAX_WAIT`            | `5`          | Max seconds to wait for daemon responses                                 |
@@ -1547,30 +1547,9 @@ another indexed stage resolves the reference. Numeric and named COPY stages
 resolve without executing a build. The graph stores syntax as EXTRACTED and
 unambiguous symbol/file resolution as INFERRED; it does not simulate runtimes.
 
-<!-- BEGIN CITATIONS -->
-## References
+### Stream coordination
 
-- <a id="ref-14"></a>**[14]** Subhadeep Pal, Fiona Y. Wang, and Markus J. Buehler. SwarmWorld: Stigmergic technological evolution in societies of language-model agents. arXiv:2608.26081 (2026). [source](<https://arxiv.org/abs/2608.26081>) [source](<https://arxiv.org/html/2608.26081>)
-- <a id="ref-24"></a>**[24]** Stephen Robertson and Hugo Zaragoza. The Probabilistic Relevance Framework: BM25 and Beyond. Foundations and Trends in Information Retrieval 3(4), 333–389 (2009). [source](<https://doi.org/10.1561/1500000019>)
-- <a id="ref-34"></a>**[34]** Anthropic. How Claude remembers your project. Claude Code documentation (accessed 2026-09-16). [source](<https://code.claude.com/docs/en/memory>)
-- <a id="ref-35"></a>**[35]** Anthropic. Prompting Claude Fable 5.1. Claude Platform documentation (accessed 2026-09-16). [source](<https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5-1>)
-- <a id="ref-36"></a>**[36]** Anthropic. Skill authoring best practices. Claude Platform documentation (accessed 2026-09-16). [source](<https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices>)
-- <a id="ref-37"></a>**[37]** Thariq Shihipar. The new rules of context engineering for Claude 5 generation models. Anthropic blog (2026-07-24). [source](<https://www.claude.com/blog/the-new-rules-of-context-engineering-for-claude-5-generation-models>)
-- <a id="ref-38"></a>**[38]** OpenAI. Custom instructions with AGENTS.md. Codex documentation, ChatGPT Learn (accessed 2026-09-16). [source](<https://learn.chatgpt.com/docs/agent-configuration/agents-md>)
-- <a id="ref-39"></a>**[39]** OpenAI. Codex Security. Codex documentation, ChatGPT Learn (accessed 2026-09-16). [source](<https://developers.openai.com/codex/security/>)
-- <a id="ref-41"></a>**[41]** OpenAI. GPT-6 Astra: A new generation of intelligence. OpenAI (2026; exact publication day unverified). [source](<https://openai.com/index/gpt-6-astra/>)
-- <a id="ref-42"></a>**[42]** openai/codex issue contributors. AGENTS.md is silently truncated and instructions near the end ignored. GitHub issue #13386 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/13386>)
-- <a id="ref-43"></a>**[43]** openai/codex issue contributors. Docs: project_doc_max_bytes semantics are undocumented — the 22.5KB root AGENTS.md leaves ~9.7KB before nested files are truncated. GitHub issue #37956 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/37956>)
-- <a id="ref-44"></a>**[44]** openai/codex issue contributors. Hooks: PostToolUse payload carries no failure signal, and PostToolUseFailure never fires. GitHub issue #34289 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/34289>)
-- <a id="ref-45"></a>**[45]** openai/codex issue contributors. Docs list --ask-for-approval as global, but codex exec rejects the post-subcommand form. GitHub issue #26602 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/26602>)
-- <a id="ref-46"></a>**[46]** openai/codex issue contributors. Streamable HTTP MCP bearer_token_env_var reported as unset although present in parent shell. GitHub issue #41378 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/41378>)
-- <a id="ref-47"></a>**[47]** openai/codex issue contributors. MCP Streamable HTTP: sessions are opened but never terminated (1.8% DELETE ratio), exhausting remote server worker pools. GitHub issue #41600 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/41600>)
-- <a id="ref-48"></a>**[48]** openai/codex issue contributors. Experimental context management: native notes/history return 404 on Pro + Astra, while new_context can discard task state. GitHub issue #43194 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/43194>)
-- <a id="ref-49"></a>**[49]** openai/codex issue contributors. Token-budget new windows omit notes content, so the first LLM request has no task state. GitHub issue #43335 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/43335>)
-- <a id="ref-50"></a>**[50]** openai/codex issue contributors. Codex Desktop compaction requires unavailable notes tool, loses checkpoint, and repeats token-heavy work. GitHub issue #42449 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/42449>)
-- <a id="ref-51"></a>**[51]** openai/codex issue contributors. Codex tool loop causes context snowballing and multi-million-token input amplification. GitHub issue #44305 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/44305>)
-- <a id="ref-71"></a>**[71]** Alex L. Zhang, Tim Kraska, and Omar Khattab. Recursive Language Models. arXiv:2512.24601 (2025; revised 2026). [source](<https://arxiv.org/abs/2512.24601>)
-<!-- END CITATIONS -->
+`scripts/codex-stream.sh` and `scripts/claude-stream.sh` claim a stream before starting a worker. `CHITTA_LEAD_SESSION` selects the completion inbox; `--lead` overrides it. The PID file contains the worker PID. A supervisor saves the final handoff, sends one completion message, releases the claim and removes the PID file, including on worker failure or interruption. See [the coordination decision](DECISION-2026-09-17-multi-agent.md) for TTL renewal and recovery.
 
 ### Transcript token accounting
 
@@ -1613,3 +1592,28 @@ same code state; milestone writers must record current evidence explicitly.
 For an explicit milestone file, run `python3 chitta-mcp/capsule_cli.py save
 capsule.json --expected-revision N`. The CLI prints only an acknowledged
 record and fails on transport errors or rejected compare-and-set writes.
+
+<!-- BEGIN CITATIONS -->
+## References
+
+- <a id="ref-14"></a>**[14]** Subhadeep Pal, Fiona Y. Wang, and Markus J. Buehler. SwarmWorld: Stigmergic technological evolution in societies of language-model agents. arXiv:2608.26081 (2026). [source](<https://arxiv.org/abs/2608.26081>) [source](<https://arxiv.org/html/2608.26081>)
+- <a id="ref-24"></a>**[24]** Stephen Robertson and Hugo Zaragoza. The Probabilistic Relevance Framework: BM25 and Beyond. Foundations and Trends in Information Retrieval 3(4), 333–389 (2009). [source](<https://doi.org/10.1561/1500000019>)
+- <a id="ref-34"></a>**[34]** Anthropic. How Claude remembers your project. Claude Code documentation (accessed 2026-09-16). [source](<https://code.claude.com/docs/en/memory>)
+- <a id="ref-35"></a>**[35]** Anthropic. Prompting Claude Fable 5.1. Claude Platform documentation (accessed 2026-09-16). [source](<https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5-1>)
+- <a id="ref-36"></a>**[36]** Anthropic. Skill authoring best practices. Claude Platform documentation (accessed 2026-09-16). [source](<https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices>)
+- <a id="ref-37"></a>**[37]** Thariq Shihipar. The new rules of context engineering for Claude 5 generation models. Anthropic blog (2026-07-24). [source](<https://www.claude.com/blog/the-new-rules-of-context-engineering-for-claude-5-generation-models>)
+- <a id="ref-38"></a>**[38]** OpenAI. Custom instructions with AGENTS.md. Codex documentation, ChatGPT Learn (accessed 2026-09-16). [source](<https://learn.chatgpt.com/docs/agent-configuration/agents-md>)
+- <a id="ref-39"></a>**[39]** OpenAI. Codex Security. Codex documentation, ChatGPT Learn (accessed 2026-09-16). [source](<https://developers.openai.com/codex/security/>)
+- <a id="ref-41"></a>**[41]** OpenAI. GPT-6 Astra: A new generation of intelligence. OpenAI (2026; exact publication day unverified). [source](<https://openai.com/index/gpt-6-astra/>)
+- <a id="ref-42"></a>**[42]** openai/codex issue contributors. AGENTS.md is silently truncated and instructions near the end ignored. GitHub issue #13386 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/13386>)
+- <a id="ref-43"></a>**[43]** openai/codex issue contributors. Docs: project_doc_max_bytes semantics are undocumented — the 22.5KB root AGENTS.md leaves ~9.7KB before nested files are truncated. GitHub issue #37956 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/37956>)
+- <a id="ref-44"></a>**[44]** openai/codex issue contributors. Hooks: PostToolUse payload carries no failure signal, and PostToolUseFailure never fires. GitHub issue #34289 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/34289>)
+- <a id="ref-45"></a>**[45]** openai/codex issue contributors. Docs list --ask-for-approval as global, but codex exec rejects the post-subcommand form. GitHub issue #26602 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/26602>)
+- <a id="ref-46"></a>**[46]** openai/codex issue contributors. Streamable HTTP MCP bearer_token_env_var reported as unset although present in parent shell. GitHub issue #41378 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/41378>)
+- <a id="ref-47"></a>**[47]** openai/codex issue contributors. MCP Streamable HTTP: sessions are opened but never terminated (1.8% DELETE ratio), exhausting remote server worker pools. GitHub issue #41600 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/41600>)
+- <a id="ref-48"></a>**[48]** openai/codex issue contributors. Experimental context management: native notes/history return 404 on Pro + Astra, while new_context can discard task state. GitHub issue #43194 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/43194>)
+- <a id="ref-49"></a>**[49]** openai/codex issue contributors. Token-budget new windows omit notes content, so the first LLM request has no task state. GitHub issue #43335 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/43335>)
+- <a id="ref-50"></a>**[50]** openai/codex issue contributors. Codex Desktop compaction requires unavailable notes tool, loses checkpoint, and repeats token-heavy work. GitHub issue #42449 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/42449>)
+- <a id="ref-51"></a>**[51]** openai/codex issue contributors. Codex tool loop causes context snowballing and multi-million-token input amplification. GitHub issue #44305 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/44305>)
+- <a id="ref-71"></a>**[71]** Alex L. Zhang, Tim Kraska, and Omar Khattab. Recursive Language Models. arXiv:2512.24601 (2025; revised 2026). [source](<https://arxiv.org/abs/2512.24601>)
+<!-- END CITATIONS -->
