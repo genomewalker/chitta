@@ -6,6 +6,10 @@
 #include <cstdlib>
 #include <filesystem>
 #include <future>
+#include <condition_variable>
+#include <memory>
+#include <mutex>
+#include <thread>
 #include "chitta/hit_line.hpp"
 #include "chitta/recall_lanes.hpp"
 #include "chitta/speech_act.hpp"
@@ -1848,33 +1852,70 @@ ToolResult FieldRpcHandler::tool_recall_lanes(const json& params) {
         return ToolResult::error("lane limits must be integers");
 
     const auto total_started = std::chrono::steady_clock::now();
-    std::vector<std::future<RecallLaneOutput>> futures;
-    futures.reserve(calls.size());
-    // The dispatcher already permits these same handlers to overlap as separate
-    // read RPCs. Keep one outer shared rpc_mutex_ lock while the Rust store's
-    // component RwLocks synchronize the internal workers.
+    // Bounded fan-out: each lane runs on its own thread and the aggregator waits
+    // for it only up to its budget (capped by wait_ms when the caller has a
+    // deadline). A lane that misses is reported as timed out with no results;
+    // its thread finishes in the background and its output is dropped. This is
+    // what the shell fan-out did before Phase 5 and what the prompt hook needs
+    // under load: the fast lanes arrive, the slow ones do not block the reply.
+    struct LaneSlot {
+        std::mutex m;
+        std::condition_variable cv;
+        bool done = false;
+        RecallLaneOutput out;
+    };
+    std::vector<std::shared_ptr<LaneSlot>> slots;
+    slots.reserve(calls.size());
     for (const auto& call : calls) {
-        futures.push_back(std::async(std::launch::async, [this, call] {
+        auto slot = std::make_shared<LaneSlot>();
+        slots.push_back(slot);
+        std::thread([this, call, slot] {
             const auto started = std::chrono::steady_clock::now();
             auto budget_scope = rpc_budget_.measure("recall_lanes." + call.name,
                                                     call.budget_ms);
             ToolResult result;
-            if (call.name == "sem" || call.name == "ctx")
-                result = tool_smart_recall(call.args);
-            else if (call.name == "corrk")
-                result = tool_correction_check(call.args);
-            else
-                result = tool_recall(call.args);
+            try {
+                if (call.name == "sem" || call.name == "ctx")
+                    result = tool_smart_recall(call.args);
+                else if (call.name == "corrk")
+                    result = tool_correction_check(call.args);
+                else
+                    result = tool_recall(call.args);
+            } catch (const std::exception& e) {
+                result = ToolResult::error(e.what());
+            }
             const long elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::steady_clock::now() - started).count();
-            return RecallLaneOutput{call.name, result.text, result.structured,
-                                    elapsed, elapsed > call.budget_ms};
-        }));
+            {
+                std::lock_guard<std::mutex> lk(slot->m);
+                slot->out = RecallLaneOutput{call.name, result.text, result.structured,
+                                             elapsed, elapsed > call.budget_ms};
+                slot->done = true;
+            }
+            slot->cv.notify_all();
+        }).detach();
     }
-
+    long wait_ms = 0;
+    if (params.contains("wait_ms") && params["wait_ms"].is_number()) {
+        const auto raw = params["wait_ms"].get<double>();
+        if (raw >= 1) wait_ms = static_cast<long>(std::min(raw, 600000.0));
+    }
     std::vector<RecallLaneOutput> outputs;
-    outputs.reserve(futures.size());
-    for (auto& future : futures) outputs.push_back(future.get());
+    outputs.reserve(slots.size());
+    for (size_t i = 0; i < slots.size(); ++i) {
+        long lane_wait = calls[i].budget_ms;
+        if (wait_ms > 0) lane_wait = std::min(lane_wait, wait_ms);
+        const auto deadline = total_started + std::chrono::milliseconds(lane_wait);
+        std::unique_lock<std::mutex> lk(slots[i]->m);
+        if (slots[i]->cv.wait_until(lk, deadline, [&] { return slots[i]->done; })) {
+            outputs.push_back(slots[i]->out);
+        } else {
+            const long waited = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - total_started).count();
+            outputs.push_back(RecallLaneOutput{calls[i].name, "",
+                                               {{"results", json::array()}}, waited, true});
+        }
+    }
     const long total_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now() - total_started).count();
     json response = assemble_recall_lanes(outputs, total_ms);

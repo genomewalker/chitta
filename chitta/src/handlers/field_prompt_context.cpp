@@ -52,6 +52,10 @@ ToolResult FieldRpcHandler::tool_prompt_context(const json& params) {
             if (embedding.empty() && embed_queue_) embed_queue_->enqueue_write(q);
             if (!embedding.empty()) request["_preembedding"] = embedding;
             const auto embedding_ms = elapsed();
+            // Leave the hook client margin to receive the reply before its own timeout.
+            request["wait_ms"] = std::max<int64_t>(200,
+                std::min(state.value("lane_budget_ms", int64_t(2000)),
+                         state.value("remaining_ms", int64_t(3000))) - 250);
             auto batch = tool_recall_lanes(request);
             if (batch.is_error) return batch;
             auto lanes = batch.structured.at("lanes");
