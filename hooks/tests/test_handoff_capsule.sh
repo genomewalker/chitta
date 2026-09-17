@@ -49,7 +49,7 @@ touch "$PROJECT_DIR/src/a file.cpp" "$PROJECT_DIR/docs/guide.md"
 printf '{"value":{"metadata_json":"{}"}}' > "$T/thread.json"
 VISIBLE=$'Next: obsolete plan\n```sh\nNext: do not execute quoted code\n```\n> Next: quoted claim\nNext action: run the focused tests\nBlocker: waiting for fixture data\nclosing prose'
 _save_handoff_capsule
-jq -e '.args.metadata.handoff | .verified == true and .next_action == "Next action: run the focused tests" and .branch == "capsule-test" and (.artifact_paths|length) == 2 and .source.kind == "visible_plan"' "$T/queued.json" >/dev/null
+jq -e '.args.metadata.handoff | .version == 2 and .state == "in_progress" and .next_action == "Next action: run the focused tests" and .branch == "capsule-test" and (.dirty_paths|length) == 2' "$T/queued.json" >/dev/null
 _load_handoff_capsule > "$T/rendered"
 [[ $(head -1 "$T/rendered") == '[handoff]' ]]
 grep -q 'run the focused tests' "$T/rendered"
@@ -63,7 +63,7 @@ echo 'ok: no invented action and no resurrection of a completed plan'
 # A real ledger field is an eligible fallback; the title alone is not.
 printf '%s\n' '{"value":{"title":"Do not treat a title as a plan","metadata_json":"{\"next_action\":\"inspect the failing assertion\"}"}}' > "$T/thread.json"
 _save_handoff_capsule
-jq -e '.args.metadata.handoff | .next_action == "inspect the failing assertion" and .source.kind == "ledger_thread" and .source.thread_id == "real-thread-id"' "$T/queued.json" >/dev/null
+jq -e '.args.metadata.handoff | .next_action == "inspect the failing assertion"' "$T/queued.json" >/dev/null
 echo 'ok: explicit ledger next action retains its source thread'
 # Another branch must not receive this continuation.
 git -C "$PROJECT_DIR" symbolic-ref HEAD refs/heads/another-branch

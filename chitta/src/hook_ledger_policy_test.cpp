@@ -4,6 +4,49 @@
 
 int main() {
     using namespace chitta::hook_ledger;
+    json v2{{"repository", "/maps/projects/repo/.git"}, {"session_id", "s"},
+        {"stream_id", "stream"}, {"next_action", "run tests"},
+        {"gates", {{"quick", {{"status", "pass"}, {"number", 1}}}}}};
+    const auto saved = capsule_v2(v2, 9, 100);
+    assert(saved["repository"] == "/projects/repo/.git" && saved["revision"] == 9);
+    assert(saved.dump().size() <= 4096);
+    auto completed = saved;
+    completed["state"] = "complete";
+    completed["code_head"] = "";
+    json stop{{"session_id", "s"}, {"project_dir", "/nonexistent"}};
+    const auto kept = prepare_capsule(stop, json::object(), json::object(), completed, 101);
+    assert(kept["args"]["expected_revision"] == 9);
+    assert(kept["args"]["metadata"]["handoff"]["state"] == "complete");
+    assert(kept["args"]["metadata"]["handoff"]["gates"] == saved["gates"]);
+    stop["artifact_paths"] = json::array({"modified.cpp"});
+    const auto invalid = prepare_capsule(stop, json::object(), json::object(), completed, 102);
+    assert(invalid["args"]["metadata"]["handoff"]["state"] == "invalidated");
+    assert(invalid["args"]["metadata"]["handoff"]["gates"].empty());
+    auto alias = saved;
+    alias["repository"] = "/maps/projects/repo/.git";
+    assert(capsule_key(alias) == capsule_key(saved));
+    alias["stream_id"] = "another";
+    assert(capsule_key(alias) != capsule_key(saved));
+    for (const auto& state : {"complete", "in_progress", "missing", "invalidated"}) {
+        v2["state"] = state;
+        assert(capsule_v2(v2, 10, 101)["state"] == state);
+    }
+    auto rejected = [&](json value) {
+        try { capsule_v2(value, 10, 101); return false; }
+        catch (const std::exception&) { return true; }
+    };
+    v2["state"] = "invented";
+    assert(rejected(v2));
+    v2["state"] = "in_progress";
+    v2["dirty_paths"] = std::vector<std::string>(21, "a");
+    assert(rejected(v2));
+    v2["dirty_paths"] = std::vector<std::string>(20, std::string(128, '\n'));
+    assert(rejected(v2)); // Escaping is included in the serialized byte bound.
+    v2["dirty_paths"] = json::array();
+    v2["jobs"] = {{{"id", "job"}, {"result_path", "/scratch/result"}}};
+    assert(!rejected(v2));
+    v2["gates"]["quick"]["status"] = "unknown";
+    assert(rejected(v2));
     json input{{"session_id", "s"}, {"project_dir", "/fixture/project"}, {"branch", "feature"},
         {"next_action", "Next action: run the fixture"}, {"blocker", ""},
         {"artifact_paths", {"b", "a", "b"}}};

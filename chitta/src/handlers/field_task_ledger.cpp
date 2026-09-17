@@ -26,6 +26,7 @@ ToolResult FieldRpcHandler::tool_ledger_op(const json& params) {
         if (!args.is_object()) return ToolResult::error("args must be an object");
         args        = rpc::clamp_read_arguments("ledger_op." + op, std::move(args));
         auto run = [&](const std::string& operation, const json& input) {
+            std::lock_guard<std::recursive_mutex> lock(hook_ledger::capsule_mutex);
             return task_ledger_.run(operation, input, [&](const json& batch) {
                 if (!field_store_->emit_event("ledger", "task_records", "task-ledger", batch.dump()))
                     throw std::runtime_error("ledger WAL append failed");
@@ -43,6 +44,67 @@ ToolResult FieldRpcHandler::tool_ledger_op(const json& params) {
             if (result.is_error) throw std::runtime_error(result.text);
             return json{{"text", result.text}, {"structured", result.structured}};
         };
+        // All handoff writers enter through this gateway. Hold the capsule lock
+        // across lookup, revision validation and the ledger's durable transaction.
+        const bool capsule_write = op == "capsule_save" || op == "hook_handoff_prepare" ||
+            (op == "session_bind" && args.value("metadata", json::object()).contains("handoff"));
+        std::unique_lock<std::recursive_mutex> capsule_lock(hook_ledger::capsule_mutex, std::defer_lock);
+        if (capsule_write) capsule_lock.lock();
+        auto latest_capsule = [&](const json& key) {
+            json latest = json::object(), page_args = {{"limit", 100}};
+            do {
+                const auto page = run("session_list", page_args);
+                for (const auto& row : page.at("rows")) {
+                    const auto cap = hook_ledger::metadata(row).value("handoff", json::object());
+                    if (cap.value("version", 0) == 2 && hook_ledger::capsule_key(cap) == hook_ledger::capsule_key(key)
+                        && cap.value("revision", uint64_t(0)) > latest.value("revision", uint64_t(0))) latest = cap;
+                }
+                page_args["after"] = page.at("after");
+            } while (!page_args["after"].is_null());
+            return latest;
+        };
+        if (op == "capsule_save") {
+            auto input = args.at("capsule");
+            const auto facts = hook_ledger::git_identity(input.value("project_dir", ""));
+            for (auto field : {"repository", "code_head", "stream_id"})
+                if (!input.contains(field)) input[field] = facts.at(field);
+            const auto bound = run("session_get", {{"session_id", input.value("session_id", "")}});
+            const auto previous = hook_ledger::metadata(bound).value("handoff", json::object());
+            if (previous.value("version", 0) == 2 &&
+                hook_ledger::capsule_key(previous) != hook_ledger::capsule_key(input))
+                return ToolResult::error("capsule session key is immutable");
+            const auto old = latest_capsule(input);
+            const auto revision = old.value("revision", uint64_t(0));
+            if (!args.contains("expected_revision") || args.at("expected_revision") != revision)
+                return ToolResult::error("capsule revision mismatch");
+            const auto cap = hook_ledger::capsule_v2(input, revision + 1, TaskLedger::now());
+            const auto sid = cap.at("session_id").get<std::string>();
+            if (sid.empty()) return ToolResult::error("capsule session_id required");
+            run("session_bind", {{"session_id", sid}, {"project_dir", cap.at("project_dir")},
+                {"metadata", {{"handoff", cap}}}});
+            return ok(cap);
+        }
+        if (op == "session_bind" && args.value("metadata", json::object()).contains("handoff")) {
+            const auto cap = args.at("metadata").at("handoff");
+            if (cap.value("version", 0) == 2) {
+                if (cap.value("session_id", "") != args.value("session_id", ""))
+                    return ToolResult::error("capsule session_id mismatch");
+                const auto bound = run("session_get", {{"session_id", args.at("session_id")}});
+                const auto previous = hook_ledger::metadata(bound).value("handoff", json::object());
+                if (previous.value("version", 0) == 2 &&
+                    hook_ledger::capsule_key(previous) != hook_ledger::capsule_key(cap))
+                    return ToolResult::error("capsule session key is immutable");
+                const auto old = latest_capsule(cap);
+                const auto revision = old.value("revision", uint64_t(0));
+                if (!args.contains("expected_revision") || args.at("expected_revision") != revision ||
+                    cap.at("revision") != revision + 1) return ToolResult::error("capsule revision mismatch");
+                args["metadata"]["handoff"] = hook_ledger::capsule_v2(cap, revision + 1, cap.at("saved_at"));
+            } else {
+                const auto old = hook_ledger::metadata(run("session_get", {{"session_id", args.at("session_id")}}));
+                if (old.value("handoff", json::object()).value("version", 0) == 2)
+                    return ToolResult::error("cannot overwrite v2 capsule with unversioned writer");
+            }
+        }
         if (op == "hook_session_start") return ok(hook_policy::session_start(args, invoke));
         if (op == "hook_ancillary") {
             if (args.value("family", "") == "shepherd" && args.value("list_tasks", false)) {
@@ -97,10 +159,10 @@ ToolResult FieldRpcHandler::tool_ledger_op(const json& params) {
                 const auto tid = hook_ledger::str(session, "thread_id");
                 if (!tid.empty()) thread = run("thread_get", {{"thread_id", tid}});
             }
-            const auto capsule = hook_ledger::capsule(args, session, thread,
-                args.value("saved_at", TaskLedger::now()));
-            return ok({{"op", "session_bind"}, {"args", {{"session_id", args.at("session_id")},
-                {"project_dir", args.at("project_dir")}, {"metadata", {{"handoff", capsule}}}}}});
+            auto key = hook_ledger::git_identity(args.value("project_dir", ""));
+            key["session_id"] = args.at("session_id");
+            return ok(hook_ledger::prepare_capsule(args, session, thread,
+                latest_capsule(key), TaskLedger::now()));
         }
         if (op == "hook_stop_progress") return ok(hook_ledger::stop_progress(args));
         if (op == "hook_stop_checkpoint") {
@@ -118,10 +180,7 @@ ToolResult FieldRpcHandler::tool_ledger_op(const json& params) {
             return ok({{"event_id", event}});
         }
         // The ledger holds its own transaction lock through WAL append and publish.
-        auto result = task_ledger_.run(op, args, [&](const json& batch) {
-            if (!field_store_->emit_event("ledger", "task_records", "task-ledger", batch.dump()))
-                throw std::runtime_error("ledger WAL append failed");
-        });
+        auto result = run(op, args);
         // Envelope also represents null/bool/string results without losing them
         // in ToolResult::ok's optional structured payload handling.
         return ToolResult::ok("Ledger operation complete", {{"value", result}});

@@ -1553,3 +1553,31 @@ and shows each top session's last-request context beside its lifetime mean.
 Costs use configurable provider price estimates, including 5-minute and 1-hour
 cache writes; they are not model-resolved invoices. Run `--self-test` for accounting
 regressions. Tool-output byte totals are diagnostic and are not billed usage.
+
+### Version 2 continuation checkpoints
+
+`ledger_op --op capsule_save --args '{"expected_revision":0,"capsule":{"session_id":"SESSION","project_dir":"/path/to/worktree","stream_id":"STREAM","objective":"Finish the task","state":"in_progress","next_action":"Run the gate"}}'`
+saves a bounded checkpoint in session metadata. Read the latest revision before
+updating: the write must carry `expected_revision`, and mismatches fail without
+changing the capsule. Revisions are monotonic per canonical repository plus
+stream (or session for a lead). `/maps/projects` and `/projects` are aliases.
+The native prepare operation keeps the existing Stop `session_bind` envelope
+and attaches its expected revision; a delayed queued write cannot overwrite a
+newer milestone. Stop collects its existing explicit Next/Blocker lines and
+changed paths; native preparation reads HEAD and the common git directory from
+git metadata without executing a shell. Worktree names `codex-wt-STREAM` supply
+the default stream identifier; other worktrees use the session key.
+
+Capsules carry objective, constraints, state (`complete`, `in_progress`,
+`missing`, `invalidated`), repository/worktree, branch/HEAD, up to 20 dirty paths,
+gate evidence (`name: {status: pass|fail, number: N}`), blockers, next action,
+job handles (`id`, `result_path`), save time and revision. Field and collection
+limits reject oversized inputs, and serialized UTF-8 including JSON escaping
+must fit 4096 bytes. No field is shortened to fit. Old v1 capsules remain
+readable. Stop invalidates an absent explicit next action, except for an explicit completed
+milestone at the same HEAD and dirty paths. Gate evidence survives only at that
+same code state; milestone writers must record current evidence explicitly.
+
+For an explicit milestone file, run `python3 chitta-mcp/capsule_cli.py save
+capsule.json --expected-revision N`. The CLI prints only an acknowledged
+record and fails on transport errors or rejected compare-and-set writes.

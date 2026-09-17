@@ -1,6 +1,10 @@
 #pragma once
 #include <chitta/prompt_policy.hpp>
 #include <ctime>
+#include <filesystem>
+#include <fstream>
+#include <mutex>
+#include <tuple>
 
 namespace chitta::hook_ledger {
 using json = nlohmann::json;
@@ -12,6 +16,105 @@ inline json metadata(const json& row) {
 inline std::string str(const json& object, const char* field, const std::string& fallback = "") {
     auto it = object.find(field);
     return it != object.end() && it->is_string() ? it->get<std::string>() : fallback;
+}
+// One lock covers capsule read/compare/WAL publication, including queued Stop writes.
+// Ordinary session metadata updates continue to merge inside TaskLedger's lock.
+inline std::recursive_mutex capsule_mutex;
+inline std::string canonical_repository(std::string path) {
+    if (path.rfind("/maps/projects/", 0) == 0) path.erase(0, 5);
+    return std::filesystem::path(path).lexically_normal().string();
+}
+inline std::string first_line(const std::filesystem::path& path) {
+    std::ifstream file(path);
+    std::string line;
+    std::getline(file, line);
+    return line;
+}
+// Read git metadata without starting a shell or executing repository configuration.
+inline json git_identity(const std::string& project) {
+    namespace fs = std::filesystem;
+    fs::path root(project), dir = root / ".git";
+    auto link = first_line(dir);
+    if (link.rfind("gitdir: ", 0) == 0) {
+        dir = link.substr(8);
+        if (dir.is_relative()) dir = root / dir;
+    }
+    fs::path common = dir;
+    const auto common_link = first_line(dir / "commondir");
+    if (!common_link.empty()) {
+        common = common_link;
+        if (common.is_relative()) common = dir / common;
+    }
+    common = common.lexically_normal();
+    std::string head = first_line(dir / "HEAD");
+    if (head.rfind("ref: ", 0) == 0) {
+        const auto ref = head.substr(5);
+        head = first_line(common / ref);
+        if (head.empty()) {
+            std::ifstream packed(common / "packed-refs");
+            for (std::string line; std::getline(packed, line);)
+                if (line.size() > 41 && line.substr(41) == ref) head = line.substr(0, 40);
+        }
+    }
+    if (head.size() != 40 && head.size() != 64) head.clear();
+    std::string stream = root.filename().string();
+    stream = stream.rfind("codex-wt-", 0) == 0 ? stream.substr(9) : "";
+    return {{"repository", canonical_repository(common.string())}, {"code_head", head},
+            {"stream_id", stream}};
+}
+inline std::string capsule_key(const json& cap) {
+    return canonical_repository(str(cap, "repository")) + "\n" +
+        (str(cap, "stream_id").empty() ? "session:" + str(cap, "session_id")
+                                      : "stream:" + str(cap, "stream_id"));
+}
+inline void bounded_text(const json& value, size_t bytes, const char* name) {
+    if (!value.is_string() || value.get_ref<const std::string&>().size() > bytes)
+        throw std::invalid_argument(std::string("capsule field limit: ") + name);
+}
+inline json capsule_v2(const json& input, uint64_t revision, double now) {
+    json out = {{"version", 2}, {"revision", revision}, {"saved_at", now}};
+    for (auto [field, limit] : std::vector<std::pair<const char*, size_t>>{
+            {"objective", 384}, {"repository", 384}, {"project_dir", 384},
+            {"session_id", 128}, {"stream_id", 96}, {"branch", 128},
+            {"code_head", 64}, {"next_action", 400}}) {
+        out[field] = input.value(field, json(""));
+        bounded_text(out[field], limit, field);
+    }
+    out["repository"] = canonical_repository(str(out, "repository"));
+    if (str(out, "repository").empty() ||
+        (str(out, "stream_id").empty() && str(out, "session_id").empty()))
+        throw std::invalid_argument("capsule repository and stream/session key required");
+    out["state"] = input.value("state", "in_progress");
+    if (out["state"] != "complete" && out["state"] != "in_progress" &&
+        out["state"] != "missing" && out["state"] != "invalidated")
+        throw std::invalid_argument("invalid capsule state");
+    for (auto [field, count, length] : std::vector<std::tuple<const char*, size_t, size_t>>{
+            {"constraints", 4, 128}, {"dirty_paths", 20, 128}, {"blockers", 3, 160}}) {
+        out[field] = input.value(field, json::array());
+        if (!out[field].is_array() || out[field].size() > count)
+            throw std::invalid_argument(std::string("capsule array limit: ") + field);
+        for (const auto& value : out[field]) bounded_text(value, length, field);
+    }
+    out["gates"] = input.value("gates", json::object());
+    if (!out["gates"].is_object() || out["gates"].size() > 6)
+        throw std::invalid_argument("capsule gate limit");
+    for (const auto& [name, gate] : out["gates"].items()) {
+        bounded_text(name, 48, "gate name");
+        if (!gate.is_object() || gate.size() != 2 || !gate.contains("number") ||
+            !gate["number"].is_number() || (str(gate, "status") != "pass" && str(gate, "status") != "fail"))
+            throw std::invalid_argument("gate requires status pass/fail and one number");
+    }
+    out["jobs"] = input.value("jobs", json::array());
+    if (!out["jobs"].is_array() || out["jobs"].size() > 4)
+        throw std::invalid_argument("capsule job limit");
+    for (const auto& job : out["jobs"]) {
+        if (!job.is_object() || job.size() != 2) throw std::invalid_argument("invalid capsule job");
+        bounded_text(job.at("id"), 64, "job id");
+        bounded_text(job.at("result_path"), 192, "job result path");
+    }
+    // Check serialized UTF-8 including escaping and structure. Never truncate fields.
+    if (out.dump().size() > 4096) throw std::invalid_argument("capsule exceeds 4096 bytes");
+    return out;
 }
 inline std::string join(const json& values, const std::string& separator) {
     std::string out;
@@ -29,9 +132,13 @@ inline std::string handoff_card(const json& rows, const std::string& project,
     for (const auto& row : rows) {
         const auto meta = metadata(row);
         const auto capsule = meta.value("handoff", json::object());
-        if (!capsule.is_object() || capsule.value("version", 0) != 1
+        if (!capsule.is_object() || (capsule.value("version", 0) != 1 && capsule.value("version", 0) != 2)
             || str(capsule, "project_dir") != project || str(capsule, "branch") != branch) continue;
         if (latest.is_null() || capsule.value("saved_at", 0.0) >= latest.value("saved_at", 0.0)) latest = capsule;
+    }
+    if (!latest.is_null() && latest.value("version", 0) == 2) {
+        if (str(latest, "state") != "in_progress") return "";
+        return "[handoff]\n" + latest.dump() + "\n[/handoff]";
     }
     if (latest.is_null() || !latest.value("verified", false) || str(latest, "next_action").empty()) return "";
     const auto source = latest.value("source", json::object());
@@ -62,6 +169,33 @@ inline json capsule(const json& input, const json& session, const json& thread, 
         {"artifact_paths", paths}, {"blocker", str(input, "blocker")},
         {"source", {{"kind", source}, {"session_id", str(input, "session_id")}, {"thread_id", tid}}},
         {"saved_at", saved_at}};
+}
+inline json prepare_capsule(const json& args, const json& session, const json& thread,
+                            const json& old, double now) {
+    const auto legacy = capsule(args, session, thread, now);
+    auto input = git_identity(args.value("project_dir", ""));
+    input["session_id"] = args.at("session_id");
+    for (auto field : {"objective", "constraints", "jobs"})
+        if (old.contains(field)) input[field] = old[field];
+    input["project_dir"] = args.at("project_dir");
+    input["branch"] = args.value("branch", "");
+    input["next_action"] = legacy.at("next_action");
+    input["dirty_paths"] = legacy.at("artifact_paths");
+    input["blockers"] = json::array();
+    if (!args.value("blocker", "").empty()) input["blockers"].push_back(args.at("blocker"));
+    input["state"] = legacy.value("verified", false) ? "in_progress" : "invalidated";
+    // A Stop cannot erase an explicit completed milestone at the same code state.
+    if (str(old, "code_head") == str(input, "code_head") &&
+        old.value("dirty_paths", json::array()) == input["dirty_paths"]) {
+        if (old.contains("gates")) input["gates"] = old["gates"];
+        if (str(old, "state") == "complete" && str(input, "next_action").empty())
+            input["state"] = "complete";
+    }
+    const auto revision = old.value("revision", uint64_t(0));
+    const auto cap = capsule_v2(input, revision + 1, now);
+    return {{"op", "session_bind"}, {"args", {{"session_id", args.at("session_id")},
+        {"project_dir", args.at("project_dir")}, {"expected_revision", revision},
+        {"metadata", {{"handoff", cap}}}}}};
 }
 inline std::string task_card(const json& inbox, const json& threads, const std::string& realm) {
     std::string out;

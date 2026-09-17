@@ -1,6 +1,8 @@
 #pragma once
 #include <chitta/hook_compact_policy.hpp>
 #include <filesystem>
+#include <algorithm>
+#include <tuple>
 
 namespace chitta::hook_policy {
 inline std::string scalar(const json& value) {
@@ -143,8 +145,17 @@ inline json session_start(const json& a, const Invoke& invoke) {
         }
         std::vector<std::string> corrections;
         auto surfaces = lines(str(local, ".correction_surfaces"));
-        for (const auto& row :
-             get("corrections").at("structured").value("results", json::array())) {
+        auto correction_rows = get("corrections").at("structured").value("results", json::array());
+        // Recall ties can arrive in a different order after a daemon restart.
+        // Keep uint64 IDs lossless; decimal length then bytes orders them numerically.
+        const auto correction_key = [](const json& row) {
+            const auto id = scalar(row.value("id", json("")));
+            return std::make_tuple(id.size(), id, str(row, "text"));
+        };
+        std::sort(correction_rows.begin(), correction_rows.end(), [&](const json& a, const json& b) {
+            return correction_key(a) < correction_key(b);
+        });
+        for (const auto& row : correction_rows) {
             auto text = str(row, "text"), state = str(row, "correction_state", "emitted");
             if (match(text, "verified", true) || state == "verified" || state == "applied")
                 continue;
