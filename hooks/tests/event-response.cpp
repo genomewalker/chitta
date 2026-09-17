@@ -1,6 +1,7 @@
 // Native-policy transport for hook envelope integration fixtures.
 #include <chitta/hook_ancillary_policy.hpp>
 #include <chitta/hook_pretool_policy.hpp>
+#include <chitta/output_cap.hpp>
 #include <chitta/hook_prompt_policy.hpp>
 #include <chitta/hook_saddle_policy.hpp>
 #include <chitta/hook_session_policy.hpp>
@@ -11,6 +12,8 @@
 #include <thread>
 int main(int argc, char **argv) {
   using namespace chitta::hook_policy;
+  if (argc > 1 && (std::string(argv[1]) == "output_cap" || std::string(argv[1]) == "output_ref"))
+    return chitta::output_cache::run(argv[1], argc, argv, 1);
   if (argc > 1 && std::string(argv[1]) == "realm_detect") {
     std::cout << "project:test\n";
     return 0;

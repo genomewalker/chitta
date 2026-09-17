@@ -1,0 +1,22 @@
+
+━━━ active threads ━━━
+  ⟳  all status fix ask codex [33c3dea9]
+  ⟳  all why fix sqlite stream [f677038f]
+  ⟳  codex claude docs new skills [606e42e9]
+[ledger] ba37be2c-ee11-424f-bd7e-50bd77e872e3 (working)
+
+[recent-corrections]
+[correction] The prompt hook must not pipe injected memories through 'sqz compress': sqz dedup replaces previously seen 
+[correction] Claude Code sessions started before the cc-soul->chitta plugin rename keep executing hooks from ~/.claude/p
+[correction] Never let a second chittad open the live mind dir. 2026-09-14 12:01: 'chitta mcp' auto-started a daemon whe
+[correction] 'tag recall leaks across realms' was a misdiagnosis: the daemon ignored a --tag with no 'tagged' triplets a
+[correction] Prompt-hook 3 s lane timeouts on a 96-core node were NOT load or the RPC mutex: eu-stack showed ~20 recall 
+[/recent-corrections]
+
+[compliance] missed corrections
+
+⚠️ BEFORE RUNNING: [cache] Recent cache break detected:
+[cache:break] Session had cache_hit_ratio=0.46 (threshold 0.5). Potential causes: model switch mid-s
+
+[cache:break] Session had cache_hit_ratio=0.46 (threshold 0.5). Potential causes: model switch mid-session, tool set changes, or compaction.
+[tokens] this week: fable 12s 150k/req $34.50; astra 7s $6.00

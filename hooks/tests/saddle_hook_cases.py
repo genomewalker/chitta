@@ -47,6 +47,7 @@ def main():
             CHITTA_QUEUE=str(base / "queue"),
             CHITTA_SOCKET_PATH=str(base / "absent.sock"),
             CHITTA_PLUGIN_DIR=str(ROOT),
+            CHITTA_OUTPUT_CAP="0",  # This fixture checks saddle advisories only.
             CHITTA_BIN=str(cli),
         )
         for key in ("CHITTA_HEADLESS", "CC_SOUL_HEADLESS"):

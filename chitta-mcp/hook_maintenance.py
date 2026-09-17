@@ -3,6 +3,8 @@
 import fcntl
 import json
 import os
+import subprocess
+import sys
 import tempfile
 import time
 from pathlib import Path
@@ -12,6 +14,21 @@ from hook_client import read_text
 
 
 def run(client):
+    ledger = Path(__file__).resolve().parents[1] / "scripts/token-ledger.py"
+    if ledger.is_file():
+        subprocess.Popen(
+            [
+                sys.executable,
+                str(ledger),
+                "--json",
+                "--cache-daily",
+                str(client.state / "token-ledger.json"),
+            ],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
     client.mind = Path(os.environ.get("MIND", str(client.mind)))
     client.mind.mkdir(parents=True, exist_ok=True)
     with (client.mind / ".dream_sweep.lock").open("a") as lock:

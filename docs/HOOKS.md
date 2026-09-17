@@ -270,6 +270,36 @@ chitta provides hooks in two forms:
 
 The `smart-install.sh` script configures the appropriate system automatically.
 
+### Bash output references
+
+The daemon's PreToolUse policy rewrites eligible single-line Bash commands as
+`(set -o pipefail; ( <command>
+) 2>&1 | chitta output_cap)` through
+`updatedInput.command`. Other input fields are preserved. Multiline commands,
+background jobs (shell `&` or Bash `run_in_background=true`), heredocs,
+interactive commands, `srun`, `nohup`, `setsid`, and
+`codex` are skipped. Commands already piped through `sqz compress` or
+`chitta output_cap` are left alone. Denied commands are never rewritten.
+
+| Setting | Default | Effect |
+|---|---|---|
+| `CHITTA_OUTPUT_CAP` | `1` | `0` disables the PreToolUse rewrite |
+| `CHITTA_OUTPUT_CAP_CHARS` | `6000` | Pass smaller outputs through byte-for-byte; cap larger previews |
+| `CHITTA_OUTPUT_REF_TTL_H` | `48` | Expire cached output references after this many hours |
+
+`chitta output_cap` runs locally without an RPC. Oversized output is saved in
+`outputs/` under the runtime state directory, keyed by the first 12 hexadecimal
+SHA-256 characters. The thread receives a `§ref:<hash>§` header, character and
+line counts, and the first/last 20 lines. Long lines are bounded too. Fetch the
+original bytes with `chitta output_ref --hash <hash>`, or select inclusive,
+one-based lines with `--lines 21-60`. Expired references are removed lazily.
+Cache failures pass through the original output. The wrapper preserves failure
+status using Bash pipefail. PostToolUse does not add output summaries.
+
+SessionStart may append a cached `[tokens] this week:` line. Refresh the ledger
+with `scripts/token-ledger.py --cache-daily <runtime-dir>/token-ledger.json`;
+SessionStart never scans transcripts.
+
 ### Hook Output Format
 
 All lifecycle hooks write JSON `hookSpecificOutput` schema on stdout. This is not the old "SSL format" (`[conf%:type]`) from earlier versions — that format is obsolete.

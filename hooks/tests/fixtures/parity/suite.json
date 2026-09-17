@@ -91,6 +91,55 @@
       "hook": "session-start-hook.sh",
       "input": "session-compact.json",
       "contains": "[session-restored]"
+    },
+    {
+      "name": "session-tokens",
+      "hook": "session-start-hook.sh",
+      "input": "session-start.json",
+      "contains": "[tokens] this week: fable 12s 150k/req $34.50; astra 7s $6.00",
+      "state": {
+        "token-ledger.json": "{\"agents\": {\"fable\": {\"sessions\": 12, \"avg_context_per_turn\": 150000, \"total_cost\": 34.5}, \"astra\": {\"sessions\": 7, \"total_cost\": 6}}}"
+      }
+    },
+    {
+      "name": "pretool-cap",
+      "hook": "pre-tool-hook.sh",
+      "input": "pretool-cap.json",
+      "args": [
+        "Bash"
+      ]
+    },
+    {
+      "name": "pretool-sqz",
+      "hook": "pre-tool-hook.sh",
+      "input": "pretool-sqz.json",
+      "args": [
+        "Bash"
+      ]
+    },
+    {
+      "name": "pretool-multiline",
+      "hook": "pre-tool-hook.sh",
+      "input": "pretool-multiline.json",
+      "args": [
+        "Bash"
+      ]
+    },
+    {
+      "name": "pretool-background",
+      "hook": "pre-tool-hook.sh",
+      "input": "pretool-background.json",
+      "args": [
+        "Bash"
+      ]
+    },
+    {
+      "name": "pretool-srun",
+      "hook": "pre-tool-hook.sh",
+      "input": "pretool-srun.json",
+      "args": [
+        "Bash"
+      ]
     }
   ],
   "ledger_setup": [

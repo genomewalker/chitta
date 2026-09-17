@@ -261,7 +261,20 @@ def main():
         "--now", type=float, default=None, help="Pin the event-time window (Unix seconds)"
     )
     ap.add_argument("--self-test", action="store_true")
+    ap.add_argument("--cache-daily", type=Path)
     args = ap.parse_args()
+    lock = None
+    if args.cache_daily:
+        import fcntl
+
+        args.cache_daily.parent.mkdir(parents=True, exist_ok=True)
+        lock = args.cache_daily.with_suffix(".lock").open("a")
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return 0
+        if args.cache_daily.exists() and time.time() - args.cache_daily.stat().st_mtime < 86400:
+            return 0
     if args.self_test:
         self_test()
         return 0
@@ -274,6 +287,10 @@ def main():
         report["agents"][provider] = report_agent(
             sorted(root.glob("**/*.jsonl")), provider, prices, report["since"], until, args.top
         )
+    if args.cache_daily:
+        temporary = args.cache_daily.with_suffix(".tmp")
+        temporary.write_text(json.dumps(report))
+        temporary.replace(args.cache_daily)
     if args.json:
         print(json.dumps(report, indent=2))
     else:

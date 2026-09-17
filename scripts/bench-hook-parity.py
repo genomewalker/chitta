@@ -252,7 +252,7 @@ def main():
                         check=True,
                     )
                 stdout, stderr, result = run_hook(
-                    ["bash", str(hook_root / case["hook"])],
+                    ["bash", str(hook_root / case["hook"]), *case.get("args", [])],
                     payload,
                     env,
                     work / "project",

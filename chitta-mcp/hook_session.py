@@ -106,6 +106,9 @@ def run(client):
             for path in root.glob(pattern):
                 path.unlink(missing_ok=True)
     client.apply(plan)
+    from hook_tokens import weekly_line
+
+    client.output += weekly_line(client.state)
     profile = setting("LEDGER_PROFILE")
     if profile and "ledger_profile" in plan:
         Path(profile).write_text(json.dumps(plan["ledger_profile"]) + "\n")

@@ -12,6 +12,13 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 > reconstructed from `git log` between tags; patch releases are grouped under
 > their minor version (`## [5.x.y]`) with per-release dates on one line.
 
+- Cap eligible Bash output at source through PreToolUse `updatedInput` and local
+  `chitta output_cap`; preserve pipefail status and skip sqz, multiline,
+  interactive and background commands (including Bash `run_in_background`).
+  Full bytes remain retrievable with
+  `output_ref --hash` and optional line ranges for 48 hours. Remove additive
+  PostToolUse summaries; retain the cached weekly token line.
+
 - Organ ablation dispatch supports `--jobs` with process-local replicas and an
   admission byte budget inside a 16-CPU/96-GiB compute allocation. Serial and
   parallel controls must agree before ordered groups, nine priority organs and

@@ -1,3 +1,4 @@
+#include <chitta/output_cap.hpp>
 #include <chitta/queue_path.hpp>
 #include <chitta/prompt_policy.hpp>
 // Chitta CLI - Multi-mode memory operations
@@ -675,6 +676,9 @@ int main(int argc, char* argv[]) {
             tool_positional.emplace_back(argv[i]);
         }
     }
+
+    if (tool == "output_cap" || tool == "output_ref")
+        return chitta::output_cache::run(tool, argc, argv, tool_arg_index);
 
     // Some daemon tools also have client-side shortcuts (realm_detect). Their
     // help still comes from the advertised schema, just like every other tool.

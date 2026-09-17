@@ -224,7 +224,9 @@ def post_tool(client):
             )
             git[field] = proc.stdout.rstrip("\n") if proc.returncode == 0 else ""
     plan = client.policy(
-        "hook_post_tool", local={".last_bash_cmd": read_text(client.mind / ".last_bash_cmd")}, **git
+        "hook_post_tool",
+        local={".last_bash_cmd": read_text(client.mind / ".last_bash_cmd")},
+        **git,
     )
     client.apply(plan)
     if plan.get("provenance"):
@@ -292,6 +294,7 @@ def pre_tool(client, matcher):
     settings = {
         name: setting(name)
         for name in (
+            "OUTPUT_CAP",
             "STRICT_MODE",
             "HOOK_ENFORCE",
             "ALLOW_READ",
