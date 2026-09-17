@@ -1,6 +1,6 @@
 # Changelog
 
-- PreToolUse hard stop: once the transcript's last assistant usage (input + cache read + cache creation) exceeds `CHITTA_CONTEXT_HARD_STOP` (default 200000), every tool call is denied except the handoff allowlist (`mcp__chitta__checkpoint`, `mcp__chitta__remember`, `chitta remember|checkpoint|ledger_op`); denial clears once a compaction or fresh session brings the last usage back under the limit. Stop hook budget advisory: once per session, one `[budget]` line when mean context per turn exceeds `CHITTA_CONTEXT_BUDGET` (default 150000).
+- PreToolUse hard stop: once the transcript's last assistant usage (input + cache read + cache creation) exceeds `CHITTA_CONTEXT_HARD_STOP` (opt-in, default off; the one-day 200000 default blocked ordinary sessions on 1M-window models: chitta economises context, it does not refuse work), every tool call is denied except the handoff allowlist (`mcp__chitta__checkpoint`, `mcp__chitta__remember`, `chitta remember|checkpoint|ledger_op`); denial clears once a compaction or fresh session brings the last usage back under the limit. Stop hook budget advisory: once per session, one `[budget]` line when mean context per turn exceeds `CHITTA_CONTEXT_BUDGET` (default 150000).
 
 - Token ledger deduplicates provider requests across transcripts, uses event timestamps for reporting windows, includes cache-write costs, and reports per-model usage plus last-request and lifetime-mean context. Codex usage-event fallback IDs are counted explicitly.
 

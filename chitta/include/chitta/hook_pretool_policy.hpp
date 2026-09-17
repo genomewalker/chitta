@@ -43,7 +43,7 @@ inline json pretool(const json& a, const Invoke& invoke) {
     // cache read + cache creation) crosses CHITTA_CONTEXT_HARD_STOP, until a
     // compaction or fresh session brings the transcript's last usage back down.
     // A small allowlist keeps the handoff path itself usable while denied.
-    const auto hard_stop_limit = integer("CONTEXT_HARD_STOP", 200000);
+    const auto hard_stop_limit = integer("CONTEXT_HARD_STOP", 0);
     if (hard_stop_limit > 0) {
         const auto usage = a.value("last_usage", json::object());
         const long long total = usage.value("input_tokens", 0LL) +
