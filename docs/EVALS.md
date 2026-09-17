@@ -372,7 +372,8 @@ required. CI also imports the new modules at the Python 3.9 deployment floor.
 
 ## Utility posteriors: when to flip `CHITTA_UTILITY_RECALL`
 
-> Status as of 2026-09-14: still **off**. Per-memory Beta posteriors only became
+> Status as of 2026-09-17: still **off**; `scripts/utility-flip.sh` runs steps 1–3
+> and prints the step-4 comparison (date-gated to 2026-09-21). Per-memory Beta posteriors only became
 > meaningful on 2026-09-13, when `post-bash-hook.sh` started receiving Claude
 > Code's `PostToolUseFailure` payloads and Codex's exit-less shape; everything
 > recorded before that is success-only and must not be trusted.
