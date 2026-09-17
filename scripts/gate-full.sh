@@ -13,7 +13,7 @@
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT" || exit 1
-PY="${CHITTA_PY:-$(command -v python3)}"
+PY="$("$ROOT/scripts/python-with-mcp.sh")"; export PATH="$(dirname "$PY"):$PATH"
 ON="$ROOT/scripts/on-compute.sh"
 replica=0 recall=0
 for a in "$@"; do case "$a" in --replica) replica=1 ;; --recall) replica=1; recall=1 ;; esac; done
@@ -28,7 +28,10 @@ step "quick gate"
 bash scripts/gate-quick.sh || fail=1
 
 step "Rust build and tests (release)"
-"$ON" -c 16 -- bash -c 'cd chitta-field && ./build.sh build --release 2>&1 | grep -E "^error" ; ./build.sh test --release 2>&1 | grep -E "^test result|FAILED|panicked"' | tee /dev/stderr | grep -qE '^test result: ok' || { echo "FAIL: Rust"; fail=1; }
+# Rust tests use TempDir: node-local /tmp, not the NFS scratch on-compute exports as
+# TMPDIR (NFS server clocks make a just-touched file look younger than "now" and the
+# janitor age-gate test fails there, 2026-09-17).
+TMPDIR=/tmp "$ON" -c 16 -- bash -c 'cd chitta-field && ./build.sh build --release 2>&1 | grep -E "^error" ; ./build.sh test --release 2>&1 | grep -E "^test result|FAILED|panicked"' | tee /dev/stderr | grep -qE '^test result: ok' || { echo "FAIL: Rust"; fail=1; }
 
 step "C++ build and ctest"
 "$ON" -c 16 -- bash -c 'cd chitta && cmake --build build --parallel 2>&1 | grep -E "error|Built target chittad"; cd build && ctest -j8 2>&1 | grep -E "tests passed|tests failed"' | tee /dev/stderr | grep -q '100% tests passed' || { echo "FAIL: C++/ctest"; fail=1; }

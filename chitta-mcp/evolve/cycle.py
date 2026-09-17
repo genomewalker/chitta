@@ -211,7 +211,7 @@ def test_python() -> str:
     return sys.executable
 
 
-def codex_binary() -> str:
+def codex_binary(path: str | None = None) -> str:
     """The Codex CLI to run. PATH order is not trustworthy here: the bioinfo conda
     env ships an npm @openai/codex (0.151.0) that rejects gpt-6-astra, and a
     manual cycle launched with that env first failed its survey on 2026-09-14.
@@ -220,9 +220,10 @@ def codex_binary() -> str:
     explicit = os.environ.get("CHITTA_CODEX_BIN")
     if explicit:
         return explicit
-    found = shutil.which("codex")
+    # Resolve against the PATH the child will run with (tests put a stub codex
+    # first there); the runner's own PATH is irrelevant.
+    found = shutil.which("codex", path=path)
     if found and "node_modules/@openai/codex" not in os.path.realpath(found):
-        # Leave it to the child's PATH (tests put a stub codex first there).
         return "codex"
     local = Path.home() / ".local" / "bin" / "codex"
     if os.access(local, os.X_OK):
@@ -230,10 +231,12 @@ def codex_binary() -> str:
     return "codex"
 
 
-def implement_command(args, worktree: Path, spec: str, output: Path) -> list[str]:
+def implement_command(
+    args, worktree: Path, spec: str, output: Path, env: dict | None = None
+) -> list[str]:
     if args.implementer == "codex":
         return [
-            codex_binary(),
+            codex_binary((env or os.environ).get("PATH")),
             "exec",
             "-C",
             str(worktree),
@@ -263,11 +266,12 @@ mechanism; a replica delta or an unchanged existing test is insufficient."""
 def agent_output(args, worktree: Path, prompt: str, artifacts: Path, phase: str, budget: Budget):
     output = artifacts / (phase + "-final.txt")
     log = artifacts / (phase + ".log")
+    env = dict(getattr(budget, "env", os.environ), CHITTA_HEADLESS="1", CC_SOUL_HEADLESS="1")
     budget.run(
-        implement_command(args, worktree, prompt, output),
+        implement_command(args, worktree, prompt, output, env),
         worktree,
         log,
-        env=dict(getattr(budget, "env", os.environ), CHITTA_HEADLESS="1", CC_SOUL_HEADLESS="1"),
+        env=env,
         final_output=output if args.implementer == "codex" else None,
     )
     if args.implementer == "claude":

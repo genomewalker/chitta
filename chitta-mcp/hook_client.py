@@ -304,6 +304,7 @@ def pre_tool(client, matcher):
             "AGENT_LIMIT",
             "LOOP_WARN",
             "LOOP_LIMIT",
+            "CONTEXT_HARD_STOP",
         )
         if setting(name)
     }
@@ -314,6 +315,17 @@ def pre_tool(client, matcher):
         "now_ms": client.now_ms,
         "strict_marker": (client.mind / ".strict_claude_style").exists(),
     }
+    if setting("CONTEXT_HARD_STOP", "0") != "0" and client.payload.get("transcript_path"):
+        usage = last_assistant_usage(Path(client.payload["transcript_path"]))
+        if usage:
+            extra["last_usage"] = {
+                key: int(usage.get(key, 0) or 0)
+                for key in (
+                    "input_tokens",
+                    "cache_read_input_tokens",
+                    "cache_creation_input_tokens",
+                )
+            }
     if matcher in ("Bash", "Read"):
         realm = subprocess.run(
             [client.cli, "realm_detect"],
@@ -466,6 +478,35 @@ def lifecycle(client, family):
         operation = "hook_compact_restore"
     plan = client.policy(operation, **state)
     client.apply(plan)
+
+
+def last_assistant_usage(path, window=1048576):
+    """Cheap tail read for the hard-stop check: scan the last `window` bytes for
+    the most recent assistant record's usage, without parsing the transcript."""
+    try:
+        with path.open("rb") as stream:
+            size = stream.seek(0, 2)
+            offset = max(0, size - window)
+            stream.seek(offset)
+            data = stream.read()
+    except OSError:
+        return None
+    lines = data.split(b"\n")
+    if offset:
+        lines = lines[1:]
+    for line in reversed(lines):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except (ValueError, UnicodeError):
+            continue
+        if not isinstance(row, dict) or row.get("type") != "assistant":
+            continue
+        usage = row.get("message", {}).get("usage")
+        if isinstance(usage, dict):
+            return usage
+    return None
 
 
 def tail_events(path):
