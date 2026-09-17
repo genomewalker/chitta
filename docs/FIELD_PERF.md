@@ -898,6 +898,31 @@ separate from the calibrated `hook_total_ms` statistic above.
 | `all` | 914/1143, 891/1077, 827/4680 | 937/4971, 858/1200, 818/995 | 0 | 3/3 passed; recall identity 20/20, 20/20, 20/20 |
 <!-- ORGAN-ABLATION-TABLE -->
 
+### Follow-up: complete evidence required (2026-09-17)
+
+The 144-trial table above is historical evidence from the first runner.
+Current-truth did execute in every trial, but the summary retained only
+overall p3/abstention. Its visible and holdout results stayed in `truth.json`.
+The frozen `benchmarks/noise.json` has no current-truth margins; the report
+incorrectly combined missing calibration and missing measurements under one
+label. SMRITI was optional and was skipped without an isolated agent.
+Controls could pass while those panels were unavailable.
+
+The follow-up runner retains the full truth report and all six overall,
+visible and holdout p3/abstention metrics. It requires every control metric
+and margin, and invokes the real SMRITI visible panel with this checkout's
+CLI/hooks and private home, socket, fixtures and ledger. Dry-run records,
+missing tasks, zero-usage agent failures and unconfirmed on-arm injection
+cannot qualify. Daemon logs are preserved before scratch cleanup.
+
+Preflight currently rejects the committed calibration: its SMRITI bands cover
+only examples 001–003, whereas the visible panel has nine tasks; it has no
+current-truth margins or panel/config identity and no pinned SMRITI model.
+No agent credentials are exported. Matching frozen calibration and authorized
+isolated credentials are prerequisites for new controls. Protected benchmark
+files and the historical measurements have not been changed; no new control
+or retirement verdict is claimed by these collection fixes.
+
 ### Organ retention and rollback justification
 
 The checked-in noise declaration lacks `current_truth.p3` and

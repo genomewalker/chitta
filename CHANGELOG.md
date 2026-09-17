@@ -110,6 +110,12 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
   36/50; the current-truth and golden recall exit gates remain unmet.
 
 ### Added
+- Require complete control evidence before organ-ablation trials: retain
+  current-truth visible/holdout metrics, validate calibration panel identity,
+  and require real SMRITI output with confirmed memory injection through
+  private checkout hooks. Preserve daemon logs on failed trials. The new
+  controls still require matching frozen bands and isolated agent credentials;
+  these collection fixes do not qualify historical ablations for retirement.
 - Per-open `CHITTA_ABLATE_ORGANS` experiments for 43 field organs, with
   empty runtime views, suppressed new organ WAL events, and preserved snapshot
   state for rollback. Six new Rust tests cover parsing, runtime isolation,

@@ -93,7 +93,15 @@ LARGEST = (
     "lite_encoder",
     "sparse_encoder",
 )
-REQUIRED = ("golden.ndcg", "current_truth.p3", "current_truth.abstain", "hook_total_ms")
+TRUTH_METRICS = tuple(
+    f"current_truth.{prefix}{metric}"
+    for prefix in ("", "visible.", "holdout.")
+    for metric in ("p3", "abstain")
+)
+SMRITI_METRICS = tuple(
+    f"smriti.{arm}.{metric}" for arm in ("off", "on") for metric in ("sr", "tokens")
+)
+REQUIRED = ("golden.ndcg", *TRUTH_METRICS, *SMRITI_METRICS, "hook_total_ms")
 SNAPSHOT = {
     "event_tape",
     "decision_tape",
@@ -277,19 +285,24 @@ def compare(control, treatment, declared, missing):
     }
 
 
-def control_gate(runs, declared):
+def control_gate(runs, declared, required=REQUIRED):
     """A spread outside any frozen band stops the matrix before treatments."""
     reasons, spreads = [], {}
     if len(runs) != 3 or any(r.get("error") for r in runs):
         reasons.append("requires three error-free controls")
     if any(not r.get("invariants", {}).get("passed") for r in runs):
         reasons.append("control write/keyed/identity gate failed")
-    for key, margin in declared.items():
+    for key in required:
+        margin = declared.get(key)
+        if margin is None:
+            reasons.append(f"{key} frozen margin unavailable")
+            continue
         values = [r.get("metrics", {}).get(key) for r in runs]
         if not values or any(
             not isinstance(v, (int, float)) or not math.isfinite(v) for v in values
         ):
-            continue  # Unavailable optional panels still block equivalence in compare().
+            reasons.append(f"{key} control evidence unavailable")
+            continue
         spread = max(values) - min(values)
         spreads[key] = {"samples": values, "spread": spread, "margin": margin}
         if spread > margin:
@@ -297,6 +310,163 @@ def control_gate(runs, declared):
     if "golden.ndcg" not in spreads:
         reasons.append("golden control spread unavailable")
     return {"passed": not reasons, "spreads": spreads, "reasons": reasons}
+
+
+def truth_metrics(report):
+    """Retain both frozen splits; overall success must not hide holdout losses."""
+    metrics = {}
+    for split, count in (("overall", 50), ("visible", 30), ("holdout", 20)):
+        row = report["overall"] if split == "overall" else report["splits"][split]
+        if row["n"] != count:
+            raise ValueError(f"incomplete current-truth {split}: expected {count} questions")
+        prefix = "" if split == "overall" else split + "."
+        for metric in ("p3", "abstain"):
+            value = row[metric]
+            if not isinstance(value, (int, float)) or not math.isfinite(value):
+                raise ValueError(f"missing current-truth {split}.{metric}")
+            metrics[f"current_truth.{prefix}{metric}"] = value
+    return metrics
+
+
+def smriti_definition():
+    split_path = ROOT / "benchmarks/smriti/split.json"
+    assignments = json.loads(split_path.read_text())
+    split = module("ablation_split", ROOT / "benchmarks/smriti/split.py")
+    return {
+        "agent": "claude-code",
+        "tasks": sorted(k for k, v in assignments.items() if v == "visible"),
+        "split_hash": split.fingerprint(assignments),
+    }
+
+
+def calibration_errors(noise):
+    """Bands are usable only for the panel that actually produced them."""
+    errors = []
+    if not noise.get("acceptance_ready") or noise.get("mode") != "replica":
+        errors.append("acceptance-ready replica calibration required")
+    if noise.get("golden_config") != {"limit": 20, "strategy": "hybrid", "reranker": False}:
+        errors.append("golden calibration configuration mismatch")
+    for key, expected in smriti_definition().items():
+        if noise.get(key) != expected:
+            errors.append(f"SMRITI calibration {key} mismatch")
+    truth = noise.get("current_truth") or {}
+    panel = ROOT / "benchmarks/current_truth/questions.json"
+    if truth.get("panel_sha256") != hashlib.sha256(panel.read_bytes()).hexdigest():
+        errors.append("current-truth calibration panel hash missing or mismatched")
+    if truth.get("config") != {
+        "realm": "project:cc-soul",
+        "limit": 3,
+        "strategy": "fused",
+        "no_learn": True,
+    }:
+        errors.append("current-truth calibration configuration missing or mismatched")
+    if truth.get("snapshot_id") != noise.get("snapshot_id") or not noise.get("snapshot_id"):
+        errors.append("current-truth calibration snapshot missing or mismatched")
+    if noise.get("errors") or noise.get("injection_confirmed") is not True:
+        errors.append("SMRITI calibration must have no errors and confirmed injection")
+    return errors
+
+
+def smriti_metrics(records, definition):
+    expected = {(task, arm) for task in definition["tasks"] for arm in ("off", "on")}
+    observed = [(row.get("task_id"), row.get("condition")) for row in records]
+    if len(observed) != len(expected) or set(observed) != expected:
+        raise ValueError("SMRITI requires exactly one record per visible task and off/on arm")
+    for row in records:
+        if row.get("dry_run") is not False or row.get("tokens_used", 0) <= 0:
+            raise ValueError("SMRITI requires real agent output with nonzero usage")
+        if not isinstance(row.get("passed"), bool):
+            raise ValueError("SMRITI task verdict missing")
+        if row.get("split_hash") != definition["split_hash"] or row.get("split") != "visible":
+            raise ValueError("SMRITI split identity mismatch")
+        if row["condition"] == "on" and row.get("injected_confirmed") is not True:
+            raise ValueError("SMRITI on-arm memory injection not confirmed")
+    return {
+        f"smriti.{arm}.{metric}": statistics.mean(
+            row[field] for row in records if row["condition"] == arm
+        )
+        for arm in ("off", "on")
+        for metric, field in (("sr", "passed"), ("tokens", "tokens_used"))
+    }
+
+
+def run_smriti(env, output, home, mind, cli, model):
+    """Run the actual benchmark with this checkout's hooks and private state."""
+    sys.path.insert(0, str(ROOT / "benchmarks/smriti"))
+    runner = module("ablation_smriti", ROOT / "benchmarks/smriti/runner.py")
+    runner.ChittaAdapter.CHITTA_BIN = str(cli)
+    runner.MIND_PATH = mind
+    runner.SCRATCH_ROOT = str(home.parent / "smriti-work")
+    settings = home / ".claude/settings.json"
+    settings.write_text(
+        json.dumps(
+            {
+                "disableAllHooks": False,
+                "hooks": {
+                    "UserPromptSubmit": [
+                        {
+                            "hooks": [
+                                {
+                                    "type": "command",
+                                    "command": shlex.join(
+                                        ["bash", str(ROOT / "hooks/prompt-hook.sh")]
+                                    ),
+                                    "timeout": 60,
+                                }
+                            ]
+                        }
+                    ]
+                },
+            }
+        )
+    )
+    mcp = home / "mcp.json"
+    mcp.write_text('{"mcpServers": {}}\n')
+
+    class PrivateAgent(runner.ClaudeCodeAdapter):
+        def build_cmd(self, prompt):
+            return [
+                *super().build_cmd(prompt),
+                "--model",
+                model,
+                "--setting-sources",
+                "",
+                "--settings",
+                str(settings),
+                "--strict-mcp-config",
+                "--mcp-config",
+                str(mcp),
+                "--permission-mode",
+                "acceptEdits",
+                "--no-session-persistence",
+                "--tools",
+                "Bash,Read,Edit,Write,Glob,Grep",
+                "--allowedTools",
+                "Bash,Read,Edit,Write,Glob,Grep",
+            ]
+
+    definition = smriti_definition()
+    # These variables are private to the worker process, never shared threads.
+    os.environ.update(
+        env,
+        CHITTA_DB_PATH=str(mind),
+        CHITTA_SOCKET_PATH=env["CHITTA_EVAL_SOCKET"],
+        CLAUDE_CONFIG_DIR=str(home / ".claude"),
+        CC_SOUL_ROOT=str(ROOT),
+    )
+    path = runner.run_all(
+        ROOT / "benchmarks/smriti/tasks",
+        definition["tasks"],
+        ["off", "on"],
+        PrivateAgent(),
+        output / "smriti",
+        trials=1,
+        dry_run=False,
+    )
+    if path is None:
+        raise ValueError("SMRITI emitted no real records")
+    records = [json.loads(line) for line in Path(path).read_text().splitlines() if line.strip()]
+    return smriti_metrics(records, definition)
 
 
 def golden_with_traces(noise, output, cli):
@@ -439,7 +609,14 @@ def invariants(stress, mind):
 
 
 def trial(args, organs, index, output):
-    result = {"organs": list(organs), "trial": index, "metrics": {}}
+    started = time.monotonic()
+    result = {
+        "organs": list(organs),
+        "trial": index,
+        "metrics": {},
+        "host": socket.gethostname(),
+        "allocation": os.environ.get("SLURM_JOB_ID"),
+    }
     env = {k: v for k, v in os.environ.items() if not k.startswith(("CHITTA_", "CC_SOUL_"))}
     env.update(
         PATH=str(args.cli.parent)
@@ -494,9 +671,8 @@ def trial(args, organs, index, output):
                 output / "truth.log",
             )
             truth = json.loads((output / "truth.json").read_text())
-            result["truth"] = truth["overall"]
-            for key in ("p3", "abstain"):
-                result["metrics"][f"current_truth.{key}"] = truth["overall"][key]
+            result["truth"] = truth
+            result["metrics"].update(truth_metrics(truth))
             run(["bash", "scripts/bench-recall-lanes.sh", "5"], env, output / "hook.log")
             result["hooks"] = hook_metrics(output / "hook.log")
             # The frozen metric is one fixed three-query median per trial.
@@ -505,43 +681,9 @@ def trial(args, organs, index, output):
             # separately reported and does not replace this statistic.
             result["hook_noise"] = noise.hook_runs(2)
             result["metrics"]["hook_total_ms"] = result["hook_noise"]["samples"][0]
-            if args.smriti_agent:
-                run(
-                    [
-                        PYTHON,
-                        "benchmarks/smriti/runner.py",
-                        "--split",
-                        "visible",
-                        "--agent",
-                        args.smriti_agent,
-                        "--trials",
-                        "1",
-                        "--output",
-                        output / "smriti",
-                    ],
-                    env,
-                    output / "smriti.log",
-                    timeout=7200,
-                )
-                records = [
-                    json.loads(line)
-                    for p in (output / "smriti").glob("*.jsonl")
-                    for line in p.read_text().splitlines()
-                ]
-                if not records or any(r.get("dry_run") for r in records):
-                    raise ValueError("SMRITI needs real, non-dry-run records")
-                for arm in ("off", "on"):
-                    rows = [r for r in records if r["condition"] == arm]
-                    if not rows:
-                        raise ValueError(f"missing SMRITI arm: {arm}")
-                    result["metrics"][f"smriti.{arm}.sr"] = statistics.mean(
-                        r["passed"] for r in rows
-                    )
-                    result["metrics"][f"smriti.{arm}.tokens"] = statistics.mean(
-                        r["tokens_used"] for r in rows
-                    )
-            else:
-                result["smriti"] = "unavailable: no isolated replica agent configured"
+            result["metrics"].update(
+                run_smriti(env, output, home, mind, args.cli, args.smriti_model)
+            )
             result["invariants"] = invariants(stress, mind)
             result["invariants"]["passed"] = False  # Identity must complete successfully too.
             result["consumer_tests"] = {}
@@ -622,8 +764,12 @@ def trial(args, organs, index, output):
                     identity_env = {**env, **metadata(identity_mind)}
                     stop_copy(identity_mind, identity_env, output / "identity-stop.log")
             finally:
+                for source, name in ((mind, "daemon.log"), (identity_mind, "identity-daemon.log")):
+                    if (source / "replica.log").is_file():
+                        shutil.copyfile(source / "replica.log", output / name)
                 os.environ.clear()
                 os.environ.update(old_env)
+    result["wall_seconds"] = time.monotonic() - started
     (output / "trial.json").write_text(json.dumps(result, indent=2) + "\n")
     return result
 
@@ -746,49 +892,65 @@ def write_table(report, destination):
 
 
 def self_test():
-    assert contains_text({"text": "line1\nline2"}, "line1\nline2")
-    assert contains_text({"text": json.dumps({"content": "line1\nline2"})}, "line1\nline2")
-    assert not contains_text({"text": "other"}, "line1\nline2")
-    assert not contains_text({"content": "remember 10"}, "remember 1")
-    declared, missing = margins({"metrics": {"golden.ndcg": {"accept_delta": 0.1, "n": 3}}})
-    assert missing == ["current_truth.p3", "current_truth.abstain", "hook_total_ms"]
-    row = {"metrics": {"golden.ndcg": 0.5}, "invariants": {"passed": True}}
-    assert compare([row] * 3, [row] * 3, declared, missing)["verdict"] == "unqualified"
-    assert compare([row] * 3, [row] * 3, declared, [])["verdict"] == "equivalent"
-    changed = {"metrics": {"golden.ndcg": 0.7}, "invariants": {"passed": True}}
-    assert compare([row] * 3, [changed] * 3, declared, [])["verdict"] == "not equivalent"
-    assert (
-        compare([row] * 3, [changed] * 3, declared, ["current_truth.p3"])["verdict"]
-        == "not equivalent"
-    )
-    failed_identity = {**row, "invariants": {"passed": False}}
-    assert compare([row] * 3, [failed_identity] * 3, declared, [])["verdict"] == "not equivalent"
-    errored = {**changed, "error": "missing embedding"}
-    assert compare([row] * 3, [errored] * 3, declared, [])["verdict"] == "unqualified"
-    assert compare([row] * 3, [row] * 2, declared, [])["verdict"] == "unqualified"
-    unstable = compare([row, row, changed], [row] * 3, declared, [])
-    assert unstable["verdict"] == "unqualified"
-    assert unstable["unstable_controls"] == ["golden.ndcg"]
-    assert compare([], [], declared, [])["verdict"] == "unqualified"
-    assert control_gate([row] * 3, declared)["passed"]
-    spread = control_gate([row, row, changed], declared)
-    assert not spread["passed"]
-    assert math.isclose(spread["spreads"]["golden.ndcg"]["spread"], 0.2)
-    assert not control_gate([{**row, "error": "missing embedding"}] * 3, declared)["passed"]
-    # Exercise orchestration, not just arithmetic: unstable controls must never
-    # start a treatment, even when the caller explicitly requests the all group.
     from unittest.mock import patch
 
+    row = {"metrics": {key: 0.5 for key in REQUIRED}, "invariants": {"passed": True}}
+    declared = {key: 0.01 for key in REQUIRED}
+    changed = {**row, "metrics": {**row["metrics"], "golden.ndcg": 0.7}}
+    assert compare([row] * 3, [row] * 3, declared, [])["verdict"] == "equivalent"
+    assert compare([row] * 3, [changed] * 3, declared, [])["verdict"] == "not equivalent"
+    assert control_gate([row] * 3, declared)["passed"]
+    for key in REQUIRED:
+        incomplete = {**row, "metrics": {k: v for k, v in row["metrics"].items() if k != key}}
+        assert not control_gate([incomplete] * 3, declared)["passed"], key
+        assert not control_gate([row] * 3, {k: v for k, v in declared.items() if k != key})[
+            "passed"
+        ]
+    assert not control_gate([row, row, changed], declared)["passed"]
+    assert not control_gate([{**row, "error": "missing embedding"}] * 3, declared)["passed"]
+    truth = {
+        "overall": {"n": 50, "p3": 0.5, "abstain": 1.0},
+        "splits": {
+            "visible": {"n": 30, "p3": 0.7, "abstain": 1.0},
+            "holdout": {"n": 20, "p3": 0.2, "abstain": 0.5},
+        },
+    }
+    assert truth_metrics(truth)["current_truth.holdout.p3"] == 0.2
+    assert truth_metrics(truth)["current_truth.visible.abstain"] == 1.0
+    definition = {"tasks": ["example"], "split_hash": "frozen"}
+    records = [
+        {
+            "task_id": "example",
+            "condition": arm,
+            "dry_run": False,
+            "tokens_used": 10,
+            "passed": True,
+            "injected_confirmed": True,
+            "split": "visible",
+            "split_hash": "frozen",
+        }
+        for arm in ("off", "on")
+    ]
+    assert smriti_metrics(records, definition)["smriti.on.sr"] == 1
+    for broken in (
+        records[:1],
+        records + records[:1],
+        [records[0], {**records[1], "dry_run": True}],
+        [records[0], {**records[1], "tokens_used": 0}],
+        [records[0], {**records[1], "injected_confirmed": False}],
+    ):
+        try:
+            smriti_metrics(broken, definition)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("invalid SMRITI evidence must not qualify")
+    assert calibration_errors({})
+    assert not contains_text({"text": "remember 10"}, "remember 1")
+    assert contains_text({"text": '{"content": "remember 1"}'}, "remember 1")
+    # No treatment may start after incomplete or unstable controls.
     with tempfile.TemporaryDirectory(prefix="p2-control-test-") as directory:
         base = Path(directory)
-        status_command = [sys.executable, "-c", "raise SystemExit(1)"]
-        run(status_command, os.environ, base / "status.log", accepted_codes=(0, 1))
-        try:
-            run(status_command, os.environ, base / "status-default.log")
-        except subprocess.CalledProcessError as exc:
-            assert exc.returncode == 1
-        else:
-            raise AssertionError("unaccepted child failures must propagate")
         source = base / "source"
         source.mkdir()
         (source / "replica.env").touch()
@@ -798,34 +960,37 @@ def self_test():
         noise.write_text(
             json.dumps(
                 {
-                    "acceptance_ready": True,
-                    "mode": "replica",
                     "snapshot_id": "test",
-                    "golden_config": {"limit": 20, "strategy": "hybrid", "reranker": False},
-                    "metrics": {"golden.ndcg": {"accept_delta": 0.01, "n": 3}},
+                    "smriti_model": "test",
+                    "metrics": {
+                        key: {"accept_delta": value, "n": 3} for key, value in declared.items()
+                    },
                 }
             )
         )
-        output = base / "output"
         argv = [
             "ablate-organs.py",
             "--source",
             str(source),
             "--output",
-            str(output),
+            str(base / "out"),
             "--noise",
             str(noise),
             "--organ",
             "all",
+            "--smriti-model",
+            "test",
         ]
         for flag in ("--daemon", "--cli", "--model"):
             argv += [flag, str(fixture)]
-        rows = [
-            {**row, "snapshot_id": "test"},
-            {**row, "snapshot_id": "test"},
-            {**changed, "snapshot_id": "test"},
-        ]
-        with patch.object(sys, "argv", argv), patch(__name__ + ".trial", side_effect=rows) as fake:
+        rows = [{**r, "snapshot_id": "test"} for r in (row, row, changed)]
+        with (
+            patch.object(sys, "argv", argv),
+            patch(__name__ + ".trial", side_effect=rows) as fake,
+            patch(__name__ + ".calibration_errors", return_value=[]),
+            patch.dict(os.environ, {"ANTHROPIC_API_KEY": "unit-test-placeholder"}),
+            patch("shutil.which", return_value="/fixture/claude"),
+        ):
             try:
                 main()
             except SystemExit as exc:
@@ -857,7 +1022,9 @@ def main():
         help="defer remaining individuals above this one-minute node load",
     )
     parser.add_argument("--source", type=Path, default=SOURCE)
-    parser.add_argument("--scratch-root", type=Path, default=Path("/tmp"))
+    parser.add_argument(
+        "--scratch-root", type=Path, default=Path("/projects/caeg/scratch/kbd606/tmp")
+    )
     parser.add_argument("--output", type=Path, default=ROOT / "results/ablation")
     parser.add_argument("--noise", type=Path, default=ROOT / "benchmarks/noise.json")
     parser.add_argument("--daemon", type=Path, default=ROOT / "bin/chittad")
@@ -867,7 +1034,7 @@ def main():
         type=Path,
         default=Path("/maps/projects/caeg/people/kbd606/models/nomic-embed-text-v1.5.gguf"),
     )
-    parser.add_argument("--smriti-agent", choices=("claude-code",))
+    parser.add_argument("--smriti-model", help="pinned model from the frozen SMRITI calibration")
     parser.add_argument("--write-table", action="store_true")
     parser.add_argument(
         "--resume",
@@ -883,16 +1050,11 @@ def main():
         parser.error("source must be the evaluation replica, never the live mind")
     if not (args.source / "replica.env").is_file():
         parser.error("source must have evaluation replica metadata")
-    required = [
-        *REQUIRED,
-        *[f"smriti.{arm}.{metric}" for arm in ("off", "on") for metric in ("sr", "tokens")],
-    ]
     noise = json.loads(args.noise.read_text())
-    declared, missing = margins(noise, required)
-    if not noise.get("acceptance_ready") or noise.get("mode") != "replica":
-        missing.append("acceptance-ready replica calibration")
-    if noise.get("golden_config") != {"limit": 20, "strategy": "hybrid", "reranker": False}:
-        missing.append("matching golden configuration")
+    declared, missing = margins(noise)
+    problems = calibration_errors(noise)
+    if not args.smriti_model or noise.get("smriti_model") != args.smriti_model:
+        problems.append("explicit matching frozen SMRITI model required")
     previous = args.output / "report.json"
     saved = json.loads(previous.read_text()) if args.resume and previous.exists() else None
     args.now_ms = (
@@ -913,13 +1075,14 @@ def main():
         parser.error("consumer-tests must map known organs to nonempty command argv lists")
     args.consumer_commands = consumer_tests
     report = {
-        "schema_version": 2,
+        "schema_version": 3,
         "evaluation": {
             "recall_now_ms": args.now_ms,
             "embedding_wait_ms": 10000,
             "threads": {"OPENBLAS_NUM_THREADS": 1, "OMP_NUM_THREADS": 1, "RAYON_NUM_THREADS": 1},
             "identity_gate": "scripts/restart-identity.py",
             "max_load": args.max_load,
+            "smriti": {**smriti_definition(), "model": args.smriti_model},
         },
         "consumer_tests": consumer_tests,
         "noise_sha256": hashlib.sha256(args.noise.read_bytes()).hexdigest(),
@@ -928,16 +1091,26 @@ def main():
         else None,
         "margins": declared,
         "missing_margins": missing,
+        "calibration_errors": problems,
         "runs": {},
         "comparisons": {},
     }
     if args.preflight:
         print(json.dumps({**report, "organs": ORGANS}, indent=2))
         return
+    if missing or problems:
+        parser.error("incomplete frozen calibration: " + "; ".join([*missing, *problems]))
+    if not any(
+        os.environ.get(key)
+        for key in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN")
+    ):
+        parser.error(
+            "real SMRITI requires env-only agent credentials; protected home config is never read"
+        )
     for path in (args.daemon, args.cli, args.model):
         if not path.is_file():
             parser.error(f"required file missing: {path}")
-    if args.smriti_agent and not shutil.which("claude"):
+    if not shutil.which("claude"):
         parser.error("requested SMRITI agent is unavailable")
     args.output.mkdir(parents=True, exist_ok=True)
     if saved is not None:
@@ -948,6 +1121,7 @@ def main():
             "noise_sha256",
             "margins",
             "missing_margins",
+            "calibration_errors",
             "consumer_tests",
         ):
             if saved.get(key) != report.get(key):
