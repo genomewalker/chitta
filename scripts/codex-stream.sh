@@ -7,8 +7,9 @@
 # The prompt is: the stream contract (codex-plugin/stream-contract.md), what
 # chitta knows about the task (decisions and handoffs recalled for the task
 # text, realm chitta), the code map for the task (code_query on the worktree),
-# then the task itself. The task file states the goal, the write scope and the
-# gates that are specific to it; it does not restate the rules. Effort: high
+# then the task itself. The task file's first line is a one-line title (it is
+# the query for recall and the code map); the rest states the goal, the write
+# scope and the task-specific gates, never the rules. Effort: high
 # for implementation (default), medium for docs, tables and measurement runs.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

@@ -44,8 +44,8 @@ the assistant's own words.
    bytes. Measured: bytes of file content read per task.
 4. **Fewer turns.** No polling from inside a thread (background jobs return a
    summary once), batched commands, one call per step. For Astra the launcher
-   `scripts/codex-stream.sh` prepends `codex-plugin/stream-preamble.md`
-   (batching, output caps, gate tiers, handoff instead of thread growth,
+   `scripts/codex-stream.sh` builds the prompt from `codex-plugin/stream-contract.md`
+   and chitta (batching, output caps, gate tiers, handoff instead of thread growth,
    effort by task shape: high for implementation, medium for docs, tables and
    measurement runs, never ultra unattended). Measured: turns per task.
 5. **The ledger is visible.** `scripts/token-ledger.py` runs weekly (evolve
@@ -86,8 +86,9 @@ sessions start from the capsule and `/recap` rather than growing.
    with the capsule freshness check; parity fixtures updated.
 2. sqz repair and `§ref` for large outputs in the post-tool path; measure
    savings on a fixed replay of one day of Bash outputs.
-3. Launcher and preamble in force for every stream; the plan's stream specs
-   reference them instead of restating rules.
+3. Launcher and contract in force for every stream; a task file is a one-line
+   title (the launcher's query for recall and the code map) plus goal, write
+   scope and task-specific gates, never the rules.
 4. Two-week measurement against the targets; then decide whether the
    per-turn context needs a hard stop (a hook that refuses further tool calls
    until compaction) or the advisory suffices.
