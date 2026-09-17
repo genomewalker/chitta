@@ -13,8 +13,9 @@ stream_context() {
 
 stream_check() {
     printf 'stream %s: worker PID %s\n' "$name" "$(cat "$S/$name.pid" 2>/dev/null || echo none)"
-    stream_rpc stream_list "$(jq -nc --arg stream "$name" '{stream:$stream}')"
-    "$CLI" recall --query "stream=$name handoff" --realm chitta --tag handoff --limit 3 --sources false
+    # Claims and handoff memories are informational; the exact capsule decides --check's exit status.
+    stream_rpc stream_list "$(jq -nc --arg stream "$name" '{stream:$stream}')" || echo '(claims unavailable)'
+    "$CLI" recall --query "stream=$name handoff" --realm chitta --tag handoff --limit 3 --sources false 2>/dev/null || true
 }
 
 stream_rpc() {
