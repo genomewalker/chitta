@@ -69,7 +69,7 @@ class Client:
             setting("QUEUE", os.environ.get("CHITTA_QUEUE_PATH", str(self.state / "queue.jsonl")))
         )
 
-    def rpc(self, tool, args):
+    def rpc(self, tool, args, timeout=None):
         request = {
             "jsonrpc": "2.0",
             "id": 1,
@@ -89,7 +89,10 @@ class Client:
         try:
             raw, _ = proc.communicate(
                 json.dumps(request),
-                timeout=max(0.001, min(self.timeout, self.deadline - time.monotonic())),
+                timeout=max(
+                    0.001,
+                    min(timeout if timeout else self.timeout, self.deadline - time.monotonic()),
+                ),
             )
         except subprocess.TimeoutExpired:
             try:

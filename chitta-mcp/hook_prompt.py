@@ -130,7 +130,9 @@ def run(client):
             if heartbeat.exists()
             else 999999,
         }
-        response = client.rpc("prompt_context", {"state": state})
+        # The daemon bounds its lane wait at lane_budget_ms - 250; leave the reply
+        # room to arrive instead of killing it at exactly the lane budget.
+        response = client.rpc("prompt_context", {"state": state}, timeout=client.timeout + 0.75)
         plan = response["hook"]
         if not isinstance(plan, dict) or not isinstance(plan.get("queue"), list):
             raise ValueError("invalid prompt reply")
