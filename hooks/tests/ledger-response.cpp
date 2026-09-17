@@ -10,10 +10,9 @@ int main() {
     const auto args = request.value("args", json::object());
     json value;
     if (op == "hook_handoff_prepare") {
-        auto cap = capsule(args, request.value("session", json::object()),
-            request.value("thread", json::object()), args.value("saved_at", 100.0));
-        value = {{"op", "session_bind"}, {"args", {{"session_id", args.at("session_id")},
-            {"project_dir", args.at("project_dir")}, {"metadata", {{"handoff", cap}}}}}};
+        value = prepare_capsule(args, request.value("session", json::object()),
+            request.value("thread", json::object()), request.value("old", json::object()),
+            args.value("saved_at", 100.0));
     } else if (op == "hook_handoff_context") {
         value = {{"text", handoff_card(request.value("rows", json::array()),
             args.value("project_dir", ""), args.value("branch", ""))}};

@@ -6,11 +6,11 @@
 [ledger] ba37be2c-ee11-424f-bd7e-50bd77e872e3 (working)
 
 [recent-corrections]
-[correction] The prompt hook must not pipe injected memories through 'sqz compress': sqz dedup replaces previously seen 
-[correction] Claude Code sessions started before the cc-soul->chitta plugin rename keep executing hooks from ~/.claude/p
 [correction] 'tag recall leaks across realms' was a misdiagnosis: the daemon ignored a --tag with no 'tagged' triplets a
-[correction] Never let a second chittad open the live mind dir. 2026-09-14 12:01: 'chitta mcp' auto-started a daemon whe
 [correction] Prompt-hook 3 s lane timeouts on a 96-core node were NOT load or the RPC mutex: eu-stack showed ~20 recall 
+[correction] Claude Code sessions started before the cc-soul->chitta plugin rename keep executing hooks from ~/.claude/p
+[correction] Never let a second chittad open the live mind dir. 2026-09-14 12:01: 'chitta mcp' auto-started a daemon whe
+[correction] The prompt hook must not pipe injected memories through 'sqz compress': sqz dedup replaces previously seen 
 [/recent-corrections]
 
 [compliance] missed corrections

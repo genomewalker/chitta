@@ -181,6 +181,65 @@ def main():
                         assert {r[key]: r for r in actual} == {r[key]: r for r in expected}, table
                 report["migration"] = {"first": first, "second": second, "all_values_equal": True}
 
+            # Two sessions with the same exact key share one monotonic revision.
+            cap = {
+                "session_id": "capsule-a",
+                "repository": "/projects/capsule-test/.git",
+                "stream_id": "same-stream",
+                "next_action": "run the gate",
+            }
+            saved = raw(
+                "ledger_op", op="capsule_save", args={"expected_revision": 0, "capsule": cap}
+            )["value"]
+            assert saved["version"] == 2 and saved["revision"] == 1
+            assert len(json.dumps(saved, separators=(",", ":")).encode()) <= 4096
+            cap["session_id"] = "capsule-b"
+            cap["repository"] = "/maps/projects/capsule-test/.git"
+            saved = raw(
+                "ledger_op", op="capsule_save", args={"expected_revision": 1, "capsule": cap}
+            )["value"]
+            assert saved["revision"] == 2
+            try:
+                stale = raw(
+                    "ledger_op", op="capsule_save", args={"expected_revision": 1, "capsule": cap}
+                )
+            except Exception:
+                stale = None
+            assert not stale or "value" not in stale, "stale writer succeeded"
+            current = json.loads(ledger.session_get("capsule-b")["metadata_json"])["handoff"]
+            assert current["revision"] == 2
+            # A queued Stop prepared at revision one cannot replace a milestone.
+            queued = {
+                "session_id": "capsule-b",
+                "expected_revision": 1,
+                "metadata": {"handoff": saved},
+            }
+            try:
+                rejected = raw("ledger_op", op="session_bind", args=queued)
+            except Exception:
+                rejected = None
+            assert not rejected or "value" not in rejected
+            assert (
+                json.loads(ledger.session_get("capsule-b")["metadata_json"])["handoff"]["revision"]
+                == 2
+            )
+
+            for altered in (
+                dict(saved, revision=3, session_id="wrong-session"),
+                dict(saved, revision=1, stream_id="different-stream"),
+            ):
+                queued = {
+                    "session_id": "capsule-b",
+                    "expected_revision": 2 if altered["revision"] == 3 else 0,
+                    "metadata": {"handoff": altered},
+                }
+                try:
+                    rejected = raw("ledger_op", op="session_bind", args=queued)
+                except Exception:
+                    rejected = None
+                assert not rejected or "value" not in rejected, "capsule identity changed"
+            assert json.loads(ledger.session_get("capsule-b")["metadata_json"])["handoff"] == saved
+
             tid = ledger.thread_create("integration", "project:ledger", "fingerprint")
             assert tid
             assert ledger.thread_update(tid, title="updated", ignored="discard")

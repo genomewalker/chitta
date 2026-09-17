@@ -1,6 +1,8 @@
 #pragma once
 #include <chitta/hook_compact_policy.hpp>
 #include <filesystem>
+#include <algorithm>
+#include <tuple>
 
 namespace chitta::hook_policy {
 inline std::string scalar(const json& value) {
@@ -19,6 +21,18 @@ inline std::string text_only(const json& response) {
         text.pop_back();
     return text;
 }
+struct SessionContext {
+    std::string text;
+    size_t omitted = 0;
+    void operator+=(const std::string& section) {
+        // Reserve space for a retrieval notice, retaining complete sections.
+        if (text.size() + section.size() <= 1400) text += section;
+        else ++omitted;
+    }
+    std::string finish() const {
+        return text + (omitted ? "\n[context] Sections omitted; retrieve details through ledger_op or recall.\n" : "");
+    }
+};
 inline json session_start(const json& a, const Invoke& invoke) {
     auto p           = plan();
     p["state"]       = json::object();
@@ -26,7 +40,7 @@ inline json session_start(const json& a, const Invoke& invoke) {
     const auto sid = str(input, "session_id"), realm = str(a, "realm", "brahman"),
                project = str(a, "project_dir"), source = str(input, "source", "startup");
     const auto now = a.value("now", 0LL);
-    std::string output;
+    SessionContext output;
     const bool subagent = source == "startup" && a.value("subagent_age", 999LL) < 30;
     if (source != "compact") {
         p["local"][".session_active"]        = nullptr;
@@ -90,7 +104,7 @@ inline json session_start(const json& a, const Invoke& invoke) {
             {"args", {{"project", realm}, {"source", source}, {"now", now}}}});
     launch("tasks", "ledger_op", {{"op", "hook_task_context"}, {"args", {{"realm", realm}}}});
     if (a.value("project_exists", false)) {
-        json args = {{"project_dir", project}, {"limit", 100}, {"branch", str(a, "branch")}};
+        json args = {{"project_dir", project}, {"limit", 100}, {"branch", str(a, "branch")}, {"session_id", sid}};
         if (!str(input, "thread_id").empty()) args["thread_id"] = input["thread_id"];
         launch("handoff", "ledger_op", {{"op", "hook_handoff_context"}, {"args", args}});
     }
@@ -143,8 +157,17 @@ inline json session_start(const json& a, const Invoke& invoke) {
         }
         std::vector<std::string> corrections;
         auto surfaces = lines(str(local, ".correction_surfaces"));
-        for (const auto& row :
-             get("corrections").at("structured").value("results", json::array())) {
+        auto correction_rows = get("corrections").at("structured").value("results", json::array());
+        // Recall ties can arrive in a different order after a daemon restart.
+        // Keep uint64 IDs lossless; decimal length then bytes orders them numerically.
+        const auto correction_key = [](const json& row) {
+            const auto id = scalar(row.value("id", json("")));
+            return std::make_tuple(id.size(), id, str(row, "text"));
+        };
+        std::sort(correction_rows.begin(), correction_rows.end(), [&](const json& a, const json& b) {
+            return correction_key(a) < correction_key(b);
+        });
+        for (const auto& row : correction_rows) {
             auto text = str(row, "text"), state = str(row, "correction_state", "emitted");
             if (match(text, "verified", true) || state == "verified" || state == "applied")
                 continue;
@@ -200,7 +223,8 @@ inline json session_start(const json& a, const Invoke& invoke) {
         }
     }
     p["maintenance"] = true;
-    p["stdout"]      = output;
+    p["stdout"]      = output.finish();
+    p["context_token_upper_bound"] = output.finish().size();
     return p;
 }
 } // namespace chitta::hook_policy

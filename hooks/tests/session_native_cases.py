@@ -134,6 +134,31 @@ with tempfile.TemporaryDirectory(prefix="chitta-session-native-") as temporary:
         for row in records
     )
     print("ok: frozen SessionStart bytes, u64 corrections, queued registration/lease/transcript")
+    original_corrections = data["recall.correction"]["structured"]["results"]
+    rows = [
+        dict(id=10, text="ten"),
+        dict(id=2, text="two-z"),
+        dict(id=2, text="two-a"),
+        dict(id=18446744073709551614, text="large"),
+    ]
+    rendered = []
+    surface_file = mind / ".correction_surfaces"
+    saved_surfaces = surface_file.read_text()
+    for shuffled in (rows, list(reversed(rows))):
+        data["recall.correction"]["structured"]["results"] = shuffled
+        data["triplet_history.2"] = result(history=[])
+        surface_file.unlink(missing_ok=True)
+        output, _ = run()
+        rendered.append(output.stdout)
+    assert rendered[0] == rendered[1]
+    corrections = (
+        rendered[0].split("[recent-corrections]\n", 1)[1].split("\n[/recent-corrections]", 1)[0]
+    )
+    assert corrections.splitlines() == ["two-a", "two-z", "ten", "large"], corrections
+    surface_file.write_text(saved_surfaces)
+    data["recall.correction"]["structured"]["results"] = original_corrections
+    data["triplet_history.2"] = result(history=[dict(object="wontfix")])
+    print("ok: corrections deterministic by lossless memory ID then text")
     for raw in (
         "Found 2 results:\nFound 1 results:\n",
         "[weak: no strong matches]\nFound 0 results:\n",

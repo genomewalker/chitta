@@ -427,3 +427,13 @@ def _cli() -> None:
 
 if __name__ == "__main__":
     _cli()
+
+
+def capsule_get(project_dir: str, stream_id: str, code_head: str, max_age_seconds: int = 86400):
+    """Exact latest revision, including invalidation; never semantic recall."""
+    return _rpc("capsule_get", locals())
+
+
+def capsule_manifest(repository: str):
+    """Complete rows plus explicit omission count, at most 450 token upper bound."""
+    return _rpc("capsule_manifest", locals())

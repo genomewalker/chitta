@@ -19,13 +19,26 @@ S="${CHITTA_CODEX_SPECS:-/projects/caeg/scratch/kbd606/tmp/codex-specs}"
 CLI="${CHITTA_BIN:-$HOME/.claude/bin/chitta}"
 mkdir -p "$S"
 
+# Exact context is shared by launch and --check; transport failure is explicit.
+_capsule_context() {
+    local head args response
+    head=$(git -C "$W" rev-parse HEAD) || return 1
+    args=$(jq -nc --arg project "$W" --arg stream "$name" --arg head "$head" \
+        '{project_dir:$project,stream_id:$stream,code_head:$head}')
+    response=$(timeout 20 "$CLI" ledger_op --op capsule_get --args "$args" --json) || {
+        echo "capsule transport unavailable" >&2; return 1;
+    }
+    jq -e '.value | (.status|type == "string") and (.capsule|type == "object") and (.manifest|type == "object")' \
+        <<< "$response" >/dev/null || { echo "invalid capsule response" >&2; return 1; }
+    printf '## Exact capsule and lead manifest\n\n'
+    jq -c '.value' <<< "$response"
+    jq -e '.value.status == "ok"' <<< "$response" >/dev/null
+}
+
 if [[ "${1:-}" == "--check" ]]; then
     name=${2:?name}
     W="${CHITTA_CODEX_WORKTREES:-/projects/caeg/scratch/kbd606/tmp}/codex-wt-$name"
-    head=$(git -C "$W" rev-parse --short HEAD 2>/dev/null || echo none)
-    found=$(timeout 20 "$CLI" recall --query "stream=$name handoff" --realm chitta --tag handoff --limit 5 --sources false 2>/dev/null | grep -c "stream=$name" || true)
-    printf 'stream %s: HEAD %s, handoff memories found: %s\n' "$name" "$head" "$found"
-    timeout 20 "$CLI" recall --query "stream=$name handoff" --realm chitta --tag handoff --limit 3 --sources false 2>/dev/null | grep "stream=$name" | cut -c1-200 || true
+    _capsule_context || exit 1
     exit 0
 fi
 
@@ -48,10 +61,14 @@ title=$(grep -m1 -vE '^\s*$' "$task" | cut -c1-200)
 context="$S/$name.context.md"
 {
     cat "$ROOT/codex-plugin/stream-contract.md"
+    printf '\n'
     printf '\n## What chitta knows about this task (realm chitta)\n\n'
     timeout 25 "$CLI" recall --query "$title" --realm chitta --tag decision --limit 4 --sources false 2>/dev/null | cut -c1-600 || echo "(recall unavailable)"
     printf '\n'
-    timeout 25 "$CLI" recall --query "stream=$name handoff $title" --realm chitta --tag handoff --limit 3 --sources false 2>/dev/null | cut -c1-600 || true
+    _capsule_context || {
+        printf '\n[capsule] No current verified checkpoint; the last handoff memories follow. Establish state from them, the task and git before acting.\n'
+        timeout 25 "$CLI" recall --query "stream=$name handoff $title" --realm chitta --tag handoff --limit 3 --sources false 2>/dev/null | cut -c1-600 || true
+    }
     printf '\n## Code map for this task (code_query on the worktree)\n\n'
     timeout 30 "$CLI" code_query --question "$title" --path "$W" --limit 12 2>/dev/null | head -n 60 || echo "(code_query unavailable; index the worktree with chitta learn_codebase --path $W)"
     printf '\n## Task\n\n'
