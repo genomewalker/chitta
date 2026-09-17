@@ -10,6 +10,17 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 > reconstructed from `git log` between tags; patch releases are grouped under
 > their minor version (`## [5.x.y]`) with per-release dates on one line.
 
+- Organ ablation dispatch supports `--jobs` with process-local replicas and an
+  admission byte budget inside a 16-CPU/96-GiB compute allocation. Serial and
+  parallel controls must agree before ordered groups, nine priority organs and
+  the remainder run. Reports retain per-trial and per-block wall time; real
+  serial/parallel measurements remain blocked by calibration/agent prerequisites.
+
+- Organ ablation comparisons now use one-sided margins: better quality or lower
+  token/latency cost passes; any repetition degrading beyond its margin blocks.
+  Signed changes and direction are retained, while incomplete panels and failed
+  write/restart or consumer evidence still prevent positive qualification.
+
 - CMake code navigation extracts functions, macros, targets and dependencies; source collection avoids traversing ignored build caches.
 
 - SQL code navigation exposes tables, views, functions and object references.
@@ -112,6 +123,12 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
   36/50; the current-truth and golden recall exit gates remain unmet.
 
 ### Added
+- Require complete control evidence before organ-ablation trials: retain
+  current-truth visible/holdout metrics, validate calibration panel identity,
+  and require real SMRITI output with confirmed memory injection through
+  private checkout hooks. Preserve daemon logs on failed trials. The new
+  controls still require matching frozen bands and isolated agent credentials;
+  these collection fixes do not qualify historical ablations for retirement.
 - Per-open `CHITTA_ABLATE_ORGANS` experiments for 43 field organs, with
   empty runtime views, suppressed new organ WAL events, and preserved snapshot
   state for rollback. Six new Rust tests cover parsing, runtime isolation,

@@ -889,6 +889,39 @@ separate from the calibrated `hook_total_ms` statistic above.
 | `all` | 914/1143, 891/1077, 827/4680 | 937/4971, 858/1200, 818/995 | 0 | 3/3 passed; recall identity 20/20, 20/20, 20/20 |
 <!-- ORGAN-ABLATION-TABLE -->
 
+### Follow-up: complete evidence required (2026-09-17)
+
+Comparisons now use one-sided noninferiority: positive quality deltas and
+negative token/latency deltas are improvements, including beyond the margin.
+Any repetition degrading beyond the frozen margin blocks acceptance. Thus the
+historical HDC golden change `+0.005005509837521904` and recall-adjacent/all
+`+0.004632109418440722` pass that panel; learners `−0.0021989989178248792`
+fails its `0.0017901251267712533` golden band. These are interpretations of
+old observations, not newly qualified full-panel or laptop-profile verdicts.
+
+The 144-trial table above is historical evidence from the first runner.
+Current-truth did execute in every trial, but the summary retained only
+overall p3/abstention. Its visible and holdout results stayed in `truth.json`.
+The frozen `benchmarks/noise.json` has no current-truth margins; the report
+incorrectly combined missing calibration and missing measurements under one
+label. SMRITI was optional and was skipped without an isolated agent.
+Controls could pass while those panels were unavailable.
+
+The follow-up runner retains the full truth report and all six overall,
+visible and holdout p3/abstention metrics. It requires every control metric
+and margin, and invokes the real SMRITI visible panel with this checkout's
+CLI/hooks and private home, socket, fixtures and ledger. Dry-run records,
+missing tasks, zero-usage agent failures and unconfirmed on-arm injection
+cannot qualify. Daemon logs are preserved before scratch cleanup.
+
+Preflight currently rejects the committed calibration: its SMRITI bands cover
+only examples 001–003, whereas the visible panel has nine tasks; it has no
+current-truth margins or panel/config identity and no pinned SMRITI model.
+No agent credentials are exported. Matching frozen calibration and authorized
+isolated credentials are prerequisites for new controls. Protected benchmark
+files and the historical measurements have not been changed; no new control
+or retirement verdict is claimed by these collection fixes.
+
 ### Organ retention and rollback justification
 
 The checked-in noise declaration lacks `current_truth.p3` and
@@ -908,19 +941,32 @@ The runner pins one `CHITTA_RECALL_NOW`, a 10000 ms embedding wait and
 BLAS/OMP/Rayon thread limits of one, recording these in the report. Golden
 requests save their actual `--explain` lane traces; missing embeddings fail
 the trial. The identity gate is `scripts/restart-identity.py` on a fresh copy.
-Run `--controls-only` first, then `--resume` with `--block groups`,
-`--block largest` and `--block remaining`, using the same `--output /tmp/RESULTS`. Each arm has
-three fresh copies. Controls must fit the frozen spread bands before any
-treatment starts. The remaining block defers when one-minute node load exceeds
-`--max-load` (default: CPU affinity count; 96 on this run).
-Use `--organ NAME` for a specific arm and `--write-table` for qualified numeric
-comparisons; unqualified rows explain the missing evidence. A complete
-calibrated panel outside its margin can disprove equivalence even when other
-panels are unavailable. `--consumer-tests FILE` supplies an organ-to-argv JSON
-map; those API tests must actually pass on each ablated replica for a positive
-equivalence claim. Their commands and log hashes are retained. The optional
-`--smriti-agent claude-code` runs the real visible panel without `--dry-run`;
-without an isolated replica agent, the report explicitly omits SMRITI.
+Use `scripts/on-compute.sh -c 16 -m 96G --` followed by the pinned Python and
+`scripts/ablate-organs.py --jobs 3 --smriti-model MODEL --noise DECLARATION
+--consumer-tests COMMANDS --output /projects/caeg/scratch/kbd606/tmp/RESULTS
+--write-table`. Invoked directly, the runner submits itself with that wrapper;
+it refuses local fallback. Each process gets a fresh private replica and HOME.
+The default 80-GiB admission budget reserves 24 GiB per job (at most three),
+leaving 16 GiB for overhead. These are reservations, not measured RSS;
+Slurm enforces the allocation's aggregate memory limit.
+
+Three serial controls must pass every frozen band. With multiple jobs, three
+parallel controls must also match quality scores and ordered identity IDs
+exactly; token costs and hook timing must fit the same pooled bands. Full metric
+identity, including stochastic costs, is reported separately without claiming
+it when timings differ. Blocks run in order: four groups; HDC, learners,
+cortex, spans, CDAWG, episode HDC, event tape, lite encoder, sparse encoder;
+then the remaining organs. Each block checkpoints deterministic arm/repetition
+order and wall time per trial. There is no shared-node load-average cutoff.
+`--controls-only`, `--block`, `--organ` and matching `--resume` allow checkpoints;
+changing job/budget declarations requires a fresh report.
+
+`--consumer-tests FILE` supplies an organ-to-argv JSON map; tests run against
+private sockets in both controls and ablations, and their commands/log hashes
+are retained. SMRITI always uses the real visible panel, a matching declared
+model and environment-only credentials. Missing panel evidence never becomes
+a zero score or a positive verdict. No real serial/parallel control timing is
+available yet; the scheduling regression uses fixtures, not benchmark evidence.
 
 Retention reasons below distinguish consumers from exposed APIs. API ownership
 was traced from `ChittaField` through store/FFI entry points and searched in
