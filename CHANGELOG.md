@@ -8,6 +8,12 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 > reconstructed from `git log` between tags; patch releases are grouped under
 > their minor version (`## [5.x.y]`) with per-release dates on one line.
 
+- Organ ablation dispatch supports `--jobs` with process-local replicas and an
+  admission byte budget inside a 16-CPU/96-GiB compute allocation. Serial and
+  parallel controls must agree before ordered groups, nine priority organs and
+  the remainder run. Reports retain per-trial and per-block wall time; real
+  serial/parallel measurements remain blocked by calibration/agent prerequisites.
+
 - Organ ablation comparisons now use one-sided margins: better quality or lower
   token/latency cost passes; any repetition degrading beyond its margin blocks.
   Signed changes and direction are retained, while incomplete panels and failed

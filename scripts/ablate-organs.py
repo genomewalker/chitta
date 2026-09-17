@@ -13,6 +13,7 @@ import hashlib
 import importlib.util
 import json
 import math
+import multiprocessing
 import os
 import shlex
 import shutil
@@ -85,9 +86,10 @@ GROUPS = {
 }
 LARGEST = (
     "hdc_idx",
+    "learners",
     "cortical_idx",
-    "cdawg",
     "span_store",
+    "cdawg",
     "episode_hdc",
     "event_tape",
     "lite_encoder",
@@ -206,6 +208,105 @@ def free_port():
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 0))
         return probe.getsockname()[1]
+
+
+def compute_allocation():
+    """Submit the entire dispatcher once; its independent workers share the grant."""
+    if not os.environ.get("SLURM_JOB_ID"):
+        if not shutil.which("srun"):
+            raise ValueError("Slurm is required; replica trials cannot fall back to the login node")
+        env = {**os.environ, "CHITTA_ON_COMPUTE": "1"}
+        os.execvpe(
+            "bash",
+            [
+                "bash",
+                str(ROOT / "scripts/on-compute.sh"),
+                "-c",
+                "16",
+                "-m",
+                "96G",
+                "--",
+                PYTHON,
+                *sys.argv,
+            ],
+            env,
+        )
+    if (
+        int(os.environ.get("SLURM_CPUS_PER_TASK", "0")) < 16
+        or int(os.environ.get("SLURM_MEM_PER_NODE", "0")) < 96 * 1024
+    ):
+        raise ValueError("trials require an on-compute allocation with >=16 CPUs and >=96 GiB")
+
+
+def job_limit(jobs, byte_budget, bytes_per_job):
+    if min(jobs, byte_budget, bytes_per_job) <= 0 or bytes_per_job > byte_budget:
+        raise ValueError("positive jobs and byte reservation fitting the budget are required")
+    if byte_budget > 80 * 1024**3:
+        raise ValueError("reserve at least 16 GiB of the 96 GiB allocation for overhead")
+    return min(jobs, byte_budget // bytes_per_job, 16)
+
+
+def ordered_trials(args, tasks, jobs, worker=None):
+    """Process isolation protects HOME, sockets and imported benchmark globals.
+
+    Futures are consumed in declaration order, independent of finish order.
+    The byte budget bounds admission reservations, not measured process RSS;
+    Slurm enforces the aggregate allocation memory limit.
+    """
+    worker = worker or trial
+    if jobs == 1:
+        for name, organs, index, output in tasks:
+            yield name, worker(args, organs, index, output)
+        return
+    with concurrent.futures.ProcessPoolExecutor(
+        max_workers=jobs,
+        mp_context=multiprocessing.get_context("spawn"),
+        max_tasks_per_child=1,
+    ) as pool:
+        futures = [
+            (name, index, organs, pool.submit(worker, args, organs, index, output))
+            for name, organs, index, output in tasks
+        ]
+        for name, index, organs, future in futures:
+            try:
+                result = future.result()
+            except Exception as exc:  # noqa: BLE001 — retain worker failures at the process boundary
+                result = {"trial": index, "organs": list(organs), "error": repr(exc)}
+            yield name, result
+
+
+def parallel_control_gate(serial, parallel, declared):
+    """Require identical quality/IDs; stochastic costs must share the frozen band."""
+    reasons = []
+    for label, rows in (("serial", serial), ("parallel", parallel)):
+        gate = control_gate(rows, declared)
+        reasons.extend(f"{label}: {reason}" for reason in gate["reasons"])
+    keys = [key for key in REQUIRED if direction(key) > 0]
+    differences = []
+    for index, (left, right) in enumerate(zip(serial, parallel), 1):
+        for key in keys:
+            if left.get("metrics", {}).get(key) != right.get("metrics", {}).get(key):
+                differences.append(f"trial {index} {key}")
+        if not left.get("identity_ids") or left.get("identity_ids") != right.get("identity_ids"):
+            differences.append(f"trial {index} ordered identity IDs")
+    if differences:
+        reasons.append("serial/parallel quality or IDs differ: " + ", ".join(differences))
+    spreads = {}
+    for key in REQUIRED:
+        values = [row.get("metrics", {}).get(key) for row in serial + parallel]
+        if len(values) == 6 and all(isinstance(v, (float, int)) for v in values):
+            spread = max(values) - min(values)
+            spreads[key] = spread
+            if key in declared and spread > declared[key]:
+                reasons.append(f"pooled {key} spread {spread:.12g} exceeds {declared[key]:.12g}")
+    return {
+        "passed": not reasons,
+        "reasons": reasons,
+        "quality_and_ids_identical": not differences,
+        "all_metrics_identical": [r.get("metrics") for r in serial]
+        == [r.get("metrics") for r in parallel],
+        "pooled_spreads": spreads,
+    }
 
 
 def margins(noise, required=REQUIRED):
@@ -702,7 +803,7 @@ def trial(args, organs, index, output):
             result["invariants"] = invariants(stress, mind)
             result["invariants"]["passed"] = False  # Identity must complete successfully too.
             result["consumer_tests"] = {}
-            for organ in organs:
+            for organ in organs or args.consumer_commands:
                 command = args.consumer_commands.get(organ)
                 if command:
                     log = output / f"consumer-{organ}.log"
@@ -753,6 +854,7 @@ def trial(args, organs, index, output):
             ):
                 raise ValueError("canonical identity gate incomplete; see identity.json")
             count = sum(row["identical"] for row in comparisons[0]) if comparisons else 0
+            result["identity_ids"] = [row["before_ids"] for row in comparisons[0]]
             result["invariants"]["restart"] = {
                 "ordered_recall_identity": f"{count}/20",
                 "report": str(output / "identity.json"),
@@ -907,7 +1009,96 @@ def write_table(report, destination):
     destination.write_text(text)
 
 
+def save_report(args, report):
+    path = args.output / "report.json"
+    temporary = path.with_suffix(".tmp")
+    temporary.write_text(json.dumps(report, indent=2) + "\n")
+    temporary.replace(path)
+
+
+def run_stage(args, names, report, noise, label, jobs):
+    started = time.monotonic()
+    tasks = []
+    for name in names:
+        organs = () if name.startswith("control") else GROUPS.get(name, (name,))
+        existing = report["runs"].setdefault(name, [])
+        for index in range(len(existing), 3):
+            output = args.output / name / str(index + 1)
+            output.mkdir(parents=True, exist_ok=True)
+            tasks.append((name, organs, index + 1, output))
+    for name, result in ordered_trials(args, tasks, jobs):
+        if result.get("snapshot_id") != noise.get("snapshot_id"):
+            result["error"] = "; ".join(
+                filter(
+                    None,
+                    [
+                        result.get("error"),
+                        "snapshot identity differs from the declared noise calibration",
+                    ],
+                )
+            )
+        report["runs"][name].append(result)
+        print(
+            f"{label}: {name} trial {result['trial']}/3: {result.get('error', 'recorded')}",
+            flush=True,
+        )
+        if len(report["runs"][name]) == 3 and not name.startswith("control"):
+            row = compare(
+                report["runs"]["control"],
+                report["runs"][name],
+                report["margins"],
+                report["missing_margins"],
+            )
+            organs = GROUPS.get(name, (name,))
+            absent = [
+                organ
+                for organ in organs
+                if not all(
+                    run.get("consumer_tests", {}).get(organ, {}).get("passed") is True
+                    for run in report["runs"][name]
+                )
+            ]
+            if absent:
+                row["failures"].append("consumer API test evidence missing: " + ", ".join(absent))
+                if row["verdict"] == "equivalent":
+                    row["verdict"] = "unqualified"
+            report["comparisons"][name] = row
+        save_report(args, report)
+    if tasks:
+        elapsed = time.monotonic() - started
+        measured = [r for name in names for r in report["runs"][name]]
+        report.setdefault("timing", {})[label] = {
+            "jobs": jobs,
+            "trials": len(tasks),
+            "wall_seconds": elapsed,
+            "wall_seconds_per_trial": elapsed / len(tasks),
+            "trial_wall_seconds": [r.get("wall_seconds") for r in measured],
+        }
+    save_report(args, report)
+    if args.write_table:
+        write_table(report, ROOT / "docs/FIELD_PERF.md")
+    print(
+        f"block {label} complete: {len(tasks)} new records; report {args.output / 'report.json'}",
+        flush=True,
+    )
+
+
+def scheduler_fixture(args, organs, index, output):
+    """No-daemon regression fixture for actual spawned process isolation."""
+    with private_directory(args.scratch_root) as directory:
+        os.environ["P2_SCHEDULER_TEST"] = str(index)
+        time.sleep((4 - index) * 0.03)
+        return {
+            "trial": index,
+            "organs": list(organs),
+            "private": directory,
+            "pid": os.getpid(),
+            "value": os.environ["P2_SCHEDULER_TEST"],
+        }
+
+
 def self_test():
+    from types import SimpleNamespace
     from unittest.mock import patch
 
     row = {"metrics": {key: 0.5 for key in REQUIRED}, "invariants": {"passed": True}}
@@ -975,6 +1166,28 @@ def self_test():
         else:
             raise AssertionError("invalid SMRITI evidence must not qualify")
     assert calibration_errors({})
+    assert job_limit(8, 80 * 1024**3, 24 * 1024**3) == 3
+    for values in ((0, 80, 24), (1, 0, 24), (1, 20, 24)):
+        try:
+            job_limit(*values)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("invalid byte budget must fail")
+    identified = {**row, "identity_ids": [["id"]] * 20}
+    assert parallel_control_gate([identified] * 3, [identified] * 3, declared)["passed"]
+    assert not parallel_control_gate([identified] * 3, [changed] * 3, declared)["passed"]
+    with tempfile.TemporaryDirectory(prefix="p2-scheduler-test-") as directory:
+        args = SimpleNamespace(scratch_root=Path(directory))
+        tasks = [("fixture", ("hdc_idx",), index, Path(directory)) for index in (1, 2, 3)]
+        serial = list(ordered_trials(args, tasks, 1, scheduler_fixture))
+        parallel = list(ordered_trials(args, tasks, 3, scheduler_fixture))
+        assert [row[1]["trial"] for row in parallel] == [1, 2, 3]
+        assert [row[1]["value"] for row in serial] == [row[1]["value"] for row in parallel]
+        assert len({row[1]["pid"] for row in parallel}) == 3
+        assert len({row[1]["private"] for row in parallel}) == 3
+        assert all(not Path(row[1]["private"]).exists() for row in serial + parallel)
+        os.environ.pop("P2_SCHEDULER_TEST", None)
     assert not contains_text({"text": "remember 10"}, "remember 1")
     assert contains_text({"text": '{"content": "remember 1"}'}, "remember 1")
     # No treatment may start after incomplete or unstable controls.
@@ -1012,11 +1225,15 @@ def self_test():
         ]
         for flag in ("--daemon", "--cli", "--model"):
             argv += [flag, str(fixture)]
-        rows = [{**r, "snapshot_id": "test"} for r in (row, row, changed)]
+        rows = [
+            {**r, "snapshot_id": "test", "trial": index}
+            for index, r in enumerate((row, row, changed), 1)
+        ]
         with (
             patch.object(sys, "argv", argv),
             patch(__name__ + ".trial", side_effect=rows) as fake,
             patch(__name__ + ".calibration_errors", return_value=[]),
+            patch(__name__ + ".compute_allocation"),
             patch.dict(os.environ, {"ANTHROPIC_API_KEY": "unit-test-placeholder"}),
             patch("shutil.which", return_value="/fixture/claude"),
         ):
@@ -1045,10 +1262,19 @@ def main():
         help="JSON organ -> argv for API tests run on each ablated replica",
     )
     parser.add_argument(
-        "--max-load",
-        type=float,
-        default=float(len(os.sched_getaffinity(0))),
-        help="defer remaining individuals above this one-minute node load",
+        "--jobs", type=int, default=1, help="independent processes; byte budget may cap this"
+    )
+    parser.add_argument(
+        "--byte-budget",
+        type=int,
+        default=80 * 1024**3,
+        help="total admission reservations in bytes (not observed RSS)",
+    )
+    parser.add_argument(
+        "--bytes-per-job",
+        type=int,
+        default=24 * 1024**3,
+        help="conservative per-trial admission reservation in bytes",
     )
     parser.add_argument("--source", type=Path, default=SOURCE)
     parser.add_argument(
@@ -1091,8 +1317,16 @@ def main():
         or (saved or {}).get("evaluation", {}).get("recall_now_ms")
         or time.time_ns() // 1_000_000
     )
-    if args.now_ms <= 0 or args.max_load <= 0:
-        parser.error("now-ms and max-load must be positive")
+    if args.now_ms <= 0:
+        parser.error("now-ms must be positive")
+    try:
+        args.effective_jobs = job_limit(args.jobs, args.byte_budget, args.bytes_per_job)
+    except ValueError as exc:
+        parser.error(str(exc))
+    allowed_scratch = Path("/projects/caeg/scratch/kbd606/tmp").resolve()
+    args.scratch_root = args.scratch_root.resolve()
+    if not args.scratch_root.is_relative_to(allowed_scratch):
+        parser.error("replica scratch must be under /projects/caeg/scratch/kbd606/tmp")
     consumer_tests = json.loads(args.consumer_tests.read_text()) if args.consumer_tests else {}
     if not isinstance(consumer_tests, dict) or any(
         organ not in ORGANS
@@ -1104,13 +1338,19 @@ def main():
         parser.error("consumer-tests must map known organs to nonempty command argv lists")
     args.consumer_commands = consumer_tests
     report = {
-        "schema_version": 3,
+        "schema_version": 4,
         "evaluation": {
             "recall_now_ms": args.now_ms,
             "embedding_wait_ms": 10000,
             "threads": {"OPENBLAS_NUM_THREADS": 1, "OMP_NUM_THREADS": 1, "RAYON_NUM_THREADS": 1},
             "identity_gate": "scripts/restart-identity.py",
-            "max_load": args.max_load,
+            "scheduling": {
+                "requested_jobs": args.jobs,
+                "effective_jobs": args.effective_jobs,
+                "byte_budget": args.byte_budget,
+                "bytes_per_job": args.bytes_per_job,
+                "budget_kind": "admission reservation; Slurm caps aggregate memory",
+            },
             "smriti": {**smriti_definition(), "model": args.smriti_model},
         },
         "consumer_tests": consumer_tests,
@@ -1141,6 +1381,10 @@ def main():
             parser.error(f"required file missing: {path}")
     if not shutil.which("claude"):
         parser.error("requested SMRITI agent is unavailable")
+    try:
+        compute_allocation()
+    except ValueError as exc:
+        parser.error(str(exc))
     args.output.mkdir(parents=True, exist_ok=True)
     if saved is not None:
         for key in (
@@ -1167,65 +1411,35 @@ def main():
         if args.controls_only
         else args.organ or blocks.get(args.block, [*GROUPS, *LARGEST, *remaining])
     )
-    for name in ["control", *selections]:
-        if name in remaining and os.getloadavg()[0] > args.max_load:
-            report["deferred"] = {
-                "reason": "node load exceeds predeclared remaining-organ limit",
-                "load": os.getloadavg()[0],
-                "limit": args.max_load,
-                "from": name,
-            }
-            break
-        organs = () if name == "control" else GROUPS.get(name, (name,))
-        existing = report["runs"].setdefault(name, [])
-        for index in range(len(existing), 3):
-            out = args.output / name / str(index + 1)
-            out.mkdir(parents=True, exist_ok=True)
-            print(f"{name} trial {index + 1}/3", flush=True)
-            result = trial(args, organs, index + 1, out)
-            report["runs"][name].append(result)
-            if result.get("snapshot_id") != noise.get("snapshot_id"):
-                result["error"] = "; ".join(
-                    filter(
-                        None,
-                        [
-                            result.get("error"),
-                            "snapshot identity differs from the declared noise calibration",
-                        ],
-                    )
-                )
-            (args.output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
-        if name == "control":
-            report["control_gate"] = control_gate(existing, declared)
-            (args.output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
-            print("control gate: " + json.dumps(report["control_gate"], sort_keys=True), flush=True)
-            if not report["control_gate"]["passed"]:
-                if args.write_table:
-                    write_table(report, ROOT / "docs/FIELD_PERF.md")
-                raise SystemExit(
-                    "controls unqualified; no ablation trials started; see golden-traces.json and identity.json"
-                )
-        else:
-            report["comparisons"][name] = compare(
-                report["runs"]["control"], report["runs"][name], declared, missing
-            )
-            row = report["comparisons"][name]
-            absent = [
-                organ
-                for organ in organs
-                if not all(
-                    r.get("consumer_tests", {}).get(organ, {}).get("passed") is True
-                    for r in report["runs"][name]
-                )
-            ]
-            if absent:
-                row["failures"].append("consumer API test evidence missing: " + ", ".join(absent))
-                if row["verdict"] == "equivalent":
-                    row["verdict"] = "unqualified"
-        (args.output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
+    run_stage(args, ["control"], report, noise, "controls_serial", 1)
+    report["control_gate"] = control_gate(report["runs"]["control"], declared)
+    save_report(args, report)
+    print("control gate: " + json.dumps(report["control_gate"], sort_keys=True), flush=True)
+    if not report["control_gate"]["passed"]:
         if args.write_table:
             write_table(report, ROOT / "docs/FIELD_PERF.md")
-    (args.output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
+        raise SystemExit(
+            "controls unqualified; no ablation trials started; see golden-traces.json and identity.json"
+        )
+    if args.effective_jobs > 1:
+        run_stage(
+            args, ["control_parallel"], report, noise, "controls_parallel", args.effective_jobs
+        )
+        report["parallel_control_gate"] = parallel_control_gate(
+            report["runs"]["control"], report["runs"]["control_parallel"], declared
+        )
+        save_report(args, report)
+        if not report["parallel_control_gate"]["passed"]:
+            raise SystemExit(
+                "serial/parallel controls disagree; no ablation trials started: "
+                + "; ".join(report["parallel_control_gate"]["reasons"])
+            )
+    # Barrier between blocks: partial reports are usable in the requested order.
+    for label, names in blocks.items():
+        selected = [name for name in names if name in selections]
+        if selected:
+            run_stage(args, selected, report, noise, label, args.effective_jobs)
+    save_report(args, report)
     if args.write_table:
         write_table(report, ROOT / "docs/FIELD_PERF.md")
     print(f"report: {args.output / 'report.json'}", flush=True)

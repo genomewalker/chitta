@@ -950,19 +950,32 @@ The runner pins one `CHITTA_RECALL_NOW`, a 10000 ms embedding wait and
 BLAS/OMP/Rayon thread limits of one, recording these in the report. Golden
 requests save their actual `--explain` lane traces; missing embeddings fail
 the trial. The identity gate is `scripts/restart-identity.py` on a fresh copy.
-Run `--controls-only` first, then `--resume` with `--block groups`,
-`--block largest` and `--block remaining`, using the same `--output /tmp/RESULTS`. Each arm has
-three fresh copies. Controls must fit the frozen spread bands before any
-treatment starts. The remaining block defers when one-minute node load exceeds
-`--max-load` (default: CPU affinity count; 96 on this run).
-Use `--organ NAME` for a specific arm and `--write-table` for qualified numeric
-comparisons; unqualified rows explain the missing evidence. A complete
-calibrated panel outside its margin can disprove equivalence even when other
-panels are unavailable. `--consumer-tests FILE` supplies an organ-to-argv JSON
-map; those API tests must actually pass on each ablated replica for a positive
-equivalence claim. Their commands and log hashes are retained. The optional
-`--smriti-agent claude-code` runs the real visible panel without `--dry-run`;
-without an isolated replica agent, the report explicitly omits SMRITI.
+Use `scripts/on-compute.sh -c 16 -m 96G --` followed by the pinned Python and
+`scripts/ablate-organs.py --jobs 3 --smriti-model MODEL --noise DECLARATION
+--consumer-tests COMMANDS --output /projects/caeg/scratch/kbd606/tmp/RESULTS
+--write-table`. Invoked directly, the runner submits itself with that wrapper;
+it refuses local fallback. Each process gets a fresh private replica and HOME.
+The default 80-GiB admission budget reserves 24 GiB per job (at most three),
+leaving 16 GiB for overhead. These are reservations, not measured RSS;
+Slurm enforces the allocation's aggregate memory limit.
+
+Three serial controls must pass every frozen band. With multiple jobs, three
+parallel controls must also match quality scores and ordered identity IDs
+exactly; token costs and hook timing must fit the same pooled bands. Full metric
+identity, including stochastic costs, is reported separately without claiming
+it when timings differ. Blocks run in order: four groups; HDC, learners,
+cortex, spans, CDAWG, episode HDC, event tape, lite encoder, sparse encoder;
+then the remaining organs. Each block checkpoints deterministic arm/repetition
+order and wall time per trial. There is no shared-node load-average cutoff.
+`--controls-only`, `--block`, `--organ` and matching `--resume` allow checkpoints;
+changing job/budget declarations requires a fresh report.
+
+`--consumer-tests FILE` supplies an organ-to-argv JSON map; tests run against
+private sockets in both controls and ablations, and their commands/log hashes
+are retained. SMRITI always uses the real visible panel, a matching declared
+model and environment-only credentials. Missing panel evidence never becomes
+a zero score or a positive verdict. No real serial/parallel control timing is
+available yet; the scheduling regression uses fixtures, not benchmark evidence.
 
 Retention reasons below distinguish consumers from exposed APIs. API ownership
 was traced from `ChittaField` through store/FFI entry points and searched in
