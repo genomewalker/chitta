@@ -61,7 +61,14 @@ ToolResult FieldRpcHandler::tool_prompt_context(const json& params) {
             auto lanes = batch.structured.at("lanes");
             const auto options = state.value("fusion_options", json::object());
             retrieval = prompt_policy::fuse(lanes, options);
-            auto budget_left = [&] { return elapsed() < state.value("remaining_ms", int64_t(3000)); };
+            // Retries are standalone recalls with no lane bound: only when every
+            // lane finished inside its budget and half the wait is still left.
+            bool lane_timed_out = false;
+            for (const auto& [lane_name, lane] : lanes.items())
+                if (lane.value("timed_out", false)) lane_timed_out = true;
+            const int64_t retry_window = std::min(state.value("remaining_ms", int64_t(3000)),
+                                                  request.value("wait_ms", int64_t(2000))) / 2;
+            auto budget_left = [&] { return !lane_timed_out && elapsed() < retry_window; };
             // Keep the old missing-hybrid-header and empty scoped recall retries.
             if (retrieval["c2_pct"] == "" && lanes.contains("hyb") && budget_left()) {
                 auto retry = request;
