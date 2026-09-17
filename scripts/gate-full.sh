@@ -59,5 +59,6 @@ if [[ $recall == 1 ]]; then
     echo "run scripts/eval-replica.sh start on a private copy, then the golden panel three times and benchmarks/current_truth/run.py; compare against the stored bands (see docs/EVALS.md)"
 fi
 
+bash scripts/tmp-janitor.sh
 printf '\n== full gate: %s\n' "$([[ $fail == 0 ]] && echo PASS || echo FAIL)"
 exit $fail

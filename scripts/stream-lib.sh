@@ -47,6 +47,7 @@ stream_launch() {
     cat "$HOME/.claude/agent_safety_preamble.md" "$context" > "$prompt"
     printf '\n## Coordination\nStream: %s\nLead session: %s\nWrite the final handoff line to %s/%s.handoff.\n' "$name" "$lead" "$S" "$name" >> "$prompt"
     holder=$(cat /proc/sys/kernel/random/uuid)
+    bash "$ROOT/scripts/tmp-janitor.sh" >/dev/null 2>&1 || true
     stream_claim || { echo "stream claim failed: $name" >&2; return 1; }
     printf 'Holder session: %s\nUse ledger_op stream_handoff with stream, session_id and content for intermediate handoffs; this renews the claim. Write the final handoff file only; the supervisor persists and messages it.\n' "$holder" >> "$prompt"
     rm -f "$S/$name.handoff" "$S/$name.pid"

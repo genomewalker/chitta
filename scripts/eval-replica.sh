@@ -29,6 +29,9 @@ validate_paths() {
     [[ "$EVAL_MIND" == /* ]] || die "CHITTA_EVAL_MIND must be an absolute path"
     [[ "$eval_real" != "/" && "$eval_real" != "$home_real" ]] || die "unsafe CHITTA_EVAL_MIND: $EVAL_MIND"
     [[ "$eval_real" != "$live_real" ]] || die "eval mind must not be the live mind: $EVAL_MIND"
+    # Node-local /tmp is 100 GB shared by every user and nothing cleans it; replica
+    # copies (1.5-9 GB each) filled it on 2026-09-17. Replicas live on scratch.
+    [[ "$eval_real" != /tmp/* || "${CHITTA_ALLOW_TMP_REPLICA:-0}" == 1 ]] || die "replica under /tmp is not allowed; use /projects/caeg/scratch/kbd606/tmp (CHITTA_ALLOW_TMP_REPLICA=1 overrides)"
 }
 
 manifest_fingerprint() {

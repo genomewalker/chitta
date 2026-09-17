@@ -11,7 +11,7 @@ export CHITTA_LIVE_MIND="${CHITTA_CANARY_SOURCE:-/projects/caeg/scratch/kbd606/t
 export PATH="$(dirname "$PY"):$(dirname "$CHITTA_BIN"):$PATH"
 mkdir -p "$REPORT_ROOT"
 REPORT_DIR="$(mktemp -d "$REPORT_ROOT/$(date -u +%Y-%m-%dT%H%M%SZ).XXXXXX")"
-PRIVATE="$(mktemp -d /tmp/chitta-canary.XXXXXX)"
+PRIVATE="$(mktemp -d "${CHITTA_SCRATCH:-/projects/caeg/scratch/kbd606/tmp}/chitta-canary.XXXXXX")"
 mkdir "$REPORT_DIR/mind"
 ln -s "$REPORT_DIR/mind" "$PRIVATE/m"
 export CHITTA_EVAL_MIND="$PRIVATE/m"
