@@ -91,6 +91,27 @@
       "hook": "session-start-hook.sh",
       "input": "session-compact.json",
       "contains": "[session-restored]"
+    },
+    {
+      "name": "bash-output-ref",
+      "hook": "post-bash-hook.sh",
+      "input": "bash-output-ref.json",
+      "contains": "\u00a7ref:"
+    },
+    {
+      "name": "codex-bash-output-ref",
+      "hook": "post-bash-hook.sh",
+      "input": "codex-bash-output-ref.json",
+      "contains": "\u00a7ref:"
+    },
+    {
+      "name": "session-tokens",
+      "hook": "session-start-hook.sh",
+      "input": "session-start.json",
+      "contains": "[tokens] this week: fable 12s 150k/req $34.50; astra 7s $6.00",
+      "state": {
+        "token-ledger.json": "{\"agents\": {\"fable\": {\"sessions\": 12, \"avg_context_per_turn\": 150000, \"total_cost\": 34.5}, \"astra\": {\"sessions\": 7, \"total_cost\": 6}}}"
+      }
     }
   ],
   "ledger_setup": [

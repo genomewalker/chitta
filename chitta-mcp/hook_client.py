@@ -203,7 +203,10 @@ class Client:
 
 
 def post_tool(client):
+    from hook_outputs import add_context, summarize
+
     raw = client.payload
+    summary = summarize(raw, client.state)
     if (client.mind / ".dump_bash_payload").exists():
         append(client.mind / "bash_payload_dump.jsonl", raw)
     command = raw.get("tool_input", {}).get("command", "")
@@ -223,9 +226,19 @@ def post_tool(client):
                 timeout=2,
             )
             git[field] = proc.stdout.rstrip("\n") if proc.returncode == 0 else ""
-    plan = client.policy(
-        "hook_post_tool", local={".last_bash_cmd": read_text(client.mind / ".last_bash_cmd")}, **git
-    )
+    try:
+        plan = client.policy(
+            "hook_post_tool",
+            local={".last_bash_cmd": read_text(client.mind / ".last_bash_cmd")},
+            **git,
+        )
+    except (OSError, ValueError, subprocess.SubprocessError):
+        if not summary:
+            raise
+        client.output += add_context("", summary)
+        client.diagnostics += UNAVAILABLE
+        return
+    plan["stdout"] = add_context(plan["stdout"], summary)
     client.apply(plan)
     if plan.get("provenance"):
         # Config and file metadata are client-local. Existing provenance and

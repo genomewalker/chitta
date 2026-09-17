@@ -19,8 +19,10 @@ contract in force, the ratios are what the report is for.
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 import os
+import tempfile
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -137,7 +139,18 @@ def main():
     ap.add_argument("--days", type=float, default=7)
     ap.add_argument("--top", type=int, default=5)
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--cache-daily", type=Path, help="Atomically refresh this cache at most daily")
     args = ap.parse_args()
+    lock = None
+    if args.cache_daily:
+        args.cache_daily.parent.mkdir(parents=True, exist_ok=True)
+        lock = args.cache_daily.with_suffix(".lock").open("a")
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return 0
+        if args.cache_daily.exists() and time.time() - args.cache_daily.stat().st_mtime < 86400:
+            return 0
     since = time.time() - args.days * 86400
     report = {"since_days": args.days, "agents": {}}
     for agent, root, pattern, reader, prices in (
@@ -169,6 +182,15 @@ def main():
             else 0,
             "top": sessions[: args.top],
         }
+    if args.cache_daily:
+        fd, temporary = tempfile.mkstemp(dir=args.cache_daily.parent)
+        try:
+            with os.fdopen(fd, "w") as stream:
+                json.dump(report, stream)
+            os.replace(temporary, args.cache_daily)
+        finally:
+            if os.path.exists(temporary):
+                os.unlink(temporary)
     if args.json:
         print(json.dumps(report, indent=2))
         return 0

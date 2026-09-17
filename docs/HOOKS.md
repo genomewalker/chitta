@@ -128,6 +128,7 @@ not select a shell implementation. Models for distillation are daemon-owned.
 | `CHITTA_EMBED_WRITE_WORKERS` | `0` | `0` preserves the existing embedding lane. Positive values enable dedicated document workers and a separate two-worker Unix write-RPC pool. Clamped to leave one of `CHITTA_EMBED_CONTEXTS` free when possible. |
 | `CHITTA_EMBED_WRITE_DEPTH` | `64` | Maximum queued document jobs, excluding active workers; 1–65536. |
 | `CHITTA_EMBED_WRITE_WAIT_MS` | `1000` | Actual document-inference callers wait for admission at most this long; 1–60000 ms. Cache-warming calls remain nonblocking because legacy callers can hold the global write lock. |
+| `CHITTA_OUTPUT_CAP_CHARS` | `6000` | Bash results above this character limit are saved in runtime `outputs/<sha256>` with a `§ref:<hash12>§` and first/last 20 lines in PostToolUse additionalContext. Long-line previews are also character-bounded (minimum 256). Retrieve with `chitta output_ref --hash <hash12-or-full>`, using the same DB/runtime environment. Files are private; remove the runtime outputs directory when references are no longer needed. Hooks cannot rewrite the frontend raw result. |
 | `CHITTA_HOOK_PROFILE` | unset | Measurement only: write the complete prompt policy response to this private file, including lane statuses and daemon embedding, retrieval and admission milliseconds. The parity harness uses this in `measure` mode or with `--require-pipeline`. |
 | `CHITTA_LEDGER_PROFILE` | unset | Evaluation only: private destination for the validated ledger assembly response. `--require-ledger` checks this and Stop's queued capsule/turn payloads. |
 | `CHITTA_HOOK_NOW` | unset | Parity evaluation only: 13-digit positive Unix milliseconds. Pins hook wall timestamps and displayed lane/total durations to zero; explicit date parsing, real timeout flags and prompt budget enforcement remain unpinned. Use with `CHITTA_RECALL_NOW` on a private replica and `scripts/bench-hook-parity.py`. Invalid values are ignored. |
@@ -1539,3 +1540,7 @@ unambiguous symbol/file resolution as INFERRED; it does not simulate runtimes.
 - <a id="ref-51"></a>**[51]** openai/codex issue contributors. Codex tool loop causes context snowballing and multi-million-token input amplification. GitHub issue #44305 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/44305>)
 - <a id="ref-71"></a>**[71]** Alex L. Zhang, Tim Kraska, and Omar Khattab. Recursive Language Models. arXiv:2512.24601 (2025; revised 2026). [source](<https://arxiv.org/abs/2512.24601>)
 <!-- END CITATIONS -->
+
+### Weekly token cache
+
+The dream maintenance sweep starts `scripts/token-ledger.py --json --cache-daily <runtime>/token-ledger.json` outside SessionStart. A nonblocking lock and atomic replacement limit refresh to once per 24 hours. This command can also run from a daily scheduler. SessionStart only reads the cached report and emits `[tokens] this week: fable <sessions>s <mean context>k/req $<cost>; astra <sessions>s $<cost>`. Missing or malformed caches are silent; the last successful report remains available if refresh fails. Until maintenance first runs, no line is printed.

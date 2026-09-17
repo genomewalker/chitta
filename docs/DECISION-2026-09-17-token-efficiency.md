@@ -78,3 +78,7 @@ the assistant's own words.
 
 Not planned: changing the models or their effort for implementation work,
 or trimming the recall block itself below what the current-truth panel needs.
+
+### Output references and token cache implementation
+
+Step 2 now stores oversized Bash outputs locally and adds a bounded reference preview on both frontends. PostToolUse cannot replace the original tool result; any replacement savings are projections, while additionalContext adds bytes today. The weekly session-start line reads a daily maintenance cache without a transcript scan. Budget advisory and pre-tool enforcement are handled in the separate context-hardstop stream.

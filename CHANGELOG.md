@@ -1,5 +1,7 @@
 # Changelog
 
+- Bash PostToolUse stores oversized results by SHA-256 and emits bounded reference previews for Claude Code and Codex; `chitta output_ref --hash` retrieves local content without RPC. SessionStart reads a weekly token report cached daily by maintenance. Raw frontend results remain unchanged.
+
 All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 [docs/RENAME.md](docs/RENAME.md)) are documented here.
 
