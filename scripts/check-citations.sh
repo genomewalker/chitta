@@ -136,7 +136,15 @@ for path in files:
             if footer and b.start() > footer.start():
                 errors.append(f'{path}: References is after footer')
         elif text[b.end():].strip():
-            errors.append(f'{path}: References is not at end')
+            # Streams append new sections at the end of a page, after the generated
+            # block; --write moves the block back to the end instead of failing.
+            if WRITE:
+                trailing = text[b.end():].strip('\n')
+                text = (text[:b.start()].rstrip('\n') + '\n\n' + trailing + '\n\n'
+                        + text[b.start():b.end()] + '\n')
+                path.write_text(text)
+            else:
+                errors.append(f'{path}: References is not at end (run --write to move the appended section above it)')
 
 # JSON evidence has no native References section; its sources also appear in
 # EVOLVE-BRIDGE's on-page evidence bibliography.
