@@ -50,8 +50,6 @@ stream_launch() {
     printf 'Holder session: %s\nUse ledger_op stream_handoff with stream, session_id and content for intermediate handoffs; this renews the claim. Write the final handoff file only; the supervisor persists and messages it.\n' "$holder" >> "$prompt"
     rm -f "$S/$name.handoff" "$S/$name.pid"
     if [[ $1 == claude ]]; then
-        export CLAUDE_CONFIG_DIR="$S/$name.claude"
-        mkdir -p "$CLAUDE_CONFIG_DIR"
         set -- "$@" --session-id "$holder"
     fi
     export ROOT S CLI W name lead holder claim_args
