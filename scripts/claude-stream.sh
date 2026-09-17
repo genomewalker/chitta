@@ -30,4 +30,6 @@ fi
 title=$(grep -m1 -vE '^\s*$' "$task" | cut -c1-200)
 context="$S/$name.context.md"
 stream_context > "$context"
-stream_launch claude -p --model "$model" --output-format json --permission-mode acceptEdits
+stream_launch claude -p --model "$model" --output-format json --permission-mode acceptEdits \
+    --setting-sources '' --strict-mcp-config --mcp-config '{"mcpServers":{}}' \
+    --settings '{"disableAllHooks":true}' --add-dir "$S"
