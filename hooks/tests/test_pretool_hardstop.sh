@@ -71,6 +71,19 @@ data = json.loads(sys.stdin.read() or '{}')
 assert data.get('hookSpecificOutput', {}).get('permissionDecision') != 'deny', data
 "
 
+# Coordination remains available, but forked context and lookalike commands do not.
+for cmd in 'chitta msg_send --to lead --body done' 'chitta msg_inbox' 'chitta msg_ack' 'chitta session_list' 'chitta ledger_op' 'chitta checkpoint'; do
+    out=$(call Bash "$(payload "$cmd")")
+    tail -n +2 <<< "$out" | python3 -c "import json,sys; d=json.loads(sys.stdin.read() or '{}'); assert d.get('hookSpecificOutput',{}).get('permissionDecision') != 'deny',d"
+done
+for kind in general-purpose fork; do
+    input=$(printf '{"session_id":"hardstop-test","transcript_path":"%s","tool_input":{"subagent_type":"%s"}}' "$TRANSCRIPT" "$kind")
+    out=$(call Agent "$input")
+    tail -n +2 <<< "$out" | python3 -c "import json,sys; d=json.loads(sys.stdin.read() or '{}'); assert (d.get('hookSpecificOutput',{}).get('permissionDecision') == 'deny') == ('$kind' == 'fork'),d"
+done
+out=$(call Bash "$(payload 'chitta msg_send_extra')")
+tail -n +2 <<< "$out" | python3 -c "import json,sys; assert json.load(sys.stdin)['hookSpecificOutput']['permissionDecision'] == 'deny'"
+
 # Disabled via CHITTA_CONTEXT_HARD_STOP=0: no deny despite the same transcript.
 out=$(CHITTA_CONTEXT_HARD_STOP=0 call Bash "$(payload 'ls -la')")
 body=$(tail -n +2 <<< "$out")
