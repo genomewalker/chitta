@@ -26,6 +26,8 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 - Elixir code navigation: Modules, protocols, functions/macros, calls and import/alias/require/use edges; declaration heads are excluded from calls.
 
+- Haskell code navigation: Functions with type signatures, data/newtypes, typeclasses/instances, curried calls, imports and instance relationships.
+
 ## [Unreleased]
 
 - Add Make target/macro navigation, prerequisite links, calls and includes.

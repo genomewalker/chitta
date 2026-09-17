@@ -463,3 +463,14 @@ recorded as calls; their bodies and captures remain navigable. The fixture has
 averages 605.91 microseconds/KiB; daemon size is 103,176,808 bytes (+1,418,992).
 Offline extraction/query fixtures and the quick gate pass. Contracts and
 recall scoring are unchanged.
+
+### Haskell
+
+Haskell navigation extracts functions with available type signatures, data and
+newtypes, typeclasses and instances, curried calls and imports. Instance edges
+point to their typeclass; constructor patterns are not recorded as calls.
+The fixture has 6 definitions and 6 query edges (4 calls, 1 import, 1 instance
+relationship); duplicate curried application records collapse in the graph.
+Fresh parsing averages 659.59 microseconds/KiB; daemon size is 107,019,544 bytes
+(+3,842,736). Offline extraction/query fixtures pass. Contracts and recall
+scoring are unchanged.

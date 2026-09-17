@@ -1,0 +1,28 @@
+{
+  "symbols": {
+    "Sample": "type",
+    "normalize": "function",
+    "total": "function",
+    "Countable": "class",
+    "Countable Sample": "instance",
+    "count": "function"
+  },
+  "calls": [
+    "abs",
+    "sum",
+    "map",
+    "sort"
+  ],
+  "imports": [
+    "Data.List"
+  ],
+  "inherits": [
+    "Countable"
+  ],
+  "signatures": {
+    "normalize": "normalize :: Int -> Int"
+  },
+  "file": "navigation.hs",
+  "language": "haskell",
+  "extra": true
+}

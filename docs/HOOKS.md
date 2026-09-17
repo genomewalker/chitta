@@ -1467,6 +1467,7 @@ connections. Runtime dispatch and dynamic import paths are not evaluated.
 | HCL / Terraform | `.tf`, `.tfvars`, `.hcl` | Resource, data, variable, module and output blocks; module sources, function calls and attribute references |
 | OCaml | `.ml`, `.mli` | Functions, types, modules, classes/methods, calls, open/include imports and inheritance; implementation and interface grammars |
 | Elixir | `.ex`, `.exs` | Modules, protocols, functions/macros, calls and import/alias/require/use edges; declaration heads are excluded from calls |
+| Haskell | `.hs` | Functions with type signatures, data/newtypes, typeclasses/instances, curried calls, imports and instance relationships |
 | PHP | `.php`, `.phtml` | Functions, methods, classes/interfaces/traits/enums, calls, literal includes/requires, namespace imports, inheritance |
 | SQL | `.sql`, `.ddl` | Tables, views, functions/procedures, calls and object references, including parsed SQL function bodies |
 | CMake | `.cmake`, `CMakeLists.txt` | Functions, macros, targets, command calls, includes/subdirectories, target dependencies |

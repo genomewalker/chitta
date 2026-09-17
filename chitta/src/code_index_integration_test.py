@@ -153,6 +153,7 @@ def main():
                     ".mli",
                     ".ex",
                     ".exs",
+                    ".hs",
                     ".php",
                     ".phtml",
                     ".sql",

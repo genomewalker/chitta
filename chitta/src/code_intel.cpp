@@ -37,6 +37,8 @@ extern "C" const TSLanguage* tree_sitter_ocaml_interface();
 
 extern "C" const TSLanguage* tree_sitter_elixir();
 
+extern "C" const TSLanguage* tree_sitter_haskell();
+
 namespace chitta {
 const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
     if (language == "bash") return tree_sitter_bash();
@@ -58,11 +60,12 @@ const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
     if (language == "ocaml") return tree_sitter_ocaml();
     if (language == "ocaml_interface") return tree_sitter_ocaml_interface();
     if (language == "elixir") return tree_sitter_elixir();
+    if (language == "haskell") return tree_sitter_haskell();
 #endif
     return nullptr;
 }
 void CodeIntel::initialize_extended_parsers() {
-    for (const auto* language : {"bash", "r", "julia", "fortran", "nextflow", "snakemake", "perl", "make", "cmake", "sql", "kotlin", "scala", "zig", "hcl", "ocaml", "ocaml_interface", "elixir", "php"}) {
+    for (const auto* language : {"bash", "r", "julia", "fortran", "nextflow", "snakemake", "perl", "make", "cmake", "sql", "kotlin", "scala", "zig", "hcl", "ocaml", "ocaml_interface", "elixir", "haskell", "php"}) {
         if (!extended_grammar(language)) continue; // Optional grammar group disabled.
         auto* parser = ts_parser_new();
         if (!ts_parser_set_language(parser, extended_grammar(language))) {
@@ -83,6 +86,7 @@ std::string CodeIntel::detect_extended_language(const std::string& path) {
     if (ext == ".ml" && extended_grammar("ocaml")) return "ocaml";
     if (ext == ".mli" && extended_grammar("ocaml_interface")) return "ocaml_interface";
     if ((ext == ".ex" || ext == ".exs") && extended_grammar("elixir")) return "elixir";
+    if ((ext == ".hs") && extended_grammar("haskell")) return "haskell";
     if ((ext == ".php" || ext == ".phtml") && extended_grammar("php")) return "php";
     if (ext == ".sql" || ext == ".ddl") return "sql";
     if (ext == ".cmake" || filename == "CMakeLists.txt") return "cmake";
@@ -156,6 +160,7 @@ void CodeIntel::extract_extended(TSNode root, const std::string& source,
         return leaf_name(ast_named_child(node, 0));
     };
     std::string perl_package;
+    std::map<std::string, std::string> haskell_signatures;
     std::function<void(TSNode, std::string)> visit = [&](TSNode node, std::string parent) {
         std::string type = ast_type(node);
         if (language == "bash" && type == "function_definition") {
@@ -756,6 +761,41 @@ void CodeIntel::extract_extended(TSNode root, const std::string& source,
                 auto scope = std::string(ast_type(left)) == "alias" ? text(left) : "";
                 call(node, text(field(target, "right")), parent, scope, scope.empty() ? text(left) : "");
             } else call(node, name, parent);
+        }
+        if (language == "haskell") {
+            if (type == "signature") haskell_signatures[text(field(node, "name"))] = text(node);
+            if (type == "instance") {
+                auto base = text(field(node, "name"));
+                auto name = base + " " + text(field(node, "patterns"));
+                define(node, name, "instance", parent, field(node, "declarations"));
+                result.type_relationships.push_back({name, base, "implements", path, uint32_t(node_line(node))}); parent = name;
+            }
+            if (type == "function" && !ts_node_is_null(field(node, "name"))) {
+                auto name = text(field(node, "name"));
+                define(node, name, "function", parent, field(node, "match"));
+                if (haskell_signatures.count(name)) result.symbols.back().signature = haskell_signatures[name];
+                parent = name;
+            }
+            if (type == "data_type" || type == "newtype" || type == "type_synomym" || type == "class") {
+                auto name = text(field(node, "name"));
+                define(node, name, type == "class" ? "class" : "type", parent); parent = name;
+            }
+            if (type == "apply") {
+                bool pattern = false;
+                for (auto owner = ts_node_parent(node); !ts_node_is_null(owner); owner = ts_node_parent(owner)) {
+                    auto owner_type = std::string(ast_type(owner));
+                    if (owner_type == "patterns" || owner_type == "type_patterns") { pattern = true; break; }
+                    if (owner_type == "function") break;
+                }
+                if (pattern) return;
+                auto fn = field(node, "function");
+                while (std::string(ast_type(fn)) == "apply") fn = field(fn, "function");
+                auto name = text(fn);
+                auto split = name.rfind('.');
+                call(node, split == std::string::npos ? name : name.substr(split + 1), parent,
+                    split == std::string::npos ? "" : name.substr(0, split));
+            }
+            if (type == "import") result.imports.push_back({path, text(field(node, "module")), "", {}, uint32_t(node_line(node))});
         }
         for (uint32_t i = 0; i < ast_named_count(node); ++i) visit(ast_named_child(node, i), parent);
     };
