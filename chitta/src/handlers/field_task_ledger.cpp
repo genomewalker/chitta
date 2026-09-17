@@ -49,20 +49,42 @@ ToolResult FieldRpcHandler::tool_ledger_op(const json& params) {
         const bool capsule_write = op == "capsule_save" || op == "hook_handoff_prepare" ||
             (op == "session_bind" && args.value("metadata", json::object()).contains("handoff"));
         std::unique_lock<std::recursive_mutex> capsule_lock(hook_ledger::capsule_mutex, std::defer_lock);
-        if (capsule_write) capsule_lock.lock();
-        auto latest_capsule = [&](const json& key) {
-            json latest = json::object(), page_args = {{"limit", 100}};
+        if (capsule_write || op == "capsule_get" || op == "capsule_manifest" || op == "hook_handoff_context") capsule_lock.lock();
+        auto capsule_rows = [&]() {
+            json rows = json::array(), page_args = {{"limit", 100}};
             do {
                 const auto page = run("session_list", page_args);
-                for (const auto& row : page.at("rows")) {
-                    const auto cap = hook_ledger::metadata(row).value("handoff", json::object());
-                    if (cap.value("version", 0) == 2 && hook_ledger::capsule_key(cap) == hook_ledger::capsule_key(key)
-                        && cap.value("revision", uint64_t(0)) > latest.value("revision", uint64_t(0))) latest = cap;
-                }
+                for (const auto& row : page.at("rows")) rows.push_back(row);
                 page_args["after"] = page.at("after");
             } while (!page_args["after"].is_null());
-            return latest;
+            return rows;
         };
+        auto latest_capsule = [&](const json& key) {
+            return hook_ledger::latest_by_key(capsule_rows(), key);
+        };
+        if (op == "capsule_get" || op == "capsule_manifest") {
+            auto key = args;
+            const auto facts = hook_ledger::git_identity(args.value("project_dir", ""));
+            if (!key.contains("repository")) key["repository"] = facts.at("repository");
+            if (!key.contains("stream_id")) key["stream_id"] = facts.at("stream_id");
+            if (hook_ledger::str(key, "repository").empty()) return ToolResult::error("repository required");
+            const auto rows = capsule_rows();
+            if (op == "capsule_manifest") return ok(hook_ledger::capsule_manifest(rows, key.at("repository")));
+            if (hook_ledger::str(key, "stream_id").empty() && hook_ledger::str(key, "session_id").empty())
+                return ToolResult::error("stream_id or session_id required");
+            const auto cap = hook_ledger::latest_by_key(rows, key);
+            const auto now = TaskLedger::now();
+            const auto max_age = args.value("max_age_seconds", 86400.0);
+            if (!(max_age > 0 && max_age <= 604800)) return ToolResult::error("invalid max_age_seconds");
+            std::string status = "ok";
+            if (cap.empty() || hook_ledger::str(cap, "state") == "missing") status = "missing";
+            else if (hook_ledger::str(cap, "state") == "invalidated") status = "invalidated";
+            else if (cap.value("saved_at", 0.0) > now + 60 || now - cap.value("saved_at", 0.0) > max_age) status = "stale";
+            else if (hook_ledger::str(cap, "code_head").empty() ||
+                     hook_ledger::str(cap, "code_head") != args.value("code_head", facts.value("code_head", ""))) status = "head_mismatch";
+            return ok({{"status", status}, {"capsule", cap},
+                       {"manifest", hook_ledger::capsule_manifest(rows, key.at("repository"))}});
+        }
         if (op == "capsule_save") {
             auto input = args.at("capsule");
             const auto facts = hook_ledger::git_identity(input.value("project_dir", ""));
@@ -136,8 +158,16 @@ ToolResult FieldRpcHandler::tool_ledger_op(const json& params) {
         if (op == "hook_pre_compact") return ok(hook_policy::precompact(args, invoke));
         if (op == "hook_compact_restore") return ok(hook_policy::compact_restore(args, invoke));
         if (op == "hook_handoff_context") {
-            auto rows = run("session_list", args);
-            return ok({{"text", hook_ledger::handoff_card(rows.at("rows"),
+            const auto rows = capsule_rows();
+            auto key = hook_ledger::git_identity(args.value("project_dir", ""));
+            if (args.contains("stream_id")) key["stream_id"] = args.at("stream_id");
+            if (args.contains("session_id")) key["session_id"] = args.at("session_id");
+            const auto cap = hook_ledger::latest_by_key(rows, key);
+            if (!cap.empty()) return ok({{"text", hook_ledger::capsule_card(cap)}});
+            json legacy = json::array();
+            for (const auto& row : rows)
+                if (hook_ledger::metadata(row).value("handoff", json::object()).value("version", 0) == 1) legacy.push_back(row);
+            return ok({{"text", hook_ledger::handoff_card(legacy,
                 args.value("project_dir", ""), args.value("branch", ""))}});
         }
         if (op == "hook_task_context") {

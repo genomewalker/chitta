@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <fstream>
 #include <mutex>
+#include <map>
 #include <tuple>
 
 namespace chitta::hook_ledger {
@@ -66,6 +67,46 @@ inline std::string capsule_key(const json& cap) {
     return canonical_repository(str(cap, "repository")) + "\n" +
         (str(cap, "stream_id").empty() ? "session:" + str(cap, "session_id")
                                       : "stream:" + str(cap, "stream_id"));
+}
+// UTF-8 byte length is a conservative upper bound for byte-fallback tokenizers.
+// Admit complete fields/rows; never cut JSON or a UTF-8 sequence.
+inline json latest_by_key(const json& rows, const json& key) {
+    json latest = json::object();
+    for (const auto& row : rows) {
+        const auto cap = metadata(row).value("handoff", json::object());
+        if (cap.value("version", 0) == 2 && capsule_key(cap) == capsule_key(key) &&
+            cap.value("revision", uint64_t(0)) > latest.value("revision", uint64_t(0))) latest = cap;
+    }
+    return latest;
+}
+inline json capsule_manifest(const json& rows, const std::string& repository) {
+    std::map<std::string, json> latest;
+    for (const auto& row : rows) {
+        const auto cap = metadata(row).value("handoff", json::object());
+        if (cap.value("version", 0) != 2 || str(cap, "repository") != canonical_repository(repository)) continue;
+        const auto key = capsule_key(cap);
+        if (!latest.count(key) || cap.value("revision", uint64_t(0)) > latest.at(key).value("revision", uint64_t(0)))
+            latest[key] = cap;
+    }
+    json result = {{"streams", json::array()}, {"omitted", latest.size()}};
+    for (const auto& [key, cap] : latest) {
+        json row;
+        for (auto field : {"stream_id", "session_id", "branch", "code_head", "state", "revision", "next_action"})
+            row[field] = cap.at(field);
+        auto candidate = result;
+        candidate["streams"].push_back(row);
+        candidate["omitted"] = result["omitted"].get<size_t>() - 1;
+        if (candidate.dump().size() <= 450) result = std::move(candidate);
+    }
+    return result;
+}
+inline std::string capsule_card(const json& cap) {
+    if (cap.empty()) return "";
+    json card;
+    for (auto field : {"stream_id", "session_id", "state", "revision", "code_head", "next_action"})
+        card[field] = cap.at(field);
+    // Detailed constraints, gates and jobs remain available through capsule_get.
+    return "[handoff]\n" + card.dump() + "\n[/handoff]";
 }
 inline void bounded_text(const json& value, size_t bytes, const char* name) {
     if (!value.is_string() || value.get_ref<const std::string&>().size() > bytes)
