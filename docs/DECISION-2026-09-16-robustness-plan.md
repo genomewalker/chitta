@@ -106,7 +106,7 @@
 - No line-count quota; the measure is what is retired with evidence.
 - Exit gate: every remaining organ has a `docs/FIELD_PERF.md` line naming the panel it moves or the API that consumes it.
 
-> Phase 2 status 2026-09-16 (pinned largest-organ checkpoint): 43 organ flags preserve
+> Phase 2 status 2026-09-17 (matrix complete; retirement unqualified): 43 organ flags preserve
 > rollback state and core writes. The 105 completed pre-fix trials are quarantined;
 > after merging main, three controls score 0.5000783626223507 with spread 0
 > against the frozen 0.0017901251267712533 margin. Four groups have three runs
@@ -115,11 +115,16 @@
 > The eight largest organs also have three runs each: HDC is not equivalent
 > (golden delta +0.005005509837521904); cortex, CDAWG, spans, episode HDC,
 > event tape, lite encoder and sparse encoder remain unqualified.
-> All 39 trials recover 200 writes, preserve three keyed lanes and pass
-> canonical restart identity 20/20. Current-truth margins, a real
-> isolated SMRITI panel and per-organ consumer-test evidence are still absent.
-> No organs/tools/tests removed (retirement LOC 0). The remaining 35 individuals
-> depend on node load (recorded limit 96). See `docs/FIELD_PERF.md`
+> All 35 remaining individuals were measured three times without load deferral
+> (limit 96). Learners are also not equivalent (golden delta
+> −0.0021989989178248792). Final individual verdicts: 2 not equivalent,
+> 41 unqualified, 0 equivalent. Of 144 total trial records, 142 recover
+> 200 writes, preserve three keyed lanes and pass canonical identity 20/20.
+> Agent-registry repetition 2 and interaction-ledger repetition 3 retain
+> process-disappearance errors with incomplete invariants; neither was replaced.
+> Current-truth margins, a real isolated SMRITI panel and per-organ consumer-test
+> evidence are still absent. No organs/tools/tests removed (retirement LOC 0).
+> See `docs/FIELD_PERF.md`
 > for the table and every retained organ's consumer/dependency justification.
 
 ### Phase 4 — Surface reduction (with Phase 2)

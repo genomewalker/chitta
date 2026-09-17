@@ -835,49 +835,49 @@ Unqualified raw observations remain in the report and are not equivalence estima
 
 | Organ | Dependency class | Panels moved (Δ; margin) | Verdict |
 |---|---|---|---|
-| `session_registry` | event/API | not measured | unqualified: not run |
-| `transcript_registry` | event/API | not measured | unqualified: not run |
-| `task_registry` | event/API; write path (retain) | not measured | unqualified: not run |
-| `user_model_registry` | event/API | not measured | unqualified: not run |
-| `theme_organ` | event/API | not measured | unqualified: not run |
-| `analytics_registry` | event/API; write path (retain) | not measured | unqualified: not run |
-| `msg_registry` | event/API; snapshot section retained | not measured | unqualified: not run |
-| `skill_registry` | event/API | not measured | unqualified: not run |
-| `agent_registry` | event/API | not measured | unqualified: not run |
-| `constraint_store` | event/API | not measured | unqualified: not run |
-| `trigger_store` | event/API | not measured | unqualified: not run |
-| `intervention_store` | event/API | not measured | unqualified: not run |
-| `agent_protocol_store` | event/API | not measured | unqualified: not run |
-| `wisdom_lineage_store` | event/API | not measured | unqualified: not run |
-| `symbol_event_log` | event/API | not measured | unqualified: not run |
-| `repl_sessions` | event/API | not measured | unqualified: not run |
+| `session_registry` | event/API | not qualified; raw observations retained | unqualified; consumer API test evidence missing: session_registry: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `transcript_registry` | event/API | not qualified; raw observations retained | unqualified; consumer API test evidence missing: transcript_registry: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `task_registry` | event/API; write path (retain) | not qualified; raw observations retained | unqualified; consumer API test evidence missing: task_registry: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `user_model_registry` | event/API | not qualified; raw observations retained | unqualified; consumer API test evidence missing: user_model_registry: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `theme_organ` | event/API | not qualified; raw observations retained | unqualified; consumer API test evidence missing: theme_organ: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `analytics_registry` | event/API; write path (retain) | not qualified; raw observations retained | unqualified; consumer API test evidence missing: analytics_registry: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `msg_registry` | event/API; snapshot section retained | not qualified; raw observations retained | unqualified; consumer API test evidence missing: msg_registry: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `skill_registry` | event/API | not qualified; raw observations retained | unqualified; consumer API test evidence missing: skill_registry: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `agent_registry` | event/API | not qualified; raw observations retained | unqualified; [Errno 3] No such process; treatment invariants incomplete; consumer API test evidence missing: agent_registry: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `constraint_store` | event/API | not qualified; raw observations retained | unqualified; consumer API test evidence missing: constraint_store: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `trigger_store` | event/API | not qualified; raw observations retained | unqualified; consumer API test evidence missing: trigger_store: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `intervention_store` | event/API | not qualified; raw observations retained | unqualified; consumer API test evidence missing: intervention_store: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `agent_protocol_store` | event/API | not qualified; raw observations retained | unqualified; consumer API test evidence missing: agent_protocol_store: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `wisdom_lineage_store` | event/API | not qualified; raw observations retained | unqualified; consumer API test evidence missing: wisdom_lineage_store: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `symbol_event_log` | event/API | not qualified; raw observations retained | unqualified; consumer API test evidence missing: symbol_event_log: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `repl_sessions` | event/API | not qualified; raw observations retained | unqualified; consumer API test evidence missing: repl_sessions: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
 | `event_tape` | event/API; write path (retain); snapshot section retained | not qualified; raw observations retained | unqualified; consumer API test evidence missing: event_tape: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
 | `cdawg` | event/API; write path (retain) | not qualified; raw observations retained | unqualified; consumer API test evidence missing: cdawg: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
 | `episode_hdc` | event/API | not qualified; raw observations retained | unqualified; consumer API test evidence missing: episode_hdc: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
-| `refutation_ledger` | event/API | not measured | unqualified: not run |
-| `cec_policy_store` | event/API | not measured | unqualified: not run |
-| `decision_tape` | event/API; snapshot section retained | not measured | unqualified: not run |
-| `hypothesis_market` | event/API | not measured | unqualified: not run |
-| `turiya_monitor` | event/API; snapshot section retained | not measured | unqualified: not run |
-| `fep_prior` | event/API; write path (retain) | not measured | unqualified: not run |
-| `observer` | event/API; write path (retain) | not measured | unqualified: not run |
-| `observer_state` | event/API; write path (retain); snapshot section retained | not measured | unqualified: not run |
-| `interaction_ledger` | event/API; snapshot section retained | not measured | unqualified: not run |
-| `predicate_store` | event/API; snapshot section retained | not measured | unqualified: not run |
-| `archive` | event/API; write path (retain) | not measured | unqualified: not run |
+| `refutation_ledger` | event/API | not qualified; raw observations retained | unqualified; consumer API test evidence missing: refutation_ledger: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `cec_policy_store` | event/API | not qualified; raw observations retained | unqualified; consumer API test evidence missing: cec_policy_store: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `decision_tape` | event/API; snapshot section retained | not qualified; raw observations retained | unqualified; consumer API test evidence missing: decision_tape: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `hypothesis_market` | event/API | not qualified; raw observations retained | unqualified; consumer API test evidence missing: hypothesis_market: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `turiya_monitor` | event/API; snapshot section retained | not qualified; raw observations retained | unqualified; consumer API test evidence missing: turiya_monitor: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `fep_prior` | event/API; write path (retain) | not qualified; raw observations retained | unqualified; consumer API test evidence missing: fep_prior: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `observer` | event/API; write path (retain) | not qualified; raw observations retained | unqualified; consumer API test evidence missing: observer: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `observer_state` | event/API; write path (retain); snapshot section retained | not qualified; raw observations retained | unqualified; consumer API test evidence missing: observer_state: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `interaction_ledger` | event/API; snapshot section retained | not qualified; raw observations retained | unqualified; [Errno 3] No such process; treatment invariants incomplete; consumer API test evidence missing: interaction_ledger: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `predicate_store` | event/API; snapshot section retained | not qualified; raw observations retained | unqualified; consumer API test evidence missing: predicate_store: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `archive` | event/API; write path (retain) | not qualified; raw observations retained | unqualified; consumer API test evidence missing: archive: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
 | `cortical_idx` | recall-adjacent; write path (retain); index sidecar retained | not qualified; raw observations retained | unqualified; consumer API test evidence missing: cortical_idx: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
 | `hdc_idx` | recall-adjacent; write path (retain); index sidecar retained | golden.ndcg: +0.00500551; margin=0.0017901251267712533; hook_total_ms: +31.3333; margin=1833.3949929025114 | not equivalent; consumer API test evidence missing: hdc_idx: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens; observed beyond band: golden.ndcg |
 | `lite_encoder` | recall-adjacent | not qualified; raw observations retained | unqualified; consumer API test evidence missing: lite_encoder: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
 | `sparse_encoder` | recall-adjacent; write path (retain) | not qualified; raw observations retained | unqualified; consumer API test evidence missing: sparse_encoder: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
-| `learners` | recall-adjacent; write path (retain) | not measured | unqualified: not run |
+| `learners` | recall-adjacent; write path (retain) | golden.ndcg: -0.002199; margin=0.0017901251267712533; hook_total_ms: +134.333; margin=1833.3949929025114 | not equivalent; consumer API test evidence missing: learners: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens; observed beyond band: golden.ndcg |
 | `span_store` | recall-adjacent; write path (retain) | not qualified; raw observations retained | unqualified; consumer API test evidence missing: span_store: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
-| `predictor` | recall-adjacent | not measured | unqualified: not run |
-| `surprise_store` | recall-adjacent | not measured | unqualified: not run |
-| `epistemic_debt_store` | recall-adjacent | not measured | unqualified: not run |
-| `integration_kernel` | recall-adjacent | not measured | unqualified: not run |
-| `surprise_learning` | recall-adjacent | not measured | unqualified: not run |
-| `wisdom_promotion` | recall-adjacent | not measured | unqualified: not run |
-| `learned_scorer` | recall-adjacent | not measured | unqualified: not run |
+| `predictor` | recall-adjacent | not qualified; raw observations retained | unqualified; consumer API test evidence missing: predictor: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `surprise_store` | recall-adjacent | not qualified; raw observations retained | unqualified; consumer API test evidence missing: surprise_store: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `epistemic_debt_store` | recall-adjacent | not qualified; raw observations retained | unqualified; consumer API test evidence missing: epistemic_debt_store: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `integration_kernel` | recall-adjacent | not qualified; raw observations retained | unqualified; consumer API test evidence missing: integration_kernel: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `surprise_learning` | recall-adjacent | not qualified; raw observations retained | unqualified; consumer API test evidence missing: surprise_learning: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `wisdom_promotion` | recall-adjacent | not qualified; raw observations retained | unqualified; consumer API test evidence missing: wisdom_promotion: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
+| `learned_scorer` | recall-adjacent | not qualified; raw observations retained | unqualified; consumer API test evidence missing: learned_scorer: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
 | `event_api` | group (30 organs) | not qualified; raw observations retained | unqualified; consumer API test evidence missing: session_registry, transcript_registry, task_registry, user_model_registry, theme_organ, analytics_registry, msg_registry, skill_registry, agent_registry, constraint_store, trigger_store, intervention_store, agent_protocol_store, wisdom_lineage_store, symbol_event_log, repl_sessions, event_tape, cdawg, episode_hdc, refutation_ledger, cec_policy_store, decision_tape, hypothesis_market, turiya_monitor, fep_prior, observer, observer_state, interaction_ledger, predicate_store, archive: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
 | `recall_adjacent` | group (13 organs) | golden.ndcg: +0.00463211; margin=0.0017901251267712533; hook_total_ms: +45.6667; margin=1833.3949929025114 | not equivalent; consumer API test evidence missing: cortical_idx, hdc_idx, lite_encoder, sparse_encoder, learners, span_store, predictor, surprise_store, epistemic_debt_store, integration_kernel, surprise_learning, wisdom_promotion, learned_scorer: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens; observed beyond band: golden.ndcg |
 | `event_prediction` | group (4 organs) | not qualified; raw observations retained | unqualified; consumer API test evidence missing: event_tape, cdawg, episode_hdc, fep_prior: missing current_truth.abstain, current_truth.p3, smriti.off.sr, smriti.off.tokens, smriti.on.sr, smriti.on.tokens |
@@ -893,6 +893,7 @@ separate from the calibrated `hook_total_ms` statistic above.
 |---|---|---|---|---|
 | `control` | 903/1103, 938/5094, 863/1167 | 908/4922, 920/995, 878/1065 | 0 | 3/3 passed; recall identity 20/20, 20/20, 20/20 |
 | `hdc_idx` | 977/3161, 924/1611, 1044/1555 | 868/1570, 884/4713, 909/1107 | 0 | 3/3 passed; recall identity 20/20, 20/20, 20/20 |
+| `learners` | 841/2258, 1043/5130, 1050/1419 | 881/2306, 1042/1389, 1066/5113 | 0 | 3/3 passed; recall identity 20/20, 20/20, 20/20 |
 | `recall_adjacent` | 842/1347, 930/1345, 932/1892 | 883/3310, 912/1053, 901/1809 | 0 | 3/3 passed; recall identity 20/20, 20/20, 20/20 |
 | `all` | 914/1143, 891/1077, 827/4680 | 937/4971, 858/1200, 818/995 | 0 | 3/3 passed; recall identity 20/20, 20/20, 20/20 |
 <!-- ORGAN-ABLATION-TABLE -->
@@ -1020,7 +1021,7 @@ passed eight and skipped the NFS-only case; it is not the 9/9 evidence.
 CI Ruff, shell syntax and ShellCheck pass. Contract checks printed
 `contracts unchanged` at the commits. No tests were removed.
 
-### Pinned controls, groups and largest-organ checkpoint
+### Pinned controls and completed measurement blocks
 
 Runner `f3ea9cd9` fixes the clock at **1789581502687 ms**, embedding wait at
 **10000 ms**, and the three thread limits at **1**. All three control golden
@@ -1053,11 +1054,44 @@ equivalent**. Its answerable current-truth hits are 3/40. `cortical_idx`,
 all three runs; their equivalence remains **unqualified** for the missing
 evidence above. All eight preserve 10/10 correct abstentions.
 
-Across all **39 completed trials**, every run passes 200-write recovery,
+Across the first **39 completed trials**, every run passes 200-write recovery,
 three keyed lanes and canonical restart identity **20/20**, with no trial
-errors or empty hook outputs. The remaining 35 individuals are conditional
-on the recorded one-minute node-load limit of **96**. Raw post-fix reports are in
-`/tmp/p2-ablation-postfix`.
+errors or empty hook outputs.
+
+The remaining-organ block finished on **2026-09-17**, recording **105 trials**
+for all **35 individuals** without triggering the recorded node-load limit
+of **96**. `learners` scores **0.49787936370452585** in every repetition:
+golden delta **−0.0021989989178248792**, outside the frozen band, hence
+**not equivalent**. Its three runs preserve 4/40 answerable truth hits,
+10/10 correct abstentions, 200 recovered writes, three keyed lanes and
+identity 20/20. The other 34 individuals in this block are **unqualified**.
+
+The complete post-fix matrix contains **144 records**: three controls,
+four groups and 43 individual organs, each with three repetitions.
+**142 trials** pass 200-write recovery, three keyed lanes and canonical
+restart identity **20/20**. Two trials have incomplete invariants:
+`agent_registry` repetition 2 and `interaction_ledger` repetition 3 both
+report `[Errno 3] No such process`; cleanup confirms the owned replica was
+not running. Their other two repetitions pass. These errors are retained
+without replacement and disqualify both arms. The retained start/stop logs
+do not establish why those processes disappeared; the runner removed their
+scratch copies without retaining the daemon logs.
+
+All 144 records have nonempty hook outputs. Predeclared primary hook samples
+range from **795 to 1194 ms**, inside the frozen band around the **884 ms**
+control mean. The separate second probe for `surprise_store` repetition 2
+measures **2814 ms** and remains in the raw report alongside its predeclared
+first probe of **899 ms**; samples were not selected after measurement.
+
+Final individual verdicts: **2 not equivalent** (`hdc_idx`, `learners`),
+**41 unqualified**, **0 equivalent**. Group verdicts: recall-adjacent and
+all organs are not equivalent; event/API and event prediction are
+unqualified. Missing current-truth calibration, a real isolated SMRITI
+panel and per-organ consumer tests still block positive equivalence.
+The table includes numbers only for qualified comparisons and gives the
+reason for each unqualified row. Raw post-fix reports remain in
+`/tmp/p2-ablation-postfix`; `report.json` SHA-256 is
+`7942245fa6c380d13f0c2b7ac7707679235491bb47c083e9e61b269805e408cb`.
 
 **Retired organs: none. Removed tools: none. Retirement lines removed: 0.
 Removed tests: none.** Consumers and protected dependencies above remain the

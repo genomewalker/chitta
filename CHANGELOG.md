@@ -35,8 +35,13 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
   all-organ ablation change golden nDCG by +0.004632109418440722 and are not
   equivalent. The eight largest organs have three runs each; HDC changes
   golden by +0.005005509837521904 (not equivalent), while the other seven
-  remain unqualified. All 39 trials pass 200-write recovery, three keyed
-  lanes and identity 20/20. The 105 pre-fix trials remain quarantined.
+  remain unqualified. All 35 remaining individuals were also measured three
+  times; learners change golden by −0.0021989989178248792 (not equivalent).
+  The complete matrix has 144 trial records: 142 pass 200-write recovery,
+  three keyed lanes and identity 20/20; agent-registry repetition 2 and
+  interaction-ledger repetition 3 retain process-disappearance errors with
+  incomplete invariants. Final individual verdicts are 2 not equivalent and
+  41 unqualified. The 105 pre-fix trials remain quarantined.
   No tools or organs retired (retirement LOC 0); positive equivalence still
   lacks current-truth margins, a real isolated SMRITI panel and consumer API
   tests. Per-organ consumers and measurements are in `docs/FIELD_PERF.md`.
