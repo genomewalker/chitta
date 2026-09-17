@@ -1,5 +1,7 @@
 # Changelog
 
+- Token ledger deduplicates provider requests across transcripts, uses event timestamps for reporting windows, includes cache-write costs, and reports per-model usage plus last-request and lifetime-mean context. Codex usage-event fallback IDs are counted explicitly.
+
 All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 [docs/RENAME.md](docs/RENAME.md)) are documented here.
 
