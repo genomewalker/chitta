@@ -315,7 +315,7 @@ def pre_tool(client, matcher):
         "now_ms": client.now_ms,
         "strict_marker": (client.mind / ".strict_claude_style").exists(),
     }
-    if setting("CONTEXT_HARD_STOP", "200000") != "0" and client.payload.get("transcript_path"):
+    if setting("CONTEXT_HARD_STOP", "0") != "0" and client.payload.get("transcript_path"):
         usage = last_assistant_usage(Path(client.payload["transcript_path"]))
         if usage:
             extra["last_usage"] = {

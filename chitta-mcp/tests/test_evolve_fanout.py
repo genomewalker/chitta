@@ -178,7 +178,9 @@ class FanoutTests(unittest.TestCase):
             ):
                 self.assertEqual(len({env[key] for env in envs}), 3, key)
                 for env in envs:
-                    self.assertTrue(Path(env[key]).is_relative_to(artifacts), key)
+                    self.assertTrue(
+                        Path(env[key]).resolve().is_relative_to(artifacts.resolve()), key
+                    )
             for row, env in zip(rows, envs):
                 self.assertEqual(env["CHITTA_HEADLESS"], "1")
                 self.assertEqual(env["CC_SOUL_HEADLESS"], "1")

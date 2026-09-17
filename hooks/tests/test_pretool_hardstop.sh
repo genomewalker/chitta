@@ -8,6 +8,7 @@ ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
 export HOME="$T/home" CHITTA_DB_PATH="$T/mind" CHITTA_QUEUE="$T/queue" CHITTA_BIN="$T/cli" CHITTA_PLUGIN_DIR="$ROOT" HOOK_POLICY_FIXTURE="$T/responses"
+export CHITTA_CONTEXT_HARD_STOP=900000
 mkdir -p "$CHITTA_DB_PATH"
 "${CXX:-g++}" -std=c++17 -O2 -pthread -I"$ROOT/chitta/include" "$ROOT/hooks/tests/event-response.cpp" -lcrypto -o "$CHITTA_BIN"
 printf '%s\n' '{}' > "$HOOK_POLICY_FIXTURE"
@@ -18,8 +19,8 @@ usage_line() {
 }
 
 TRANSCRIPT="$T/transcript.jsonl"
-# Over the default 200k limit: 150000 + 60000 + 5000 = 215000.
-{ usage_line 20000 0 0; usage_line 150000 60000 5000; } > "$TRANSCRIPT"
+# The hard stop is opt-in: CHITTA_CONTEXT_HARD_STOP=900000 for this test; 700000 + 250000 + 5000 = 955000 exceeds it.
+{ usage_line 20000 0 0; usage_line 700000 250000 5000; } > "$TRANSCRIPT"
 
 call() {
     local matcher="$1" input_json="$2"
@@ -49,8 +50,8 @@ data = json.load(sys.stdin)
 out = data['hookSpecificOutput']
 assert out['permissionDecision'] == 'deny', out
 assert '[hard-stop]' in out['permissionDecisionReason'], out
-assert '215k' in out['permissionDecisionReason'], out
-assert '200k' in out['permissionDecisionReason'], out
+assert '955k' in out['permissionDecisionReason'], out
+assert '900k' in out['permissionDecisionReason'], out
 "
 
 # Allowlisted Bash command (chitta remember/checkpoint/ledger_op) is not denied.
