@@ -106,6 +106,27 @@
 - No line-count quota; the measure is what is retired with evidence.
 - Exit gate: every remaining organ has a `docs/FIELD_PERF.md` line naming the panel it moves or the API that consumes it.
 
+> Phase 2 status 2026-09-17 (matrix complete; retirement unqualified): 43 organ flags preserve
+> rollback state and core writes. The 105 completed pre-fix trials are quarantined;
+> after merging main, three controls score 0.5000783626223507 with spread 0
+> against the frozen 0.0017901251267712533 margin. Four groups have three runs
+> each: recall-adjacent and all-organ ablation are not equivalent (golden delta
+> +0.004632109418440722); event/API and event prediction remain unqualified.
+> The eight largest organs also have three runs each: HDC is not equivalent
+> (golden delta +0.005005509837521904); cortex, CDAWG, spans, episode HDC,
+> event tape, lite encoder and sparse encoder remain unqualified.
+> All 35 remaining individuals were measured three times without load deferral
+> (limit 96). Learners are also not equivalent (golden delta
+> −0.0021989989178248792). Final individual verdicts: 2 not equivalent,
+> 41 unqualified, 0 equivalent. Of 144 total trial records, 142 recover
+> 200 writes, preserve three keyed lanes and pass canonical identity 20/20.
+> Agent-registry repetition 2 and interaction-ledger repetition 3 retain
+> process-disappearance errors with incomplete invariants; neither was replaced.
+> Current-truth margins, a real isolated SMRITI panel and per-organ consumer-test
+> evidence are still absent. No organs/tools/tests removed (retirement LOC 0).
+> See `docs/FIELD_PERF.md`
+> for the table and every retained organ's consumer/dependency justification.
+
 ### Phase 4 — Surface reduction (with Phase 2)
 - Keep the existing tiering (`core` advertised, `advanced` and hidden callable). Add `scripts/check-mcp-surface.py` that measures the filtered `tools/list` and its payload in tokens for the model in use; target ≤ 80 advertised and payload ≤ 8k tokens. Unadvertised handlers are promoted, moved to advanced, or deleted; hidden direct calls stay compatible; contracts unchanged for kept tools.
 

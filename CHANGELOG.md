@@ -110,6 +110,27 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
   36/50; the current-truth and golden recall exit gates remain unmet.
 
 ### Added
+- Per-open `CHITTA_ABLATE_ORGANS` experiments for 43 field organs, with
+  empty runtime views, suppressed new organ WAL events, and preserved snapshot
+  state for rollback. Six new Rust tests cover parsing, runtime isolation,
+  rollback sections, disabled WAL writes, and core writes/keyed lanes.
+  `scripts/ablate-organs.py` pins recall time, a 10-second embedding wait and
+  BLAS/OMP/Rayon thread limits, records lane traces and uses the canonical
+  restart-identity gate. Three controls have golden spread 0 against margin
+  0.0017901251267712533. Four groups have three runs each: recall-adjacent and
+  all-organ ablation change golden nDCG by +0.004632109418440722 and are not
+  equivalent. The eight largest organs have three runs each; HDC changes
+  golden by +0.005005509837521904 (not equivalent), while the other seven
+  remain unqualified. All 35 remaining individuals were also measured three
+  times; learners change golden by −0.0021989989178248792 (not equivalent).
+  The complete matrix has 144 trial records: 142 pass 200-write recovery,
+  three keyed lanes and identity 20/20; agent-registry repetition 2 and
+  interaction-ledger repetition 3 retain process-disappearance errors with
+  incomplete invariants. Final individual verdicts are 2 not equivalent and
+  41 unqualified. The 105 pre-fix trials remain quarantined.
+  No tools or organs retired (retirement LOC 0); positive equivalence still
+  lacks current-truth margins, a real isolated SMRITI panel and consumer API
+  tests. Per-organ consumers and measurements are in `docs/FIELD_PERF.md`.
 - Markdown heading extraction through code intel, including hierarchical heading
   names, duplicate-heading disambiguation, fenced examples and Setext headings.
   Repository recall integration now validates sources on startup and query.
