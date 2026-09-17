@@ -9,7 +9,9 @@
 # text, realm chitta), the code map for the task (code_query on the worktree),
 # then the task itself. The task file's first line is a one-line title (it is
 # the query for recall and the code map); the rest states the goal, the write
-# scope and the task-specific gates, never the rules. Effort: high
+# scope and the task-specific gates, never the rules. Codex auto-compacts its
+# thread at CHITTA_CODEX_COMPACT_TOKENS (default 60000) so context per request
+# stays bounded (Astra's round-2 budget). Effort: high
 # for implementation (default), medium for docs, tables and measurement runs.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -58,6 +60,7 @@ context="$S/$name.context.md"
 printf 'prompt: %s bytes (%s lines) in %s\n' "$(wc -c < "$context")" "$(wc -l < "$context")" "$context"
 ( cd "$W" && setsid nohup codex exec -C "$W" --approve-for-me --skip-git-repo-check \
     -m "${CHITTA_CODEX_MODEL:-gpt-6-astra}" -c "model_reasoning_effort=$effort" \
+    -c "model_auto_compact_token_limit=${CHITTA_CODEX_COMPACT_TOKENS:-60000}" \
     -o "$S/$name.last.md" "$(cat "$context")" </dev/null >"$S/$name.log" 2>&1 &
   echo $! >"$S/$name.pid" )
 sleep 2
