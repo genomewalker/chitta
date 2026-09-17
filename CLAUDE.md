@@ -57,6 +57,12 @@ bash scripts/dev-install.sh
 - Gates: `scripts/gate-quick.sh` per commit (about a minute), `scripts/gate-full.sh
   [--replica] [--recall]` before a merge; heavy steps run on a compute node via
   `scripts/on-compute.sh -- <cmd>` (the login nodes sit at load 70–140).
+  Python for the gates and the contract check is whichever interpreter imports
+  `mcp` (`scripts/python-with-mcp.sh`: `CHITTA_PY`, then the conda bioinfo env);
+  on a compute node the contract check re-runs itself over ssh on the daemon
+  node named in `<mind>/.daemon-node`, since the socket is not reachable there.
+- The pre-tool hard stop (`CHITTA_CONTEXT_HARD_STOP`) is opt-in and off by
+  default since 2026-09-17: chitta economises context, it never refuses work.
 - `install`, never `cp`: `cp` over a running binary gives ETXTBSY. `install` is an
   atomic rename.
 - `chitta_hintd` exists only in a `CHITTA_WITH_LLAMA_CPP=ON` build.

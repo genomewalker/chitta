@@ -13,7 +13,7 @@
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT" || exit 1
-PY="${CHITTA_PY:-$(command -v python3)}"
+PY="$("$ROOT/scripts/python-with-mcp.sh")"; export PATH="$(dirname "$PY"):$PATH"
 ON="$ROOT/scripts/on-compute.sh"
 replica=0 recall=0
 for a in "$@"; do case "$a" in --replica) replica=1 ;; --recall) replica=1; recall=1 ;; esac; done

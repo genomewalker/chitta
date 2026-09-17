@@ -53,7 +53,11 @@ time.sleep(30)
 """,
             )
             command = implement_command(
-                SimpleNamespace(implementer="codex", model="gpt-6-astra"), root, "stub task", output
+                SimpleNamespace(implementer="codex", model="gpt-6-astra"),
+                root,
+                "stub task",
+                output,
+                env,
             )
             started = time.monotonic()
             result = Budget(0.1).run(command, root, env=env, final_output=output)

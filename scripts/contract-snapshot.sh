@@ -13,7 +13,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CHITTA_BIN="${CHITTA_BIN:-$HOME/.claude/bin/chitta}"
-PY="${CHITTA_PY:-python3}"
+PY="$("$ROOT/scripts/python-with-mcp.sh")"
 mode="${1:-check}"
 dir="${2:-$ROOT/contracts}"
 
@@ -46,6 +46,19 @@ PY
     jq -S . "$ROOT/.claude-plugin/plugin.json" > "$out/plugin.json" 2>/dev/null || true
     grep -hoE 'handlers_\["[a-z_0-9]+"\]' "$ROOT"/chitta/src/handlers/register_*.cpp | grep -oE '"[a-z_0-9]+"' | tr -d '"' | LC_ALL=C sort -u > "$out/daemon-handler-names.txt"
 }
+
+# The capture talks to the live daemon over its socket. A compute node cannot
+# reach it, so run the same check on the daemon node (named in <mind>/.daemon-node).
+if ! printf '{"jsonrpc":"2.0","id":1,"method":"tools/list"}\n' | timeout 15 "$CHITTA_BIN" 2>/dev/null | grep -q '"tools"'; then
+    node="$(cat "${CHITTA_DB_PATH:-$HOME/.claude/mind}/.daemon-node" 2>/dev/null || true)"
+    if [[ -n "$node" && "$node" != "$(hostname -s)" && -z "${CHITTA_CONTRACT_REMOTE:-}" ]]; then
+        echo "daemon unreachable from $(hostname -s); checking contracts on $node"
+        exec ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new "$node" \
+            "CHITTA_CONTRACT_REMOTE=1 CHITTA_PY=$PY bash $ROOT/scripts/contract-snapshot.sh $mode $dir"
+    fi
+    echo "contract $mode needs the live daemon; unreachable from $(hostname -s)" >&2
+    exit 1
+fi
 
 case "$mode" in
     write) capture "$dir"; echo "contracts written to $dir ($(wc -l < "$dir/daemon-tool-names.txt") daemon tools, $(wc -l < "$dir/cli-tool-names.txt") CLI tools)";;

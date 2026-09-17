@@ -12,7 +12,7 @@
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT" || exit 1
-PY="${CHITTA_PY:-$(command -v python3)}"
+PY="$("$ROOT/scripts/python-with-mcp.sh")"; export PATH="$(dirname "$PY"):$PATH"
 RUFF="${RUFF:-$(dirname "$PY")/ruff}"; command -v "$RUFF" >/dev/null 2>&1 || RUFF=ruff
 export OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 RAYON_NUM_THREADS=1
 CI_PY="chitta-mcp hooks benchmarks/smriti benchmarks/noise.py benchmarks/check_eval_immutable.py benchmarks/current_truth benchmarks/continuation scripts/provenance-coverage.py"
