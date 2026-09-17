@@ -181,6 +181,10 @@
   18/20 with 64.44% fewer bytes and 20/20 identical graph responses. See the
   per-language table and final evidence in `Documentation.md`.
 
+### Phase 10 — Token efficiency (owner request 2026-09-17)
+- chitta is the layer that keeps agent sessions cheap: short sessions carried by memory, capped and deduplicated tool output, code read through the graph, fewer turns, and a visible ledger. Baseline, targets and steps are in `DECISION-2026-09-17-token-efficiency.md` (Fable: 343k tokens of context per turn, 61,636 turns and 84 M output tokens in a week; Astra: 41k per turn).
+- Exit gate: Fable context per turn ≤ 150k on the weekly ledger, tool chars per session halved with no raw output over 6k in the thread, Astra ≤ 300 turns per stream, weekly cost −50% at equal work.
+
 ## Backlog (owner-listed, not yet scheduled)
 
 - **Source index: first walk after a restart runs on the query thread** (2026-09-17: the first repository-shaped recall after a restart took 40 s, the second 16 s, then 0.4 s once the walk was throttled). Move the walk to the maintenance thread at startup and after `learn_codebase`, and serve queries from the last completed walk; belongs with Phase 8 step 1 (bounded execution).

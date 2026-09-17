@@ -52,6 +52,8 @@ systemctl --user try-restart chitta-hintd 2>/dev/null || true
 bash scripts/dev-install.sh
 ```
 
+- Streams: `scripts/codex-stream.sh <name> <branch> <spec> [effort]`; cost: `scripts/token-ledger.py`
+  (turns × context is the bill; see `docs/DECISION-2026-09-17-token-efficiency.md`).
 - Gates: `scripts/gate-quick.sh` per commit (about a minute), `scripts/gate-full.sh
   [--replica] [--recall]` before a merge; heavy steps run on a compute node via
   `scripts/on-compute.sh -- <cmd>` (the login nodes sit at load 70–140).
