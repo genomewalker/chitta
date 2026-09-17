@@ -34,6 +34,10 @@ step "Rust build and tests (release)"
 TMPDIR=/tmp "$ON" -c 16 -- bash -c 'cd chitta-field && ./build.sh build --release 2>&1 | grep -E "^error" ; ./build.sh test --release 2>&1 | grep -E "^test result|FAILED|panicked"' | tee /dev/stderr | grep -qE '^test result: ok' || { echo "FAIL: Rust"; fail=1; }
 
 step "C++ build and ctest"
+# A fresh worktree has no configured build dir: configure it like the main checkout
+# (Release, 768-d embeddings, conda g++; llama.cpp off, the gate does not need chitta_hintd).
+[[ -f chitta/build/CMakeCache.txt ]] || "$ON" -c 4 -- cmake -S chitta -B chitta/build -DCMAKE_BUILD_TYPE=Release \
+    -DCHITTA_EMBED_DIM="${CHITTA_EMBED_DIM:-768}" -DCMAKE_CXX_COMPILER="${CXX:-/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/bin/g++}" > /dev/null
 "$ON" -c 16 -- bash -c 'cd chitta && cmake --build build --parallel 2>&1 | grep -E "error|Built target chittad"; cd build && ctest -j8 2>&1 | grep -E "tests passed|tests failed"' | tee /dev/stderr | grep -q '100% tests passed' || { echo "FAIL: C++/ctest"; fail=1; }
 
 step "hook suites"
