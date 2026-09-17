@@ -571,6 +571,9 @@ if(CHITTA_BUILD_TESTS)
     target_compile_options(repository_index_test PRIVATE -UNDEBUG)
     target_link_libraries(repository_index_test PRIVATE chitta OpenSSL::Crypto)
     add_test(NAME repository_index_test COMMAND repository_index_test)
+    # The test asserts same-mtime content changes are seen by the next search;
+    # production throttles the walk (CHITTA_SOURCE_REFRESH_S, default 30).
+    set_tests_properties(repository_index_test PROPERTIES ENVIRONMENT "CHITTA_SOURCE_REFRESH_S=0")
     add_executable(code_index_test src/code_index_test.cpp src/code_intel.cpp)
     target_compile_options(code_index_test PRIVATE -UNDEBUG)
     target_link_libraries(code_index_test PRIVATE chitta OpenSSL::Crypto)

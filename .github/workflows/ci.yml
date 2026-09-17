@@ -141,8 +141,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install jq
-        run: sudo apt-get install -y jq
+      - name: Install jq and the JSON header the compile-based hook tests need
+        run: sudo apt-get install -y jq nlohmann-json3-dev
 
       - name: Run hook tests
         run: |

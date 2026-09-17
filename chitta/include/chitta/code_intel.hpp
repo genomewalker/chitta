@@ -64,6 +64,9 @@ private:
     std::mutex mutex_;
     std::string sidecar_;
     std::unordered_map<std::string, std::string> roots_; // realm -> active checkout
+    // Last full walk per realm: a walk reads and hashes every source file, so it
+    // runs at most every CHITTA_SOURCE_REFRESH_S seconds (default 30), not per recall.
+    std::unordered_map<std::string, std::chrono::steady_clock::time_point> last_refresh_;
     std::unordered_map<std::string, File> files_;
     void refresh(const std::string& realm);
 };

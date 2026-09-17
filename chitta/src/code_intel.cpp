@@ -1,4 +1,5 @@
 #include "chitta/code_intel.hpp"
+#include <cstdlib>
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
@@ -269,6 +270,7 @@ void RepositoryIndex::index(const std::string& path, const std::string& realm) {
     if (root.empty() || realm.empty()) return;
     std::lock_guard<std::mutex> lock(mutex_);
     roots_[scoped(realm)] = root;
+    last_refresh_.erase(scoped(realm)); // an explicit index call always walks
     refresh(scoped(realm));
     if (!sidecar_.empty()) {
         auto tmp = sidecar_ + ".tmp";
@@ -282,6 +284,16 @@ void RepositoryIndex::index(const std::string& path, const std::string& realm) {
 void RepositoryIndex::refresh(const std::string& realm) {
     const auto registered = roots_.find(realm);
     if (registered == roots_.end()) return;
+    static const long interval_s = [] {
+        const char* v = std::getenv("CHITTA_SOURCE_REFRESH_S");
+        char* end = nullptr;
+        const long s = v ? std::strtol(v, &end, 10) : 30;
+        return v && end != v && !*end && s >= 0 ? s : 30;
+    }();
+    const auto now = std::chrono::steady_clock::now();
+    auto last = last_refresh_.find(realm);
+    if (last != last_refresh_.end() && now - last->second < std::chrono::seconds(interval_s)) return;
+    last_refresh_[realm] = now;
     const std::filesystem::path root(registered->second);
     static const std::unordered_set<std::string> exclude = {
         ".git", "build", "target", "node_modules", "_deps", "__pycache__", ".venv", "venv",
