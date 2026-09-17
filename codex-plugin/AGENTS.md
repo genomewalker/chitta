@@ -121,11 +121,14 @@ stream's, stop and say so.
 
 ### Launching a stream
 
-`scripts/codex-stream.sh <name> <branch> <spec.md> [high|medium|low]` creates the
-worktree, prepends `codex-plugin/stream-preamble.md` (turn and token discipline:
-batching, output caps, gate tiers, handoff instead of thread growth) and starts
-Codex with a pidfile. Effort: high for implementation, medium for docs, tables
-and measurement runs. `scripts/token-ledger.py` reports what sessions cost.
+`scripts/codex-stream.sh <name> <branch> <task.md> [high|medium|low]` builds the
+prompt from chitta: `codex-plugin/stream-contract.md` (the rulebook, 25 lines),
+the decisions and handoffs chitta recalls for the task, the code map from
+`code_query` on the worktree, then the task. Streams write a `[handoff]` memory
+at every commit and a fresh thread continues from it; `codex exec resume` is
+not used. `scripts/codex-stream.sh --check <name>` lists a stream's handoffs.
+Effort: high for implementation, medium for docs, tables and measurement runs.
+`scripts/token-ledger.py` reports what sessions cost.
 
 ### Gates: two tiers, heavy work on a compute node
 

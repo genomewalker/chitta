@@ -52,6 +52,22 @@ the assistant's own words.
    nightly card) and its top line joins the session-start block as
    `[tokens] this week: …` so drift is seen, not discovered on the invoice.
 
+## Context across streams (measured 2026-09-17)
+
+How the streams actually got their context this week: task specs of 4 to 7 KB
+restating the rules; the first commands of every stream read the plan (240
+lines), AGENTS.md (240 lines) and HOOKS.md (190 lines), then grep the code;
+between zero and four `chitta recall` calls per stream and no `code_query`;
+nothing written back to chitta (Plan.md and reports only), so the next stream
+or resume got its context from a new spec written by the lead, and resumes
+carried whole threads forward. Fable did the same in one 5,000-turn thread.
+
+The fix is structural: the stream's opening context is built from chitta by
+`scripts/codex-stream.sh` (contract, recalled decisions and handoffs, code
+map, task), every commit writes a `[handoff]` memory in a fixed shape, a fresh
+thread continues from the handoff instead of a resume, and the lead's own
+sessions start from the capsule and `/recap` rather than growing.
+
 ## Targets (measured weekly by the ledger, same work mix)
 
 - Fable average context per turn ≤ 150k (from 343k).
