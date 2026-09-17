@@ -69,9 +69,11 @@ inline json pretool(const json& a, const Invoke& invoke) {
                                  usage.value("cache_read_input_tokens", 0LL) +
                                  usage.value("cache_creation_input_tokens", 0LL);
         bool allowlisted = tool == "mcp__chitta__checkpoint" || tool == "mcp__chitta__remember";
+        if (!allowlisted && tool == "Agent")
+            allowlisted = str(tool_input, "subagent_type") != "fork";
         if (!allowlisted && tool == "Bash")
             allowlisted = match(str(tool_input, "command"),
-                                R"(^\s*chitta\s+(remember|checkpoint|ledger_op)(\s|$))");
+                                R"(^\s*chitta\s+(remember|checkpoint|ledger_op|msg_send|msg_inbox|msg_ack|session_list)(\s|$))");
         if (!allowlisted && total > hard_stop_limit) {
             output["permissionDecision"] = "deny";
             output["permissionDecisionReason"] =

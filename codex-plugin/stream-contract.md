@@ -15,4 +15,17 @@ Context discipline (the thread's cost is turns × context; every output is re-se
 - Plan.md stays untracked and short (state and next action). Never commit results or logs.
 - Budgets are requests and tokens, not tool calls: aim for 15–25 model requests per stream; at 40 requests or 40k context checkpoint (commit, write the handoff and the capsule); restart by 60 requests, 60k context or 1 M cumulative input tokens: write the handoff, print the next action and stop, a fresh thread continues. Tool results ≤ 4 KB per request combined; visible output ≤ 600 tokens per request, progress lines ≤ 150, final report ≤ 800. Never ask the lead a question in the thread: state the assumption in the handoff and proceed, or stop with the question in the handoff.
 
+When a launcher supplies a holder session, persist intermediate handoffs through
+`chitta ledger_op --op stream_handoff --args '{"stream":"<name>","session_id":"<holder>","content":"<handoff-line>"}'`.
+This checks ownership and renews the original lease TTL (default six hours).
+On finish, write the exact handoff line to the supplied handoff file. The launcher
+persists it with renewal, sends it once with `chitta msg_send` to the lead from
+CHITTA_LEAD_SESSION (or `--lead`), then releases the claim. For workers without a
+supervisor, send the final line directly with `chitta msg_send --target "<lead>"
+--session_id "<holder>" --content "<handoff-line>"` and release the claim.
+Never infer completion from a PID disappearing; check the handoff and message.
+Coordination and context economy help finish the work: use capsules, output caps,
+code maps and short sessions. There is no default context ceiling; the optional
+CHITTA_CONTEXT_HARD_STOP is off unless explicitly enabled, and permits coordination.
+
 When finished, print the commit hashes, the gate results and the numbers the task asked for, then stop.

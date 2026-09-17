@@ -1,5 +1,6 @@
 #include "../../include/chitta/rpc/field_handler.hpp"
 #include <limits>
+#include <mutex>
 #include <chitta/hook_ledger_policy.hpp>
 #include <chitta/hook_pretool_policy.hpp>
 #include <chitta/hook_saddle_policy.hpp>
@@ -18,6 +19,10 @@ void FieldRpcHandler::load_task_ledger() {
 }
 
 ToolResult FieldRpcHandler::tool_ledger_op(const json& params) {
+    // Keep multi-operation stream lifecycle updates ordered, including recursive
+    // session registration/heartbeat calls. The underlying ledger also locks WAL writes.
+    static std::recursive_mutex stream_mutex;
+    std::lock_guard<std::recursive_mutex> guard(stream_mutex);
     try {
         const auto started = std::chrono::steady_clock::now();
         auto op   = params.at("op").get<std::string>();
@@ -126,6 +131,88 @@ ToolResult FieldRpcHandler::tool_ledger_op(const json& params) {
                 if (old.value("handoff", json::object()).value("version", 0) == 2)
                     return ToolResult::error("cannot overwrite v2 capsule with unversioned writer");
             }
+        auto owned_lease = [&](const std::string& tid, const std::string& sid) -> json {
+            const auto page = run("lease_list", {{"session_id", sid}, {"active_only", false}, {"limit", 1000}});
+            for (const auto& lease : page.at("rows"))
+                if (lease.value("thread_id", "") == tid) return lease;
+            return nullptr;
+        };
+        if (op == "session_touch") {
+            const auto sid = args.at("session_id").get<std::string>();
+            const auto session = run("session_get", {{"session_id", sid}});
+            if (session.is_null()) return ok(run(op, args));
+            const auto metadata = json::parse(session.value("metadata_json", "{}"));
+            const auto stream = metadata.value("stream", "");
+            const auto tid = "stream:" + stream;
+            const auto lease = stream.empty() ? json(nullptr) : owned_lease(tid, sid);
+            const auto touched = run(op, args);
+            if (!lease.is_null() && lease.value("session_id", "") == sid)
+                run("lease_claim", {{"thread_id", tid}, {"session_id", sid},
+                    {"ttl", metadata.value("ttl", 21600)}});
+            return ok(touched);
+        }
+        if (op == "stream_handoff") {
+            const auto sid = args.at("session_id").get<std::string>();
+            const auto stream = args.at("stream").get<std::string>();
+            const auto lease = owned_lease("stream:" + stream, sid);
+            if (lease.is_null() || lease.value("session_id", "") != sid ||
+                lease.value("expires_at", 0.0) <= TaskLedger::now())
+                return ToolResult::error("stream handoff requires a live owned claim");
+            const auto content = args.at("content").get<std::string>();
+            if (content.rfind("[handoff] stream=" + stream + " ", 0) != 0)
+                return ToolResult::error("handoff must name the claimed stream");
+            const auto saved = invoke("remember", {{"type", "signal"}, {"realm", "chitta"},
+                {"visibility", 1}, {"tags", json::array({"handoff"})}, {"content", content}});
+            invoke("ledger_op", {{"op", "session_touch"}, {"args", {{"session_id", sid}}}});
+            return ok({{"saved", saved}, {"lease", owned_lease("stream:" + stream, sid)}});
+        }
+        // Stream ownership uses the ledger's atomic, WAL-backed lease transaction.
+        // Names are prefixed so ordinary conversational threads cannot collide.
+        if (op == "stream_claim" || op == "stream_release" || op == "stream_list") {
+            const auto name = args.value("stream", "");
+            if (op != "stream_list" && name.empty())
+                return ToolResult::error("stream is required");
+            const auto tid = "stream:" + name;
+            if (op == "stream_list") {
+                json claims = json::array();
+                const auto page = run("lease_list", {{"limit", 1000}});
+                for (auto lease : page.at("rows")) {
+                    const auto id = lease.value("thread_id", "");
+                    if (id.rfind("stream:", 0) != 0 ||
+                        lease.value("expires_at", 0.0) <= TaskLedger::now() ||
+                        (!name.empty() && id != tid)) continue;
+                    const auto session = run("session_get", {{"session_id", lease.at("session_id")}});
+                    lease["stream"] = id.substr(7);
+                    lease["metadata"] = json::parse(session.value("metadata_json", "{}"));
+                    claims.push_back(lease);
+                }
+                return ok({{"claims", claims}});
+            }
+            const auto sid = args.at("session_id").get<std::string>();
+            if (sid.empty()) return ToolResult::error("session_id is required");
+            if (op == "stream_release") {
+                const auto released = run("lease_release", {{"thread_id", tid}, {"session_id", sid}});
+                if (released == true)
+                    invoke("session_heartbeat", {{"session_id", sid}, {"metadata", {{"stream_claim", nullptr}}}});
+                return ok({{"released", released}});
+            }
+            const auto ttl = args.value("ttl", 21600);
+            if (ttl < 30 || ttl > 604800) return ToolResult::error("ttl must be 30..604800 seconds");
+            json metadata = {{"stream", name}, {"worktree", args.at("worktree")},
+                             {"branch", args.at("branch")}, {"task_title", args.at("title")},
+                             {"ttl", ttl}};
+            run("thread_create", {{"id", tid}, {"title", args.at("title")}, {"realm", "chitta"}});
+            run("session_bind", {{"session_id", sid}, {"project_dir", args.at("worktree")}});
+            auto claim = run("lease_claim", {{"thread_id", tid}, {"session_id", sid}, {"ttl", ttl}});
+            if (!claim.value("claimed", false)) return ok(claim);
+            metadata["expires_at"] = claim.at("expires_at");
+            run("session_bind", {{"session_id", sid}, {"metadata", metadata}});
+            invoke("session_register", {{"session_id", sid}, {"name", name},
+                   {"metadata", {{"stream_claim", metadata}}}});
+            invoke("session_heartbeat", {{"session_id", sid}, {"metadata", {{"stream_claim", metadata}}}});
+            claim["stream"] = name;
+            claim["metadata"] = metadata;
+            return ok(claim);
         }
         if (op == "hook_session_start") return ok(hook_policy::session_start(args, invoke));
         if (op == "hook_ancillary") {

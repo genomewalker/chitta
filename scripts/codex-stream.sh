@@ -17,6 +17,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 S="${CHITTA_CODEX_SPECS:-/projects/caeg/scratch/kbd606/tmp/codex-specs}"
 CLI="${CHITTA_BIN:-$HOME/.claude/bin/chitta}"
+source "$ROOT/scripts/stream-lib.sh"
 mkdir -p "$S"
 
 # Exact context is shared by launch and --check; transport failure is explicit.
@@ -37,12 +38,13 @@ _capsule_context() {
 
 if [[ "${1:-}" == "--check" ]]; then
     name=${2:?name}
+    stream_check
     W="${CHITTA_CODEX_WORKTREES:-/projects/caeg/scratch/kbd606/tmp}/codex-wt-$name"
     _capsule_context || exit 1
     exit 0
 fi
 
-name=${1:?name}; branch=${2:?branch}; task=${3:?task.md}; effort=${4:-high}; base=${5:-origin/main}
+name=${1:?name}; [[ "$name" =~ ^[a-zA-Z0-9][a-zA-Z0-9._-]*$ ]] || exit 2; branch=${2:?branch}; task=${3:?task.md}; effort=${4:-high}; base=${5:-origin/main}
 case "$effort" in high|medium|low) ;; *) echo "effort must be high|medium|low (never ultra unattended)" >&2; exit 2 ;; esac
 [[ -f "$task" ]] || { echo "task file not found: $task" >&2; exit 2; }
 W="${CHITTA_CODEX_WORKTREES:-/projects/caeg/scratch/kbd606/tmp}/codex-wt-$name"
@@ -75,11 +77,7 @@ context="$S/$name.context.md"
     cat "$task"
 } > "$context"
 printf 'prompt: %s bytes (%s lines) in %s\n' "$(wc -c < "$context")" "$(wc -l < "$context")" "$context"
-( cd "$W" && setsid nohup codex exec -C "$W" --approve-for-me --skip-git-repo-check \
+stream_launch codex exec -C "$W" --approve-for-me --skip-git-repo-check \
     -m "${CHITTA_CODEX_MODEL:-gpt-6-astra}" -c "model_reasoning_effort=$effort" \
     -c "model_auto_compact_token_limit=${CHITTA_CODEX_COMPACT_TOKENS:-60000}" \
-    -o "$S/$name.last.md" "$(cat "$context")" </dev/null >"$S/$name.log" 2>&1 &
-  echo $! >"$S/$name.pid" )
-sleep 2
-printf 'stream %s: pid %s effort %s\n  worktree %s\n  log %s\n  status: kill -0 $(cat %s/%s.pid)\n  handoffs: scripts/codex-stream.sh --check %s\n' \
-    "$name" "$(cat "$S/$name.pid")" "$effort" "$W" "$S/$name.log" "$S" "$name" "$name"
+    -o "$S/$name.last.md"
