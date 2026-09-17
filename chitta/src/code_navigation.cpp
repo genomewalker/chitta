@@ -45,11 +45,12 @@ std::vector<std::string> words(const std::string& text) {
     return out;
 }
 std::string language(const std::string& path) {
-    auto ext = fs::path(path).extension().string();
-    if (ext == ".c" || ext == ".h" || ext == ".cpp" || ext == ".hpp" || ext == ".cc" || ext == ".cxx" || ext == ".hxx") return "cpp";
-    if (ext == ".py" || ext == ".pyw") return "python";
-    if (ext == ".js" || ext == ".jsx" || ext == ".mjs" || ext == ".ts" || ext == ".tsx") return "javascript";
-    return ext;
+    auto lang = CodeIntel::detect_language(path);
+    // Saved indexes may outlive an optional parser configuration. Never fold
+    // all disabled/unknown languages into one resolution namespace.
+    if (lang.empty()) return fs::path(path).extension().empty() ? fs::path(path).filename().string() : fs::path(path).extension().string();
+    if (lang == "ocaml_interface") return "ocaml";
+    return lang == "typescript" ? "javascript" : lang;
 }
 std::string contents(const std::string& path) {
     std::ifstream in(path, std::ios::binary);
@@ -84,7 +85,7 @@ struct CodeNavigation::Impl {
     struct Edge {
         size_t from;
         int to;
-        std::string kind, surface, confidence, resolution;
+        std::string kind, surface, confidence, resolution, evidence_file;
         int line;
     };
     std::mutex mutex;
@@ -145,11 +146,11 @@ struct CodeNavigation::Impl {
         }
         average_length = nodes.empty() ? 1 : std::max(1.0, double(lengths) / nodes.size());
         std::set<std::tuple<size_t, int, std::string, std::string>> seen;
-        auto add = [&](size_t from, int to, const std::string& kind, const std::string& surface, int line, const std::string& resolution) {
+        auto add = [&](size_t from, int to, const std::string& kind, const std::string& surface, int line, const std::string& resolution, const std::string& evidence_file) {
             if (to == static_cast<int>(from)) return;
             if (!seen.emplace(from, to, kind, surface).second) return;
             auto id = edges.size();
-            edges.push_back({from, to, kind, surface, to < 0 ? "EXTRACTED" : "INFERRED", resolution, line});
+            edges.push_back({from, to, kind, surface, to < 0 ? "EXTRACTED" : "INFERRED", resolution, evidence_file, line});
             nodes[from].edges.push_back(id);
             if (to >= 0) nodes[to].edges.push_back(id);
         };
@@ -161,6 +162,24 @@ struct CodeNavigation::Impl {
                 int from = enclosing_cache[line];
                 if (from < 0) continue;
                 std::string target = raw["target"], kind = raw["kind"];
+                const auto derived = raw.value("derived", "");
+                if (kind == "inherits" && !derived.empty() && nodes[from].data.value("name", "") != derived) {
+                    std::vector<size_t> local;
+                    for (auto id : names[derived]) if (nodes[id].file == item.key()) local.push_back(id);
+                    if (local.size() == 1) from = static_cast<int>(local.front());
+                }
+                const auto source_name = raw.value("source_name", "");
+                if (!source_name.empty()) {
+                    std::vector<size_t> sources;
+                    for (auto id : names[source_name]) {
+                        const auto& source = nodes[id];
+                        const auto source_kind = source.data.value("kind", "");
+                        if (source.root == nodes[from].root && source.lang == nodes[from].lang &&
+                            (source_kind == "process" || source_kind == "workflow" || source_kind == "rule" || source_kind == "checkpoint" || source_kind == "target")) sources.push_back(id);
+                    }
+                    if (sources.size() != 1) continue; // A channel producer must resolve uniquely.
+                    from = static_cast<int>(sources.front());
+                }
                 std::vector<size_t> candidates;
                 if (kind == "imports") {
                     from = static_cast<int>(by_file[item.key()].back());
@@ -172,8 +191,24 @@ struct CodeNavigation::Impl {
                         for (const auto& entry : by_file) {
                             if (nodes[entry.second.front()].root != nodes[from].root) continue;
                             auto rel = fs::path(entry.first).lexically_relative(nodes[from].root).string();
-                            if (rel == module + ".py" || rel == target || rel == module + "/__init__.py")
+                            if (rel == target || (nodes[from].lang == "python" &&
+                                (rel == module + ".py" || rel == module + "/__init__.py")))
                                 candidates.push_back(entry.second.back());
+                        }
+                    }
+                    if (candidates.empty() && names.count(target)) {
+                        for (auto id : names[target]) {
+                            const auto& candidate = nodes[id];
+                            if (candidate.root == nodes[from].root && candidate.lang == nodes[from].lang &&
+                                candidate.data.value("kind", "") == "module") candidates.push_back(id);
+                        }
+                    }
+                } else if (kind == "references" && raw.value("file_reference", false)) {
+                    for (const auto& base : {fs::path(item.key()).parent_path(), fs::path(nodes[from].root)}) {
+                        auto relative = (base / target).lexically_normal().string();
+                        auto file = by_file.find(relative);
+                        if (file != by_file.end() && nodes[file->second.back()].root == nodes[from].root) {
+                            candidates.push_back(file->second.back()); break;
                         }
                     }
                 } else if (names.count(target)) {
@@ -196,7 +231,7 @@ struct CodeNavigation::Impl {
                         if (kind == "references") {
                             if (target.size() <= 3) continue;
                             auto candidate_kind = candidate.data.value("kind", "");
-                            if (candidate_kind == "variable" || candidate_kind == "file") continue;
+                            if ((candidate_kind == "variable" && candidate.lang != "hcl") || candidate_kind == "file") continue;
                             if (!parent.empty() && parent != caller_parent && candidate_kind != "class" && candidate_kind != "struct") continue;
                         }
                         candidates.push_back(id);
@@ -211,7 +246,7 @@ struct CodeNavigation::Impl {
                 int to = candidates.size() == 1 ? static_cast<int>(candidates[0]) : -1;
                 if (kind == "references" && to < 0) continue;
                 add(from, to, kind, target, raw.value("line", 1),
-                    to >= 0 ? "unique_name" : candidates.empty() ? "unresolved" : "AMBIGUOUS");
+                    to >= 0 ? "unique_name" : candidates.empty() ? "unresolved" : "AMBIGUOUS", item.key());
             }
         }
         labels.resize(nodes.size());
@@ -244,7 +279,7 @@ struct CodeNavigation::Impl {
         return {{"source", nodes[e.from].data["id"]},
             {"target", e.to < 0 ? json("external:" + e.surface) : nodes[e.to].data["id"]},
             {"kind", e.kind}, {"surface", e.surface}, {"confidence", e.confidence},
-            {"resolution", e.resolution}, {"file", nodes[e.from].file}, {"line", e.line},
+            {"resolution", e.resolution}, {"file", e.evidence_file}, {"line", e.line},
             {"evidence", "AST"}};
     }
     json render(const std::vector<size_t>& selected, const std::map<size_t, double>& scores = {}, bool commands = true) const {
@@ -370,7 +405,8 @@ void CodeNavigation::update(const std::string& root, const std::string& project,
             {"line_start", 1}, {"line_end", lines.size()}, {"doc", "File scope"}, {"body", body}});
         for (const auto* c : calls[path])
             file["edges"].push_back({{"kind", "calls"}, {"target", c->callee_leaf}, {"line", c->line},
-                {"receiver", c->receiver_text}, {"scope", c->scope_text}});
+                {"receiver", c->receiver_text}, {"scope", c->scope_text},
+                {"source_name", c->kind == CallKind::Channel ? c->caller_symbol : ""}});
         for (const auto* extracted : imports[path]) {
             const auto& c = *extracted;
             auto target = c.import_path;
@@ -378,9 +414,9 @@ void CodeNavigation::update(const std::string& root, const std::string& project,
             file["edges"].push_back({{"kind", "imports"}, {"target", target}, {"line", c.line}});
         }
         for (const auto* c : inherits[path])
-            file["edges"].push_back({{"kind", "inherits"}, {"target", c->base_name}, {"line", c->line}});
+            file["edges"].push_back({{"kind", "inherits"}, {"target", c->base_name}, {"derived", c->derived_name}, {"line", c->line}});
         for (const auto* c : references[path])
-            file["edges"].push_back({{"kind", "references"}, {"target", c->name}, {"line", c->line}});
+            file["edges"].push_back({{"kind", "references"}, {"target", c->name}, {"line", c->line}, {"file_reference", c->file_reference}});
         impl_->files[path] = std::move(file);
     }
     impl_->warning.clear(); impl_->rebuild(); impl_->save();

@@ -13,7 +13,859 @@
 
 extern char** environ;
 
+extern "C" const TSLanguage* tree_sitter_bash();
+extern "C" const TSLanguage* tree_sitter_r();
+extern "C" const TSLanguage* tree_sitter_julia();
+extern "C" const TSLanguage* tree_sitter_fortran();
+extern "C" const TSLanguage* tree_sitter_nextflow();
+extern "C" const TSLanguage* tree_sitter_snakemake();
+extern "C" const TSLanguage* tree_sitter_perl();
+extern "C" const TSLanguage* tree_sitter_make();
+extern "C" const TSLanguage* tree_sitter_cmake();
+extern "C" const TSLanguage* tree_sitter_sql();
+extern "C" const TSLanguage* tree_sitter_php();
+
+extern "C" const TSLanguage* tree_sitter_kotlin();
+
+extern "C" const TSLanguage* tree_sitter_scala();
+
+extern "C" const TSLanguage* tree_sitter_zig();
+
+extern "C" const TSLanguage* tree_sitter_hcl();
+
+extern "C" const TSLanguage* tree_sitter_ocaml();
+extern "C" const TSLanguage* tree_sitter_ocaml_interface();
+
+extern "C" const TSLanguage* tree_sitter_elixir();
+
+extern "C" const TSLanguage* tree_sitter_haskell();
+
+extern "C" const TSLanguage* tree_sitter_dockerfile();
+
 namespace chitta {
+const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
+    if (language == "bash") return tree_sitter_bash();
+    if (language == "r") return tree_sitter_r();
+    if (language == "julia") return tree_sitter_julia();
+    if (language == "fortran") return tree_sitter_fortran();
+    if (language == "nextflow") return tree_sitter_nextflow();
+    if (language == "snakemake") return tree_sitter_snakemake();
+    if (language == "perl") return tree_sitter_perl();
+    if (language == "make") return tree_sitter_make();
+    if (language == "cmake") return tree_sitter_cmake();
+    if (language == "sql") return tree_sitter_sql();
+#ifdef CHITTA_EXTRA_GRAMMARS
+    if (language == "php") return tree_sitter_php();
+    if (language == "kotlin") return tree_sitter_kotlin();
+    if (language == "scala") return tree_sitter_scala();
+    if (language == "zig") return tree_sitter_zig();
+    if (language == "hcl") return tree_sitter_hcl();
+    if (language == "ocaml") return tree_sitter_ocaml();
+    if (language == "ocaml_interface") return tree_sitter_ocaml_interface();
+    if (language == "elixir") return tree_sitter_elixir();
+    if (language == "haskell") return tree_sitter_haskell();
+    if (language == "dockerfile") return tree_sitter_dockerfile();
+#endif
+    return nullptr;
+}
+void CodeIntel::initialize_extended_parsers() {
+    for (const auto* language : {"bash", "r", "julia", "fortran", "nextflow", "snakemake", "perl", "make", "cmake", "sql", "kotlin", "scala", "zig", "hcl", "ocaml", "ocaml_interface", "elixir", "haskell", "dockerfile", "php"}) {
+        if (!extended_grammar(language)) continue; // Optional grammar group disabled.
+        auto* parser = ts_parser_new();
+        if (!ts_parser_set_language(parser, extended_grammar(language))) {
+            ts_parser_delete(parser);
+            throw std::runtime_error(std::string("unsupported grammar ABI: ") + language);
+        }
+        parsers_[language] = parser;
+    }
+}
+std::string CodeIntel::detect_extended_language(const std::string& path) {
+    auto ext = std::filesystem::path(path).extension().string();
+    if (ext == ".json" || ext == ".yaml" || ext == ".yml" || ext == ".toml") return "reference";
+    if (ext == ".sh" || ext == ".bash") return "bash";
+    auto filename = std::filesystem::path(path).filename().string();
+    if ((ext == ".kt" || ext == ".kts") && extended_grammar("kotlin")) return "kotlin";
+    if ((ext == ".scala" || ext == ".sc") && extended_grammar("scala")) return "scala";
+    if ((ext == ".zig") && extended_grammar("zig")) return "zig";
+    if ((ext == ".tf" || ext == ".tfvars" || ext == ".hcl") && extended_grammar("hcl")) return "hcl";
+    if (ext == ".ml" && extended_grammar("ocaml")) return "ocaml";
+    if (ext == ".mli" && extended_grammar("ocaml_interface")) return "ocaml_interface";
+    if ((ext == ".ex" || ext == ".exs") && extended_grammar("elixir")) return "elixir";
+    if ((ext == ".hs") && extended_grammar("haskell")) return "haskell";
+    if ((ext == ".dockerfile" || ext == ".Dockerfile" || filename == "Dockerfile" || filename == "dockerfile" || filename.starts_with("Dockerfile.")) && extended_grammar("dockerfile")) return "dockerfile";
+    if ((ext == ".php" || ext == ".phtml") && extended_grammar("php")) return "php";
+    if (ext == ".sql" || ext == ".ddl") return "sql";
+    if (ext == ".cmake" || filename == "CMakeLists.txt") return "cmake";
+    if (ext == ".mk" || ext == ".mak" || filename == "Makefile" || filename == "makefile" || filename == "GNUmakefile" || filename.rfind("Makefile.", 0) == 0) return "make";
+    if (ext == ".smk" || filename == "Snakefile" || filename == "snakefile") return "snakemake";
+    if (ext == ".pl" || ext == ".pm" || ext == ".t" || ext == ".perl") return "perl";
+    if (ext == ".nf") return "nextflow";
+    if (ext == ".jl") return "julia";
+    if (ext == ".R" || ext == ".r" || std::filesystem::path(path).filename() == ".Rprofile") return "r";
+    for (auto& c : ext) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    if (ext == ".f" || ext == ".for" || ext == ".f77" || ext == ".f90" || ext == ".f95" || ext == ".f03" || ext == ".f08") return "fortran";
+    return {};
+}
+
+void CodeIntel::extract_extended(TSNode root, const std::string& source,
+                                const std::string& path, const std::string& language,
+                                ExtractionResult& result) {
+    // Optional fields and error-recovery nodes are null during partial edits.
+    // Tree-sitter's C child/count APIs require a non-null node.
+    auto ast_type = [](TSNode node) { return ts_node_is_null(node) ? "" : ts_node_type(node); };
+    auto ast_child_count = [](TSNode node) { return ts_node_is_null(node) ? 0u : ts_node_child_count(node); };
+    auto ast_named_count = [](TSNode node) { return ts_node_is_null(node) ? 0u : ts_node_named_child_count(node); };
+    auto ast_child = [](TSNode node, uint32_t i) { return ts_node_is_null(node) ? TSNode{} : ts_node_child(node, i); };
+    auto ast_named_child = [](TSNode node, uint32_t i) { return ts_node_is_null(node) ? TSNode{} : ts_node_named_child(node, i); };
+    auto ast_find = [&](TSNode node, const char* type) { return ts_node_is_null(node) ? TSNode{} : find_child(node, type); };
+    if (language == "snakemake")
+        extract_python_full(root, source, path, result.symbols, result.callsites, result.type_relationships, result.imports);
+    auto field = [](TSNode node, const char* name) {
+        return ts_node_is_null(node) ? TSNode{} : ts_node_child_by_field_name(node, name, std::strlen(name));
+    };
+    auto text = [&](TSNode node) { return ts_node_is_null(node) ? std::string{} : node_text(node, source); };
+    auto literal = [&](TSNode node) {
+        auto value = text(node);
+        if (value.size() > 1 && (value.front() == '\'' || value.front() == '"') && value.back() == value.front())
+            value = value.substr(1, value.size() - 2);
+        return value;
+    };
+    auto define = [&](TSNode node, const std::string& name, const std::string& kind,
+                      const std::string& parent, TSNode body = TSNode{}) {
+        if (name.empty()) return;
+        auto signature = text(node);
+        if (!ts_node_is_null(body)) signature.resize(ts_node_start_byte(body) - ts_node_start_byte(node));
+        if (ts_node_is_null(body)) {
+            auto newline = signature.find('\n');
+            if (newline != std::string::npos) signature.resize(newline);
+        }
+        while (!signature.empty() && std::isspace(static_cast<unsigned char>(signature.back()))) signature.pop_back();
+        auto end = ts_node_end_point(node);
+        auto last = std::max(node_line(node), int(end.row) + (end.column ? 1 : 0));
+        result.symbols.push_back({kind, name, signature, path, node_line(node), last, parent});
+    };
+    auto call = [&](TSNode node, const std::string& name, const std::string& parent,
+                    const std::string& scope = "", const std::string& receiver = "") {
+        if (name.empty()) return;
+        Callsite site;
+        site.file_path = path; site.start_byte = ts_node_start_byte(node); site.end_byte = ts_node_end_byte(node);
+        site.line = node_line(node); site.column = ts_node_start_point(node).column + 1;
+        site.caller_symbol = parent; site.callee_text = name; site.callee_leaf = name;
+        site.scope_text = scope; site.receiver_text = receiver;
+        if (!scope.empty()) site.kind = CallKind::Qualified;
+        if (!receiver.empty()) site.kind = CallKind::MemberCall;
+        result.callsites.push_back(std::move(site));
+    };
+    std::function<std::string(TSNode)> leaf_name = [&](TSNode node) -> std::string {
+        if (ts_node_is_null(node)) return {};
+        std::string type = ast_type(node);
+        if (type == "identifier" || type == "type_identifier" || type == "name") return text(node);
+        auto count = ast_named_count(node);
+        if (!count) return {};
+        if (type == "field_expression" || type == "dot_expression") return leaf_name(ast_named_child(node, count - 1));
+        return leaf_name(ast_named_child(node, 0));
+    };
+    std::string perl_package;
+    std::map<std::string, std::string> haskell_signatures;
+    std::function<void(TSNode, std::string)> visit = [&](TSNode node, std::string parent) {
+        std::string type = ast_type(node);
+        if (language == "bash" && type == "function_definition") {
+            auto name = text(field(node, "name"));
+            auto body = field(node, "body");
+            auto signature = source.substr(ts_node_start_byte(node), ts_node_start_byte(body) - ts_node_start_byte(node));
+            while (!signature.empty() && std::isspace(static_cast<unsigned char>(signature.back()))) signature.pop_back();
+            result.symbols.push_back({"function", name, signature, path, node_line(node), node_end_line(node), parent});
+            parent = name;
+        }
+        if (language == "bash" && type == "command") {
+            auto name = text(field(node, "name"));
+            if (name == "source" || name == ".") {
+                auto target = literal(field(node, "argument"));
+                if (!target.empty()) result.imports.push_back({path, target, "", {}, uint32_t(node_line(node))});
+            } else if (!name.empty() && name.find_first_of("$`\"'") == std::string::npos) {
+                Callsite call;
+                call.file_path = path; call.start_byte = ts_node_start_byte(node); call.end_byte = ts_node_end_byte(node);
+                call.line = node_line(node); call.column = ts_node_start_point(node).column + 1;
+                call.caller_symbol = parent; call.callee_text = name; call.callee_leaf = name;
+                result.callsites.push_back(std::move(call));
+            }
+        }
+        if (language == "r") {
+            if (type == "binary_operator" || type == "argument") {
+                auto value = field(node, type == "argument" ? "value" : "rhs");
+                auto name = field(node, type == "argument" ? "name" : "lhs");
+                auto op = text(field(node, "operator"));
+                if (op == "->" || op == "->>") std::swap(value, name);
+                while (!ts_node_is_null(value) && std::strcmp(ast_type(value), "parenthesized_expression") == 0)
+                    value = ast_named_child(value, 0);
+                const bool assignment = type == "argument" || op == "<-" || op == "<<-" || op == "=" || op == "->" || op == "->>";
+                if (assignment && !ts_node_is_null(value) && std::strcmp(ast_type(value), "function_definition") == 0 && !ts_node_is_null(name)) {
+                    const bool class_scope = std::any_of(result.symbols.begin(), result.symbols.end(), [&](const auto& s) {
+                        return s.kind == "class" && s.name == parent;
+                    });
+                    // A named callback argument is not a global definition.
+                    // R6's public/private method lists do name class methods.
+                    if (type != "argument" || class_scope) {
+                        auto function = literal(name);
+                        define(node, function, class_scope ? "method" : "function", parent, field(value, "body"));
+                        parent = function;
+                    }
+                }
+            }
+            if (type == "call") {
+                auto function = field(node, "function");
+                auto args = field(node, "arguments");
+                auto function_type = ts_node_is_null(function) ? std::string{} : std::string(ast_type(function));
+                auto name = text(function), scope = std::string{}, receiver = std::string{};
+                if (function_type == "namespace_operator" || function_type == "extract_operator") {
+                    name = text(field(function, "rhs"));
+                    (function_type == "namespace_operator" ? scope : receiver) = text(field(function, "lhs"));
+                }
+                if (function_type == "identifier" || function_type == "namespace_operator" || function_type == "extract_operator")
+                    call(node, name, parent, scope, receiver);
+                auto first = field(ast_named_child(args, 0), "value");
+                if ((name == "source" || name == "library" || name == "require") && !ts_node_is_null(first))
+                    result.imports.push_back({path, literal(first), "", {}, uint32_t(node_line(node))});
+                if ((name == "setClass" || name == "R6Class") && !ts_node_is_null(first) && std::strcmp(ast_type(first), "string") == 0) {
+                    auto class_name = literal(first);
+                    define(node, class_name, "class", parent);
+                    parent = class_name;
+                    for (uint32_t i = 0; i < ast_named_count(args); ++i) {
+                        auto arg = ast_named_child(args, i);
+                        auto key = text(field(arg, "name"));
+                        if (key != "contains" && key != "inherit") continue;
+                        auto value = field(arg, "value");
+                        if (ts_node_is_null(value)) continue;
+                        auto base = literal(value);
+                        if (std::strcmp(ast_type(value), "identifier") == 0 || std::strcmp(ast_type(value), "string") == 0)
+                            result.type_relationships.push_back({class_name, base, "extends", path, uint32_t(node_line(arg))});
+                    }
+                }
+            }
+            if (type == "namespace_operator")
+                result.imports.push_back({path, text(field(node, "lhs")), "", {}, uint32_t(node_line(node))});
+        }
+        if (language == "julia") {
+            auto first = ast_named_child(node, 0);
+            if (type == "module_definition" || type == "struct_definition" || type == "abstract_definition") {
+                auto name = type == "module_definition" ? text(field(node, "name")) : leaf_name(first);
+                define(node, name, type == "module_definition" ? "module" : type == "struct_definition" ? "struct" : "class", parent);
+                if (type != "module_definition") {
+                    auto head = ast_named_child(first, 0);
+                    if (!ts_node_is_null(head) && std::strcmp(ast_type(head), "binary_expression") == 0 &&
+                        text(ast_named_child(head, 1)) == "<:")
+                        result.type_relationships.push_back({name, leaf_name(ast_named_child(head, 2)), "extends", path, uint32_t(node_line(node))});
+                }
+                parent = name;
+            }
+            if (type == "function_definition" || type == "macro_definition" ||
+                (type == "assignment" && !ts_node_is_null(first) && std::strcmp(ast_type(first), "call_expression") == 0)) {
+                auto name = leaf_name(first);
+                define(node, name, type == "macro_definition" ? "macro" : "function", parent);
+                if (!name.empty()) result.symbols.back().signature = text(first);
+                for (uint32_t i = 1; i < ast_named_count(node); ++i) visit(ast_named_child(node, i), name);
+                return; // The declaration's call-shaped signature is not a call.
+            }
+            if (type == "using_statement" || type == "import_statement") {
+                for (uint32_t i = 0; i < ast_named_count(node); ++i) {
+                    auto module = ast_named_child(node, i);
+                    std::vector<std::string> imported;
+                    if (std::strcmp(ast_type(module), "selected_import") == 0) {
+                        for (uint32_t j = 1; j < ast_named_count(module); ++j) imported.push_back(text(ast_named_child(module, j)));
+                        module = ast_named_child(module, 0);
+                    }
+                    result.imports.push_back({path, text(module), "", imported, uint32_t(node_line(node))});
+                }
+            }
+            if (type == "call_expression") {
+                auto name = leaf_name(first);
+                auto surface = text(first);
+                std::string scope, receiver;
+                auto dot = surface.rfind('.');
+                if (dot != std::string::npos) {
+                    receiver = surface.substr(0, dot);
+                    const bool module = std::any_of(result.imports.begin(), result.imports.end(), [&](const auto& i) { return i.import_path == receiver; }) ||
+                        std::any_of(result.symbols.begin(), result.symbols.end(), [&](const auto& s) { return s.kind == "module" && s.name == receiver; });
+                    if (module) { scope = receiver; receiver.clear(); }
+                }
+                call(node, name, parent, scope, receiver);
+                if (name == "include") {
+                    auto arg = ast_named_child(ast_named_child(node, 1), 0);
+                    if (!ts_node_is_null(arg) && std::strcmp(ast_type(arg), "string_literal") == 0)
+                        result.imports.push_back({path, literal(arg), "", {}, uint32_t(node_line(node))});
+                }
+            }
+        }
+        if (language == "fortran") {
+            auto folded = [](std::string value) {
+                for (auto& c : value) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                return value;
+            };
+            if (type == "module" || type == "subroutine" || type == "function" || type == "program" || type == "derived_type_definition") {
+                auto statement = ast_named_child(node, 0);
+                auto name_node = field(statement, "name");
+                if (ts_node_is_null(name_node)) name_node = ast_find(statement, type == "derived_type_definition" ? "type_name" : "name");
+                auto name = folded(text(name_node));
+                define(node, name, type == "derived_type_definition" ? "struct" : type == "program" ? "module" : type, parent);
+                if (!name.empty()) result.symbols.back().signature = text(statement);
+                auto base = field(statement, "base");
+                if (!ts_node_is_null(base))
+                    result.type_relationships.push_back({name, folded(leaf_name(base)), "extends", path, uint32_t(node_line(statement))});
+                parent = name;
+            }
+            if (type == "use_statement") {
+                auto module = ast_find(node, "module_name");
+                if (!ts_node_is_null(module)) result.imports.push_back({path, folded(text(module)), "", {}, uint32_t(node_line(node))});
+            }
+            if (type == "include_statement")
+                result.imports.push_back({path, literal(field(node, "path")), "", {}, uint32_t(node_line(node))});
+            if (type == "subroutine_call" || type == "call_expression") {
+                auto callee = type == "subroutine_call" ? field(node, "subroutine") : ast_named_child(node, 0);
+                auto name = folded(text(callee));
+                std::string receiver;
+                auto member = name.rfind('%');
+                if (member != std::string::npos) { receiver = name.substr(0, member); name = name.substr(member + 1); }
+                call(node, name, parent, "", receiver);
+            }
+        }
+        if (language == "nextflow") {
+            if (type == "process_definition" || type == "workflow_definition" || type == "function_definition") {
+                auto name_node = ast_find(node, "identifier");
+                if (ts_node_eq(name_node, field(node, "return_type"))) {
+                    for (uint32_t i = 0; i < ast_named_count(node); ++i) {
+                        auto child = ast_named_child(node, i);
+                        if (std::strcmp(ast_type(child), "identifier") == 0 && !ts_node_eq(child, name_node)) { name_node = child; break; }
+                    }
+                }
+                auto name = text(name_node);
+                if (name.empty() && type == "workflow_definition") name = "<workflow>";
+                define(node, name, type == "process_definition" ? "process" : type == "workflow_definition" ? "workflow" : "function", parent);
+                parent = name;
+            }
+            if (type == "include") {
+                auto target = ast_find(node, "string");
+                result.imports.push_back({path, literal(target), "", {}, uint32_t(node_line(node))});
+            }
+            auto channel = [&](TSNode evidence, const std::string& producer, const std::string& consumer) {
+                if (producer.empty() || consumer.empty()) return;
+                call(evidence, consumer, producer);
+                result.callsites.back().kind = CallKind::Channel;
+            };
+            if (type == "function_call") {
+                auto name = text(ast_named_child(node, 0));
+                call(node, name, parent);
+                for (uint32_t i = 1; i < ast_named_count(node); ++i) {
+                    auto argument = ast_named_child(node, i);
+                    while (!ts_node_is_null(argument) &&
+                        (std::strcmp(ast_type(argument), "simple_expression") == 0 || std::strcmp(ast_type(argument), "parenthesized_expression") == 0))
+                        argument = ast_named_child(argument, 0);
+                    if (!ts_node_is_null(argument) && std::strcmp(ast_type(argument), "process_output") == 0)
+                        channel(argument, text(ast_named_child(argument, 0)), name);
+                }
+            }
+            if (type == "pipe_expression") {
+                auto lhs = ast_named_child(node, 0);
+                auto rhs = ast_named_child(node, 1);
+                auto operation = ast_named_child(rhs, 0);
+                auto consumer = leaf_name(operation);
+                if (!ts_node_is_null(operation) && std::strcmp(ast_type(operation), "identifier") == 0)
+                    call(operation, consumer, parent);
+                std::string producer;
+                if (!ts_node_is_null(lhs) && std::strcmp(ast_type(lhs), "pipe_expression") == 0)
+                    producer = leaf_name(ast_named_child(lhs, 1));
+                else if (!ts_node_is_null(lhs) && std::strcmp(ast_type(lhs), "process_output") == 0)
+                    producer = text(ast_named_child(lhs, 0));
+                channel(node, producer, consumer);
+            }
+            if (type == "method_call") {
+                auto receiver = text(ast_named_child(node, 0));
+                std::string name;
+                for (uint32_t i = 1; i < ast_child_count(node); ++i) {
+                    auto child = ast_child(node, i);
+                    if (std::strcmp(ast_type(child), "(") == 0 || std::strcmp(ast_type(child), "closure") == 0) break;
+                    if (std::strcmp(ast_type(child), "identifier") == 0) name = text(child);
+                }
+                call(node, name, parent, "", receiver);
+            }
+            if (type == "channel_of" || type == "channel_from" || type == "channel_from_list" ||
+                type == "channel_value" || type == "channel_factory") {
+                auto name = type == "channel_factory" ? text(ast_find(node, "identifier")) :
+                    type == "channel_from_list" ? std::string("fromList") : type.substr(8);
+                call(node, name, parent, "Channel");
+            }
+        }
+        if (language == "snakemake") {
+            if (type == "rule_definition" || type == "checkpoint_definition" || type == "module_definition") {
+                auto name = text(field(node, "name"));
+                if (name.empty()) name = "<rule>";
+                define(node, name, type == "module_definition" ? "module" : type == "checkpoint_definition" ? "checkpoint" : "rule", parent, field(node, "body"));
+                parent = name;
+            }
+            if (type == "directive") {
+                auto directive = text(ast_child(node, 0));
+                if (!parent.empty() && (directive == "input" || directive == "output" || directive == "params")) {
+                    define(node, parent + "." + directive, directive, parent);
+                    result.symbols.back().signature = text(node);
+                }
+                if (directive == "include" || directive == "snakefile" || directive == "configfile") {
+                    auto value = ast_named_child(field(node, "arguments"), 0);
+                    if (!ts_node_is_null(value) && std::strcmp(ast_type(value), "string") == 0)
+                        result.imports.push_back({path, literal(value), "", {}, uint32_t(node_line(node))});
+                }
+            }
+            if (type == "attribute" && text(field(node, "attribute")) == "output" && !parent.empty()) {
+                auto producer = field(node, "object");
+                if (!ts_node_is_null(producer) && std::strcmp(ast_type(producer), "attribute") == 0 && text(field(producer, "object")) == "rules") {
+                    call(node, parent, text(field(producer, "attribute")));
+                    result.callsites.back().kind = CallKind::Channel;
+                }
+            }
+        }
+        if (language == "perl") {
+            if (type == "package_statement") {
+                auto previous = perl_package;
+                perl_package = text(field(node, "name"));
+                define(node, perl_package, "module", "");
+                auto block = ast_find(node, "block");
+                if (!ts_node_is_null(block)) {
+                    visit(block, perl_package);
+                    perl_package = previous;
+                    return;
+                }
+            }
+            if (type == "subroutine_declaration_statement") {
+                auto name = text(field(node, "name")), scope = perl_package;
+                auto split = name.rfind("::");
+                if (split != std::string::npos) { scope = name.substr(0, split); name = name.substr(split + 2); }
+                define(node, name, "function", scope, field(node, "body"));
+                parent = name;
+            }
+            if (type == "use_statement") {
+                auto module = text(field(node, "module"));
+                result.imports.push_back({path, module, "", {}, uint32_t(node_line(node))});
+                if ((module == "parent" || module == "base") && !perl_package.empty()) {
+                    for (uint32_t i = 0; i < ast_named_count(node); ++i) {
+                        auto value = ast_named_child(node, i);
+                        if (std::strcmp(ast_type(value), "string_literal") == 0)
+                            result.type_relationships.push_back({perl_package, literal(value), "extends", path, uint32_t(node_line(node))});
+                    }
+                }
+            }
+            if (type == "require_expression") {
+                auto value = ast_named_child(node, 0);
+                if (!ts_node_is_null(value)) result.imports.push_back({path, literal(value), "", {}, uint32_t(node_line(node))});
+            }
+            if (type == "function_call_expression" || type == "ambiguous_function_call_expression") {
+                auto name = text(field(node, "function")), scope = std::string{};
+                auto split = name.rfind("::");
+                if (split != std::string::npos) { scope = name.substr(0, split); name = name.substr(split + 2); }
+                call(node, name, parent, scope);
+            }
+            if (type == "method_call_expression")
+                call(node, text(field(node, "method")), parent, "", text(field(node, "invocant")));
+        }
+        if (language == "make") {
+            if (type == "rule") {
+                static const std::unordered_set<std::string> special = {".PHONY", ".SUFFIXES", ".DEFAULT", ".PRECIOUS", ".INTERMEDIATE", ".SECONDARY", ".SECONDEXPANSION", ".DELETE_ON_ERROR", ".IGNORE", ".LOW_RESOLUTION_TIME", ".SILENT", ".EXPORT_ALL_VARIABLES", ".NOTPARALLEL", ".ONESHELL", ".POSIX"};
+                auto targets = ast_find(node, "targets");
+                for (uint32_t i = 0; i < ast_named_count(targets); ++i) {
+                    auto target = ast_named_child(targets, i);
+                    auto name = text(target);
+                    if (std::strcmp(ast_type(target), "word") != 0 || special.count(name)) continue;
+                    define(node, name, "target", parent);
+                    for (const auto* edge : {"normal", "order_only"}) {
+                        auto dependencies = field(node, edge);
+                        for (uint32_t j = 0; j < ast_named_count(dependencies); ++j) {
+                            auto dependency = ast_named_child(dependencies, j);
+                            if (std::strcmp(ast_type(dependency), "word") != 0) continue;
+                            call(dependency, text(dependency), name);
+                            result.callsites.back().kind = CallKind::Channel;
+                        }
+                    }
+                }
+            }
+            if (type == "define_directive") {
+                auto name = text(field(node, "name"));
+                define(node, name, "function", parent, field(node, "value"));
+                parent = name;
+            }
+            if (type == "include_directive") {
+                auto files = field(node, "filenames");
+                for (uint32_t i = 0; i < ast_named_count(files); ++i) {
+                    auto file = ast_named_child(files, i);
+                    if (std::strcmp(ast_type(file), "word") == 0)
+                        result.imports.push_back({path, text(file), "", {}, uint32_t(node_line(node))});
+                }
+            }
+            if (type == "function_call" || type == "shell_function") {
+                auto name = text(field(node, "function"));
+                if (name == "call") {
+                    auto args = ast_find(node, "arguments");
+                    name = text(field(args, "argument"));
+                    name = name.substr(0, name.find(','));
+                    auto begin = name.find_first_not_of(" \t");
+                    name = begin == std::string::npos ? "" : name.substr(begin, name.find_last_not_of(" \t") - begin + 1);
+                }
+                if (name.find('$') == std::string::npos) call(node, name, parent);
+            }
+        }
+        if (language == "cmake") {
+            auto args_of = [&](TSNode command) {
+                std::vector<std::string> args;
+                auto list = ast_find(command, "argument_list");
+                for (uint32_t i = 0; i < ast_named_count(list); ++i) args.push_back(literal(ast_named_child(list, i)));
+                return args;
+            };
+            auto lowercase = [](std::string value) {
+                for (auto& c : value) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                return value;
+            };
+            if (type == "function_def" || type == "macro_def") {
+                auto args = args_of(ast_named_child(node, 0));
+                if (!args.empty()) {
+                    auto name = lowercase(args[0]);
+                    define(node, name, type == "macro_def" ? "macro" : "function", parent, ast_find(node, "body"));
+                    parent = name;
+                }
+            }
+            if (type == "normal_command") {
+                auto name = lowercase(text(ast_find(node, "identifier")));
+                auto args = args_of(node);
+                call(node, name, parent);
+                if (!args.empty() && args[0].find('$') == std::string::npos) {
+                    if (name == "include" || name == "add_subdirectory") {
+                        auto target = args[0];
+                        if (name == "add_subdirectory") target += "/CMakeLists.txt";
+                        else if (std::filesystem::path(target).extension().empty()) target += ".cmake";
+                        result.imports.push_back({path, target, "", {}, uint32_t(node_line(node))});
+                    }
+                    if (name == "add_library" || name == "add_executable" || name == "add_custom_target")
+                        define(node, args[0], "target", parent);
+                    if (name == "target_link_libraries" || name == "add_dependencies")
+                        for (size_t i = 1; i < args.size(); ++i)
+                            if (args[i] != "PRIVATE" && args[i] != "PUBLIC" && args[i] != "INTERFACE" && args[i].find('$') == std::string::npos) {
+                                call(node, args[i], args[0]);
+                                result.callsites.back().kind = CallKind::Channel;
+                            }
+                }
+            }
+        }
+        if (language == "sql") {
+            auto object_name = [&](TSNode object) {
+                auto name = text(field(object, "name"));
+                if (name.size() > 1 && name.front() == '\"' && name.back() == '\"') return name.substr(1, name.size() - 2);
+                for (auto& c : name) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                return name;
+            };
+            if (type == "create_table" || type == "create_view" || type == "create_function" || type == "create_procedure") {
+                auto name = object_name(ast_find(node, "object_reference"));
+                auto kind = type.substr(7);
+                define(node, name, kind, parent);
+                parent = name;
+            }
+            if (type == "invocation") call(node, object_name(ast_find(node, "object_reference")), parent);
+            if (type == "object_reference") {
+                auto name = object_name(node);
+                auto owner = ts_node_parent(node);
+                auto owner_type = std::string(ast_type(owner));
+                bool declaration = owner_type.starts_with("create_") && ts_node_eq(ast_find(owner, "object_reference"), node);
+                if (!declaration && !name.empty()) result.references.push_back({path, name, uint32_t(node_line(node))});
+            }
+        }
+        if (language == "php") {
+            if (type == "function_definition" || type == "method_declaration" || type == "class_declaration" || type == "interface_declaration" || type == "trait_declaration" || type == "enum_declaration") {
+                auto name = text(field(node, "name"));
+                auto kind = type == "function_definition" ? "function" : type == "method_declaration" ? "method" : type.substr(0, type.find('_'));
+                define(node, name, kind, parent, field(node, "body"));
+                for (const auto* clause : {"base_clause", "class_interface_clause"}) {
+                    auto bases = ast_find(node, clause);
+                    for (uint32_t i = 0; i < ast_named_count(bases); ++i)
+                        result.type_relationships.push_back({name, text(ast_named_child(bases, i)), "inherits", path, uint32_t(node_line(bases))});
+                }
+                parent = name;
+            }
+            if (type == "function_call_expression") call(node, text(field(node, "function")), parent);
+            if (type == "member_call_expression" || type == "nullsafe_member_call_expression") {
+                auto receiver = text(field(node, "object"));
+                if (receiver == "$this") receiver = "this";
+                call(node, text(field(node, "name")), parent, "", receiver);
+            }
+            if (type == "scoped_call_expression") call(node, text(field(node, "name")), parent, text(field(node, "scope")));
+            if (type == "include_expression" || type == "include_once_expression" || type == "require_expression" || type == "require_once_expression") {
+                auto argument = ast_named_child(node, 0);
+                if (std::string(ast_type(argument)) == "string")
+                    result.imports.push_back({path, literal(argument), "", {}, uint32_t(node_line(node))});
+            }
+            if (type == "namespace_use_declaration") {
+                auto declaration = text(node);
+                result.imports.push_back({path, declaration.substr(4, declaration.size() - 5), "", {}, uint32_t(node_line(node))});
+            }
+        }
+        if (language == "kotlin") {
+            if (type == "function_declaration" || type == "class_declaration" || type == "object_declaration") {
+                auto name = text(ast_find(node, type == "function_declaration" ? "simple_identifier" : "type_identifier"));
+                std::string kind = type == "function_declaration" ? "function" : type == "object_declaration" ? "object" : "class";
+                for (uint32_t i = 0; i < ast_child_count(node); ++i)
+                    if (std::string(ast_type(ast_child(node, i))) == "interface") kind = "interface";
+                define(node, name, kind, parent, ast_find(node, type == "function_declaration" ? "function_body" : "class_body"));
+                for (uint32_t i = 0; i < ast_named_count(node); ++i) {
+                    auto child = ast_named_child(node, i);
+                    if (std::string(ast_type(child)) == "delegation_specifier") {
+                        auto base = leaf_name(child);
+                        if (!base.empty()) result.type_relationships.push_back({name, base, "inherits", path, uint32_t(node_line(child))});
+                    }
+                }
+                parent = name;
+            }
+            if (type == "call_expression") {
+                auto fn = ast_named_child(node, 0);
+                if (std::string(ast_type(fn)) == "simple_identifier") call(node, text(fn), parent);
+                else if (std::string(ast_type(fn)) == "navigation_expression") {
+                    auto suffix = ast_named_child(fn, ast_named_count(fn) - 1);
+                    call(node, text(ast_named_child(suffix, ast_named_count(suffix) - 1)), parent, "", text(ast_named_child(fn, 0)));
+                }
+            }
+            if (type == "import_header") result.imports.push_back({path, text(ast_find(node, "identifier")), "", {}, uint32_t(node_line(node))});
+        }
+        if (language == "scala") {
+            if (type == "function_definition" || type == "function_declaration" || type == "class_definition" || type == "object_definition" || type == "trait_definition" || type == "enum_definition") {
+                auto name = text(field(node, "name"));
+                define(node, name, type.starts_with("function") ? "function" : type.substr(0, type.find('_')), parent, field(node, "body"));
+                auto bases = field(node, "extend");
+                for (uint32_t i = 0; i < ast_child_count(bases); ++i) {
+                    auto child = ast_child(bases, i);
+                    auto field_name = ts_node_field_name_for_child(bases, i);
+                    if (field_name && std::string(field_name) == "type") result.type_relationships.push_back({name, text(child), "inherits", path, uint32_t(node_line(child))});
+                }
+                parent = name;
+            }
+            if (type == "call_expression") {
+                auto fn = field(node, "function");
+                if (std::string(ast_type(fn)) == "field_expression") call(node, text(field(fn, "field")), parent, "", text(field(fn, "value")));
+                else call(node, text(fn), parent);
+            }
+            if (type == "import_declaration") {
+                auto target = text(node).substr(7);
+                while (!target.empty() && (target.back() == ';' || std::isspace(static_cast<unsigned char>(target.back())))) target.pop_back();
+                result.imports.push_back({path, target, "", {}, uint32_t(node_line(node))});
+            }
+        }
+        if (language == "zig") {
+            if (type == "function_declaration") {
+                auto name = text(field(node, "name"));
+                define(node, name, "function", parent, field(node, "body")); parent = name;
+            }
+            if (type == "variable_declaration") {
+                auto name = text(ast_find(node, "identifier"));
+                for (const auto* kind : {"struct_declaration", "enum_declaration", "union_declaration", "opaque_declaration"}) {
+                    auto body = ast_find(node, kind);
+                    if (!ts_node_is_null(body)) {
+                        define(node, name, std::string(kind).substr(0, std::string(kind).find('_')), parent);
+                        parent = name; break;
+                    }
+                }
+            }
+            if (type == "call_expression") {
+                auto fn = field(node, "function");
+                if (std::string(ast_type(fn)) == "field_expression") call(node, text(field(fn, "member")), parent, "", text(field(fn, "object")));
+                else call(node, text(fn), parent);
+            }
+            if (type == "builtin_function") {
+                auto name = text(ast_find(node, "builtin_identifier"));
+                call(node, name, parent);
+                if (name == "@import" || name == "@cInclude") {
+                    auto arg = ast_named_child(ast_find(node, "arguments"), 0);
+                    if (std::string(ast_type(arg)) == "string") result.imports.push_back({path, literal(arg), "", {}, uint32_t(node_line(node))});
+                }
+            }
+        }
+        if (language == "hcl") {
+            if (type == "block" || type == "one_line_block") {
+                auto kind = text(ast_named_child(node, 0));
+                std::vector<std::string> labels;
+                for (uint32_t i = 1; i < ast_named_count(node); ++i) {
+                    auto child = ast_named_child(node, i);
+                    if (std::string(ast_type(child)) != "string_literal") break;
+                    labels.push_back(literal(child));
+                }
+                auto name = kind;
+                if (kind == "variable" && !labels.empty()) name = "var." + labels[0];
+                else if (kind == "resource" && labels.size() == 2) name = labels[0] + "." + labels[1];
+                else for (const auto& label : labels) name += "." + label;
+                if (kind == "variable" || kind == "resource" || kind == "data" || kind == "module" || kind == "output" || kind == "terraform" || kind == "locals") {
+                    define(node, name, kind, parent, ast_find(node, "body")); parent = name;
+                }
+            }
+            if (type == "attribute" && parent.starts_with("module.") && text(ast_find(node, "identifier")) == "source") {
+                auto target = literal(ast_find(node, "expression"));
+                if (!target.empty() && target.find('$') == std::string::npos) result.imports.push_back({path, target, "", {}, uint32_t(node_line(node))});
+            }
+            if (type == "function_call") call(node, text(ast_find(node, "identifier")), parent);
+            if (type == "expr_term" && !ts_node_is_null(ast_find(node, "get_attr"))) {
+                auto target = text(node);
+                target.erase(std::remove_if(target.begin(), target.end(), [](unsigned char c) { return std::isspace(c); }), target.end());
+                auto first = target.find('.');
+                auto end = first == std::string::npos ? first : target.find('.', first + 1);
+                if (target.starts_with("data.") && end != std::string::npos) end = target.find('.', end + 1);
+                target = target.substr(0, end);
+                if (!target.empty()) result.references.push_back({path, target, uint32_t(node_line(node))});
+            }
+        }
+        if ((language == "ocaml" || language == "ocaml_interface")) {
+            std::string name, kind;
+            if (type == "let_binding") {
+                auto pattern = field(node, "pattern");
+                if (std::string(ast_type(pattern)) == "value_name") {
+                    name = text(pattern);
+                    kind = !ts_node_is_null(ast_find(node, "parameter")) || std::string(ast_type(field(node, "body"))) == "function_expression" ? "function" : "variable";
+                }
+            }
+            if (type == "module_binding") { name = text(ast_find(node, "module_name")); kind = "module"; }
+            if (type == "type_binding") { name = text(field(node, "name")); kind = "type"; }
+            if (type == "class_binding") { name = text(ast_find(node, "class_name")); kind = "class"; }
+            if (type == "value_specification") { name = text(ast_find(node, "value_name")); kind = "function"; }
+            if (type == "method_specification") { name = text(ast_find(node, "method_name")); kind = "method"; }
+            if (type == "method_definition") { name = text(ast_find(node, "method_name")); kind = "method"; }
+            if (!name.empty()) { define(node, name, kind, parent, field(node, "body")); parent = name; }
+            if (type == "application_expression") {
+                auto fn = field(node, "function");
+                auto scope = ast_find(fn, "module_path");
+                call(node, text(ast_named_child(fn, ast_named_count(fn) - 1)), parent, text(scope));
+            }
+            if (type == "open_module" || type == "open_module_signature" || type == "include_module") result.imports.push_back({path, text(field(node, "module")), "", {}, uint32_t(node_line(node))});
+            if (type == "inheritance_definition") {
+                auto base = text(field(node, "class"));
+                if (!base.empty()) result.type_relationships.push_back({parent, base, "inherits", path, uint32_t(node_line(node))});
+            }
+        }
+        if (language == "elixir" && type == "call") {
+            auto target = field(node, "target");
+            auto name = text(target);
+            auto arguments = ast_find(node, "arguments");
+            auto first = ast_named_child(arguments, 0);
+            auto body = ast_find(node, "do_block");
+            if (name == "defmodule" || name == "defprotocol") {
+                auto declared = text(first);
+                define(node, declared, name == "defprotocol" ? "interface" : "module", parent, body);
+                if (!ts_node_is_null(body)) visit(body, declared);
+                return;
+            }
+            if (name == "def" || name == "defp" || name == "defmacro" || name == "defmacrop") {
+                auto head = first;
+                if (std::string(ast_type(head)) == "binary_operator") head = field(head, "left");
+                auto declared = text(std::string(ast_type(head)) == "call" ? field(head, "target") : head);
+                auto inline_body = ast_find(arguments, "keywords");
+                define(node, declared, name.starts_with("defmacro") ? "macro" : "function", parent, ts_node_is_null(body) ? inline_body : body);
+                if (!ts_node_is_null(body)) visit(body, declared);
+                if (!ts_node_is_null(inline_body)) visit(inline_body, declared);
+                return; // Function heads are declarations, not calls.
+            }
+            if (name == "import" || name == "alias" || name == "require" || name == "use")
+                result.imports.push_back({path, text(first), "", {}, uint32_t(node_line(node))});
+            else if (std::string(ast_type(target)) == "dot") {
+                auto left = field(target, "left");
+                auto scope = std::string(ast_type(left)) == "alias" ? text(left) : "";
+                call(node, text(field(target, "right")), parent, scope, scope.empty() ? text(left) : "");
+            } else call(node, name, parent);
+        }
+        if (language == "haskell") {
+            if (type == "signature") haskell_signatures[text(field(node, "name"))] = text(node);
+            if (type == "instance") {
+                auto base = text(field(node, "name"));
+                auto name = base + " " + text(field(node, "patterns"));
+                define(node, name, "instance", parent, field(node, "declarations"));
+                result.type_relationships.push_back({name, base, "implements", path, uint32_t(node_line(node))}); parent = name;
+            }
+            if (type == "function" && !ts_node_is_null(field(node, "name"))) {
+                auto name = text(field(node, "name"));
+                define(node, name, "function", parent, field(node, "match"));
+                if (haskell_signatures.count(name)) result.symbols.back().signature = haskell_signatures[name];
+                parent = name;
+            }
+            if (type == "data_type" || type == "newtype" || type == "type_synomym" || type == "class") {
+                auto name = text(field(node, "name"));
+                define(node, name, type == "class" ? "class" : "type", parent); parent = name;
+            }
+            if (type == "apply") {
+                bool pattern = false;
+                for (auto owner = ts_node_parent(node); !ts_node_is_null(owner); owner = ts_node_parent(owner)) {
+                    auto owner_type = std::string(ast_type(owner));
+                    if (owner_type == "patterns" || owner_type == "type_patterns") { pattern = true; break; }
+                    if (owner_type == "function") break;
+                }
+                if (pattern) return;
+                auto fn = field(node, "function");
+                while (std::string(ast_type(fn)) == "apply") fn = field(fn, "function");
+                auto name = text(fn);
+                auto split = name.rfind('.');
+                call(node, split == std::string::npos ? name : name.substr(split + 1), parent,
+                    split == std::string::npos ? "" : name.substr(0, split));
+            }
+            if (type == "import") result.imports.push_back({path, text(field(node, "module")), "", {}, uint32_t(node_line(node))});
+        }
+        if (language == "dockerfile") {
+            if (type == "from_instruction") {
+                auto image = ast_find(node, "image_spec");
+                auto name = text(field(node, "as"));
+                if (name.empty()) name = "stage@" + std::to_string(node_line(node));
+                define(node, name, "stage", "");
+                auto last = node_end_line(root);
+                for (uint32_t i = 0; i < ast_named_count(root); ++i) {
+                    auto next = ast_named_child(root, i);
+                    if (std::string(ast_type(next)) == "from_instruction" && node_line(next) > node_line(node)) { last = node_line(next) - 1; break; }
+                }
+                result.symbols.back().line_end = last;
+                result.imports.push_back({path, text(image), "", {}, uint32_t(node_line(node))});
+                result.references.push_back({path, text(image), uint32_t(node_line(node))});
+            }
+            if (type == "copy_instruction" || type == "add_instruction") {
+                std::vector<TSNode> files;
+                bool from_stage = false;
+                for (uint32_t i = 0; i < ast_named_count(node); ++i) {
+                    auto child = ast_named_child(node, i);
+                    if (std::string(ast_type(child)) == "path") files.push_back(child);
+                    if (std::string(ast_type(child)) == "param" && text(child).starts_with("--from=")) {
+                        auto target = text(child).substr(7);
+                        if (!target.empty() && target.size() <= 6 && std::all_of(target.begin(), target.end(), [](unsigned char c) { return std::isdigit(c); })) {
+                            auto ordinal = std::stoul(target);
+                            for (uint32_t n = 0; n < ast_named_count(root); ++n) {
+                                auto stage = ast_named_child(root, n);
+                                if (std::string(ast_type(stage)) != "from_instruction") continue;
+                                if (ordinal-- == 0) {
+                                    target = text(field(stage, "as"));
+                                    if (target.empty()) target = "stage@" + std::to_string(node_line(stage));
+                                    break;
+                                }
+                            }
+                        }
+                        result.references.push_back({path, target, uint32_t(node_line(node))}); from_stage = true;
+                    }
+                }
+                // The final path is the destination, not a repository input.
+                if (!from_stage) for (size_t i = 0; i + 1 < files.size(); ++i)
+                    result.imports.push_back({path, literal(files[i]), "", {}, uint32_t(node_line(node))});
+            }
+        }
+        for (uint32_t i = 0; i < ast_named_count(node); ++i) visit(ast_named_child(node, i), parent);
+    };
+    visit(root, "");
+    // Shell command syntax alone cannot distinguish an executable from a
+    // function. Keep literal calls as extracted evidence; graph resolution
+    // only binds them when a matching function exists in the indexed scope.
+}
+
+void CodeIntel::extract_file_reference(TSNode node, const std::string& source,
+                                    const std::string& path, ExtractionResult& result) {
+    std::string type = ts_node_type(node);
+    if ((type.find("string") != std::string::npos || type == "quoted_argument" || type == "word") && ts_node_end_byte(node) - ts_node_start_byte(node) < 4096) {
+        auto value = node_text(node, source);
+        if (value.size() > 1 && (value.front() == '\"' || value.front() == '\'') && value.back() == value.front()) value = value.substr(1, value.size() - 2);
+        auto extension = std::filesystem::path(value).extension().string();
+        if ((extension == ".json" || extension == ".yaml" || extension == ".yml" || extension == ".toml") && value.find_first_of("$*\n\r") == std::string::npos)
+            result.references.push_back({path, value, uint32_t(node_line(node)), true});
+    }
+}
+
 namespace {
 using json = nlohmann::json;
 std::string lower(std::string s) {
@@ -126,10 +978,15 @@ std::vector<std::string> CodeIntel::collect_source_files(
         files.push_back(candidate.string());
     };
     if (!root.empty()) {
-        auto listed = git_output({"-C", root, "ls-files", "-z", "--cached", "--others", "--exclude-standard"});
-        std::vector<std::string> ignored_args = {"-C", root, "ls-files", "-z", "--cached", "--others", "--ignored", "--exclude-standard"};
-        if (fs::is_regular_file(fs::path(root) / ".chittaignore"))
-            ignored_args.push_back("--exclude-from=" + (fs::path(root) / ".chittaignore").string());
+        std::vector<std::string> listed_args = {"-C", root, "ls-files", "-z", "--cached", "--others", "--exclude-standard"};
+        std::vector<std::string> ignored_args = {"-C", root, "ls-files", "-z", "--cached", "--ignored", "--exclude-standard"};
+        if (fs::is_regular_file(fs::path(root) / ".chittaignore")) {
+            auto ignore = "--exclude-from=" + (fs::path(root) / ".chittaignore").string();
+            listed_args.push_back(ignore); ignored_args.push_back(ignore);
+        }
+        // Untracked ignores are already excluded by the first listing. Asking
+        // Git to enumerate them again walks potentially huge build caches.
+        auto listed = git_output(listed_args);
         std::unordered_set<std::string> ignored;
         std::istringstream excluded(git_output(ignored_args));
         for (std::string rel; std::getline(excluded, rel, '\0');) ignored.insert(rel);

@@ -1,0 +1,8 @@
+{
+  "file": "navigation.jl", "language": "julia",
+  "symbols": {"Reads": "module", "AbstractRead": "class", "Read": "struct", "normalize": "function", "score": "function"},
+  "signatures": {"normalize": "normalize(x::Vector{Float64})", "score": "score(x)"},
+  "calls": ["norm", "helper", "normalize"],
+  "imports": ["Statistics", "LinearAlgebra", "helpers.jl"],
+  "inherits": ["AbstractRead"]
+}

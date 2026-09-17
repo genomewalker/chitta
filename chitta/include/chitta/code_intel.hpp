@@ -93,7 +93,8 @@ enum class CallKind {
     New,         // new Foo(...)
     Ctor,        // Foo x(...), Foo{...}, Foo(...) temporaries
     Indirect,    // (*fp)(...), fp(...), unknown callee
-    LambdaCall   // []{}(...)
+    LambdaCall,  // []{}(...)
+    Channel      // Nextflow producer output routed to a consumer
 };
 
 inline std::string call_kind_to_string(CallKind kind) {
@@ -105,6 +106,7 @@ inline std::string call_kind_to_string(CallKind kind) {
         case CallKind::Ctor: return "ctor";
         case CallKind::Indirect: return "indirect";
         case CallKind::LambdaCall: return "lambda_call";
+        case CallKind::Channel: return "channel";
     }
     return "unknown";
 }
@@ -177,6 +179,7 @@ struct CodeReference {
     std::string file_path;
     std::string name;
     uint32_t line;
+    bool file_reference = false;
 };
 
 // Combined extraction result
@@ -225,6 +228,7 @@ public:
 
         parsers_["lua"] = ts_parser_new();
         ts_parser_set_language(parsers_["lua"], tree_sitter_lua());
+        initialize_extended_parsers();
     }
 
     ~CodeIntel() {
@@ -234,7 +238,7 @@ public:
     }
 
     // Detect language from file extension
-    std::string detect_language(const std::string& path) {
+    static std::string detect_language(const std::string& path) {
         std::filesystem::path p(path);
         std::string ext = p.extension().string();
 
@@ -254,8 +258,10 @@ public:
         if (ext == ".lua") return "lua";
         if (ext == ".md" || ext == ".markdown" || ext == ".mdown") return "markdown";
 
-        return "";
+        return detect_extended_language(path);
     }
+
+    static const TSLanguage* extended_grammar(const std::string& language);
 
     // Each chunk ends before the next heading. Hierarchical names distinguish
     // repeated child headings; occurrence suffixes distinguish repeated siblings.
@@ -342,6 +348,7 @@ public:
         std::string lang = detect_language(path);
         if (lang.empty()) return symbols;
         if (lang == "markdown") return extract_markdown(path);
+        if (extended_grammar(lang)) return extract_file_full(path).symbols;
 
         auto it = parsers_.find(lang);
         if (it == parsers_.end()) return symbols;
@@ -443,6 +450,8 @@ public:
         } else if (lang == "lua") {
             extract_lua_full(root, source, path, result.symbols, result.callsites,
                             result.type_relationships, result.imports);
+        } else if (extended_grammar(lang)) {
+            extract_extended(root, source, path, lang, result);
         } else {
             // Languages without full extraction yet - symbols only
             if (lang == "java") {
@@ -493,6 +502,7 @@ public:
             std::string type = ts_node_type(node);
             if (type == "identifier" || type == "type_identifier" || type == "field_identifier")
                 result.references.push_back({path, node_text(node, source), static_cast<uint32_t>(node_line(node))});
+            extract_file_reference(node, source, path, result);
             for (uint32_t n = 0; n < ts_node_named_child_count(node); ++n)
                 pending.push_back(ts_node_named_child(node, n));
         }
@@ -609,6 +619,11 @@ public:
 
 private:
     std::unordered_map<std::string, TSParser*> parsers_;
+    void initialize_extended_parsers();
+    static std::string detect_extended_language(const std::string& path);
+    void extract_file_reference(TSNode node, const std::string& source, const std::string& path, ExtractionResult& result);
+    void extract_extended(TSNode root, const std::string& source, const std::string& path,
+                          const std::string& language, ExtractionResult& result);
 
     // Get text for a node
     std::string node_text(TSNode node, const std::string& source) {

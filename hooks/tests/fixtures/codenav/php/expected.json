@@ -1,0 +1,24 @@
+{
+  "file": "navigation.php",
+  "language": "php",
+  "extra": true,
+  "symbols": {
+    "BaseReads": "class",
+    "Counts": "class",
+    "total": "method",
+    "normalize": "function"
+  },
+  "calls": [
+    "normalize",
+    "count"
+  ],
+  "imports": [
+    "config.php"
+  ],
+  "inherits": [
+    "BaseReads"
+  ],
+  "parents": {
+    "total": "Counts"
+  }
+}

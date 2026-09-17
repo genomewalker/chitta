@@ -1,0 +1,7 @@
+{
+  "file": "navigation.smk", "language": "snakemake", "aliases": ["Snakefile", "snakefile"],
+  "symbols": {"reference": "module", "collect": "function", "align": "rule", "count": "rule", "align.input": "input", "align.output": "output", "align.params": "params", "count.input": "input", "count.output": "output"},
+  "signatures": {"align": "rule align:", "align.input": "input:", "align.params": "params:"},
+  "calls": ["collect"], "imports": ["rules/common.smk", "modules/reference/Snakefile"],
+  "channels": [["align", "count"]], "channel_count": 1
+}

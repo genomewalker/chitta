@@ -39,8 +39,7 @@ FetchContent_MakeAvailable(roaring)
 FetchContent_Declare(
     tree-sitter
     GIT_REPOSITORY https://github.com/tree-sitter/tree-sitter.git
-    GIT_TAG v0.24.6
-    GIT_SHALLOW TRUE
+    GIT_TAG da6fe9beb4f7f67beb75914ca8e0d48ae48d6406 # v0.25.10, grammar ABI 15
 )
 FetchContent_GetProperties(tree-sitter)
 if(NOT tree-sitter_POPULATED)
@@ -220,6 +219,60 @@ target_include_directories(tree-sitter-parsers PUBLIC
 )
 target_link_libraries(tree-sitter-parsers PUBLIC tree-sitter)
 
+# Additional grammars use immutable revisions and the same offline source-cache
+# overrides as the original FetchContent dependencies. Compile each scanner
+# against its own generated headers (grammars can vendor different ABI headers).
+function(chitta_grammar name repository revision)
+    FetchContent_Declare(tree-sitter-${name}
+        GIT_REPOSITORY https://github.com/${repository}.git GIT_TAG ${revision})
+    FetchContent_GetProperties(tree-sitter-${name})
+    if(NOT tree-sitter-${name}_POPULATED)
+        FetchContent_Populate(tree-sitter-${name})
+    endif()
+    set(source "${tree-sitter-${name}_SOURCE_DIR}/src")
+    if(ARGC GREATER 3)
+        set(source "${tree-sitter-${name}_SOURCE_DIR}/${ARGV3}/src")
+    endif()
+    add_library(grammar-${name} STATIC "${source}/parser.c")
+    foreach(scanner scanner.c scanner.cc)
+        if(EXISTS "${source}/${scanner}")
+            target_sources(grammar-${name} PRIVATE "${source}/${scanner}")
+        endif()
+    endforeach()
+    target_include_directories(grammar-${name} PRIVATE "${source}")
+    target_link_libraries(tree-sitter-parsers PUBLIC grammar-${name})
+endfunction()
+chitta_grammar(bash tree-sitter/tree-sitter-bash 487734f87fd87118028a65a4599352fa99c9cde8)
+chitta_grammar(r r-lib/tree-sitter-r 58a22794466c0fc15b0d3b40531db751593721e8)
+chitta_grammar(julia tree-sitter/tree-sitter-julia a8e1262997d5a45520a06cbe1b86c0737d507054)
+chitta_grammar(fortran stadelmanma/tree-sitter-fortran 6f16bab7455cd2906a86679a1be83dd4f378db81)
+chitta_grammar(nextflow nextflow-io/tree-sitter-nextflow 69a72c6cf4e90609b8558fc05d7d17a5f3df7894)
+chitta_grammar(snakemake osthomas/tree-sitter-snakemake 315d8f4a55800bcacc2e420d2865d7f64b33efe6)
+chitta_grammar(perl tree-sitter-perl/tree-sitter-perl aa5600c8df1eb9ed111db72e20c741dd73ec336a)
+chitta_grammar(make alemuller/tree-sitter-make a4b9187417d6be349ee5fd4b6e77b4172c6827dd)
+chitta_grammar(cmake uyha/tree-sitter-cmake 58993af75218bc99a1f5a04c832a5937e7c422cb)
+chitta_grammar(sql DerekStride/tree-sitter-sql 593a5ecc5dc3889890d8b24ba8fa7487ee01bfe5)
+option(CHITTA_EXTRA_GRAMMARS "Build the additional Graphify-parity language grammars" ON)
+if(CHITTA_EXTRA_GRAMMARS)
+    target_compile_definitions(tree-sitter-parsers PUBLIC CHITTA_EXTRA_GRAMMARS=1)
+    chitta_grammar(dockerfile camdencheek/tree-sitter-dockerfile 971acdd908568b4531b0ba28a445bf0bb720aba5)
+    chitta_grammar(haskell tree-sitter/tree-sitter-haskell 0975ef72fc3c47b530309ca93937d7d143523628)
+    chitta_grammar(elixir elixir-lang/tree-sitter-elixir 4b0c7118760af58a2e7081bbc8396e136f820b37)
+    chitta_grammar(ocaml tree-sitter/tree-sitter-ocaml e3c9cf368f68bffd2f81188229aefa7b434eda65 grammars/ocaml)
+    FetchContent_GetProperties(tree-sitter-ocaml)
+    set(ocaml_interface_source "${tree-sitter-ocaml_SOURCE_DIR}/grammars/interface/src")
+    add_library(grammar-ocaml-interface STATIC "${ocaml_interface_source}/parser.c" "${ocaml_interface_source}/scanner.c")
+    target_include_directories(grammar-ocaml-interface PRIVATE "${ocaml_interface_source}")
+    target_link_libraries(tree-sitter-parsers PUBLIC grammar-ocaml-interface)
+
+    chitta_grammar(hcl mitchellh/tree-sitter-hcl bdc2ee0cbd19d22f8a1529e5c9d099029573c931)
+    chitta_grammar(zig tree-sitter-grammars/tree-sitter-zig 6479aa13f32f701c383083d8b28360ebd682fb7d)
+    chitta_grammar(scala tree-sitter/tree-sitter-scala db390f312a54b04b13790e1767bfac32665c17ac)
+    chitta_grammar(kotlin fwcd/tree-sitter-kotlin 1852ea17b7f60fb3f9d84e0b1555d56b46b39fb1)
+    chitta_grammar(php tree-sitter/tree-sitter-php 3fda2fb9577166c6399834917f9844f30370beea php)
+endif()
+
+
 # Extract version from plugin.json
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../.claude-plugin/plugin.json" PLUGIN_JSON)
 string(REGEX MATCH "\"version\"[^:]*:[^\"]*\"([^\"]+)\"" _ ${PLUGIN_JSON})
@@ -346,10 +399,15 @@ message(STATUS "chitta-field: ${CHITTA_FIELD_LIB}")
 # tree-sitter trees are not ours to fix and would bury first-party diagnostics.
 set(CHITTA_WARN_FLAGS -Wall -Wextra)
 
+# One implementation for every CodeIntel user. New grammar dispatch lives in
+# the .cpp; sharing it also avoids recompiling all extractors for each test.
+add_library(chitta-code-intel STATIC src/code_intel.cpp)
+target_link_libraries(chitta-code-intel PUBLIC chitta)
+target_compile_options(chitta-code-intel PRIVATE ${CHITTA_WARN_FLAGS})
+
 # Daemon/admin tool
 add_executable(chittad
     src/simple_cli.cpp
-    src/code_intel.cpp
     src/code_navigation.cpp
     src/queue_processor.cpp
     src/daemon_lifecycle.cpp
@@ -421,7 +479,7 @@ add_executable(chittad
 target_include_directories(chittad PRIVATE "${CHITTA_FIELD_INCLUDE}")
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 find_package(BLAS REQUIRED)
-target_link_libraries(chittad PRIVATE chitta "${CHITTA_FIELD_LIB}" dl pthread Python3::Python ${BLAS_LIBRARIES})
+target_link_libraries(chittad PRIVATE chitta-code-intel chitta "${CHITTA_FIELD_LIB}" dl pthread Python3::Python ${BLAS_LIBRARIES})
 find_package(OpenSSL REQUIRED)
 target_link_libraries(chittad PRIVATE OpenSSL::Crypto)
 if(CHITTA_WITH_LLAMA_CPP)
@@ -537,17 +595,17 @@ if(CHITTA_BUILD_TESTS)
     add_executable(task_ledger_test src/task_ledger_test.cpp)
     target_link_libraries(task_ledger_test PRIVATE chitta)
     add_test(NAME task_ledger_test COMMAND task_ledger_test)
-    add_executable(rpc_publication_test src/rpc_publication_test.cpp src/code_navigation.cpp src/code_intel.cpp)
+    add_executable(rpc_publication_test src/rpc_publication_test.cpp src/code_navigation.cpp)
     target_include_directories(rpc_publication_test PRIVATE "${CHITTA_FIELD_INCLUDE}")
-    target_link_libraries(rpc_publication_test PRIVATE chitta OpenSSL::Crypto)
+    target_link_libraries(rpc_publication_test PRIVATE chitta-code-intel chitta OpenSSL::Crypto)
     target_compile_options(rpc_publication_test PRIVATE -UNDEBUG ${CHITTA_WARN_FLAGS})
     add_test(NAME rpc_publication_test COMMAND rpc_publication_test)
     set_tests_properties(rpc_publication_test PROPERTIES TIMEOUT 15)
     if(UNIX AND NOT APPLE)
-        add_executable(global_lock_test src/global_lock_test.cpp src/code_navigation.cpp src/code_intel.cpp)
+        add_executable(global_lock_test src/global_lock_test.cpp src/code_navigation.cpp)
         target_include_directories(global_lock_test PRIVATE "${CHITTA_FIELD_INCLUDE}")
         target_compile_options(global_lock_test PRIVATE -UNDEBUG ${CHITTA_WARN_FLAGS})
-        target_link_libraries(global_lock_test PRIVATE chitta OpenSSL::Crypto "${CHITTA_FIELD_LIB}" dl pthread Python3::Python ${BLAS_LIBRARIES})
+        target_link_libraries(global_lock_test PRIVATE chitta-code-intel chitta OpenSSL::Crypto "${CHITTA_FIELD_LIB}" dl pthread Python3::Python ${BLAS_LIBRARIES})
         target_link_options(global_lock_test PRIVATE "-Wl,--wrap=cf_sync")
         add_test(NAME global_lock_on_test COMMAND global_lock_test 1)
         set_tests_properties(global_lock_on_test PROPERTIES ENVIRONMENT "CHITTA_GLOBAL_LOCK=1" TIMEOUT 15)
@@ -565,22 +623,28 @@ if(CHITTA_BUILD_TESTS)
     target_link_libraries(llm_probe_test PRIVATE chitta)
     add_test(NAME llm_probe_test COMMAND llm_probe_test)
     add_executable(callsite_extract_test src/callsite_extract_test.cpp)
-    target_link_libraries(callsite_extract_test PRIVATE chitta)
+    target_compile_options(callsite_extract_test PRIVATE -UNDEBUG)
+    target_link_libraries(callsite_extract_test PRIVATE chitta-code-intel chitta)
     add_test(NAME callsite_extract_test COMMAND callsite_extract_test)
-    add_executable(repository_index_test ../hooks/tests/repository_index_test.cpp src/code_intel.cpp)
+    add_executable(repository_index_test ../hooks/tests/repository_index_test.cpp)
     target_compile_options(repository_index_test PRIVATE -UNDEBUG)
-    target_link_libraries(repository_index_test PRIVATE chitta OpenSSL::Crypto)
+    target_link_libraries(repository_index_test PRIVATE chitta-code-intel chitta OpenSSL::Crypto)
     add_test(NAME repository_index_test COMMAND repository_index_test)
     # The test asserts same-mtime content changes are seen by the next search;
     # production throttles the walk (CHITTA_SOURCE_REFRESH_S, default 30).
     set_tests_properties(repository_index_test PROPERTIES ENVIRONMENT "CHITTA_SOURCE_REFRESH_S=0")
-    add_executable(code_index_test src/code_index_test.cpp src/code_intel.cpp)
+    add_executable(code_languages_test src/code_languages_test.cpp)
+    target_compile_options(code_languages_test PRIVATE -UNDEBUG)
+    target_link_libraries(code_languages_test PRIVATE chitta-code-intel chitta OpenSSL::Crypto)
+    add_test(NAME code_languages_test COMMAND code_languages_test
+        "${CMAKE_CURRENT_SOURCE_DIR}/../hooks/tests/fixtures/codenav")
+    add_executable(code_index_test src/code_index_test.cpp)
     target_compile_options(code_index_test PRIVATE -UNDEBUG)
-    target_link_libraries(code_index_test PRIVATE chitta OpenSSL::Crypto)
+    target_link_libraries(code_index_test PRIVATE chitta-code-intel chitta OpenSSL::Crypto)
     add_test(NAME code_index_test COMMAND code_index_test)
-    add_executable(code_navigation_test src/code_navigation_test.cpp src/code_navigation.cpp src/code_intel.cpp)
+    add_executable(code_navigation_test src/code_navigation_test.cpp src/code_navigation.cpp)
     target_compile_options(code_navigation_test PRIVATE -UNDEBUG)
-    target_link_libraries(code_navigation_test PRIVATE chitta OpenSSL::Crypto)
+    target_link_libraries(code_navigation_test PRIVATE chitta-code-intel chitta OpenSSL::Crypto)
     add_test(NAME code_navigation_test COMMAND code_navigation_test)
     add_test(NAME code_index_integration_test
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/code_index_integration_test.py

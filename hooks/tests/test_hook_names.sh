@@ -20,11 +20,15 @@ assert "regex is never empty" "[[ -n \"\$CC_SOUL_SETTINGS_HOOK_RE\" ]]"
 
 # --- jq --arg round trip: every listed name matches, unrelated hooks do not ---
 for name in "${CC_SOUL_SETTINGS_HOOK_NAMES[@]}"; do
+    # Literal settings.json command, intentionally not a home-directory expansion.
+    # shellcheck disable=SC2088
     got=$(jq -n --arg re "$CC_SOUL_SETTINGS_HOOK_RE" \
               --arg c "~/.claude/hooks/${name}.sh" '$c | test($re)')
     assert "matches $name.sh" "[[ '$got' == true ]]"
 done
 for other in my-own-hook.sh notify.sh prompt-hook.py stop-hook.txt; do
+    # Literal settings.json command, intentionally not a home-directory expansion.
+    # shellcheck disable=SC2088
     got=$(jq -n --arg re "$CC_SOUL_SETTINGS_HOOK_RE" \
               --arg c "~/.claude/hooks/$other" '$c | test($re)')
     assert "does not match $other" "[[ '$got' == false ]]"

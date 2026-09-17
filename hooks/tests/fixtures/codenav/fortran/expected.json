@@ -1,0 +1,9 @@
+{
+  "file": "navigation.f90", "language": "fortran",
+  "aliases": ["a.f", "a.F", "a.F90", "a.for", "a.f95", "a.f03", "a.f08"],
+  "symbols": {"reads": "module", "baseread": "struct", "read": "struct", "normalize": "subroutine", "score": "function"},
+  "signatures": {"normalize": "SUBROUTINE Normalize(x)", "score": "real FUNCTION Score(x)"},
+  "calls": ["helper", "score", "abs"],
+  "imports": ["iso_fortran_env", "constants.inc"],
+  "inherits": ["baseread"], "absent": ["phantom"]
+}

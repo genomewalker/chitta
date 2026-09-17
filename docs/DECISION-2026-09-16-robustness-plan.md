@@ -150,8 +150,15 @@
   See [benchmark protocol](../benchmarks/codenav/README.md) and
   [implementation evidence](../Documentation.md). Binaries and hooks remain
   subject to orchestrator review and deployment.
-- Language-expansion follow-up: pending; this qualification covers the existing
-  compiled grammars and Markdown.
+- Language-expansion follow-up: complete and verified (2026-09-17).
+  The final full gate passes Rust, all 37 CTests and all 29 hook suites. All 19 requested additions have pinned
+  offline grammars and extraction/query fixtures, including both OCaml parsers.
+  No grammar was skipped. `CHITTA_EXTRA_GRAMMARS` defaults ON; its OFF build
+  also passes. YAML/TOML/JSON are reference-only files with zero definitions.
+  Coverage is 865/875 tracked code files (98.86%) in 36.916 seconds, including
+  208 Bash symbols. Query p95 is at most 60.945 ms across restart; benchmark
+  18/20 with 64.44% fewer bytes and 20/20 identical graph responses. See the
+  per-language table and final evidence in `Documentation.md`.
 
 ## Backlog (owner-listed, not yet scheduled)
 

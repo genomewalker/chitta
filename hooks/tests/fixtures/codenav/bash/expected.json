@@ -1,0 +1,23 @@
+{
+  "file": "navigation.sh",
+  "language": "bash",
+  "symbols": {
+    "render_context": "function",
+    "prompt_hook": "function"
+  },
+  "calls": [
+    "render_context",
+    "prompt_hook"
+  ],
+  "imports": [
+    "./lib.sh",
+    "./config.sh"
+  ],
+  "absent": [
+    "fake_function"
+  ],
+  "signatures": {
+    "render_context": "render_context()",
+    "prompt_hook": "function prompt_hook"
+  }
+}

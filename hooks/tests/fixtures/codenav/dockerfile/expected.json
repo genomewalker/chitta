@@ -1,0 +1,23 @@
+{
+  "symbols": {
+    "build": "stage",
+    "runtime": "stage"
+  },
+  "imports": [
+    "python:3.12",
+    "alpine:3.20",
+    "requirements.txt",
+    "config.yaml"
+  ],
+  "references": [
+    "build"
+  ],
+  "aliases": [
+    "dockerfile",
+    "Dockerfile.dev",
+    "app.Dockerfile"
+  ],
+  "file": "Dockerfile",
+  "language": "dockerfile",
+  "extra": true
+}

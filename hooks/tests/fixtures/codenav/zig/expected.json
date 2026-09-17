@@ -1,0 +1,18 @@
+{
+  "symbols": {
+    "Counts": "struct",
+    "total": "function",
+    "normalize": "function",
+    "main": "function"
+  },
+  "calls": [
+    "normalize",
+    "@import"
+  ],
+  "imports": [
+    "std"
+  ],
+  "file": "navigation.zig",
+  "language": "zig",
+  "extra": true
+}

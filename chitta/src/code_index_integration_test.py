@@ -141,6 +141,39 @@ def main():
                 result = call("learn_codebase", path=str(root), project="chitta")
                 elapsed = time.perf_counter() - started
                 extensions = {
+                    ".kt",
+                    ".kts",
+                    ".scala",
+                    ".sc",
+                    ".zig",
+                    ".tf",
+                    ".tfvars",
+                    ".hcl",
+                    ".ml",
+                    ".mli",
+                    ".ex",
+                    ".exs",
+                    ".hs",
+                    ".Dockerfile",
+                    ".dockerfile",
+                    ".php",
+                    ".phtml",
+                    ".sql",
+                    ".ddl",
+                    ".cmake",
+                    ".mk",
+                    ".mak",
+                    ".pl",
+                    ".pm",
+                    ".t",
+                    ".perl",
+                    ".smk",
+                    ".nf",
+                    ".jl",
+                    ".R",
+                    ".r",
+                    ".sh",
+                    ".bash",
                     ".c",
                     ".h",
                     ".cpp",
@@ -173,7 +206,26 @@ def main():
                     .decode()
                     .split("\0")
                 )
-                expected = {str(root / f) for f in tracked if Path(f).suffix in extensions}
+                expected = {
+                    str(root / f)
+                    for f in tracked
+                    if Path(f).suffix in extensions
+                    or Path(f).suffix.lower()
+                    in {".f", ".for", ".f77", ".f90", ".f95", ".f03", ".f08"}
+                    or Path(f).name
+                    in {
+                        "dockerfile",
+                        "Dockerfile",
+                        "CMakeLists.txt",
+                        ".Rprofile",
+                        "Snakefile",
+                        "snakefile",
+                        "Makefile",
+                        "makefile",
+                        "GNUmakefile",
+                    }
+                    or Path(f).name.startswith(("Makefile.", "Dockerfile."))
+                }
                 present = set(call("codebase_overview", project="chitta")["indexed_files"])
                 result["tracked_supported"] = len(expected)
                 result["tracked_indexed"] = len(present & expected)

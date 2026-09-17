@@ -1,0 +1,22 @@
+{
+  "symbols": {
+    "Reads": "module",
+    "normalize": "function",
+    "total": "function"
+  },
+  "calls": [
+    "abs",
+    "map"
+  ],
+  "imports": [
+    "Enum",
+    "File"
+  ],
+  "parents": {
+    "normalize": "Reads",
+    "total": "Reads"
+  },
+  "file": "navigation.ex",
+  "language": "elixir",
+  "extra": true
+}

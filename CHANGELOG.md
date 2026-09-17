@@ -8,7 +8,46 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 > reconstructed from `git log` between tags; patch releases are grouped under
 > their minor version (`## [5.x.y]`) with per-release dates on one line.
 
+- CMake code navigation extracts functions, macros, targets and dependencies; source collection avoids traversing ignored build caches.
+
+- SQL code navigation exposes tables, views, functions and object references.
+
+- PHP code navigation adds definitions, imports and inheritance; optional Graphify-parity grammars default ON with `CHITTA_EXTRA_GRAMMARS`.
+
+- Kotlin code navigation: Functions, classes/objects, calls, imports and delegation/inheritance.
+
+- Scala code navigation: Functions, classes, objects, traits/enums, calls, imports and inheritance.
+
+- Zig code navigation: Functions, named structs/enums/unions/opaque types, calls and literal imports/C includes.
+
+- HCL / Terraform code navigation: Resource, data, variable, module and output blocks; module sources, function calls and attribute references.
+
+- OCaml code navigation: Functions, types, modules, classes/methods, calls, open/include imports and inheritance; implementation and interface grammars.
+
+- Elixir code navigation: Modules, protocols, functions/macros, calls and import/alias/require/use edges; declaration heads are excluded from calls.
+
+- Haskell code navigation: Functions with type signatures, data/newtypes, typeclasses/instances, curried calls, imports and instance relationships.
+
+- YAML/TOML/JSON remain reference-only file nodes with literal path edges.
+- Dockerfile code navigation: Build stages, FROM image imports, COPY/ADD source-file imports and COPY --from stage references.
+
 ## [Unreleased]
+
+- Add Make target/macro navigation, prerequisite links, calls and includes.
+
+- Add Perl package/subroutine navigation, imports, calls and literal parent/base relationships.
+
+- Add Snakemake rules, input/output/params sections, includes/modules and explicit rule-output dependencies using its dedicated grammar.
+
+- Add Nextflow processes, workflows, includes and channel routing, backed by the dedicated grammar and the compatible tree-sitter 0.25.10 runtime.
+
+- Add Fortran navigation with case-insensitive symbols, module/include edges, calls and derived-type inheritance.
+
+- Add Julia AST navigation, including both function forms, type relationships, module imports and literal includes.
+
+- Extend structural navigation to R functions, package/source imports, and S4/R6 classes and inheritance.
+
+- Code navigation now extracts Bash/sh functions, sourced files, and literal command calls using a pinned, offline-cacheable grammar; fixtures include the real hook library.
 
 - Add complete Git-aware structural indexing, `code_query` and `code_path`, a
   deterministic repo map, and symbol/edge context before indexed file reads.

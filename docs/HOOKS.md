@@ -1473,3 +1473,69 @@ contents and those per-pair reports remain outside the repository.
 - <a id="ref-51"></a>**[51]** openai/codex issue contributors. Codex tool loop causes context snowballing and multi-million-token input amplification. GitHub issue #44305 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/44305>)
 - <a id="ref-71"></a>**[71]** Alex L. Zhang, Tim Kraska, and Omar Khattab. Recursive Language Models. arXiv:2512.24601 (2025; revised 2026). [source](<https://arxiv.org/abs/2512.24601>)
 <!-- END CITATIONS -->
+
+### Code navigation languages
+
+Definitions and edges come from pinned tree-sitter grammars. Literal call syntax
+is EXTRACTED evidence; only unambiguous symbol resolution produces INFERRED
+connections. Runtime dispatch and dynamic import paths are not evaluated.
+
+| Language | Files | Definitions and edges |
+|---|---|---|
+| C / C++ | `.c`, `.h`, `.cpp`, `.hpp`, `.cc`, `.cxx`, `.hxx` | Functions and types; calls, includes, inheritance and identifier references |
+| Python | `.py`, `.pyw` | Functions, classes and methods; calls, imports, bases and identifier references |
+| JavaScript / TypeScript | `.js`, `.jsx`, `.mjs`, `.ts`, `.tsx` | Functions, classes and methods; calls, imports, inheritance and identifier references |
+| Go | `.go` | Functions, methods and types; calls, imports and identifier references |
+| Rust | `.rs` | Functions, types, traits and implementations; calls, imports, relationships and identifier references |
+| Java / C# / Ruby | `.java`, `.cs`, `.rb` | Existing definition extractors and identifier references; dedicated call/import extraction remains limited |
+| Swift | `.swift` | Functions, types and methods; calls, imports, relationships and identifier references |
+| Lua | `.lua` | Functions, calls, literal module imports and identifier references |
+| Markdown | `.md`, `.markdown`, `.mdown` | Heading sections, extracted by the existing heading parser |
+| Bash / sh | `.sh`, `.bash` | Functions with signatures; literal command calls (resolved to known functions); `source` and `.` imports. Comments and heredocs remain data. |
+| R | `.R`, `.r`, `.Rprofile` | Assigned functions and named methods; calls; `source`, `library`, `require` and namespace imports; S4/R6 classes with literal inheritance. |
+| Julia | `.jl` | Long/short functions, macros, modules, structs and abstract types; calls, `using`/`import`, literal `include`, and subtype edges. |
+| Fortran | `.f`, `.for`, `.f77`, `.f90`, `.f95`, `.f03`, `.f08` (also uppercase) | Modules, programs, subroutines, functions and derived types; `use`, includes, calls and `extends`. Names are case-insensitive; signatures preserve source spelling. |
+| Nextflow | `.nf` | Processes, named/entry workflows and functions; includes, calls and channel routing through process outputs or pipes. Shell script bodies remain data. |
+| Snakemake | `.smk`, `Snakefile`, `snakefile` | Rules, checkpoints, modules, named input/output/params sections and Python definitions; calls, includes/module files and explicit `rules.NAME.output` dependencies. |
+| Perl | `.pl`, `.pm`, `.t`, `.perl` | Packages and subroutines with package scope; calls, `use`/`require`, and literal `use parent`/`use base` inheritance. |
+| Kotlin | `.kt`, `.kts` | Functions, classes/interfaces/objects, calls, imports and delegation/inheritance |
+| Scala | `.scala`, `.sc` | Functions, classes, objects, traits/enums, calls, imports and inheritance |
+| Zig | `.zig` | Functions, named structs/enums/unions/opaque types, calls and literal imports/C includes |
+| HCL / Terraform | `.tf`, `.tfvars`, `.hcl` | Resource, data, variable, module and output blocks; module sources, function calls and attribute references |
+| OCaml | `.ml`, `.mli` | Functions, types, modules, classes/methods, calls, open/include imports and inheritance; implementation and interface grammars |
+| Elixir | `.ex`, `.exs` | Modules, protocols, functions/macros, calls and import/alias/require/use edges; declaration heads are excluded from calls |
+| Haskell | `.hs` | Functions with type signatures, data/newtypes, typeclasses/instances, curried calls, imports and instance relationships |
+| Dockerfile | `.dockerfile`, `Dockerfile` | Build stages, FROM image imports, COPY/ADD source-file imports and COPY --from stage references |
+| PHP | `.php`, `.phtml` | Functions, methods, classes/interfaces/traits/enums, calls, literal includes/requires, namespace imports, inheritance |
+| SQL | `.sql`, `.ddl` | Tables, views, functions/procedures, calls and object references, including parsed SQL function bodies |
+| CMake | `.cmake`, `CMakeLists.txt` | Functions, macros, targets, command calls, includes/subdirectories, target dependencies |
+| Make | `.mk`, `.mak`, `Makefile`, `makefile`, `GNUmakefile`, `Makefile.*` | Literal targets, `define` macros, prerequisite links, built-in/macro calls and includes. Special targets such as `.PHONY` remain annotations. |
+
+New grammars use CMake FetchContent with immutable commits. After populating the
+cache, configure with `FETCHCONTENT_FULLY_DISCONNECTED=ON`; a source mirror can
+be supplied through `FETCHCONTENT_SOURCE_DIR_TREE-SITTER-<LANGUAGE>`.
+`code_languages_test` parses fixtures without executing them and reports mean
+fresh-parse microseconds per KiB across 200 parses (file I/O and extraction are
+excluded). It also checks the real shell hook library.
+
+Nextflow uses the `nextflow-io/tree-sitter-nextflow` grammar rather than Groovy:
+its AST distinguishes processes, workflows, process outputs and channel pipes.
+Its ABI-15 parser requires the pinned tree-sitter 0.25.10 runtime, which also
+accepts the older compiled grammars. Channel links resolve only unique indexed
+process/workflow producers; their evidence points to the routing expression.
+
+CMake navigation extracts functions, macros and build targets; `include` and
+`add_subdirectory` resolve to files, and explicit target dependencies form calls.
+
+`CHITTA_EXTRA_GRAMMARS=ON` (the release/default setting) builds the additional
+Graphify-parity grammars: PHP, Kotlin, Scala, Zig, HCL/Terraform, OCaml
+(implementation and interface), Elixir, Haskell and Dockerfile. Set it to `OFF` for a smaller
+binary with the priority bioinformatics/build languages retained. Disabled
+grammars do not claim indexed coverage. Both settings use pinned source caches.
+
+YAML, TOML and JSON are reference-only file nodes: they have no code definitions.
+Literal paths in parsed code can resolve to those nodes; Dockerfile COPY/ADD
+inputs are import edges. FROM images remain extracted external imports unless
+another indexed stage resolves the reference. Numeric and named COPY stages
+resolve without executing a build. The graph stores syntax as EXTRACTED and
+unambiguous symbol/file resolution as INFERRED; it does not simulate runtimes.

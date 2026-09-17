@@ -1,0 +1,7 @@
+{
+  "file": "navigation.mk", "language": "make", "aliases": ["Makefile", "makefile", "GNUmakefile", "Makefile.am", "build.mak"],
+  "symbols": {"all": "target", "align": "target", "counts": "target", "normalize": "function"},
+  "signatures": {"all": "all: counts", "normalize": "define normalize"},
+  "calls": ["normalize", "counts", "align"], "imports": ["config.mk"],
+  "channels": [["all", "counts"], ["counts", "align"]], "channel_count": 3, "absent": [".PHONY"]
+}

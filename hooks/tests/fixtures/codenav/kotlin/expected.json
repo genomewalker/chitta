@@ -1,0 +1,26 @@
+{
+  "symbols": {
+    "Reads": "class",
+    "Counts": "class",
+    "total": "function",
+    "normalize": "function",
+    "Named": "interface"
+  },
+  "calls": [
+    "normalize",
+    "abs"
+  ],
+  "imports": [
+    "kotlin.math.abs"
+  ],
+  "inherits": [
+    "Reads",
+    "Named"
+  ],
+  "parents": {
+    "total": "Counts"
+  },
+  "file": "navigation.kt",
+  "language": "kotlin",
+  "extra": true
+}

@@ -229,9 +229,8 @@ Step 5 documents the hook contract/environment, navigation orientation,
 changelog and verified five-step Phase 9 status. API/static generation produced
 no further drift. The final quick gate (including documentation/site checks),
 Rust 296 tests, all 36 CTest cases (one model-dependent skip), all hook suites,
-MCP 159, SMRITI 46 and CI lint passed. The language-expansion follow-up added
-by the required main merge is marked pending, separately from the five steps
-in this work order. The benchmark approval trailer is carried forward because
+MCP 159, SMRITI 46 and CI lint passed. The subsequent language-expansion follow-up is verified below, separately
+from the five steps in this work order. The benchmark approval trailer is carried forward because
 the immutable-eval checker reads the branch head message for the entire diff.
 
 # Phase 5b shell policy retirement — 2026-09-16
@@ -326,3 +325,337 @@ The final shell suite had one 3-second saddle subprocess timeout during concurre
 fixture compilation; all other 31 passed. The saddle test passed unchanged in
 isolation, including its timeout/latency assertions. Both logs remain in scratch
 evidence and the report records the rerun.
+
+## Phase 9 language expansion — Bash (2026-09-17)
+
+Shell hooks previously had no structural symbols. Bash/sh now uses the pinned
+`tree-sitter-bash` grammar with function signatures, source/dot imports and
+literal calls. Unresolved executables remain extracted syntax; graph resolution
+binds only known functions. The collector, graph language grouping and pre-read
+hook accept `.sh` and `.bash`. No recall scoring changes; contracts unchanged.
+
+The focused fixture yields 2 functions, 5 calls and 2 imports, with no heredoc
+definitions. Exact signature prefixes and the real `hooks/lib.sh` library pass.
+On compute, 200 fresh parses averaged 231.37 microseconds/KiB; the release daemon
+is 53,171,288 bytes, an increase of 1,399,056 bytes. Configuration and build used
+the cached pinned source with FetchContent fully disconnected. The quick gate
+passed, including contracts. Two existing test-only ShellCheck warnings now
+explicitly document intentional literal tilde paths. The initial JSON assertion
+compile/lifetime defects in the new test harness were fixed and rerun. The full
+gate and expanded repository coverage follow the last language addition;
+the completed measurements are recorded below.
+
+### R
+
+R source now contributes assigned functions, named methods, S4/R6 classes,
+source/package/namespace imports, calls and literal inheritance. `.R`, `.r` and
+`.Rprofile` are recognized. Multiline function signatures are retained. The
+pinned `r-lib/tree-sitter-r` revision builds with the existing runtime offline.
+The fixture finds 5 definitions, 10 calls, 4 imports, 2 inheritance relationships
+and 34 identifier references; fresh parsing averages 311.74 microseconds/KiB.
+The daemon is 53,685,328 bytes (+514,040). Bash regression and R extraction
+checks pass. A compute-side rebuild was required after shared-filesystem
+attribute caching reused an older object; the rebuilt signature check passes.
+Contracts unchanged; no recall scoring change.
+
+R package imports also no longer use Python module-file resolution. A graph
+regression keeps `library(a)` unresolved beside `a.py`, while an explicit
+`source("a.py")` resolves. The quick gate passes, including unchanged contracts.
+Named callback arguments remain anonymous; the R6 method fixture still extracts
+its method. The final extraction and graph-scope regression suites pass.
+
+### Julia
+
+Julia now extracts both function forms, macros, modules, structs, abstract types,
+subtype relationships, calls, `using`/`import` and literal `include` edges. Module
+imports can resolve to an unambiguous module definition in the same repository
+and language. Function signatures are not mistaken for callsites. The pinned
+grammar builds offline with the existing tree-sitter runtime.
+
+The fixture has 5 definitions, 4 calls, 3 imports, 1 inheritance edge and 22
+identifier references. Fresh parsing averages 431.54 microseconds/KiB. The
+daemon is 59,932,208 bytes (+6,246,880). Bash, R, Julia and graph-scope regression
+checks pass; contracts are unchanged and recall scoring is unchanged.
+
+Julia's quick gate passes. Extraction is now one shared static library rather
+than seven repeated compilations; all native CodeIntel users link it explicitly.
+The older callsite regression now runs with assertions enabled. Callsite,
+repository-index, code-index and graph CTests pass (4/4).
+
+### Fortran
+
+A pinned offline-buildable Fortran grammar now extracts modules, programs,
+subroutines, functions, derived types, `use`/include relationships, calls and
+`extends`. Extensions accept upper/lower case. Symbol, call and module names
+are folded consistently while signatures preserve the source spelling.
+The mixed-case fixture yields 5 definitions, 3 calls, 2 imports, 1 inheritance
+edge and 16 identifier references. Fresh parsing averages 292.73 microseconds
+per KiB; daemon size is 63,698,552 bytes (+3,766,344). All language fixtures and
+graph regressions pass; contracts and recall scoring are unchanged.
+
+### Nextflow
+
+The dedicated `nextflow-io/tree-sitter-nextflow` grammar was chosen over Groovy
+because its AST names processes, workflows, process outputs and pipes. Its
+pinned generated parser requires ABI 15, so the pinned tree-sitter runtime is
+now 0.25.10; the existing grammar fixtures and callsite regression still pass.
+Both `COUNT(ALIGN.out)` and `ALIGN | COUNT` produce channel links between unique
+indexed producers and consumers. Graph evidence retains the routing expression's
+file and line even when process definitions live in another file. The graph
+restart regression verifies those links remain deterministic.
+
+The fixture finds 5 definitions, 8 calls (including 2 channel links), 1 include
+and 22 identifier references. Fresh parsing averages 213.56 microseconds/KiB;
+the daemon is 64,204,504 bytes (+505,952, including the runtime upgrade). Offline
+build and all language fixtures pass. The initial direct-output regression
+identified the grammar's expression wrapper; handling it makes both routing
+forms and the cross-file evidence check pass. Contracts and recall scoring
+are unchanged.
+
+### Snakemake
+
+The dedicated Snakemake grammar builds offline and parses the fixture without
+errors, so no Python fallback is needed. Rules, checkpoints and modules are
+definitions; input/output/params sections are named children that `read_symbol`
+can read directly. Python definitions and calls share the existing AST walker.
+Includes and module Snakefiles become imports. Explicit `rules.NAME.output`
+expressions connect unique producer and consumer rules.
+
+The fixture yields 9 definitions, 2 calls (one rule dependency), 2 imports and
+18 identifier references. Fresh parsing averages 291.94 microseconds/KiB;
+daemon size is 65,027,832 bytes (+823,328). All language fixtures and graph
+regressions pass; contracts and recall scoring are unchanged.
+
+### Perl
+
+Perl navigation now extracts packages and subroutines with package scope,
+function/method calls, `use`/`require`, and literal `use parent`/`use base`
+relationships. A package inheritance edge starts at its named package and
+retains the actual pragma line as evidence. The generated release revision
+builds offline with the ABI-15 runtime.
+
+The fixture has 5 definitions, 2 calls, 5 imports and 1 inheritance edge. Fresh
+parsing averages 472.68 microseconds/KiB; daemon size is 69,770,184 bytes
+(+4,742,352). All language fixtures and graph regressions pass; contracts and
+recall scoring are unchanged.
+
+### Make
+
+Make navigation extracts literal targets, `define` macros, prerequisites,
+macro calls and includes. The fixture has 4 definitions, 4 calls (including
+3 target dependencies) and 1 include. Fresh parsing averages 149.84
+microseconds/KiB; daemon size is 69,968,848 bytes (+198,664).
+
+Offline builds, extraction and query-edge assertions pass for every language
+so far. Empty and truncated source tests exposed unsafe optional AST access;
+null-safe traversal fixes it. Exclusive AST end positions now keep a call
+following `endef` outside the macro. Contracts and recall scoring are unchanged.
+
+### CMake
+
+CMake navigation extracts functions, macros, build targets and command calls;
+includes and subdirectories point to files, while explicit target dependencies
+connect targets. The fixture has 5 definitions, 11 calls (one dependency),
+2 imports and 10 identifier references. Fresh parsing averages 442.69
+microseconds/KiB; daemon size is 70,056,592 bytes (+87,744).
+
+Offline extraction, all fixture query edges and source-collection regressions
+pass. Git collection now excludes untracked ignores in its initial listing,
+then checks only tracked ignores, avoiding a redundant walk of build caches.
+Both tracked and untracked `.gitignore`/`.chittaignore` cases are verified.
+Contracts and recall scoring are unchanged.
+
+### SQL
+
+SQL navigation extracts tables, views, functions/procedures, calls and object
+references. The generated grammar parses SQL function bodies as statements,
+so their table references remain AST-backed. The fixture has 4 definitions,
+1 call and 32 reference records; extraction and query assertions verify both
+table references. Fresh parsing averages 323.00 microseconds/KiB.
+Daemon size is 81,139,352 bytes (+11,082,760). Offline builds and all language
+fixtures pass; contracts and recall scoring are unchanged.
+
+### PHP and optional grammars
+
+PHP navigation extracts functions/methods, classes/interfaces/traits/enums,
+calls, literal include/require paths, namespace imports and inheritance.
+The fixture has 4 definitions and 4 query edges (2 calls, 1 import, 1 inheritance).
+Fresh parsing averages 287.26 microseconds/KiB; daemon size is 82,239,112 bytes
+(+1,099,760). Offline extraction/query fixtures pass. Contracts and recall
+scoring are unchanged.
+
+`CHITTA_EXTRA_GRAMMARS` defaults ON and controls the Graphify-parity group;
+OFF retains all priority bioinformatics/build grammars. The shared FetchContent
+helper supports grammar repositories with generated parsers in subdirectories.
+
+The source-filter performance fix qualifies on a fresh private daemon:
+855/865 tracked supported files (98.84%) in 37.374 seconds, 80,953,087 index
+bytes, including 208 Bash symbols. Ten deliberately ignored files remain out.
+
+### Kotlin
+
+Kotlin navigation extracts functions, classes, interfaces and objects, calls,
+imports and delegated supertypes. The fixture checks a superclass plus an
+interface and has 5 definitions, 7 query edges (2 calls, 1 import, 2 inheritance,
+2 references), and 11 raw identifier references. Fresh parsing averages
+548.10 microseconds/KiB; daemon size is 87,994,752 bytes (+5,755,640).
+Offline builds and all extraction/query fixtures pass. Contracts and recall
+scoring are unchanged.
+
+### Scala
+
+Scala navigation extracts functions, classes, objects, traits and enums, calls,
+imports and inheritance. The fixture has 6 definitions and 8 query edges
+(3 calls, 1 import, 1 inheritance, 3 references); fresh parsing averages
+590.45 microseconds/KiB. Daemon size is 92,026,152 bytes (+4,031,400).
+
+Offline extraction/query fixtures pass. A saved-index regression also proves
+that unavailable parsers retain separate language identities instead of
+resolving calls across unrelated disabled languages. Contracts and recall
+scoring are unchanged.
+
+### Zig
+
+Zig navigation extracts functions and named structs/enums/unions/opaque types,
+ordinary and builtin calls, plus literal `@import`/`@cInclude` paths. The fixture
+has 4 definitions and 7 query edges (3 calls, 1 import, 3 references). Fresh
+parsing averages 405.45 microseconds/KiB; daemon size is 92,735,512 bytes
+(+709,360). Offline extraction/query fixtures pass. Contracts and recall
+scoring are unchanged.
+
+### HCL / Terraform
+
+HCL navigation names resource, data, variable, module, output and configuration
+blocks, extracts module sources and function calls, and resolves attribute
+chains to their resource/module/variable definitions. Terraform variables
+retain reference edges through a language-specific exception to local-variable
+noise filtering.
+
+The fixture has 5 definitions and 5 query edges (1 call, 1 import, 3 references).
+Fresh parsing averages 277.36 microseconds/KiB; daemon size is 92,876,520 bytes
+(+141,008). The C++ scanner links offline, and all extraction/query fixtures
+pass. Contracts and recall scoring are unchanged.
+
+### OCaml
+
+Both OCaml implementation and interface parsers build from one immutable
+source checkout. `.ml` extraction covers functions, types, modules, classes,
+methods, calls, open/include imports and inheritance; `.mli` adds declarations.
+The implementation fixture has 7 definitions and 6 query edges; the interface
+fixture has 6 definitions and 1 import edge. Fresh parsing averages 471.03
+and 495.24 microseconds/KiB respectively. Daemon size is 101,757,816 bytes
+(+8,881,296 for both parsers). Offline extraction/query fixtures pass.
+Contracts and recall scoring are unchanged.
+
+### Elixir
+
+Elixir navigation extracts modules/protocols, functions/macros, ordinary and
+qualified calls, and import/alias/require/use edges. Function heads are not
+recorded as calls; their bodies and captures remain navigable. The fixture has
+3 definitions and 5 query edges (2 calls, 2 imports, 1 reference). Fresh parsing
+averages 605.91 microseconds/KiB; daemon size is 103,176,808 bytes (+1,418,992).
+Offline extraction/query fixtures and the quick gate pass. Contracts and
+recall scoring are unchanged.
+
+### Haskell
+
+Haskell navigation extracts functions with available type signatures, data and
+newtypes, typeclasses and instances, curried calls and imports. Instance edges
+point to their typeclass; constructor patterns are not recorded as calls.
+The fixture has 6 definitions and 6 query edges (4 calls, 1 import, 1 instance
+relationship); duplicate curried application records collapse in the graph.
+Fresh parsing averages 659.59 microseconds/KiB; daemon size is 107,019,544 bytes
+(+3,842,736). Offline extraction/query fixtures pass. Contracts and recall
+scoring are unchanged.
+
+### Dockerfile and reference-only configuration files
+
+Dockerfile navigation extracts build stages, FROM image imports, COPY/ADD source
+imports and named/numeric COPY stage references. Its fixture has 2 definitions
+and 5 query edges (4 imports, 1 stage reference). Fresh parsing averages 220.51
+microseconds/KiB; daemon size is 107,086,456 bytes (+66,912, including the
+configuration-file support below).
+
+YAML, TOML and JSON have file nodes and no code definitions. Literal paths in
+parsed code resolve to these nodes. A graph regression checks all three formats,
+three inferred file edges and identical output after reopening the sidecar.
+The existing AST metadata walk extracts these paths without a second tree walk.
+Offline extraction/query fixtures pass. Contracts and recall scoring are
+unchanged; generated API docs only changed their generation date.
+
+### Language fixture measurements
+
+Graph-edge counts below are deduplicated query edges, rather than raw AST
+records. Parsing is the mean of 200 fresh parses per fixture, excluding I/O.
+Size deltas use the same Release build with llama enabled and are incremental;
+the final daemon is 107,086,456 bytes. No requested grammar was skipped.
+
+| Language | Definitions | Query edges | Parse µs/KiB | Daemon delta (bytes) |
+|---|---:|---:|---:|---:|
+| Bash/sh | 2 | 6 | 231.37 | 1,399,056 |
+| R | 5 | 18 | 311.74 | 514,040 |
+| Julia | 5 | 10 | 431.54 | 6,246,880 |
+| Fortran | 5 | 6 | 292.73 | 3,766,344 |
+| Nextflow | 5 | 12 | 213.56 | 505,952 |
+| Snakemake | 9 | 6 | 291.94 | 823,328 |
+| Perl | 5 | 8 | 472.68 | 4,742,352 |
+| Make | 4 | 5 | 149.84 | 198,664 |
+| CMake | 5 | 15 | 442.69 | 87,744 |
+| SQL | 4 | 5 | 323.0 | 11,082,760 |
+| PHP | 4 | 4 | 287.26 | 1,099,760 |
+| Kotlin | 5 | 7 | 548.1 | 5,755,640 |
+| Scala | 6 | 8 | 590.45 | 4,031,400 |
+| Zig | 4 | 7 | 405.45 | 709,360 |
+| HCL/Terraform | 5 | 5 | 277.36 | 141,008 |
+| OCaml (.ml + .mli) | 13 | 7 | 471.03 / 495.24 | 8,881,296 |
+| Elixir | 3 | 5 | 605.91 | 1,418,992 |
+| Haskell | 6 | 6 | 659.59 | 3,842,736 |
+| Dockerfile | 2 | 5 | 220.51 | 66,912 |
+
+### Final expanded-index qualification (2026-09-17)
+
+A fresh private daemon indexed 865/875 tracked supported code files (98.86%)
+in 36.916 seconds, versus the initial live read-only observation of 39 files
+and 440 symbols. The ten omissions are deliberately gitignored files. The
+complete index includes 1,000 files when reference-only configurations and
+eligible untracked files are counted; its mind uses 90,811,769 bytes before
+shutdown. Bash now contributes 208 stored symbols across 126/134 tracked shell files;
+the other eight shell files are explicitly ignored.
+
+Stored symbols by language: Bash 208; CMake 39; C/C++ 2,593; Dockerfile 2;
+Elixir 3; Fortran 5; Haskell 6; HCL 5; Julia 5; Kotlin 5; Make 4; Markdown
+1,897; Nextflow 5; OCaml implementation 7 and interface 6; Perl 5; PHP 4;
+Python 2,031; R 5; Rust 2,694; Scala 6; Snakemake 25; SQL 4; Zig 4.
+Reference-only configurations contribute zero code definitions.
+
+The unchanged frozen benchmark scores 18/20. Query p95 is 60.945 ms before
+restart and 58.429 ms after; all 20 graph responses are identical across the
+restart. The byte proxy is 254,460 with navigation versus 715,504 for full
+file reads, a 64.44% reduction. Real Read injection and the 17-line session
+map pass; the map emits once per session.
+
+A separate cold offline build with `CHITTA_EXTRA_GRAMMARS=OFF` passes the
+priority-language and graph suites in 97.579 seconds, including build time,
+without replacing the release binaries. Release/default remains ON. All
+requested grammars built and found their expected definitions; none was
+skipped. The benchmark question hash remains
+`49fb3d96acd9c7b966e489e9b3dc6c57535665b21c18e0d22a1f54ab419240a3`.
+
+Non-code hook parity remains byte-identical across all 30 measured paired
+fixtures (three repetitions), including stdout, stderr and exit status, on
+a private copy started by `eval-replica.sh`. The coverage-test Python file
+also passes Ruff lint and formatting checks.
+
+Final `gate-full.sh` passes on the compute node: 296 Rust tests pass (two
+ignored), 37/37 CTests pass, and all 29 hook suites pass. Every language commit
+also passes `gate-quick.sh` (MCP tests, lint and contract checks). Contracts
+remain unchanged throughout the language expansion; recall scoring is untouched.
+
+Earlier full-gate attempts exposed private-runner environment issues: a fake
+embedding-model path, an inherited parent socket, and Cargo 1.70 selected under
+the temporary home. The corrected runner uses the cached real model, removes
+the socket override for native tests, and explicitly selects Rust 1.93. One
+aggregate attempt reported an intermittent saddle-hook failure without detail;
+its isolated rerun passed all checks (38.92 ms incremental median, 45.66 ms p95),
+and the final aggregate sweep passed all suites. Runner fixes and raw evidence
+remain outside version control.

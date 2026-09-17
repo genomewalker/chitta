@@ -1,0 +1,34 @@
+{
+  "file": "navigation.nf",
+  "language": "nextflow",
+  "symbols": {
+    "ALIGN": "process",
+    "COUNT": "process",
+    "PIPELINE": "workflow",
+    "<workflow>": "workflow",
+    "label": "function"
+  },
+  "signatures": {
+    "ALIGN": "process ALIGN",
+    "PIPELINE": "workflow PIPELINE",
+    "label": "def label(x)"
+  },
+  "calls": [
+    "ALIGN",
+    "COUNT",
+    "of"
+  ],
+  "imports": [
+    "./modules/report.nf"
+  ],
+  "channels": [
+    [
+      "ALIGN",
+      "COUNT"
+    ]
+  ],
+  "absent": [
+    "phantom"
+  ],
+  "channel_count": 2
+}

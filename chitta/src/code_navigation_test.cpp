@@ -63,6 +63,154 @@ int main() {
     assert(nav.read({{"name", "caller"}, {"path", a.string()}}).is_null());
     nav.remove(b.string());
     assert(nav.overview({{"project", "fixture"}})["files"] == 3);
+    // An R package import must not resolve through Python's module heuristic.
+    auto r = root / "analysis.R";
+    std::ofstream(r) << "library(a)\nsource(\"a.py\")\n";
+    paths.push_back(r.string());
+    changed = {r.string()};
+    nav.update(root.string(), "fixture", paths, changed, intel.extract_files(changed), false);
+    auto imported = nav.query({{"question", "library source"}, {"realm", "fixture"}, {"limit", 40}});
+    bool package = false, literal = false;
+    for (const auto& edge : imported["edges"]) {
+        if (edge["kind"] != "imports") continue;
+        if (edge["surface"] == "a") { assert(edge["confidence"] == "EXTRACTED"); package = true; }
+        if (edge["surface"] == "a.py") { assert(edge["confidence"] == "INFERRED"); literal = true; }
+    }
+    assert(package && literal);
+    auto jl = root / "reads.jl", consumer = root / "consumer.jl";
+    std::ofstream(jl) << "module Reads\nscore(x) = x\nend\n";
+    std::ofstream(consumer) << "using Reads\n";
+    paths.push_back(jl.string()); paths.push_back(consumer.string());
+    changed = {jl.string(), consumer.string()};
+    nav.update(root.string(), "fixture", paths, changed, intel.extract_files(changed), false);
+    auto modules = nav.query({{"question", "using Reads"}, {"realm", "fixture"}, {"limit", 40}});
+    bool module_import = false;
+    for (const auto& edge : modules["edges"])
+        if (edge["kind"] == "imports" && edge["surface"] == "Reads") {
+            assert(edge["confidence"] == "INFERRED"); module_import = true;
+        }
+    assert(module_import);
+    auto stages = root / "stages.nf", flow = root / "flow.nf";
+    auto fixture = fs::path(__FILE__).parent_path().parent_path().parent_path() / "hooks/tests/fixtures/codenav/nextflow/navigation.nf";
+    std::ifstream nf(fixture);
+    std::string nf_source(std::istreambuf_iterator<char>(nf), {});
+    assert(nf_source.find("\ndef label") != std::string::npos);
+    nf_source.resize(nf_source.find("\ndef label"));
+    std::ofstream(stages) << nf_source;
+    std::ofstream(flow) << "workflow FLOW {\n ALIGN(Channel.of('sample'))\n COUNT(ALIGN.out)\n}\n";
+    paths.push_back(stages.string()); paths.push_back(flow.string());
+    changed = {stages.string(), flow.string()};
+    nav.update(root.string(), "fixture", paths, changed, intel.extract_files(changed), false);
+    auto channel_query = nlohmann::json{{"question", "ALIGN COUNT"}, {"realm", "fixture"}, {"limit", 40}};
+    auto channels = nav.query(channel_query);
+    bool routed = false;
+    for (const auto& edge : channels["edges"])
+        if (edge["source"].get<std::string>().ends_with(":ALIGN") && edge["surface"] == "COUNT") {
+            assert(edge["confidence"] == "INFERRED" && edge["file"] == flow.string() && edge["line"] == 3);
+            routed = true;
+        }
+    assert(routed);
+    chitta::CodeNavigation channel_restart;
+    channel_restart.open((root / "navigation.json").string());
+    assert(channel_restart.query(channel_query) == channels);
+    auto snake = root / "Snakefile";
+    auto snake_fixture = fixture.parent_path().parent_path() / "snakemake/navigation.smk";
+    fs::copy_file(snake_fixture, snake);
+    paths.push_back(snake.string()); changed = {snake.string()};
+    nav.update(root.string(), "fixture", paths, changed, intel.extract_files(changed), false);
+    auto rule_graph = nav.query({{"question", "align count"}, {"path", snake.string()}, {"limit", 40}});
+    bool rule_flow = false;
+    for (const auto& edge : rule_graph["edges"])
+        if (edge["source"].get<std::string>().ends_with(":align") && edge["surface"] == "count") {
+            assert(edge["confidence"] == "INFERRED"); rule_flow = true;
+        }
+    assert(rule_flow);
+    auto perl = root / "Reads.pm";
+    fs::copy_file(fixture.parent_path().parent_path() / "perl/navigation.pl", perl);
+    paths.push_back(perl.string()); changed = {perl.string()};
+    nav.update(root.string(), "fixture", paths, changed, intel.extract_files(changed), false);
+    auto packages = nav.query({{"question", "Reads BaseReads"}, {"path", perl.string()}, {"limit", 40}});
+    bool package_base = false;
+    for (const auto& edge : packages["edges"])
+        if (edge["kind"] == "inherits" && edge["surface"] == "BaseReads") {
+            assert(edge["source"].get<std::string>().ends_with(":Reads") && edge["line"] == 7);
+            package_base = true;
+        }
+    assert(package_base);
+    // A saved index remains language-isolated when its parsers are unavailable.
+    auto unknown_a = root / "a.disabled_one", unknown_b = root / "b.disabled_two";
+    std::ofstream(unknown_a) << "caller invokes remote\n";
+    std::ofstream(unknown_b) << "remote definition\n";
+    chitta::ExtractionResult saved;
+    saved.symbols.push_back({"function", "caller", "caller()", unknown_a.string(), 1, 1, ""});
+    saved.symbols.push_back({"function", "remote", "remote()", unknown_b.string(), 1, 1, ""});
+    chitta::Callsite remote; remote.file_path = unknown_a.string(); remote.line = 1; remote.callee_leaf = "remote";
+    saved.callsites.push_back(remote);
+    chitta::CodeNavigation disabled;
+    disabled.update(root.string(), "disabled", {unknown_a.string(), unknown_b.string()}, {unknown_a.string(), unknown_b.string()}, saved, true);
+    auto isolated = disabled.query({{"path", unknown_a.string()}});
+    assert(isolated["edges"].size() == 1 && isolated["edges"][0]["confidence"] == "EXTRACTED");
+    // Configuration files are reference-only nodes, with no invented symbols.
+    auto reader = root / "reader.py";
+    std::ofstream(reader) << "def load_configs():\n    return ('config.json', 'config.yaml', 'config.toml')\n";
+    std::vector<std::string> config_paths{reader.string()};
+    for (const auto* name : {"config.json", "config.yaml", "config.toml"}) {
+        auto config = root / name; std::ofstream(config) << "{}\n";
+        config_paths.push_back(config.string());
+        assert(intel.detect_language(config.string()) == "reference");
+        assert(intel.extract_file_full(config.string()).symbols.empty());
+    }
+    std::unordered_set<std::string> config_dirty(config_paths.begin(), config_paths.end());
+    chitta::CodeNavigation configs;
+    auto config_sidecar = (root / "config-navigation.json").string(); configs.open(config_sidecar);
+    configs.update(root.string(), "configs", config_paths, config_dirty, intel.extract_files(config_dirty), true);
+    auto config_question = nlohmann::json{{"question", "load_configs config"}, {"limit", 40}};
+    auto config_answer = configs.query(config_question);
+    int config_edges = 0;
+    for (const auto& edge : config_answer["edges"])
+        if (edge["kind"] == "references") {
+            assert(edge["target"].get<std::string>().ends_with(":0:<file>") && edge["confidence"] == "INFERRED"); ++config_edges;
+        }
+    assert(config_edges == 3);
+    for (const auto& symbol : config_answer["symbols"])
+        if (symbol["file"] != reader.string()) assert(symbol["kind"] == "file");
+    chitta::CodeNavigation config_restart; config_restart.open(config_sidecar);
+    assert(config_restart.query(config_question) == config_answer);
+    // Every grammar fixture must produce usable query edges, not just raw AST records.
+    std::vector<fs::path> language_specs;
+    for (const auto& item : fs::recursive_directory_iterator(fixture.parent_path().parent_path()))
+        if (item.path().filename() == "expected.json") language_specs.push_back(item.path());
+    std::sort(language_specs.begin(), language_specs.end());
+    for (const auto& spec : language_specs) {
+        std::ifstream input(spec); nlohmann::json expected; input >> expected;
+        if (expected.value("extra", false) && !intel.extended_grammar(expected["language"].get<std::string>())) continue;
+        auto source = fs::weakly_canonical(spec.parent_path() / expected["file"].get<std::string>());
+        std::vector<std::string> sources{source.string()};
+        std::unordered_set<std::string> dirty{source.string()};
+        chitta::CodeNavigation graph;
+        graph.open((root / (expected["language"].get<std::string>() + ".json")).string());
+        graph.update(source.parent_path().string(), "grammar", sources, dirty, intel.extract_files(dirty), true);
+        auto answer = graph.query({{"path", source.string()}, {"limit", 40}});
+        for (const auto& [key, kind] : std::vector<std::pair<std::string, std::string>>{{"calls", "calls"}, {"imports", "imports"}, {"inherits", "inherits"}, {"references", "references"}})
+            for (const auto& surface : expected.value(key, nlohmann::json::array())) {
+                bool found = false;
+                for (const auto& edge : answer["edges"]) found |= edge["kind"] == kind && edge["surface"] == surface;
+                if (!found) std::cerr << expected["language"] << " missing query edge " << kind << ':' << surface << '\n';
+                assert(found);
+            }
+        nlohmann::json edge_counts = nlohmann::json::object();
+        for (const auto& edge : answer["edges"]) {
+            auto kind = edge["kind"].get<std::string>();
+            edge_counts[kind] = edge_counts.value(kind, 0) + 1;
+        }
+        std::cout << nlohmann::json{{"language", expected["language"]}, {"query_edges", edge_counts}}.dump() << '\n';
+        for (const auto& pair : expected.value("channels", nlohmann::json::array())) {
+            bool found = false;
+            for (const auto& edge : answer["edges"])
+                found |= edge["kind"] == "calls" && edge["surface"] == pair[1] && edge["source"].get<std::string>().ends_with(":" + pair[0].get<std::string>());
+            assert(found);
+        }
+    }
     fs::remove_all(root);
     std::cout << "navigation: confidence, ambiguity, scope, paths, restart identity, stale reads and deletion passed\n";
 }
