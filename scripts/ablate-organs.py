@@ -225,9 +225,14 @@ def margins(noise, required=REQUIRED):
     return result, missing
 
 
+def direction(key):
+    """Positive utility is better; token cost and latency run in reverse."""
+    return -1 if key.endswith(".tokens") or key == "hook_total_ms" else 1
+
+
 def compare(control, treatment, declared, missing):
-    """Every repetition must fit; never turn a failed/missing panel into zero."""
-    deltas, moved, unstable = {}, [], []
+    """Only degradation blocks; every repetition needs complete evidence."""
+    deltas, moved, improved, unstable = {}, [], [], []
     for key in dict.fromkeys([*declared, *missing]):
         margin = declared.get(key)
         baseline = [r.get("metrics", {}).get(key) for r in control]
@@ -242,16 +247,25 @@ def compare(control, treatment, declared, missing):
             missing = [*missing, key]
             continue
         center = statistics.mean(baseline)
-        if margin is not None and any(abs(value - center) > margin for value in baseline):
+        if margin is not None and max(baseline) - min(baseline) > margin:
             unstable.append(key)
+        utility = [direction(key) * (value - center) for value in values]
+        degraded = margin is not None and min(utility) < -margin
+        better = margin is not None and max(utility) > margin
         deltas[key] = {
             "control": center,
             "samples": values,
             "delta": statistics.mean(values) - center,
             "margin": margin,
+            "direction": "lower is better" if direction(key) < 0 else "higher is better",
+            "utility_delta": direction(key) * (statistics.mean(values) - center),
+            "worst_utility_delta": min(utility),
+            "panel_verdict": "degraded" if degraded else "improved" if better else "within margin",
         }
-        if margin is not None and any(abs(value - center) > margin for value in values):
+        if degraded:
             moved.append(key)
+        elif better:
+            improved.append(key)
     failures = [r.get("error") for r in control + treatment if r.get("error")]
     if unstable:
         failures.append("control repetitions exceed declared margins: " + ", ".join(unstable))
@@ -279,6 +293,7 @@ def compare(control, treatment, declared, missing):
         "verdict": verdict,
         "deltas": deltas,
         "moved": moved,
+        "improved": improved,
         "unstable_controls": unstable,
         "missing_margins": sorted(set(missing)),
         "failures": failures,
@@ -781,8 +796,9 @@ def write_table(report, destination):
         "Three repetitions per arm; missing calibration or invariants block retirement.",
         "When controls exceed a declared band, differences are descriptive and cannot",
         "be attributed to the ablation. No organ or tool is deleted by this runner.",
-        "Equivalence requires complete panel, identity and consumer-test evidence.",
-        "A valid calibrated-panel or invariant failure is sufficient for not equivalent.",
+        "Panel acceptance is one-sided: improvements pass; degradation beyond a band blocks.",
+        "Positive quality deltas improve; negative token/latency deltas improve.",
+        "Complete panel, identity and consumer-test evidence is required for acceptance.",
         "Unqualified raw observations remain in the report and are not equivalence estimates.",
         "",
         "| Organ | Dependency class | Panels moved (Δ; margin) | Verdict |",
@@ -801,7 +817,7 @@ def write_table(report, destination):
         row = report.get("comparisons", {}).get(organ, {})
         numbers = (
             "; ".join(
-                f"{k}: {v['delta']:+.6g}; margin={v['margin']}"
+                f"{k}: {v['delta']:+.6g}; margin={v['margin']}; {v['panel_verdict']}"
                 for k, v in row.get("deltas", {}).items()
                 if v["margin"] is not None
             )
@@ -838,7 +854,7 @@ def write_table(report, destination):
         if row.get("unstable_controls"):
             verdict += "; unstable control: " + ", ".join(row["unstable_controls"])
         if row.get("moved"):
-            verdict += "; observed beyond band: " + ", ".join(row["moved"])
+            verdict += "; degraded beyond band: " + ", ".join(row["moved"])
         lines.append(f"| `{organ}` | {dependency} | {numbers} | {verdict} |")
     lines += [
         "",
@@ -898,7 +914,20 @@ def self_test():
     declared = {key: 0.01 for key in REQUIRED}
     changed = {**row, "metrics": {**row["metrics"], "golden.ndcg": 0.7}}
     assert compare([row] * 3, [row] * 3, declared, [])["verdict"] == "equivalent"
-    assert compare([row] * 3, [changed] * 3, declared, [])["verdict"] == "not equivalent"
+    assert compare([row] * 3, [changed] * 3, declared, [])["verdict"] == "equivalent"
+    for key in REQUIRED:
+        better = {**row, "metrics": {**row["metrics"], key: 0.5 + direction(key) * 0.2}}
+        worse = {**row, "metrics": {**row["metrics"], key: 0.5 - direction(key) * 0.2}}
+        accepted = compare([row] * 3, [better] * 3, declared, [])
+        assert accepted["verdict"] == "equivalent", key
+        assert accepted["improved"] == [key]
+        rejected = compare([row] * 3, [better, better, worse], declared, [])
+        assert rejected["verdict"] == "not equivalent", key
+        assert rejected["moved"] == [key]
+    missing = compare([row] * 3, [changed] * 3, declared, ["absent"])
+    assert missing["verdict"] == "unqualified"
+    broken = {**changed, "invariants": {"passed": False}}
+    assert compare([row] * 3, [broken] * 3, declared, [])["verdict"] == "not equivalent"
     assert control_gate([row] * 3, declared)["passed"]
     for key in REQUIRED:
         incomplete = {**row, "metrics": {k: v for k, v in row["metrics"].items() if k != key}}

@@ -900,6 +900,14 @@ separate from the calibrated `hook_total_ms` statistic above.
 
 ### Follow-up: complete evidence required (2026-09-17)
 
+Comparisons now use one-sided noninferiority: positive quality deltas and
+negative token/latency deltas are improvements, including beyond the margin.
+Any repetition degrading beyond the frozen margin blocks acceptance. Thus the
+historical HDC golden change `+0.005005509837521904` and recall-adjacent/all
+`+0.004632109418440722` pass that panel; learners `−0.0021989989178248792`
+fails its `0.0017901251267712533` golden band. These are interpretations of
+old observations, not newly qualified full-panel or laptop-profile verdicts.
+
 The 144-trial table above is historical evidence from the first runner.
 Current-truth did execute in every trial, but the summary retained only
 overall p3/abstention. Its visible and holdout results stayed in `truth.json`.

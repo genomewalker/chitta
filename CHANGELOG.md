@@ -8,6 +8,11 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 > reconstructed from `git log` between tags; patch releases are grouped under
 > their minor version (`## [5.x.y]`) with per-release dates on one line.
 
+- Organ ablation comparisons now use one-sided margins: better quality or lower
+  token/latency cost passes; any repetition degrading beyond its margin blocks.
+  Signed changes and direction are retained, while incomplete panels and failed
+  write/restart or consumer evidence still prevent positive qualification.
+
 - CMake code navigation extracts functions, macros, targets and dependencies; source collection avoids traversing ignored build caches.
 
 - SQL code navigation exposes tables, views, functions and object references.
