@@ -7,7 +7,7 @@
 > transcripts with `scripts/token-ledger.py`; targets and steps below. Adds
 > Phase 10 to `DECISION-2026-09-16-robustness-plan.md`.
 
-## Baseline (last 7 days, list prices, ratios are the point)
+## Baseline (original numbers superseded; retained for comparison)
 
 | | Fable (Claude Code) | Astra (Codex) |
 |---|---|---|
@@ -20,7 +20,31 @@
 | Cost at list prices | about $38 k | about $560 |
 | Largest session | 43,332 turns, 13.2 B cached, $24 k | 814 turns, 54 M cached, $31 |
 
-Three facts follow. The money is on Fable's side by a factor of sixty. The
+### Corrected event-window baseline
+
+Measured with `scripts/token-ledger.py --days 7 --json`, window 2026-09-10T05:07:39.328394+00:00 to 2026-09-17T05:07:39.328394+00:00.
+
+| Metric | Fable | Astra |
+|---|---:|---:|
+| Sessions | 113 | 2,316 |
+| Deduplicated requests | 2,504 | 14,658 |
+| Mean context per request | 406,805 | 74,052 |
+| Context at latest request | 771,043 | 216,998 |
+| Cached input tokens | 1,002,688,543 | 1,015,270,656 |
+| Cache-write input tokens | 15,695,873 | 0 |
+| Output tokens | 2,074,095 | 5,668,994 |
+| Estimated cost | $2,116.70 | $693.37 |
+| Requests using fallback IDs | 0 | 14,658 |
+
+The original table above is superseded, as are numerical savings extrapolations
+that depend on it. This is a corrected observational baseline, not the paired
+continuation experiment. It includes nested transcript files and deduplicates
+request IDs across files; missing provider IDs use the documented fallback.
+Costs include cache writes using the configured provider prices, rather than
+model-specific billing. Model usage and per-session lifetime mean versus last
+request context are retained in the JSON report.
+
+The original analysis (based on the superseded table): three facts follow. The money is on Fable's side by a factor of sixty. The
 cost is turns × context: a Fable turn re-sends a 343k-token thread, so every
 kilobyte of tool output and every status poll is paid on every later turn.
 Output tokens are the second line (84 M at the highest price), and they are

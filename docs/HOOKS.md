@@ -1539,3 +1539,17 @@ unambiguous symbol/file resolution as INFERRED; it does not simulate runtimes.
 - <a id="ref-51"></a>**[51]** openai/codex issue contributors. Codex tool loop causes context snowballing and multi-million-token input amplification. GitHub issue #44305 (accessed 2026-09-16). [source](<https://github.com/openai/codex/issues/44305>)
 - <a id="ref-71"></a>**[71]** Alex L. Zhang, Tim Kraska, and Omar Khattab. Recursive Language Models. arXiv:2512.24601 (2025; revised 2026). [source](<https://arxiv.org/abs/2512.24601>)
 <!-- END CITATIONS -->
+
+### Transcript token accounting
+
+`scripts/token-ledger.py --days 7 --json` reads transcript events without changing
+session state. The window uses event timestamps; `--now UNIX_SECONDS` pins its
+end. Requests are deduplicated across files by provider request ID (Claude message
+ID is a fallback). Codex logs without request IDs use session identity plus the
+cumulative usage vector; `fallback_request_ids` makes this limitation visible.
+Repeated cumulative snapshots and tool calls do not increase the request count.
+The report preserves per-model usage, includes cache creation in context and cost,
+and shows each top session's last-request context beside its lifetime mean.
+Costs use configurable provider price estimates, including 5-minute and 1-hour
+cache writes; they are not model-resolved invoices. Run `--self-test` for accounting
+regressions. Tool-output byte totals are diagnostic and are not billed usage.
