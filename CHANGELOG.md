@@ -1,6 +1,6 @@
 # Changelog
 
-- Bash PostToolUse stores oversized results by SHA-256 and emits bounded reference previews for Claude Code and Codex; `chitta output_ref --hash` retrieves local content without RPC. SessionStart reads a weekly token report cached daily by maintenance. Raw frontend results remain unchanged.
+- Token ledger deduplicates provider requests across transcripts, uses event timestamps for reporting windows, includes cache-write costs, and reports per-model usage plus last-request and lifetime-mean context. Codex usage-event fallback IDs are counted explicitly.
 
 All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 [docs/RENAME.md](docs/RENAME.md)) are documented here.
@@ -9,6 +9,23 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 > released without changelog entries (~419 commits). The sections below were
 > reconstructed from `git log` between tags; patch releases are grouped under
 > their minor version (`## [5.x.y]`) with per-release dates on one line.
+
+- Cap eligible Bash output at source through PreToolUse `updatedInput` and local
+  `chitta output_cap`; preserve pipefail status and skip sqz, multiline,
+  interactive and background commands. Full bytes remain retrievable with
+  `output_ref --hash` and optional line ranges for 48 hours. Remove additive
+  PostToolUse summaries; retain the cached weekly token line.
+
+- Organ ablation dispatch supports `--jobs` with process-local replicas and an
+  admission byte budget inside a 16-CPU/96-GiB compute allocation. Serial and
+  parallel controls must agree before ordered groups, nine priority organs and
+  the remainder run. Reports retain per-trial and per-block wall time; real
+  serial/parallel measurements remain blocked by calibration/agent prerequisites.
+
+- Organ ablation comparisons now use one-sided margins: better quality or lower
+  token/latency cost passes; any repetition degrading beyond its margin blocks.
+  Signed changes and direction are retained, while incomplete panels and failed
+  write/restart or consumer evidence still prevent positive qualification.
 
 - CMake code navigation extracts functions, macros, targets and dependencies; source collection avoids traversing ignored build caches.
 
@@ -112,6 +129,12 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
   36/50; the current-truth and golden recall exit gates remain unmet.
 
 ### Added
+- Require complete control evidence before organ-ablation trials: retain
+  current-truth visible/holdout metrics, validate calibration panel identity,
+  and require real SMRITI output with confirmed memory injection through
+  private checkout hooks. Preserve daemon logs on failed trials. The new
+  controls still require matching frozen bands and isolated agent credentials;
+  these collection fixes do not qualify historical ablations for retirement.
 - Per-open `CHITTA_ABLATE_ORGANS` experiments for 43 field organs, with
   empty runtime views, suppressed new organ WAL events, and preserved snapshot
   state for rollback. Six new Rust tests cover parsing, runtime isolation,

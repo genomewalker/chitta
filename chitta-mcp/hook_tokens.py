@@ -8,9 +8,12 @@ def weekly_line(state):
     try:
         agents = json.loads((state / "token-ledger.json").read_text())["agents"]
         fable, astra = agents["fable"], agents["astra"]
+        average = fable.get("total", {}).get(
+            "avg_context_per_request", fable.get("avg_context_per_turn")
+        )
         values = (
             fable["sessions"],
-            fable["avg_context_per_turn"],
+            average,
             fable["total_cost"],
             astra["sessions"],
             astra["total_cost"],
@@ -19,7 +22,7 @@ def weekly_line(state):
             return ""
         return (
             f"[tokens] this week: fable {fable['sessions']}s "
-            f"{fable['avg_context_per_turn'] / 1000:.0f}k/req ${fable['total_cost']:.2f}; "
+            f"{average / 1000:.0f}k/req ${fable['total_cost']:.2f}; "
             f"astra {astra['sessions']}s ${astra['total_cost']:.2f}\n"
         )
     except (OSError, ValueError, KeyError, TypeError):

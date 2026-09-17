@@ -18,7 +18,7 @@ def call(tool,fields,**options):
 p,data=call('Bash',{'command':'find / -name needle'},CHITTA_STRICT_MODE='1')
 assert p.returncode==0 and data['hookSpecificOutput']['permissionDecision']=='deny'
 p,data=call('Bash',{'command':'find . -name needle'})
-assert data['hookSpecificOutput']['updatedInput']['command']=='find . -maxdepth 3 -name needle'
+assert data['hookSpecificOutput']['updatedInput']['command']=='(set -o pipefail; ( find . -maxdepth 3 -name needle\n) 2>&1 | chitta output_cap)'
 p,data=call('Agent',{'subagent_type':'research','description':'find a symbol','model':'fable'})
 assert 'updatedInput' not in data.get('hookSpecificOutput',{})
 p,data=call('Agent',{'subagent_type':'fork','description':'find a symbol'})

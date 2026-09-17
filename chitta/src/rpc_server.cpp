@@ -1,3 +1,4 @@
+#include <chitta/output_cap.hpp>
 #include <chitta/queue_path.hpp>
 #include <chitta/prompt_policy.hpp>
 // Chitta CLI - Multi-mode memory operations
@@ -676,36 +677,8 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Content references are local files, never an RPC or schema-discovered tool.
-    if (tool == "output_ref") {
-        std::string hash;
-        for (int i = tool_arg_index + 1; i < argc; ++i) {
-            if (std::strcmp(argv[i], "--hash") == 0 && i + 1 < argc) hash = argv[++i];
-        }
-        if ((hash.size() != 12 && hash.size() != 64) ||
-            hash.find_first_not_of("0123456789abcdef") != std::string::npos) {
-            std::cerr << "usage: chitta output_ref --hash <12 or 64 lowercase hex digits>\n";
-            return 2;
-        }
-        const char* configured = std::getenv("CHITTA_DB_PATH");
-        if (!configured) configured = std::getenv("CC_SOUL_DB_PATH");
-        const char* home = std::getenv("HOME");
-        const std::string mind = configured ? configured : std::string(home ? home : "") + "/.claude/mind";
-        const auto directory = std::filesystem::path(chitta::runtime_state_dir(mind)) / "outputs";
-        std::filesystem::path match;
-        std::error_code error;
-        for (const auto& entry : std::filesystem::directory_iterator(directory, error)) {
-            const auto name = entry.path().filename().string();
-            if (name.size() != 64 || name.find_first_not_of("0123456789abcdef") != std::string::npos ||
-                name.compare(0, hash.size(), hash) != 0 || entry.is_symlink() || !entry.is_regular_file()) continue;
-            if (!match.empty()) { std::cerr << "ambiguous output reference\n"; return 1; }
-            match = entry.path();
-        }
-        std::ifstream input(match, std::ios::binary);
-        if (!input) { std::cerr << "output reference not found\n"; return 1; }
-        std::cout << input.rdbuf();
-        return std::cout.good() ? 0 : 1;
-    }
+    if (tool == "output_cap" || tool == "output_ref")
+        return chitta::output_cache::run(tool, argc, argv, tool_arg_index);
 
     // Some daemon tools also have client-side shortcuts (realm_detect). Their
     // help still comes from the advertised schema, just like every other tool.

@@ -1,29 +1,11 @@
 #!/usr/bin/env python3
-"""Replay one UTC day of Claude Bash results through the real post-tool envelope.
-
-The policy transport is replaced with an empty plan: this measures local summary
-bytes, with no daemon writes. Raw frontend tool results cannot be rewritten.
-"""
+"""Replay one UTC day of Bash results through CLI-local output_cap."""
 
 import argparse
 import json
-import sys
+import os
+import subprocess
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "chitta-mcp"))
-from hook_client import post_tool
-
-
-class ReplayClient:
-    def __init__(self, payload, state):
-        self.payload, self.state, self.mind = payload, state, state
-        self.output = ""
-
-    def policy(self, *args, **kwargs):
-        return {"stdout": ""}
-
-    def apply(self, plan):
-        self.output = plan["stdout"]
 
 
 def main():
@@ -31,9 +13,11 @@ def main():
     ap.add_argument("transcript", type=Path)
     ap.add_argument("--day", required=True)
     ap.add_argument("--state", type=Path, required=True)
+    ap.add_argument("--cli", type=Path, default=Path("bin/chitta").resolve())
     args = ap.parse_args()
+    env = dict(os.environ, CHITTA_DB_PATH=str(args.state), CHITTA_RUNTIME_LOCAL="0")
     commands = {}
-    count = capped = original = projected = summary_chars = 0
+    count = capped = original = projected = unchanged = 0
     with args.transcript.open() as stream:
         for line in stream:
             try:
@@ -59,25 +43,31 @@ def main():
                     text = "\n".join(v.get("text", "") for v in text if isinstance(v, dict))
                 if not isinstance(text, str):
                     continue
-                client = ReplayClient(
-                    {
-                        "tool_name": "Bash",
-                        "tool_input": {"command": "replay"},
-                        "tool_response": text,
-                    },
-                    args.state,
-                )
-                post_tool(client)
+                raw = text.encode()
+                result = subprocess.run(
+                    [str(args.cli), "output_cap"],
+                    input=raw,
+                    capture_output=True,
+                    check=True,
+                    env=env,
+                ).stdout
                 count += 1
                 original += len(text)
-                summary = (
-                    json.loads(client.output)["hookSpecificOutput"]["additionalContext"]
-                    if client.output
-                    else ""
-                )
-                projected += len(summary) if summary else len(text)
-                summary_chars += len(summary)
-                capped += bool(summary)
+                projected += len(result.decode())
+                if result == raw:
+                    unchanged += 1
+                else:
+                    capped += 1
+                    ref = result.decode().split("§")[1].removeprefix("ref:")
+                    restored = subprocess.run(
+                        [str(args.cli), "output_ref", "--hash", ref],
+                        capture_output=True,
+                        check=True,
+                        env=env,
+                    ).stdout
+                    assert restored == raw
+                if len(text) <= int(env.get("CHITTA_OUTPUT_CAP_CHARS", "6000")):
+                    assert result == raw
     print(
         json.dumps(
             dict(
@@ -85,9 +75,10 @@ def main():
                 bash_outputs=count,
                 capped=capped,
                 raw_chars=original,
-                replacement_projection_chars=projected,
-                summary_chars=summary_chars,
-                actual_raw_plus_context_chars=original + summary_chars,
+                thread_chars=projected,
+                unchanged=unchanged,
+                reduction_pct=round(100 * (1 - projected / original), 2),
+                round_trip="PASS",
             )
         )
     )

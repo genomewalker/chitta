@@ -128,7 +128,6 @@ not select a shell implementation. Models for distillation are daemon-owned.
 | `CHITTA_EMBED_WRITE_WORKERS` | `0` | `0` preserves the existing embedding lane. Positive values enable dedicated document workers and a separate two-worker Unix write-RPC pool. Clamped to leave one of `CHITTA_EMBED_CONTEXTS` free when possible. |
 | `CHITTA_EMBED_WRITE_DEPTH` | `64` | Maximum queued document jobs, excluding active workers; 1–65536. |
 | `CHITTA_EMBED_WRITE_WAIT_MS` | `1000` | Actual document-inference callers wait for admission at most this long; 1–60000 ms. Cache-warming calls remain nonblocking because legacy callers can hold the global write lock. |
-| `CHITTA_OUTPUT_CAP_CHARS` | `6000` | Bash results above this character limit are saved in runtime `outputs/<sha256>` with a `§ref:<hash12>§` and first/last 20 lines in PostToolUse additionalContext. Long-line previews are also character-bounded (minimum 256). Retrieve with `chitta output_ref --hash <hash12-or-full>`, using the same DB/runtime environment. Files are private; remove the runtime outputs directory when references are no longer needed. Hooks cannot rewrite the frontend raw result. |
 | `CHITTA_HOOK_PROFILE` | unset | Measurement only: write the complete prompt policy response to this private file, including lane statuses and daemon embedding, retrieval and admission milliseconds. The parity harness uses this in `measure` mode or with `--require-pipeline`. |
 | `CHITTA_LEDGER_PROFILE` | unset | Evaluation only: private destination for the validated ledger assembly response. `--require-ledger` checks this and Stop's queued capsule/turn payloads. |
 | `CHITTA_HOOK_NOW` | unset | Parity evaluation only: 13-digit positive Unix milliseconds. Pins hook wall timestamps and displayed lane/total durations to zero; explicit date parsing, real timeout flags and prompt budget enforcement remain unpinned. Use with `CHITTA_RECALL_NOW` on a private replica and `scripts/bench-hook-parity.py`. Invalid values are ignored. |
@@ -270,6 +269,35 @@ chitta provides hooks in two forms:
 | **Settings hooks** | `hooks/*.sh` + `~/.claude/settings.json`                                          | Standalone installation          |
 
 The `smart-install.sh` script configures the appropriate system automatically.
+
+### Bash output references
+
+The daemon's PreToolUse policy rewrites eligible single-line Bash commands as
+`(set -o pipefail; ( <command>
+) 2>&1 | chitta output_cap)` through
+`updatedInput.command`. Other input fields are preserved. Multiline commands,
+background jobs, heredocs, interactive commands, `srun`, `nohup`, `setsid`, and
+`codex` are skipped. Commands already piped through `sqz compress` or
+`chitta output_cap` are left alone. Denied commands are never rewritten.
+
+| Setting | Default | Effect |
+|---|---|---|
+| `CHITTA_OUTPUT_CAP` | `1` | `0` disables the PreToolUse rewrite |
+| `CHITTA_OUTPUT_CAP_CHARS` | `6000` | Pass smaller outputs through byte-for-byte; cap larger previews |
+| `CHITTA_OUTPUT_REF_TTL_H` | `48` | Expire cached output references after this many hours |
+
+`chitta output_cap` runs locally without an RPC. Oversized output is saved in
+`outputs/` under the runtime state directory, keyed by the first 12 hexadecimal
+SHA-256 characters. The thread receives a `§ref:<hash>§` header, character and
+line counts, and the first/last 20 lines. Long lines are bounded too. Fetch the
+original bytes with `chitta output_ref --hash <hash>`, or select inclusive,
+one-based lines with `--lines 21-60`. Expired references are removed lazily.
+Cache failures pass through the original output. The wrapper preserves failure
+status using Bash pipefail. PostToolUse does not add output summaries.
+
+SessionStart may append a cached `[tokens] this week:` line. Refresh the ledger
+with `scripts/token-ledger.py --cache-daily <runtime-dir>/token-ledger.json`;
+SessionStart never scans transcripts.
 
 ### Hook Output Format
 
@@ -1541,6 +1569,16 @@ unambiguous symbol/file resolution as INFERRED; it does not simulate runtimes.
 - <a id="ref-71"></a>**[71]** Alex L. Zhang, Tim Kraska, and Omar Khattab. Recursive Language Models. arXiv:2512.24601 (2025; revised 2026). [source](<https://arxiv.org/abs/2512.24601>)
 <!-- END CITATIONS -->
 
-### Weekly token cache
+### Transcript token accounting
 
-The dream maintenance sweep starts `scripts/token-ledger.py --json --cache-daily <runtime>/token-ledger.json` outside SessionStart. A nonblocking lock and atomic replacement limit refresh to once per 24 hours. This command can also run from a daily scheduler. SessionStart only reads the cached report and emits `[tokens] this week: fable <sessions>s <mean context>k/req $<cost>; astra <sessions>s $<cost>`. Missing or malformed caches are silent; the last successful report remains available if refresh fails. Until maintenance first runs, no line is printed.
+`scripts/token-ledger.py --days 7 --json` reads transcript events without changing
+session state. The window uses event timestamps; `--now UNIX_SECONDS` pins its
+end. Requests are deduplicated across files by provider request ID (Claude message
+ID is a fallback). Codex logs without request IDs use session identity plus the
+cumulative usage vector; `fallback_request_ids` makes this limitation visible.
+Repeated cumulative snapshots and tool calls do not increase the request count.
+The report preserves per-model usage, includes cache creation in context and cost,
+and shows each top session's last-request context beside its lifetime mean.
+Costs use configurable provider price estimates, including 5-minute and 1-hour
+cache writes; they are not model-resolved invoices. Run `--self-test` for accounting
+regressions. Tool-output byte totals are diagnostic and are not billed usage.

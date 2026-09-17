@@ -35,6 +35,24 @@ inline json pretool(const json& a, const Invoke& invoke) {
         output["additionalContext"] = prior + (prior.empty() ? "" : "\n") + text;
     };
     auto finish = [&]() {
+        // Apply after policy decisions, including scoped-find rewrites; never to denials.
+        if (tool == "Bash" && opt("OUTPUT_CAP", "1") != "0" &&
+            str(output, "permissionDecision") != "deny") {
+            auto updated = output.value("updatedInput", tool_input);
+            const auto command = str(updated, "command");
+            // Conservative exclusions: shell comments/escapes and interactive jobs
+            // cannot safely be embedded in the pipeline's command group.
+            if (!command.empty() && command.find_first_of("\n\r#") == std::string::npos &&
+                !match(command, R"((^|[^&>])&([^&>]|$))") &&
+                command.back() != '\\' && command.find("<<") == std::string::npos &&
+                !match(command, R"(\|\s*(sqz\s+compress|chitta\s+output_cap)\b)") &&
+                !match(command, R"(\b(nohup|setsid|srun|codex|ssh|sudo|su|read|select|vi|vim|nvim|nano|less|more|top|htop|watch|tmux|screen)\b)") &&
+                !match(command, R"((^|[;|\s])(bash|sh|zsh|python3?|ipython)(\s+(-i|--interactive))?\s*$)")) {
+                updated["command"] = "(set -o pipefail; ( " + command +
+                    "\n) 2>&1 | chitta output_cap)";
+                output["updatedInput"] = updated;
+            }
+        }
         if (output.size() > 1)
             result["stdout"] = json{{"hookSpecificOutput", output}}.dump() + "\n";
         return result;

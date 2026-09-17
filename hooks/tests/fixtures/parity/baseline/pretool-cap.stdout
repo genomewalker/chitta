@@ -1,0 +1,1 @@
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","updatedInput":{"command":"(set -o pipefail; ( printf hello\n) 2>&1 | chitta output_cap)","timeout":1000}}}

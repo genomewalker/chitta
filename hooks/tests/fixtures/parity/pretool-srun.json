@@ -1,0 +1,1 @@
+{"session_id": "parity-pretool", "tool_name": "Bash", "tool_input": {"command": "srun hostname", "timeout": 1000}}
