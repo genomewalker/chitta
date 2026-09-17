@@ -37,6 +37,7 @@ inline json pretool(const json& a, const Invoke& invoke) {
     auto finish = [&]() {
         // Apply after policy decisions, including scoped-find rewrites; never to denials.
         if (tool == "Bash" && opt("OUTPUT_CAP", "1") != "0" &&
+            !tool_input.value("run_in_background", false) &&
             str(output, "permissionDecision") != "deny") {
             auto updated = output.value("updatedInput", tool_input);
             const auto command = str(updated, "command");

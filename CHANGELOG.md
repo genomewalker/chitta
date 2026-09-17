@@ -14,7 +14,8 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 - Cap eligible Bash output at source through PreToolUse `updatedInput` and local
   `chitta output_cap`; preserve pipefail status and skip sqz, multiline,
-  interactive and background commands. Full bytes remain retrievable with
+  interactive and background commands (including Bash `run_in_background`).
+  Full bytes remain retrievable with
   `output_ref --hash` and optional line ranges for 48 hours. Remove additive
   PostToolUse summaries; retain the cached weekly token line.
 

@@ -276,7 +276,8 @@ The daemon's PreToolUse policy rewrites eligible single-line Bash commands as
 `(set -o pipefail; ( <command>
 ) 2>&1 | chitta output_cap)` through
 `updatedInput.command`. Other input fields are preserved. Multiline commands,
-background jobs, heredocs, interactive commands, `srun`, `nohup`, `setsid`, and
+background jobs (shell `&` or Bash `run_in_background=true`), heredocs,
+interactive commands, `srun`, `nohup`, `setsid`, and
 `codex` are skipped. Commands already piped through `sqz compress` or
 `chitta output_cap` are left alone. Denied commands are never rewritten.
 
