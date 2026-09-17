@@ -154,6 +154,8 @@ def main():
                     ".ex",
                     ".exs",
                     ".hs",
+                    ".Dockerfile",
+                    ".dockerfile",
                     ".php",
                     ".phtml",
                     ".sql",
@@ -208,9 +210,21 @@ def main():
                     str(root / f)
                     for f in tracked
                     if Path(f).suffix in extensions
-                    or Path(f).suffix.lower() in {".f", ".for", ".f77", ".f90", ".f95", ".f03", ".f08"}
-                    or Path(f).name in {"CMakeLists.txt", ".Rprofile", "Snakefile", "snakefile", "Makefile", "makefile", "GNUmakefile"}
-                    or Path(f).name.startswith("Makefile.")
+                    or Path(f).suffix.lower()
+                    in {".f", ".for", ".f77", ".f90", ".f95", ".f03", ".f08"}
+                    or Path(f).name
+                    in {
+                        "dockerfile",
+                        "Dockerfile",
+                        "CMakeLists.txt",
+                        ".Rprofile",
+                        "Snakefile",
+                        "snakefile",
+                        "Makefile",
+                        "makefile",
+                        "GNUmakefile",
+                    }
+                    or Path(f).name.startswith(("Makefile.", "Dockerfile."))
                 }
                 present = set(call("codebase_overview", project="chitta")["indexed_files"])
                 result["tracked_supported"] = len(expected)

@@ -1454,6 +1454,15 @@ connections. Runtime dispatch and dynamic import paths are not evaluated.
 
 | Language | Files | Definitions and edges |
 |---|---|---|
+| C / C++ | `.c`, `.h`, `.cpp`, `.hpp`, `.cc`, `.cxx`, `.hxx` | Functions and types; calls, includes, inheritance and identifier references |
+| Python | `.py`, `.pyw` | Functions, classes and methods; calls, imports, bases and identifier references |
+| JavaScript / TypeScript | `.js`, `.jsx`, `.mjs`, `.ts`, `.tsx` | Functions, classes and methods; calls, imports, inheritance and identifier references |
+| Go | `.go` | Functions, methods and types; calls, imports and identifier references |
+| Rust | `.rs` | Functions, types, traits and implementations; calls, imports, relationships and identifier references |
+| Java / C# / Ruby | `.java`, `.cs`, `.rb` | Existing definition extractors and identifier references; dedicated call/import extraction remains limited |
+| Swift | `.swift` | Functions, types and methods; calls, imports, relationships and identifier references |
+| Lua | `.lua` | Functions, calls, literal module imports and identifier references |
+| Markdown | `.md`, `.markdown`, `.mdown` | Heading sections, extracted by the existing heading parser |
 | Bash / sh | `.sh`, `.bash` | Functions with signatures; literal command calls (resolved to known functions); `source` and `.` imports. Comments and heredocs remain data. |
 | R | `.R`, `.r`, `.Rprofile` | Assigned functions and named methods; calls; `source`, `library`, `require` and namespace imports; S4/R6 classes with literal inheritance. |
 | Julia | `.jl` | Long/short functions, macros, modules, structs and abstract types; calls, `using`/`import`, literal `include`, and subtype edges. |
@@ -1468,6 +1477,7 @@ connections. Runtime dispatch and dynamic import paths are not evaluated.
 | OCaml | `.ml`, `.mli` | Functions, types, modules, classes/methods, calls, open/include imports and inheritance; implementation and interface grammars |
 | Elixir | `.ex`, `.exs` | Modules, protocols, functions/macros, calls and import/alias/require/use edges; declaration heads are excluded from calls |
 | Haskell | `.hs` | Functions with type signatures, data/newtypes, typeclasses/instances, curried calls, imports and instance relationships |
+| Dockerfile | `.dockerfile`, `Dockerfile` | Build stages, FROM image imports, COPY/ADD source-file imports and COPY --from stage references |
 | PHP | `.php`, `.phtml` | Functions, methods, classes/interfaces/traits/enums, calls, literal includes/requires, namespace imports, inheritance |
 | SQL | `.sql`, `.ddl` | Tables, views, functions/procedures, calls and object references, including parsed SQL function bodies |
 | CMake | `.cmake`, `CMakeLists.txt` | Functions, macros, targets, command calls, includes/subdirectories, target dependencies |
@@ -1490,6 +1500,14 @@ CMake navigation extracts functions, macros and build targets; `include` and
 `add_subdirectory` resolve to files, and explicit target dependencies form calls.
 
 `CHITTA_EXTRA_GRAMMARS=ON` (the release/default setting) builds the additional
-Graphify-parity grammars, starting with PHP. Set it to `OFF` for a smaller
+Graphify-parity grammars: PHP, Kotlin, Scala, Zig, HCL/Terraform, OCaml
+(implementation and interface), Elixir, Haskell and Dockerfile. Set it to `OFF` for a smaller
 binary with the priority bioinformatics/build languages retained. Disabled
 grammars do not claim indexed coverage. Both settings use pinned source caches.
+
+YAML, TOML and JSON are reference-only file nodes: they have no code definitions.
+Literal paths in parsed code can resolve to those nodes; Dockerfile COPY/ADD
+inputs are import edges. FROM images remain extracted external imports unless
+another indexed stage resolves the reference. Numeric and named COPY stages
+resolve without executing a build. The graph stores syntax as EXTRACTED and
+unambiguous symbol/file resolution as INFERRED; it does not simulate runtimes.

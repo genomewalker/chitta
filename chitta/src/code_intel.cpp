@@ -39,6 +39,8 @@ extern "C" const TSLanguage* tree_sitter_elixir();
 
 extern "C" const TSLanguage* tree_sitter_haskell();
 
+extern "C" const TSLanguage* tree_sitter_dockerfile();
+
 namespace chitta {
 const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
     if (language == "bash") return tree_sitter_bash();
@@ -61,11 +63,12 @@ const TSLanguage* CodeIntel::extended_grammar(const std::string& language) {
     if (language == "ocaml_interface") return tree_sitter_ocaml_interface();
     if (language == "elixir") return tree_sitter_elixir();
     if (language == "haskell") return tree_sitter_haskell();
+    if (language == "dockerfile") return tree_sitter_dockerfile();
 #endif
     return nullptr;
 }
 void CodeIntel::initialize_extended_parsers() {
-    for (const auto* language : {"bash", "r", "julia", "fortran", "nextflow", "snakemake", "perl", "make", "cmake", "sql", "kotlin", "scala", "zig", "hcl", "ocaml", "ocaml_interface", "elixir", "haskell", "php"}) {
+    for (const auto* language : {"bash", "r", "julia", "fortran", "nextflow", "snakemake", "perl", "make", "cmake", "sql", "kotlin", "scala", "zig", "hcl", "ocaml", "ocaml_interface", "elixir", "haskell", "dockerfile", "php"}) {
         if (!extended_grammar(language)) continue; // Optional grammar group disabled.
         auto* parser = ts_parser_new();
         if (!ts_parser_set_language(parser, extended_grammar(language))) {
@@ -77,6 +80,7 @@ void CodeIntel::initialize_extended_parsers() {
 }
 std::string CodeIntel::detect_extended_language(const std::string& path) {
     auto ext = std::filesystem::path(path).extension().string();
+    if (ext == ".json" || ext == ".yaml" || ext == ".yml" || ext == ".toml") return "reference";
     if (ext == ".sh" || ext == ".bash") return "bash";
     auto filename = std::filesystem::path(path).filename().string();
     if ((ext == ".kt" || ext == ".kts") && extended_grammar("kotlin")) return "kotlin";
@@ -87,6 +91,7 @@ std::string CodeIntel::detect_extended_language(const std::string& path) {
     if (ext == ".mli" && extended_grammar("ocaml_interface")) return "ocaml_interface";
     if ((ext == ".ex" || ext == ".exs") && extended_grammar("elixir")) return "elixir";
     if ((ext == ".hs") && extended_grammar("haskell")) return "haskell";
+    if ((ext == ".dockerfile" || ext == ".Dockerfile" || filename == "Dockerfile" || filename == "dockerfile" || filename.starts_with("Dockerfile.")) && extended_grammar("dockerfile")) return "dockerfile";
     if ((ext == ".php" || ext == ".phtml") && extended_grammar("php")) return "php";
     if (ext == ".sql" || ext == ".ddl") return "sql";
     if (ext == ".cmake" || filename == "CMakeLists.txt") return "cmake";
@@ -797,12 +802,67 @@ void CodeIntel::extract_extended(TSNode root, const std::string& source,
             }
             if (type == "import") result.imports.push_back({path, text(field(node, "module")), "", {}, uint32_t(node_line(node))});
         }
+        if (language == "dockerfile") {
+            if (type == "from_instruction") {
+                auto image = ast_find(node, "image_spec");
+                auto name = text(field(node, "as"));
+                if (name.empty()) name = "stage@" + std::to_string(node_line(node));
+                define(node, name, "stage", "");
+                auto last = node_end_line(root);
+                for (uint32_t i = 0; i < ast_named_count(root); ++i) {
+                    auto next = ast_named_child(root, i);
+                    if (std::string(ast_type(next)) == "from_instruction" && node_line(next) > node_line(node)) { last = node_line(next) - 1; break; }
+                }
+                result.symbols.back().line_end = last;
+                result.imports.push_back({path, text(image), "", {}, uint32_t(node_line(node))});
+                result.references.push_back({path, text(image), uint32_t(node_line(node))});
+            }
+            if (type == "copy_instruction" || type == "add_instruction") {
+                std::vector<TSNode> files;
+                bool from_stage = false;
+                for (uint32_t i = 0; i < ast_named_count(node); ++i) {
+                    auto child = ast_named_child(node, i);
+                    if (std::string(ast_type(child)) == "path") files.push_back(child);
+                    if (std::string(ast_type(child)) == "param" && text(child).starts_with("--from=")) {
+                        auto target = text(child).substr(7);
+                        if (!target.empty() && target.size() <= 6 && std::all_of(target.begin(), target.end(), [](unsigned char c) { return std::isdigit(c); })) {
+                            auto ordinal = std::stoul(target);
+                            for (uint32_t n = 0; n < ast_named_count(root); ++n) {
+                                auto stage = ast_named_child(root, n);
+                                if (std::string(ast_type(stage)) != "from_instruction") continue;
+                                if (ordinal-- == 0) {
+                                    target = text(field(stage, "as"));
+                                    if (target.empty()) target = "stage@" + std::to_string(node_line(stage));
+                                    break;
+                                }
+                            }
+                        }
+                        result.references.push_back({path, target, uint32_t(node_line(node))}); from_stage = true;
+                    }
+                }
+                // The final path is the destination, not a repository input.
+                if (!from_stage) for (size_t i = 0; i + 1 < files.size(); ++i)
+                    result.imports.push_back({path, literal(files[i]), "", {}, uint32_t(node_line(node))});
+            }
+        }
         for (uint32_t i = 0; i < ast_named_count(node); ++i) visit(ast_named_child(node, i), parent);
     };
     visit(root, "");
     // Shell command syntax alone cannot distinguish an executable from a
     // function. Keep literal calls as extracted evidence; graph resolution
     // only binds them when a matching function exists in the indexed scope.
+}
+
+void CodeIntel::extract_file_reference(TSNode node, const std::string& source,
+                                    const std::string& path, ExtractionResult& result) {
+    std::string type = ts_node_type(node);
+    if ((type.find("string") != std::string::npos || type == "quoted_argument" || type == "word") && ts_node_end_byte(node) - ts_node_start_byte(node) < 4096) {
+        auto value = node_text(node, source);
+        if (value.size() > 1 && (value.front() == '\"' || value.front() == '\'') && value.back() == value.front()) value = value.substr(1, value.size() - 2);
+        auto extension = std::filesystem::path(value).extension().string();
+        if ((extension == ".json" || extension == ".yaml" || extension == ".yml" || extension == ".toml") && value.find_first_of("$*\n\r") == std::string::npos)
+            result.references.push_back({path, value, uint32_t(node_line(node)), true});
+    }
 }
 
 namespace {

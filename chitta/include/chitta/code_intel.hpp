@@ -176,6 +176,7 @@ struct CodeReference {
     std::string file_path;
     std::string name;
     uint32_t line;
+    bool file_reference = false;
 };
 
 // Combined extraction result
@@ -498,6 +499,7 @@ public:
             std::string type = ts_node_type(node);
             if (type == "identifier" || type == "type_identifier" || type == "field_identifier")
                 result.references.push_back({path, node_text(node, source), static_cast<uint32_t>(node_line(node))});
+            extract_file_reference(node, source, path, result);
             for (uint32_t n = 0; n < ts_node_named_child_count(node); ++n)
                 pending.push_back(ts_node_named_child(node, n));
         }
@@ -616,6 +618,7 @@ private:
     std::unordered_map<std::string, TSParser*> parsers_;
     void initialize_extended_parsers();
     static std::string detect_extended_language(const std::string& path);
+    void extract_file_reference(TSNode node, const std::string& source, const std::string& path, ExtractionResult& result);
     void extract_extended(TSNode root, const std::string& source, const std::string& path,
                           const std::string& language, ExtractionResult& result);
 

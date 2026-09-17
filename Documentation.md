@@ -229,9 +229,8 @@ Step 5 documents the hook contract/environment, navigation orientation,
 changelog and verified five-step Phase 9 status. API/static generation produced
 no further drift. The final quick gate (including documentation/site checks),
 Rust 296 tests, all 36 CTest cases (one model-dependent skip), all hook suites,
-MCP 159, SMRITI 46 and CI lint passed. The language-expansion follow-up added
-by the required main merge is marked pending, separately from the five steps
-in this work order. The benchmark approval trailer is carried forward because
+MCP 159, SMRITI 46 and CI lint passed. The subsequent language-expansion follow-up is verified below, separately
+from the five steps in this work order. The benchmark approval trailer is carried forward because
 the immutable-eval checker reads the branch head message for the entire diff.
 
 ## Phase 9 language expansion — Bash (2026-09-17)
@@ -250,7 +249,8 @@ the cached pinned source with FetchContent fully disconnected. The quick gate
 passed, including contracts. Two existing test-only ShellCheck warnings now
 explicitly document intentional literal tilde paths. The initial JSON assertion
 compile/lifetime defects in the new test harness were fixed and rerun. The full
-gate and expanded repository coverage run follow the last language commit.
+gate and expanded repository coverage follow the last language addition;
+the completed measurements are recorded below.
 
 ### R
 
@@ -474,3 +474,95 @@ relationship); duplicate curried application records collapse in the graph.
 Fresh parsing averages 659.59 microseconds/KiB; daemon size is 107,019,544 bytes
 (+3,842,736). Offline extraction/query fixtures pass. Contracts and recall
 scoring are unchanged.
+
+### Dockerfile and reference-only configuration files
+
+Dockerfile navigation extracts build stages, FROM image imports, COPY/ADD source
+imports and named/numeric COPY stage references. Its fixture has 2 definitions
+and 5 query edges (4 imports, 1 stage reference). Fresh parsing averages 220.51
+microseconds/KiB; daemon size is 107,086,456 bytes (+66,912, including the
+configuration-file support below).
+
+YAML, TOML and JSON have file nodes and no code definitions. Literal paths in
+parsed code resolve to these nodes. A graph regression checks all three formats,
+three inferred file edges and identical output after reopening the sidecar.
+The existing AST metadata walk extracts these paths without a second tree walk.
+Offline extraction/query fixtures pass. Contracts and recall scoring are
+unchanged; generated API docs only changed their generation date.
+
+### Language fixture measurements
+
+Graph-edge counts below are deduplicated query edges, rather than raw AST
+records. Parsing is the mean of 200 fresh parses per fixture, excluding I/O.
+Size deltas use the same Release build with llama enabled and are incremental;
+the final daemon is 107,086,456 bytes. No requested grammar was skipped.
+
+| Language | Definitions | Query edges | Parse µs/KiB | Daemon delta (bytes) |
+|---|---:|---:|---:|---:|
+| Bash/sh | 2 | 6 | 231.37 | 1,399,056 |
+| R | 5 | 18 | 311.74 | 514,040 |
+| Julia | 5 | 10 | 431.54 | 6,246,880 |
+| Fortran | 5 | 6 | 292.73 | 3,766,344 |
+| Nextflow | 5 | 12 | 213.56 | 505,952 |
+| Snakemake | 9 | 6 | 291.94 | 823,328 |
+| Perl | 5 | 8 | 472.68 | 4,742,352 |
+| Make | 4 | 5 | 149.84 | 198,664 |
+| CMake | 5 | 15 | 442.69 | 87,744 |
+| SQL | 4 | 5 | 323.0 | 11,082,760 |
+| PHP | 4 | 4 | 287.26 | 1,099,760 |
+| Kotlin | 5 | 7 | 548.1 | 5,755,640 |
+| Scala | 6 | 8 | 590.45 | 4,031,400 |
+| Zig | 4 | 7 | 405.45 | 709,360 |
+| HCL/Terraform | 5 | 5 | 277.36 | 141,008 |
+| OCaml (.ml + .mli) | 13 | 7 | 471.03 / 495.24 | 8,881,296 |
+| Elixir | 3 | 5 | 605.91 | 1,418,992 |
+| Haskell | 6 | 6 | 659.59 | 3,842,736 |
+| Dockerfile | 2 | 5 | 220.51 | 66,912 |
+
+### Final expanded-index qualification (2026-09-17)
+
+A fresh private daemon indexed 865/875 tracked supported code files (98.86%)
+in 36.916 seconds, versus the initial live read-only observation of 39 files
+and 440 symbols. The ten omissions are deliberately gitignored files. The
+complete index includes 1,000 files when reference-only configurations and
+eligible untracked files are counted; its mind uses 90,811,769 bytes before
+shutdown. Bash now contributes 208 stored symbols across 126/134 tracked shell files;
+the other eight shell files are explicitly ignored.
+
+Stored symbols by language: Bash 208; CMake 39; C/C++ 2,593; Dockerfile 2;
+Elixir 3; Fortran 5; Haskell 6; HCL 5; Julia 5; Kotlin 5; Make 4; Markdown
+1,897; Nextflow 5; OCaml implementation 7 and interface 6; Perl 5; PHP 4;
+Python 2,031; R 5; Rust 2,694; Scala 6; Snakemake 25; SQL 4; Zig 4.
+Reference-only configurations contribute zero code definitions.
+
+The unchanged frozen benchmark scores 18/20. Query p95 is 60.945 ms before
+restart and 58.429 ms after; all 20 graph responses are identical across the
+restart. The byte proxy is 254,460 with navigation versus 715,504 for full
+file reads, a 64.44% reduction. Real Read injection and the 17-line session
+map pass; the map emits once per session.
+
+A separate cold offline build with `CHITTA_EXTRA_GRAMMARS=OFF` passes the
+priority-language and graph suites in 97.579 seconds, including build time,
+without replacing the release binaries. Release/default remains ON. All
+requested grammars built and found their expected definitions; none was
+skipped. The benchmark question hash remains
+`49fb3d96acd9c7b966e489e9b3dc6c57535665b21c18e0d22a1f54ab419240a3`.
+
+Non-code hook parity remains byte-identical across all 30 measured paired
+fixtures (three repetitions), including stdout, stderr and exit status, on
+a private copy started by `eval-replica.sh`. The coverage-test Python file
+also passes Ruff lint and formatting checks.
+
+Final `gate-full.sh` passes on the compute node: 296 Rust tests pass (two
+ignored), 37/37 CTests pass, and all 29 hook suites pass. Every language commit
+also passes `gate-quick.sh` (MCP tests, lint and contract checks). Contracts
+remain unchanged throughout the language expansion; recall scoring is untouched.
+
+Earlier full-gate attempts exposed private-runner environment issues: a fake
+embedding-model path, an inherited parent socket, and Cargo 1.70 selected under
+the temporary home. The corrected runner uses the cached real model, removes
+the socket override for native tests, and explicitly selects Rust 1.93. One
+aggregate attempt reported an intermittent saddle-hook failure without detail;
+its isolated rerun passed all checks (38.92 ms incremental median, 45.66 ms p95),
+and the final aggregate sweep passed all suites. Runner fixes and raw evidence
+remain outside version control.

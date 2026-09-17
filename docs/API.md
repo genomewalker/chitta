@@ -2,7 +2,7 @@
 
 Status as of 2026-09-16.
 
-Generated from frozen contracts on 2026-09-16, 342 tools — regenerate with `python3 scripts/gen-tools-static.py --docs`.
+Generated from frozen contracts on 2026-09-17, 342 tools — regenerate with `python3 scripts/gen-tools-static.py --docs`.
 
 55 tools are listed in `tools/list` by default. The other 287 are hidden to keep the model's tool list small, and stay callable through the `advanced` gateway:
 

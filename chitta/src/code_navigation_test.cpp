@@ -150,6 +150,32 @@ int main() {
     disabled.update(root.string(), "disabled", {unknown_a.string(), unknown_b.string()}, {unknown_a.string(), unknown_b.string()}, saved, true);
     auto isolated = disabled.query({{"path", unknown_a.string()}});
     assert(isolated["edges"].size() == 1 && isolated["edges"][0]["confidence"] == "EXTRACTED");
+    // Configuration files are reference-only nodes, with no invented symbols.
+    auto reader = root / "reader.py";
+    std::ofstream(reader) << "def load_configs():\n    return ('config.json', 'config.yaml', 'config.toml')\n";
+    std::vector<std::string> config_paths{reader.string()};
+    for (const auto* name : {"config.json", "config.yaml", "config.toml"}) {
+        auto config = root / name; std::ofstream(config) << "{}\n";
+        config_paths.push_back(config.string());
+        assert(intel.detect_language(config.string()) == "reference");
+        assert(intel.extract_file_full(config.string()).symbols.empty());
+    }
+    std::unordered_set<std::string> config_dirty(config_paths.begin(), config_paths.end());
+    chitta::CodeNavigation configs;
+    auto config_sidecar = (root / "config-navigation.json").string(); configs.open(config_sidecar);
+    configs.update(root.string(), "configs", config_paths, config_dirty, intel.extract_files(config_dirty), true);
+    auto config_question = nlohmann::json{{"question", "load_configs config"}, {"limit", 40}};
+    auto config_answer = configs.query(config_question);
+    int config_edges = 0;
+    for (const auto& edge : config_answer["edges"])
+        if (edge["kind"] == "references") {
+            assert(edge["target"].get<std::string>().ends_with(":0:<file>") && edge["confidence"] == "INFERRED"); ++config_edges;
+        }
+    assert(config_edges == 3);
+    for (const auto& symbol : config_answer["symbols"])
+        if (symbol["file"] != reader.string()) assert(symbol["kind"] == "file");
+    chitta::CodeNavigation config_restart; config_restart.open(config_sidecar);
+    assert(config_restart.query(config_question) == config_answer);
     // Every grammar fixture must produce usable query edges, not just raw AST records.
     std::vector<fs::path> language_specs;
     for (const auto& item : fs::recursive_directory_iterator(fixture.parent_path().parent_path()))

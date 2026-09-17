@@ -28,6 +28,9 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 
 - Haskell code navigation: Functions with type signatures, data/newtypes, typeclasses/instances, curried calls, imports and instance relationships.
 
+- YAML/TOML/JSON remain reference-only file nodes with literal path edges.
+- Dockerfile code navigation: Build stages, FROM image imports, COPY/ADD source-file imports and COPY --from stage references.
+
 ## [Unreleased]
 
 - Add Make target/macro navigation, prerequisite links, calls and includes.

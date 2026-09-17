@@ -255,6 +255,7 @@ chitta_grammar(sql DerekStride/tree-sitter-sql 593a5ecc5dc3889890d8b24ba8fa7487e
 option(CHITTA_EXTRA_GRAMMARS "Build the additional Graphify-parity language grammars" ON)
 if(CHITTA_EXTRA_GRAMMARS)
     target_compile_definitions(tree-sitter-parsers PUBLIC CHITTA_EXTRA_GRAMMARS=1)
+    chitta_grammar(dockerfile camdencheek/tree-sitter-dockerfile 971acdd908568b4531b0ba28a445bf0bb720aba5)
     chitta_grammar(haskell tree-sitter/tree-sitter-haskell 0975ef72fc3c47b530309ca93937d7d143523628)
     chitta_grammar(elixir elixir-lang/tree-sitter-elixir 4b0c7118760af58a2e7081bbc8396e136f820b37)
     chitta_grammar(ocaml tree-sitter/tree-sitter-ocaml e3c9cf368f68bffd2f81188229aefa7b434eda65 grammars/ocaml)

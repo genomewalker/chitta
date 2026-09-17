@@ -203,6 +203,14 @@ struct CodeNavigation::Impl {
                                 candidate.data.value("kind", "") == "module") candidates.push_back(id);
                         }
                     }
+                } else if (kind == "references" && raw.value("file_reference", false)) {
+                    for (const auto& base : {fs::path(item.key()).parent_path(), fs::path(nodes[from].root)}) {
+                        auto relative = (base / target).lexically_normal().string();
+                        auto file = by_file.find(relative);
+                        if (file != by_file.end() && nodes[file->second.back()].root == nodes[from].root) {
+                            candidates.push_back(file->second.back()); break;
+                        }
+                    }
                 } else if (names.count(target)) {
                     const auto caller_parent = nodes[from].data.value("parent", "");
                     const auto receiver = raw.value("receiver", "");
@@ -408,7 +416,7 @@ void CodeNavigation::update(const std::string& root, const std::string& project,
         for (const auto* c : inherits[path])
             file["edges"].push_back({{"kind", "inherits"}, {"target", c->base_name}, {"derived", c->derived_name}, {"line", c->line}});
         for (const auto* c : references[path])
-            file["edges"].push_back({{"kind", "references"}, {"target", c->name}, {"line", c->line}});
+            file["edges"].push_back({{"kind", "references"}, {"target", c->name}, {"line", c->line}, {"file_reference", c->file_reference}});
         impl_->files[path] = std::move(file);
     }
     impl_->warning.clear(); impl_->rebuild(); impl_->save();
