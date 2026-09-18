@@ -67,6 +67,7 @@ effective_scorer_weights
 embed_coverage
 embed_probe
 embed_symbols
+endpoint_list
 enroll_wisdom_lineage
 epiplexity_check
 episode_cluster_status

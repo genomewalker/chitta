@@ -19,6 +19,7 @@
 // Python backend only talks to this socket when CHITTA_HINT_BACKEND=hintd.
 
 #include <chitta/hint_yantra.hpp>
+#include <chitta/llm_http.hpp>
 
 #ifdef CHITTA_WITH_LLAMA_CPP
 
@@ -115,7 +116,16 @@ void handle_conn(int fd, chitta::HintYantra* hy, std::mutex* busy, int deadline_
         // not be relied on for admission.
         std::unique_lock<std::mutex> lk(*busy, std::try_to_lock);
         if (lk.owns_lock()) {
-            resp = hy->extract(req, deadline_ms);
+            const auto model = chitta::endpoint_role_model("hint");
+            if (!model.empty()) {
+                const auto endpoint = chitta::discover_gpu_endpoint("hint", model, nullptr, false);
+                if (!endpoint.empty()) resp = chitta::call_llm_http(
+                    "", model, req, chitta::HintYantra::system_prompt(),
+                    deadline_ms > 0 ? std::max(1, (deadline_ms + 999) / 1000) : 10,
+                    0.0f, 256, nullptr, std::nullopt, "hint");
+            } else {
+                resp = hy->extract(req, deadline_ms);
+            }
         }
         // Busy → empty response; the caller skips this turn instead of stacking work.
     }
@@ -167,7 +177,7 @@ int main(int argc, char** argv) {
     // never running ~HintYantra means a detached worker still mid-extract() at exit
     // cannot dereference a freed llama_context (the shutdown-UAF the review flagged).
     auto* hy = new chitta::HintYantra(model_path, mind_path);
-    if (!hy->ready()) {
+    if (!hy->ready() && chitta::endpoint_role_model("hint").empty()) {
         std::cerr << "[chitta_hintd] hint model not loaded — set CHITTA_HINT_MODEL or "
                      "place GGUF in ~/.claude/models/. Exiting.\n";
         return 1;

@@ -1,3 +1,4 @@
+#include <chitta/llm_http.hpp>
 #include <chitta/queue_path.hpp>
 // chitta-cli: Simplified daemon for SimpleMind
 //
@@ -1405,6 +1406,7 @@ void print_usage(const char* prog) {
     std::cerr << "chittad " << CHITTA_VERSION << " - Soul daemon\n\n"
               << "Usage: " << prog << " <command> [options]\n\n"
               << "Commands:\n"
+              << "  endpoints List model-aware LLM endpoints (--probe refreshes)\n"
               << "  daemon     Run background daemon\n"
               << "  shutdown   Stop running daemon\n"
               << "  status     Check daemon status\n"
@@ -1679,6 +1681,12 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
+    if (command == "endpoints") {
+        bool probe = false;
+        for (int i = command_idx + 1; i < argc; ++i) if (std::string(argv[i]) == "--probe") probe = true;
+        std::cout << chitta::endpoint_table(chitta::endpoint_list(probe, distill_config.model));
+        return 0;
+    }
     if (command == "shutdown") return cmd_shutdown(sock_path);
     if (command == "status")   return cmd_status(sock_path);
 

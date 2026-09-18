@@ -2,6 +2,7 @@ Usage:
   chitta <tool> --param value ...   Invoke tool
   chitta <tool> --help              Show tool parameters
   chitta [options]                  Interactive mode (JSON-RPC)
+  chitta endpoints [--probe] [--json] [--local] [--distill-model MODEL]
 
 Examples:
   chitta recall --query "search terms"

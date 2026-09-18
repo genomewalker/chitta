@@ -525,6 +525,10 @@ TOOLS = [Tool(**row) for row in [{'description': 'Multi-dimensional semantic sea
                                  'reset': {'type': 'boolean'}},
                   'type': 'object'},
   'name': 'embed_symbols'},
+ {'description': 'List LLM endpoints, served models, probe latency and role winners; never starts '
+                 'GPU jobs',
+  'inputSchema': {'properties': {'probe': {'default': False, 'type': 'boolean'}}, 'type': 'object'},
+  'name': 'endpoint_list'},
  {'description': 'Enroll a Trusted wisdom candidate into the Wisdom Homeostasis layer — creates a '
                  'living WisdomLineage record that tracks belief integrity over time',
   'inputSchema': {'properties': {'ancestor_lineage_id': {'anyOf': [{'type': 'integer'},
@@ -3421,6 +3425,7 @@ DAEMON_HANDLER_NAMES = frozenset(['5w_search',
  'embed_coverage',
  'embed_probe',
  'embed_symbols',
+ 'endpoint_list',
  'enrichment_status',
  'enroll_wisdom_lineage',
  'epiplexity_check',

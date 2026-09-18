@@ -465,6 +465,7 @@ public:
     static bool is_read_only_tool(const std::string& name) {
         static const std::unordered_set<std::string> kReads = {
             // Memory/graph retrieval.
+            "endpoint_list",
             "recall", "recall_temporal", "recall_temporal_events", "recall_keyword",
             "provenance_check", "correction_check", "task_state", "explore_recall",
             "explore_peek", "explore_expand", "explore_neighbors", "query_graph",

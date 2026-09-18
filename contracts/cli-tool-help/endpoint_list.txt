@@ -1,0 +1,8 @@
+chitta endpoint_list - List LLM endpoints, served models, probe latency and role winners; never starts GPU jobs
+
+Parameters:
+  --probe [default: false]
+
+
+Example:
+  chitta endpoint_list

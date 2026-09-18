@@ -952,7 +952,7 @@ static void publish_dream(const std::string& endpoint, const std::string& model,
     auto log_fn = [](const std::string& msg) { std::cerr << "[dream-publish] " << msg << "\n"; };
     std::string sys = "You are a thoughtful writer. Write rich, reflective prose — not summaries. "
                       "Each field should contain full, developed sentences that explore the ideas deeply.";
-    std::string raw = call_llm_http(endpoint, model, prompt.str(), sys, timeout_secs, 0.7f, 4096, log_fn);
+    std::string raw = call_llm_http(endpoint, model, prompt.str(), sys, timeout_secs, 0.7f, 4096, log_fn, std::nullopt, "judge", false);
 
     // Strip markdown fences if model wrapped the JSON
     {

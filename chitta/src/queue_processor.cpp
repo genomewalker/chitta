@@ -1090,7 +1090,7 @@ void QueueProcessor::process_distill(const json& args, const std::string& endpoi
         } catch (...) {}
     }
     DistillConfig cfg = distill_config_;
-    cfg.endpoint = endpoint;  // pre-probed; skips per-distill discovery
+    cfg.endpoint = distill_config_.endpoint;  // Auto routing reserves capacity per request.
     if (run_distillation(field_store_, yantra_, ts, cfg, &handler_, true)) {
         queue_distill_count_++;
         std::cerr << "[queue] distill_trigger: success (total=" << queue_distill_count_.load() << ")\n";
@@ -1162,8 +1162,8 @@ void QueueProcessor::run_slow() try {
                     // Fail-fast probe: verify the endpoint before run_distillation
                     // burns its 180s timeout (or worse, discovery's 120s
                     // chitta-gpu start) on a dead ollama.
-                    if (endpoint.empty() || !probe_endpoint(endpoint))
-                        endpoint = discover_gpu_endpoint(distill_config_.model,
+                    if (distill_config_.endpoint.empty())
+                        endpoint = discover_gpu_endpoint("teacher", distill_config_.model,
                                                          nullptr, /*allow_start=*/false);
                     if (endpoint.empty()) { endpoint_down = true; break; }
                     process_distill(j.value("args", json::object()), endpoint);

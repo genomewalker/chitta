@@ -61,25 +61,12 @@ void NativeDistiller::log(const std::string& msg) {
 // ── LLM HTTP call ───────────────────────────────────────────────────────────
 
 std::string NativeDistiller::call_llm(const std::string& prompt) {
-    if (cached_endpoint_.empty()) {
-        cached_endpoint_ = config_.endpoint;
-        if (cached_endpoint_.empty()) {
-            cached_endpoint_ = discover_gpu_endpoint(config_.model,
-                [this](const std::string& msg) { log(msg); }, config_.think);
-        }
-    }
-
-    if (cached_endpoint_.empty()) {
-        log("[distill] No GPU endpoint found — cannot distill");
-        return "";
-    }
-
     return call_llm_http(
-        cached_endpoint_, config_.model, prompt,
+        config_.endpoint, config_.model, prompt,
         "You are a knowledge distiller. Extract learnings in SSL v0.3 format. "
         "Output ONLY SSL-formatted learnings with A:v,a affect annotations.",
         config_.timeout_secs, 0.3f, config_.max_tokens,
-        [this](const std::string& msg) { log(msg); });
+        [this](const std::string& msg) { log(msg); }, std::nullopt, "teacher", true);
 }
 
 // ── precompute_dedup (lock-free: embed + recall, no writes) ──────────────────
