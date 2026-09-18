@@ -1,6 +1,6 @@
 # Distiller SSL measurement and default
 
-Status: 2026-09-18 — replica replay complete with zero retrieval deltas; control arm queued; full gate unresolved; thinking remains enabled by default.
+Status: 2026-09-18 — manual fact retention 82.14% fails the 90% threshold; replica replay complete with zero retrieval deltas; full ablation/control and full gate unresolved; thinking remains enabled by default.
 
 The p13 harness freezes 100 dev memories (ascending ID) from the p11b pairs,
 the daemon's exact SSL and system prompts, and the earliest 339 stored teacher
@@ -34,8 +34,8 @@ production `ssl_parser.cpp` and `temporal.cpp` with `-include array` (the tempor
 translation unit relies on a transitive header in the daemon build). Keep the pre-change binary for
 the replay comparison. Reports include the parser binary and response hashes.
 
-Pending: completed ablation and control measurements, the 30-item fact review,
-and resolution of full-gate failures. Completed replica results appear below.
+Pending: completed ablation and control measurements and resolution of full-gate
+failures. The completed manual review and replica results appear below.
 
 ## Frozen teacher replay
 
@@ -188,3 +188,47 @@ relations; relaxed agreement is 0.061303. More relations cannot establish that
 the same facts survive, so this partial report does not change the default.
 Separate thinking-token counts remain unavailable from Ollama. The independent
 control and manual review are still required.
+
+## Manual fact review, 2026-09-18
+
+The preselected first 30 frozen dev IDs were reviewed against their source and
+primary thinking-on/off 8192-token outputs. Immutable
+`p13-data/manual-review/report.json` binds 30 item-level reviews, source hashes,
+response hashes and the frozen manifest. This was an unblinded, single-reviewer
+Codex assessment, not an independently adjudicated accuracy benchmark.
+
+Deduplicated, source-supported propositions in thinking-on output formed the
+denominator; semantic preservation in thinking-off output was assessed against
+the source. Concrete values and paths count. Unsupported on claims were excluded
+and flagged separately, along with unsupported off claims. Five on bodies were
+empty: they contribute no denominator and are not scored as perfect retention.
+This measures retention of supported on facts, not exhaustive source recall.
+
+Thinking off retained **92/112 facts (82.14%)** across the 25 nonempty references,
+below the lead's **90% fact-retention threshold**. Higher relation counts cannot
+make this review pass. Examples include an observed 59% pipeline stall converted
+into a target 59% reduction, Slurm concurrency `%10` corrupted to `%1`, and
+omitted benchmark numbers and paths. Both arms also contain unsupported claims;
+8 on outputs and 17 off outputs have at least one explicitly flagged claim or
+corruption. These descriptive counts are not precision estimates.
+
+**Decision: keep thinking enabled by default.** The manual review fails the
+alternative relations-and-facts criterion regardless of the pending on/on
+string-agreement control. Complete all scheduled arms and report their latency,
+tokens, type counts, relation coverage and self-agreement before declaring the
+ablation complete; do not describe the partial samples as the 100-item result.
+
+The subsequent full gate again passed 302 Rust tests (2 ignored) and all 36 C++
+tests, but failed two hook tests. The handoff-capsule diagnostic could not find
+`g++`; the noise-metric diagnostic ran under unintended PyPy and failed an
+assertion, followed by an NFS temporary-directory cleanup error. Re-run with the
+pinned compiler and Python environment before attributing those failures to this
+change. The earlier replica gate reporting issues remain as documented above.
+
+A compute rerun with the bioinfo Python and compiler on PATH still failed both
+hook tests (`p13-data/pinned-hooks.log`): handoff exited 1 without a diagnostic;
+noise failed its environment-path assertion under Python 3.12 and then its NFS
+cleanup. The environment correction did not resolve these failures. The first
+quick gate for this documentation update failed its contract probe, although a
+separate contract check returned `contracts unchanged`; the isolated retry passed
+(`p13-data/quick-manual-review-retry.log`), including its contract probe.
