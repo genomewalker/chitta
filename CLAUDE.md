@@ -89,15 +89,28 @@ bash scripts/dev-install.sh
   drop-in makes other nodes' units exit 75 without restarting; a node honours
   it only after `systemctl --user daemon-reload` there. Stop the foreign unit
   (`ssh <node> systemctl --user stop chittad`) rather than touching the lock.
-- **`WAL segment … vanished — restoring from open descriptor` every 5 s plus
-  `Stale file handle (os error 116)`**: the writer's segment was unlinked
-  (2026-09-16: right after `[subconscious] WAL compact: deleted 1 segments`).
-  On NFS an unlinked open file is ESTALE, so the restore-from-fd path cannot
-  work and every write fails until restart; `compact_wal` and the shutdown
-  snapshot fail too. Recovery: `systemctl --user stop chittad`, then start;
-  the daemon loads the last committed family and opens a new segment. Check
-  `memory_count` before and after. Writes since the last full snapshot that
-  were not in that family are lost.
+- **WAL disappearance / NFS ESTALE** (2026-09-16–18): the old compactor
+  inferred the active tail from directory filenames; a later empty or resurrected
+  name could make the actual open writer a deletion candidate. It also read
+  coverage after saving, allowing newer writes to be treated as committed.
+  Pruning now pins the descriptor's actual path under the writer lock, scans
+  candidates against validated committed-family coverage, and keeps segments
+  not older than the writer. Rotation creates and syncs the replacement before
+  closing the old descriptor; unlink and recovery rename sync the directory.
+  Audit lines identify each unlink path, reason and result. Historical logs
+  cannot prove the incident's unlink caller: the untimestamped c1cf5221 warning
+  follows a CW sweep; the timestamped 18:02:26Z warning names 1564dc7c.
+  The repeated-failure cause is certain: recovery tried reading the same stale
+  descriptor on every attempt. Recovery now retains the active segment's
+  accepted bytes (rotation threshold 256 MiB) and installs a fresh inode without
+  reading that descriptor, preserving acknowledged records and their hash chain.
+  ESTALE therefore does not require restart when replacement I/O succeeds.
+  The cache is process-local; it cannot recover bytes lost before this binary
+  started or survive a crash before successful recovery. Monitor recovery logs
+  and `memory_count`; do not assume an old deployment has this protection.
+  Frozen-copy compute proof (2026-09-18): 36,000 writes in 1,800 s at 20 Hz,
+  30 forced compactions, memory count 134,805 → 170,805 with no regressions,
+  zero vanished-segment warnings and zero ESTALE errors.
 - **Do not restart while a snapshot is in flight.** SIGTERM during a save
   abandons that family (`manifest family … failed validation` on the next
   start), so the daemon falls back to the previous family and replays the
