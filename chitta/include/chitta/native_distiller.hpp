@@ -33,6 +33,7 @@ struct NativeDistillConfig {
     std::string endpoint = "";                // HTTP endpoint (auto-discovered if empty)
     int timeout_secs = 180;                   // Timeout for HTTP call
     int min_turns = 5;                        // Minimum turns for distillation
+    bool think = distill_think_enabled();     // CHITTA_DISTILL_THINK; measured default stays on
     bool verbose = false;                     // Enable verbose logging
     float dedup_threshold = 0.92f;            // Cosine similarity above which we strengthen
                                               // instead of storing a duplicate

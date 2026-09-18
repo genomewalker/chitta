@@ -51,3 +51,18 @@ retains per-memory triples and failures. Golden/current-truth deltas remain pend
 Standalone parser tests cover all arrow spellings, chains, sets, domains, metadata,
 explicit predicates/dates, choice syntax, epsilon exclusions and citation overflow.
 Parity fixture: `chitta/tests/fixtures/distill-arrows.{ssl,json}`.
+
+## Request option
+
+`NativeDistillConfig.think` reads `CHITTA_DISTILL_THINK`; unset/unknown values keep
+thinking enabled, and `0`, `false`, `off` disable it. Distillation and research
+ingestion send the explicit boolean to Ollama `/api/chat`, with the original
+sampling temperature and token budget in `options`. Other HTTP callers retain
+the OpenAI-compatible endpoint. `distill_status.think` exposes the effective
+environment setting. The local HTTP stub checks both booleans, payload options,
+response content extraction and the generic client's existing request format.
+
+The ablation remains incomplete; no qualified agreement estimate, final latency
+comparison, or separate thinking-token counts are available. Ollama supplies only
+a combined generated-token count; thinking characters are measured separately.
+Default: **thinking enabled**, pending all 100 paired comparisons at 8192 tokens.
