@@ -1,0 +1,8 @@
+{
+  "url": "http://dandycomp06fl:11436",
+  "kind": "ollama",
+  "label": "rtx-dandycomp06fl",
+  "always_on": true,
+  "roles": ["student", "judge", "hint", "teacher"],
+  "priority": 10
+}
