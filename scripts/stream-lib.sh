@@ -32,7 +32,9 @@ stream_claim() {
 }
 
 stream_release() {
-    stream_rpc stream_release "$(jq -nc --arg stream "$name" --arg session_id "$holder" '{stream:$stream,session_id:$session_id}')" >/dev/null
+    local result
+    result=$(stream_rpc stream_release "$(jq -nc --arg stream "$name" --arg session_id "$holder" '{stream:$stream,session_id:$session_id}')") || return
+    jq -e '.released == true' <<< "$result" >/dev/null
 }
 
 stream_launch() {
@@ -67,12 +69,18 @@ stream_launch() {
 if [[ ${1:-} == --supervise ]]; then
     set -euo pipefail
     shift
-    cd "$W"
     cleanup() {
-        stream_release || echo 'ERROR: stream release failed' >&2
+        local status=$?
+        trap - EXIT
+        if ! stream_release; then
+            echo 'ERROR: stream release failed' >&2
+        fi
         rm -f "$S/$name.pid"
+        exit "$status"
     }
+    # Register before setup so failures and every worker exit release the claim.
     trap cleanup EXIT
+    cd "$W"
     exec 3<&0
     if [[ $1 == codex ]]; then
         setsid "$@" "$(cat <&3)" </dev/null &
@@ -86,7 +94,7 @@ if [[ ${1:-} == --supervise ]]; then
         interrupted=1
         kill -TERM -- "-$worker" 2>/dev/null || kill -TERM "$worker" 2>/dev/null || true
     }
-    trap stop_worker TERM INT
+    trap stop_worker TERM INT HUP
     status=0
     wait "$worker" || status=$?
     if ((interrupted)); then

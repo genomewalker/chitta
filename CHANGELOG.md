@@ -1,5 +1,7 @@
 # Changelog
 
+- Bound parallel endpoint probes with `CHITTA_ROUTER_PROBE_TIMEOUT_MS` (3000 ms), keep timed-out endpoints busy, and use vLLM metrics without generation or latency-based saturation. Require `CHITTA_GPU_AUTOSTART=1` before discovery submits a GPU job. Accept ledger thread IDs in stream release, verify ownership, and check supervisor release results on all exits including setup failure and hangup.
+
 - Route LLM roles by exact model availability, with background Ollama/vLLM load probes, interactive latency routing, batch backoff, admission caps, token budgets, and hysteresis. Prefer always-on endpoints on capacity ties; retain cached model checks and failure fallback. Add JSON declarations, `chitta endpoints [--probe]`, RPC `endpoint_list`, role-model environment settings, and an RTX tunnel/relay declaration for orchestrator publication.
 
 - Parse typed SSL arrow chains and sets into relations, normalize ASCII/Unicode/LaTeX arrows, strip entity annotations, and tolerate oversized citations. Add `CHITTA_DISTILL_THINK` and `distill_status.think`; thinking stays enabled pending the frozen quality gate.

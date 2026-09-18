@@ -878,6 +878,8 @@ Role-aware LLM routing uses these daemon/CLI variables; see [endpoint operations
 | --- | --- | --- |
 | `CHITTA_ENDPOINT_TTL_S` | `60` | Refresh background model inventory after this many seconds; `0` refreshes on every worker cycle. |
 | `CHITTA_ENDPOINT_DIR` | `~/.chitta-bridge/endpoints` | Override the declaration directory and disable automatic localhost, `/tmp`, and Slurm discovery (isolated tests). |
+| `CHITTA_ROUTER_PROBE_TIMEOUT_MS` | `3000` | Shared hard deadline per endpoint for model/load probes; endpoints run concurrently outside the inventory lock. Timeouts mark busy, not down. Forced inventory waits are bounded to this deadline plus 100 ms. vLLM load uses `/metrics` only. |
+| `CHITTA_GPU_AUTOSTART` | `0` | Discovery may submit GPU jobs only when exactly `1`; logs enabled/disabled decisions when a model is absent. |
 | `CHITTA_ROUTER_PROBE_S` | `20` | Background load-probe interval in seconds (minimum 1); no request-path HTTP probes. |
 | `CHITTA_ROUTER_BACKOFF_S` | `120` | Pause batch admission after a busy probe; two good probes also required for recovery. |
 | `CHITTA_ROUTER_MAX_INFLIGHT_<LABEL>` | `4` always-on; otherwise `OLLAMA_NUM_PARALLEL` or `1` | Per-process endpoint admission cap; uppercase label, punctuation becomes underscores. |
