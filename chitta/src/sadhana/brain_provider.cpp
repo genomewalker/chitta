@@ -265,8 +265,11 @@ BrainResult LocalBrain::think(const std::string& prompt, const BrainConfig& conf
     BrainResult result;
     auto start_time = std::chrono::steady_clock::now();
 
-    if (cached_endpoint_.empty()) {
-        cached_endpoint_ = discover_gpu_endpoint(model_);
+    {
+        if (const char* model = std::getenv("CHITTA_ROLE_JUDGE_MODEL")) {
+            if (*model) model_ = model;
+        }
+        cached_endpoint_ = discover_gpu_endpoint("judge", model_);
     }
 
     if (cached_endpoint_.empty()) {

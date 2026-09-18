@@ -1,11 +1,7 @@
 #pragma once
 // llm_http: Shared GPU endpoint discovery + HTTP LLM call utility
 //
-// Discovery chain (mirrors chitta-bridge gpu_serve.py):
-// 1. Cached /tmp/ollama-server-*.url files (written by chitta-gpu start)
-// 2. Probe SLURM GPU nodes (squeue → http://<node>:11434)
-// 3. Probe localhost:11434
-// 4. Invoke `chitta-gpu start <model>` as last resort
+// Role/model-aware endpoint pool; declarations plus legacy GPU discovery.
 //
 // HTTP call: POST /v1/chat/completions (OpenAI-compatible)
 
@@ -27,6 +23,11 @@
 #include <signal.h>
 #include <chrono>
 #include <thread>
+#include <algorithm>
+#include <map>
+#include <mutex>
+#include <set>
+#include <cctype>
 
 namespace chitta {
 
@@ -160,104 +161,179 @@ inline std::string fork_exec_capture(const std::vector<std::string>& args,
     return output;
 }
 
-// Probe an Ollama endpoint for /v1/models availability
-inline bool probe_endpoint(const std::string& base_url) {
-    std::string url = base_url + "/v1/models";
-    std::string out = fork_exec_capture(
-        {"curl", "-sL", "--max-time", "3", url}, 5);
-    return !out.empty() && out.find("data") != std::string::npos;
+struct LlmEndpoint {
+    std::string url, kind = "ollama", label;
+    bool always_on = false, reachable = false;
+    int priority = 100;
+    double latency_ms = 0;
+    std::vector<std::string> roles, models;
+};
+
+inline const std::vector<std::string>& endpoint_roles() {
+    static const std::vector<std::string> roles{"teacher", "hint", "embed", "rerank", "student", "judge"};
+    return roles;
 }
 
-// Discover GPU endpoint using the full chain from gpu_serve.py
-// Returns base URL (e.g., "http://node:11434") or empty string
-inline std::string discover_gpu_endpoint(const std::string& model = "gemma4:26b",
-                                          LogFn log_fn = nullptr,
-                                          bool allow_start = true) {
-    auto log = [&](const std::string& msg) {
-        if (log_fn) log_fn(msg);
-    };
+inline std::string endpoint_role_model(const std::string& role,
+                                       const std::string& configured = "") {
+    // A caller's configured model is authoritative: routing never changes it.
+    if (!configured.empty()) return configured;
+    std::string key = "CHITTA_ROLE_";
+    for (unsigned char c : role) key += static_cast<char>(std::toupper(c));
+    key += "_MODEL";
+    if (const char* value = std::getenv(key.c_str())) return value;
+    return role == "teacher" ? "gemma4:26b" : "";
+}
 
-    // 1. Cached URL files: /tmp/ollama-server-*.url
+inline int endpoint_ttl_s() {
+    const char* value = std::getenv("CHITTA_ENDPOINT_TTL_S");
+    if (!value) return 60;
+    try { return std::max(0, std::stoi(value)); } catch (...) { return 60; }
+}
+
+inline std::vector<LlmEndpoint> declared_endpoints() {
     namespace fs = std::filesystem;
-    for (auto& entry : fs::directory_iterator("/tmp")) {
-        std::string fname = entry.path().filename().string();
-        if (fname.find("ollama-server-") == 0 && fname.size() > 4 &&
-            fname.substr(fname.size() - 4) == ".url") {
-            std::ifstream ifs(entry.path());
-            std::string url;
-            std::getline(ifs, url);
-            if (!url.empty()) {
-                // Trim trailing whitespace/newline
-                while (!url.empty() && (url.back() == '\n' || url.back() == '\r' || url.back() == ' '))
-                    url.pop_back();
-                if (probe_endpoint(url)) {
-                    log("[llm] Found cached endpoint: " + url);
-                    return url;
+    std::map<std::string, LlmEndpoint> entries;
+    auto add = [&](LlmEndpoint ep, bool declaration = false) {
+        while (!ep.url.empty() && (std::isspace(static_cast<unsigned char>(ep.url.back())) || ep.url.back() == '/')) ep.url.pop_back();
+        if (ep.url.rfind("http://", 0) != 0 && ep.url.rfind("https://", 0) != 0) return;
+        if (ep.label.empty()) ep.label = ep.url;
+        if (declaration || !entries.count(ep.url)) entries[ep.url] = std::move(ep);
+    };
+    auto scan = [&](const fs::path& dir, bool local) {
+        std::error_code ec;
+        fs::directory_iterator it(dir, ec), end;
+        for (; !ec && it != end; it.increment(ec)) {
+            const auto path = it->path();
+            const auto name = path.filename().string();
+            if (local && name.rfind("ollama-server-", 0) != 0) continue;
+            try {
+                std::ifstream in(path);
+                LlmEndpoint ep;
+                if (!local && path.extension() == ".json") {
+                    nlohmann::json j; in >> j;
+                    ep.url = j.at("url").get<std::string>();
+                    ep.kind = j.value("kind", "ollama");
+                    if (ep.kind != "ollama" && ep.kind != "vllm" && ep.kind != "openai") continue;
+                    ep.label = j.value("label", "");
+                    ep.always_on = j.value("always_on", false);
+                    ep.priority = j.value("priority", 100);
+                    ep.roles = j.value("roles", std::vector<std::string>{});
+                    add(ep, true);
+                } else if (path.extension() == ".url") {
+                    std::getline(in, ep.url); add(ep);
                 }
+            } catch (...) { /* A malformed declaration must not break discovery. */ }
+        }
+    };
+    // An override permits isolated tests and staging without editing shared home.
+    if (const char* dir = std::getenv("CHITTA_ENDPOINT_DIR")) scan(dir, false);
+    else {
+        scan("/tmp", true);
+        if (const char* home = std::getenv("HOME")) scan(fs::path(home) / ".chitta-bridge/endpoints", false);
+        LlmEndpoint local; local.url = "http://localhost:11434"; add(local);
+        auto jobs = fork_exec_capture({"squeue", "--me", "--noheader", "--format=%j %T %N"}, 5);
+        std::istringstream lines(jobs); std::string line;
+        while (std::getline(lines, line)) {
+            std::istringstream fields(line); std::string name, state, node;
+            fields >> name >> state >> node;
+            if ((name.find("ollama-") != std::string::npos || name.find("vllm-") != std::string::npos) && state == "RUNNING" && !node.empty()) {
+                LlmEndpoint ep; ep.url = "http://" + node + ":11434"; add(ep);
             }
         }
     }
+    std::vector<LlmEndpoint> out;
+    for (auto& entry : entries) out.push_back(std::move(entry.second));
+    return out;
+}
 
-    // 2. Probe SLURM GPU nodes via squeue
-    // Retry on empty output: squeue can be slow/unresponsive at daemon startup,
-    // and an empty result here forces a CPU-GGUF fallback that serializes workers.
-    std::string squeue_out;
-    for (int attempt = 0; attempt < 3; ++attempt) {
-        squeue_out = fork_exec_capture(
-            {"squeue", "--me", "--noheader", "--format=%j %T %N"}, 5);
-        if (!squeue_out.empty()) break;
-        if (attempt < 2) std::this_thread::sleep_for(std::chrono::seconds(2));
-    }
-    if (!squeue_out.empty()) {
-        std::istringstream iss(squeue_out);
-        std::string line;
-        while (std::getline(iss, line)) {
-            if (line.find("ollama-") == std::string::npos) continue;
-            // Parse: job_name state node
-            std::istringstream parts(line);
-            std::string name, state, node;
-            parts >> name >> state >> node;
-            if (state == "RUNNING" && !node.empty()) {
-                std::string url = "http://" + node + ":11434";
-                if (probe_endpoint(url)) {
-                    log("[llm] Found SLURM endpoint: " + url + " (job " + name + ")");
-                    return url;
-                }
+inline void probe_endpoint_models(LlmEndpoint& ep) {
+    ep.reachable = false; ep.models.clear();
+    const auto start = std::chrono::steady_clock::now();
+    auto fetch = [&](const std::string& path, const std::string& array, const std::string& key) {
+        auto raw = fork_exec_capture({"curl", "-fsS", "--max-time", "3", ep.url + path}, 5);
+        try {
+            auto j = nlohmann::json::parse(raw);
+            if (!j.contains(array) || !j[array].is_array()) return false;
+            for (const auto& item : j[array]) {
+                if (item.contains(key) && item[key].is_string()) ep.models.push_back(item[key].get<std::string>());
             }
-        }
-    }
+            return true;
+        } catch (...) { return false; }
+    };
+    ep.reachable = fetch("/v1/models", "data", "id");
+    if (!ep.reachable && ep.kind == "ollama") ep.reachable = fetch("/api/tags", "models", "name");
+    ep.latency_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
+}
 
-    // 3. Probe localhost
-    if (probe_endpoint("http://localhost:11434")) {
-        log("[llm] Found local endpoint: http://localhost:11434");
-        return "http://localhost:11434";
-    }
+inline bool probe_endpoint(const std::string& url) {
+    LlmEndpoint ep; ep.url = url; probe_endpoint_models(ep); return ep.reachable;
+}
 
-    // 4. Last resort: invoke chitta-gpu start
-    // Skipped when allow_start=false (fail-fast probes: a health check must
-    // never spend 120s spinning up a GPU job).
-    if (!allow_start) return "";
-    log("[llm] No endpoint found, trying chitta-gpu start " + model + "...");
-    std::string gpu_out = fork_exec_capture(
-        {"chitta-gpu", "start", model}, 120);
-    if (!gpu_out.empty()) {
-        // chitta-gpu prints export lines; parse ANTHROPIC_BASE_URL
-        std::istringstream iss(gpu_out);
-        std::string line;
-        while (std::getline(iss, line)) {
+inline bool endpoint_matches(const LlmEndpoint& ep, const std::string& role, const std::string& model) {
+    return ep.reachable && !model.empty() &&
+        (ep.roles.empty() || std::find(ep.roles.begin(), ep.roles.end(), role) != ep.roles.end()) &&
+        std::find(ep.models.begin(), ep.models.end(), model) != ep.models.end();
+}
+inline bool endpoint_preferred(const LlmEndpoint& a, const LlmEndpoint& b) {
+    if (a.always_on != b.always_on) return a.always_on;
+    if (a.priority != b.priority) return a.priority < b.priority;
+    if (a.latency_ms != b.latency_ms) return a.latency_ms < b.latency_ms;
+    return a.url < b.url;
+}
+
+struct EndpointPoolCache {
+    std::mutex mutex;
+    struct Choice { std::string url; std::chrono::steady_clock::time_point at; };
+    std::map<std::string, Choice> choices;
+    std::map<std::string, std::chrono::steady_clock::time_point> failed;
+};
+inline EndpointPoolCache& endpoint_pool_cache() { static EndpointPoolCache cache; return cache; }
+inline void endpoint_failed(const std::string& url) {
+    auto& cache = endpoint_pool_cache(); std::lock_guard<std::mutex> lock(cache.mutex);
+    cache.failed[url] = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    for (auto it = cache.choices.begin(); it != cache.choices.end();) {
+        if (it->second.url == url) it = cache.choices.erase(it); else ++it;
+    }
+}
+
+inline std::string discover_gpu_endpoint(const std::string& role, const std::string& model,
+                                         LogFn log_fn = nullptr, bool allow_start = true,
+                                         bool force_probe = false) {
+    const auto required = endpoint_role_model(role, model);
+    if (required.empty()) return "";
+    auto& cache = endpoint_pool_cache();
+    std::lock_guard<std::mutex> lock(cache.mutex);
+    const auto key = role + "\n" + required;
+    auto now = std::chrono::steady_clock::now();
+    auto found = cache.choices.find(key);
+    if (!force_probe && found != cache.choices.end() && now - found->second.at < std::chrono::seconds(endpoint_ttl_s())) return found->second.url;
+    auto entries = declared_endpoints();
+    for (auto& ep : entries) probe_endpoint_models(ep);
+    std::sort(entries.begin(), entries.end(), endpoint_preferred);
+    auto select = [&](const LlmEndpoint& ep) {
+        if (!endpoint_matches(ep, role, required)) return false;
+        auto failed = cache.failed.find(ep.url);
+        if (failed != cache.failed.end() && failed->second > std::chrono::steady_clock::now()) return false;
+        cache.choices[key] = {ep.url, std::chrono::steady_clock::now()};
+        if (log_fn) log_fn("[llm] " + role + " (" + required + ") -> " + ep.url);
+        return true;
+    };
+    for (const auto& ep : entries) if (select(ep)) return ep.url;
+    if (allow_start) {
+        auto output = fork_exec_capture({"chitta-gpu", "start", required}, 120);
+        std::istringstream lines(output); std::string line;
+        while (std::getline(lines, line)) {
             const std::string prefix = "export ANTHROPIC_BASE_URL=";
-            if (line.find(prefix) == 0) {
-                std::string url = line.substr(prefix.size());
-                while (!url.empty() && (url.back() == '\n' || url.back() == '\r'))
-                    url.pop_back();
-                if (probe_endpoint(url)) {
-                    log("[llm] Started GPU endpoint: " + url);
-                    return url;
-                }
-            }
+            if (line.rfind(prefix, 0) != 0) continue;
+            LlmEndpoint ep; ep.url = line.substr(prefix.size());
+            ep.url.erase(0, ep.url.find_first_not_of("\"' "));
+            ep.url.erase(ep.url.find_last_not_of("\"' \r\n") + 1);
+            probe_endpoint_models(ep);
+            if (select(ep)) return ep.url;
         }
     }
-
+    cache.choices[key] = {"", std::chrono::steady_clock::now()};
     return "";
 }
 
@@ -345,6 +421,7 @@ inline std::string call_llm_http(const std::string& endpoint,
     } catch (...) {
         log("[llm] Failed to parse response (" + std::to_string(output.size()) + " bytes)");
     }
+    endpoint_failed(endpoint);
     return "";
 }
 
@@ -678,6 +755,7 @@ inline std::string call_llm_http_with_tools(const std::string& endpoint,
     if (last_content.empty() && tool_calls_made > 0)
         last_content = "{\"status\": \"achieved\", \"summary\": \"Completed " +
                        std::to_string(tool_calls_made) + " tool calls\"}";
+    if (last_content.empty()) endpoint_failed(endpoint);
     return last_content;
 }
 

@@ -61,10 +61,10 @@ void NativeDistiller::log(const std::string& msg) {
 // ── LLM HTTP call ───────────────────────────────────────────────────────────
 
 std::string NativeDistiller::call_llm(const std::string& prompt) {
-    if (cached_endpoint_.empty()) {
+    {
         cached_endpoint_ = config_.endpoint;
         if (cached_endpoint_.empty()) {
-            cached_endpoint_ = discover_gpu_endpoint(config_.model,
+            cached_endpoint_ = discover_gpu_endpoint("teacher", config_.model,
                 [this](const std::string& msg) { log(msg); }, config_.think);
         }
     }

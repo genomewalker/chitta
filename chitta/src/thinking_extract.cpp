@@ -238,7 +238,7 @@ int main(int argc, char* argv[]) {
     double confidence = min_conf / 100.0;
 
     // Discover GPU endpoint once for gemma4:26b distillation
-    std::string gpu_endpoint = chitta::discover_gpu_endpoint("gemma4:26b",
+    std::string gpu_endpoint = chitta::discover_gpu_endpoint("teacher", "gemma4:26b",
         [&](const std::string& m) { if (verbose) std::cerr << m << "\n"; });
     if (verbose) {
         std::cerr << "[thinking] Distillation endpoint: "

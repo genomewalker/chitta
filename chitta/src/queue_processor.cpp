@@ -1162,8 +1162,8 @@ void QueueProcessor::run_slow() try {
                     // Fail-fast probe: verify the endpoint before run_distillation
                     // burns its 180s timeout (or worse, discovery's 120s
                     // chitta-gpu start) on a dead ollama.
-                    if (endpoint.empty() || !probe_endpoint(endpoint))
-                        endpoint = discover_gpu_endpoint(distill_config_.model,
+                    if (distill_config_.endpoint.empty())
+                        endpoint = discover_gpu_endpoint("teacher", distill_config_.model,
                                                          nullptr, /*allow_start=*/false);
                     if (endpoint.empty()) { endpoint_down = true; break; }
                     process_distill(j.value("args", json::object()), endpoint);

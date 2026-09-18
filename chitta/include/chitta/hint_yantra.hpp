@@ -53,6 +53,8 @@ public:
     bool ready() const { return ready_; }
 
     // Extract a factual hint from a user message. Returns "" if nothing personal found.
+    static const char* system_prompt() { return SYSTEM_PROMPT; }
+
     std::string extract(const std::string& user_text, int deadline_ms = 0) {
         if (!ready_) return "";
         std::lock_guard<std::mutex> lock(mtx_);

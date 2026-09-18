@@ -234,10 +234,10 @@ Output ONLY SSL-formatted learnings with A:v,a affect annotations (no explanatio
 }
 
 std::string Ingester::call_llm(const std::string& prompt) {
-    if (cached_endpoint_.empty()) {
+    {
         cached_endpoint_ = config_.endpoint;
         if (cached_endpoint_.empty()) {
-            cached_endpoint_ = discover_gpu_endpoint(config_.model,
+            cached_endpoint_ = discover_gpu_endpoint("teacher", config_.model,
                 [this](const std::string& msg) { log(msg); }, distill_think_enabled());
         }
     }
