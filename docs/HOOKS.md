@@ -873,11 +873,12 @@ The shadow log auto-rotates when it reaches **10 MB**. The current log is rename
 ## Environment Variables
 
 Every `CHITTA_*` variable below also works under its pre-rename `CC_SOUL_*`
-name, except the new code-navigation controls and explicit `CHITTA_ALLOW_MCP_KILL` bypass
+name, except the new code-navigation controls and explicit `CHITTA_ALLOW_MCP_KILL` bypass and `CHITTA_DISTILL_THINK`
 (see [docs/RENAME.md](RENAME.md)).
 
 | Variable                      | Default      | Description                                                              |
 |-------------------------------|--------------|--------------------------------------------------------------------------|
+| `CHITTA_DISTILL_THINK` | `true` | Distiller and research ingestion use Ollama `/api/chat` with explicit thinking. `0`, `false`, or `off` disables thinking; other values retain it. No legacy alias. Default remains enabled pending the frozen ablation gate. |
 | `CHITTA_CODE_NAV` | `1` | `0` disables structural Read/session injection and session refresh; no legacy alias. |
 | `CHITTA_CODE_NAV_BUDGET_MS` | `300` | Query deadline, clamped to 1–1,000 ms; invalid values use 300. No legacy alias. |
 | `CHITTA_CODE_NAV_REFRESH` | `1` | `0` disables the session's background index refresh (useful in isolated read-only probes); no legacy alias. |

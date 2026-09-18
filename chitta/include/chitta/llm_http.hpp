@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <optional>
 #include <nlohmann/json.hpp>
 #include <array>
 #include <fstream>
@@ -28,6 +29,14 @@
 #include <thread>
 
 namespace chitta {
+
+// Keep thinking enabled until the frozen ablation satisfies the documented gate.
+inline bool distill_think_enabled() {
+    const char* value = std::getenv("CHITTA_DISTILL_THINK");
+    if (!value) return true;
+    const std::string setting(value);
+    return setting != "0" && setting != "false" && setting != "off";
+}
 
 using LogFn = std::function<void(const std::string&)>;
 
@@ -261,7 +270,8 @@ inline std::string call_llm_http(const std::string& endpoint,
                                   int timeout_secs = 180,
                                   float temperature = 0.3f,
                                   int max_tokens = 4096,
-                                  LogFn log_fn = nullptr) {
+                                  LogFn log_fn = nullptr,
+                                  std::optional<bool> think = std::nullopt) {
     auto log = [&](const std::string& msg) {
         if (log_fn) log_fn(msg);
     };
@@ -279,6 +289,11 @@ inline std::string call_llm_http(const std::string& endpoint,
         {"temperature", temperature},
         {"max_tokens", max_tokens}
     };
+    if (think.has_value()) {
+        req = {{"model", model}, {"messages", messages}, {"stream", false},
+               {"think", *think},
+               {"options", {{"temperature", temperature}, {"num_predict", max_tokens}}}};
+    }
     std::string body = req.dump(-1, ' ', true);
 
     std::string tmp_path = "/tmp/chitta-llm-" + std::to_string(getpid()) + ".json";
@@ -287,7 +302,7 @@ inline std::string call_llm_http(const std::string& endpoint,
         ofs << body;
     }
 
-    std::string url = endpoint + "/v1/chat/completions";
+    std::string url = endpoint + (think.has_value() ? "/api/chat" : "/v1/chat/completions");
     std::string timeout_str = std::to_string(timeout_secs);
     std::string output = fork_exec_capture(
         {"curl", "-sL", "--max-time", timeout_str,
@@ -299,6 +314,10 @@ inline std::string call_llm_http(const std::string& endpoint,
 
     try {
         auto resp = nlohmann::json::parse(output);
+        if (think.has_value() && resp.contains("message") &&
+            resp["message"].contains("content") && resp["message"]["content"].is_string()) {
+            return resp["message"]["content"].get<std::string>();
+        }
         if (resp.contains("choices") && !resp["choices"].empty()) {
             const auto& msg = resp["choices"][0]["message"];
             if (msg.contains("content")) {
@@ -321,7 +340,7 @@ inline std::string call_llm_http(const std::string& endpoint,
             }
         }
         if (resp.contains("error")) {
-            log("[llm] Error: " + resp["error"].value("message", "unknown"));
+            log("[llm] Error: " + (resp["error"].is_string() ? resp["error"].get<std::string>() : resp["error"].value("message", "unknown")));
         }
     } catch (...) {
         log("[llm] Failed to parse response (" + std::to_string(output.size()) + " bytes)");

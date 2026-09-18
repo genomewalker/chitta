@@ -1,0 +1,9 @@
+[
+  ["queue", "leads_to", "worker"],
+  ["worker", "leads_to", "stored"],
+  ["timeout", "causes", "retry"],
+  ["timeout", "causes", "duplicate"],
+  ["sqlite", "chosen_over", "postgres"],
+  ["narrow", "leads_to", "reliable"],
+  ["daemon", "uses", "FieldStore"]
+]

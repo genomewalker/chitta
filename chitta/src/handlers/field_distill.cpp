@@ -4,6 +4,7 @@
 #include "../../include/chitta/rpc/field_handler.hpp"
 #include <chitta/distillation.hpp>
 #include <chitta/daemon_config.hpp>
+#include <chitta/llm_http.hpp>
 
 namespace chitta {
 
@@ -11,11 +12,13 @@ ToolResult FieldRpcHandler::tool_distill_status(const json&) {
     json result = {
         {"model",   get_distill_model()},
         {"enabled", get_distill_enabled()},
+        {"think", distill_think_enabled()},
         {"backend", "chitta-field"},
     };
     return ToolResult::ok(
         "Distill model: " + get_distill_model() +
-        (get_distill_enabled() ? " (enabled)" : " (disabled)"),
+        (get_distill_enabled() ? " (enabled)" : " (disabled)") +
+        (distill_think_enabled() ? " think=true" : " think=false"),
         result);
 }
 
