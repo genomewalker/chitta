@@ -67,6 +67,26 @@ comparison, or separate thinking-token counts are available. Ollama supplies onl
 a combined generated-token count; thinking characters are measured separately.
 Default: **thinking enabled**, pending all 100 paired comparisons at 8192 tokens.
 
+### Provisional measurement checkpoint, 2026-09-18
+
+Immutable report `p13-data/report-1789712308464249169.json` contains 14 paired
+responses at 8192 tokens (28/400 responses across the planned four arms).
+These are partial measurements, not the completed default-selection report.
+
+| Median at 8192 tokens | Thinking on | Thinking off |
+| --- | ---: | ---: |
+| Request latency, seconds | 244.462 | 128.999 |
+| Generated tokens, including thinking | 3700.5 | 367.5 |
+| Thinking characters | 9385.5 | 0 |
+
+The parser yields 57 on-arm and 96 off-arm deduplicated relations. Exact
+agreement is 1 match, F1 0.013072; relaxed agreement is 2 matches, F1 0.026144.
+Type-line totals also exceed the allowed drift (for example PATTERN 33.3%,
+DECISION 300%). No 2048-token responses are available at this checkpoint.
+The completion watcher waits for the existing two-worker process to exit,
+retries missing responses with at most two workers, and freezes another report.
+The partial speed and token reductions do not qualify a default change.
+
 ## Replica evaluation protocol
 
 `benchmarks/distill/run_replay.sh` starts a fresh private copy using
