@@ -27,7 +27,7 @@ public:
         std::string base_url  = ""
     ) : model_(std::move(model)), base_url_(std::move(base_url)), ready_(false) {
         if (base_url_.empty()) {
-            base_url_ = discover_gpu_endpoint(model_);
+            base_url_ = discover_gpu_endpoint("embed", model_);
         }
         ready_ = !base_url_.empty() && probe();
         if (ready_) {

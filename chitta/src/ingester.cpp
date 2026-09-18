@@ -234,25 +234,12 @@ Output ONLY SSL-formatted learnings with A:v,a affect annotations (no explanatio
 }
 
 std::string Ingester::call_llm(const std::string& prompt) {
-    {
-        cached_endpoint_ = config_.endpoint;
-        if (cached_endpoint_.empty()) {
-            cached_endpoint_ = discover_gpu_endpoint("teacher", config_.model,
-                [this](const std::string& msg) { log(msg); }, distill_think_enabled());
-        }
-    }
-
-    if (cached_endpoint_.empty()) {
-        log("[ingest] No GPU endpoint found — cannot call LLM");
-        return "";
-    }
-
     return call_llm_http(
-        cached_endpoint_, config_.model, prompt,
+        config_.endpoint, config_.model, prompt,
         "You are a research knowledge extractor. Extract learnings in SSL v0.3 format. "
         "Output ONLY SSL-formatted learnings with A:v,a affect annotations.",
         config_.timeout_secs, 0.3f, 4096,
-        [this](const std::string& msg) { log(msg); });
+        [this](const std::string& msg) { log(msg); }, std::nullopt, "teacher", true);
 }
 
 void Ingester::store_learnings(const SSLParser::Result& ssl, const std::string& realm,

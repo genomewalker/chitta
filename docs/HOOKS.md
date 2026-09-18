@@ -872,6 +872,23 @@ The shadow log auto-rotates when it reaches **10 MB**. The current log is rename
 
 ## Environment Variables
 
+Role-aware LLM routing uses these daemon/CLI variables; see [endpoint operations](OPERATIONS.md).
+
+| Environment | Default | Meaning |
+| --- | --- | --- |
+| `CHITTA_ENDPOINT_TTL_S` | `60` | Refresh background model inventory after this many seconds; `0` refreshes on every worker cycle. |
+| `CHITTA_ENDPOINT_DIR` | `~/.chitta-bridge/endpoints` | Override the declaration directory and disable automatic localhost, `/tmp`, and Slurm discovery (isolated tests). |
+| `CHITTA_ROUTER_PROBE_S` | `20` | Background load-probe interval in seconds (minimum 1); no request-path HTTP probes. |
+| `CHITTA_ROUTER_BACKOFF_S` | `120` | Pause batch admission after a busy probe; two good probes also required for recovery. |
+| `CHITTA_ROUTER_MAX_INFLIGHT_<LABEL>` | `4` always-on; otherwise `OLLAMA_NUM_PARALLEL` or `1` | Per-process endpoint admission cap; uppercase label, punctuation becomes underscores. |
+| `CHITTA_ROUTER_TPS_BUDGET_<LABEL>` | `60` always-on; otherwise `0` | Per-process output tokens/s; `0` unlimited. Reserve maximum output, refund unused completion tokens. |
+| `CHITTA_ROLE_TEACHER_MODEL` | `gemma4:26b` | Teacher model when no explicit distiller model is supplied; daemon distiller configuration takes precedence. |
+| `CHITTA_ROLE_HINT_MODEL` | unset | Enable remote hint extraction with this exact model; unset retains the local GGUF hint model. |
+| `CHITTA_ROLE_EMBED_MODEL` | unset | Required model for embed inventory/routing; does not replace the native embedder. |
+| `CHITTA_ROLE_RERANK_MODEL` | unset | Required model for rerank inventory/routing. |
+| `CHITTA_ROLE_STUDENT_MODEL` | unset | Required model for student inventory/routing. |
+| `CHITTA_ROLE_JUDGE_MODEL` | unset | Required model for the local sadhana judge; unset retains its configured model. |
+
 Every `CHITTA_*` variable below also works under its pre-rename `CC_SOUL_*`
 name, except the new code-navigation controls and explicit `CHITTA_ALLOW_MCP_KILL` bypass and `CHITTA_DISTILL_THINK`
 (see [docs/RENAME.md](RENAME.md)).

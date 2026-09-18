@@ -1090,7 +1090,7 @@ void QueueProcessor::process_distill(const json& args, const std::string& endpoi
         } catch (...) {}
     }
     DistillConfig cfg = distill_config_;
-    cfg.endpoint = endpoint;  // pre-probed; skips per-distill discovery
+    cfg.endpoint = distill_config_.endpoint;  // Auto routing reserves capacity per request.
     if (run_distillation(field_store_, yantra_, ts, cfg, &handler_, true)) {
         queue_distill_count_++;
         std::cerr << "[queue] distill_trigger: success (total=" << queue_distill_count_.load() << ")\n";

@@ -120,9 +120,9 @@ void handle_conn(int fd, chitta::HintYantra* hy, std::mutex* busy, int deadline_
             if (!model.empty()) {
                 const auto endpoint = chitta::discover_gpu_endpoint("hint", model, nullptr, false);
                 if (!endpoint.empty()) resp = chitta::call_llm_http(
-                    endpoint, model, req, chitta::HintYantra::system_prompt(),
+                    "", model, req, chitta::HintYantra::system_prompt(),
                     deadline_ms > 0 ? std::max(1, (deadline_ms + 999) / 1000) : 10,
-                    0.0f, 256);
+                    0.0f, 256, nullptr, std::nullopt, "hint");
             } else {
                 resp = hy->extract(req, deadline_ms);
             }

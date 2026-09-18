@@ -282,8 +282,8 @@ BrainResult LocalBrain::think(const std::string& prompt, const BrainConfig& conf
 
     auto log_fn = [](const std::string& msg) { std::cerr << msg << "\n"; };
     std::string output = call_llm_http_with_tools(
-        cached_endpoint_, model_, prompt,
-        config.system_prompt, max_turns, timeout_secs, log_fn);
+        "", model_, prompt,
+        config.system_prompt, max_turns, timeout_secs, log_fn, "judge");
 
     auto end_time = std::chrono::steady_clock::now();
     result.duration_ms = static_cast<int>(

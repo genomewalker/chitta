@@ -1,3 +1,4 @@
+#include <chitta/llm_http.hpp>
 // register_system_tools — chunk extracted from register_tools() so editing
 // tool metadata only retemplates one chunk at a time.
 
@@ -9,6 +10,14 @@
 namespace chitta {
 
 void FieldRpcHandler::register_system_tools() {
+    tools_.push_back({{"name", "endpoint_list"},
+        {"description", "List LLM endpoints, served models, probe latency and role winners; never starts GPU jobs"},
+        {"inputSchema", {{"type", "object"}, {"properties", {{"probe", {{"type", "boolean"}, {"default", false}}}}}}}});
+    handlers_["endpoint_list"] = [this](const json& params) {
+        auto report = endpoint_list(params.value("probe", false), distill_model_);
+        return ToolResult::ok(endpoint_table(report), report);
+    };
+
     register_tool_table({
         {"memory_status", "Get effective status of a memory: active, superseded, or contradicted — checks incoming supersedes triplets",
             {{"type","object"},{"properties",{

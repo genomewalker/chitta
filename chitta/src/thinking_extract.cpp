@@ -256,10 +256,10 @@ int main(int argc, char* argv[]) {
         std::string text = snippet;
         if (!gpu_endpoint.empty()) {
             std::string distilled = chitta::call_llm_http(
-                gpu_endpoint, "gemma4:26b",
+                "", "gemma4:26b",
                 "Summarize this thinking-block in 1-2 sentences, capturing the core insight:\n\n" + snippet,
                 "You are a concise knowledge distiller. Output only the 1-2 sentence summary.",
-                30, 0.1f, 120);
+                30, 0.1f, 120, nullptr, std::nullopt, "teacher", true);
             distilled = trim_ws(distilled);
             if (!distilled.empty()) text = distilled;
         }

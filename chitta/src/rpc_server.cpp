@@ -1,3 +1,4 @@
+#include <chitta/llm_http.hpp>
 #include <chitta/output_cap.hpp>
 #include <chitta/queue_path.hpp>
 #include <chitta/prompt_policy.hpp>
@@ -307,6 +308,7 @@ void print_usage(const char* prog) {
               << "  " << name << " <tool> --param value ...   Invoke tool\n"
               << "  " << name << " <tool> --help              Show tool parameters\n"
               << "  " << name << " [options]                  Interactive mode (JSON-RPC)\n"
+              << "  " << name << " endpoints [--probe] [--json] [--local] [--distill-model MODEL]\n"
               << "\n"
               << "Examples:\n"
               << "  " << name << " recall --query \"search terms\"\n"
@@ -643,6 +645,43 @@ static std::string detect_realm() {
 }
 
 int main(int argc, char* argv[]) {
+    if (argc > 1 && std::string(argv[1]) == "endpoints") {
+        bool probe = false, json_output = false, local = false;
+        std::string teacher_model;
+        for (int i = 2; i < argc; ++i) {
+            std::string arg(argv[i]);
+            if (arg == "--probe") probe = true;
+            else if (arg == "--json") json_output = true;
+            else if (arg == "--local") local = true;
+            else if (arg == "--distill-model" && i + 1 < argc) teacher_model = argv[++i];
+            else if (arg == "--help") {
+                std::cout << "Usage: chitta endpoints [--probe] [--json] [--local] [--distill-model MODEL]\n";
+                return 0;
+            } else { std::cerr << "Unknown endpoints option: " << arg << "\n"; return 2; }
+        }
+        nlohmann::json report;
+        // Explicit staging options inspect this process; otherwise show daemon admission state.
+        if (!local && teacher_model.empty() && !std::getenv("CHITTA_ENDPOINT_DIR")) {
+            const char* configured = std::getenv("CHITTA_SOCKET_PATH");
+            chitta::SocketClient client(configured && *configured ? configured : chitta::SocketClient::default_socket_path());
+            if (client.connect_only()) {
+                nlohmann::json request = {{"jsonrpc", "2.0"}, {"method", "tools/call"}, {"id", 1},
+                    {"params", {{"name", "endpoint_list"}, {"arguments", {{"probe", probe}}}}}};
+                auto response = client.request(request.dump());
+                if (response) {
+                    auto result = nlohmann::json::parse(*response, nullptr, false);
+                    if (result.contains("result") && result["result"].contains("structured")) report = result["result"]["structured"];
+                }
+            }
+        }
+        if (!report.is_object() || !report.contains("endpoints")) {
+            if (!local && !std::getenv("CHITTA_ENDPOINT_DIR")) std::cerr << "Local inventory (daemon endpoint inventory unavailable or local model override).\n";
+            report = chitta::endpoint_list(probe, teacher_model);
+        }
+        std::cout << (json_output ? report.dump(2) + "\n" : chitta::endpoint_table(report));
+        return 0;
+    }
+
     std::string socket_path = [] {
         if (const char* configured = std::getenv("CHITTA_SOCKET_PATH")) {
             if (*configured) return std::string(configured);

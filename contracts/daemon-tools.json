@@ -1287,6 +1287,19 @@
     "name": "embed_symbols"
   },
   {
+    "description": "List LLM endpoints, served models, probe latency and role winners; never starts GPU jobs",
+    "inputSchema": {
+      "properties": {
+        "probe": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "name": "endpoint_list"
+  },
+  {
     "description": "Enroll a Trusted wisdom candidate into the Wisdom Homeostasis layer — creates a living WisdomLineage record that tracks belief integrity over time",
     "inputSchema": {
       "properties": {
