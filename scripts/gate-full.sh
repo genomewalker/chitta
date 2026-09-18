@@ -43,7 +43,9 @@ step "C++ build and ctest"
 step "hook suites"
 pass=0; failed=""
 for t in hooks/tests/test_*.sh; do
-    if timeout 300 bash "$t" >/dev/null 2>&1; then pass=$((pass+1)); else failed="$failed $(basename "$t")"; fi
+    # Hook tests use mktemp -d; on compute nodes on-compute exports an NFS TMPDIR whose
+    # mtimes skew, which fails handoff_capsule and noise_hook_metric (2026-09-18). Node-local /tmp.
+    if TMPDIR=/tmp timeout 300 bash "$t" >/dev/null 2>&1; then pass=$((pass+1)); else failed="$failed $(basename "$t")"; fi
 done
 echo "hook suites passed=$pass failed=[${failed# }]"
 [[ -z "$failed" ]] || fail=1
