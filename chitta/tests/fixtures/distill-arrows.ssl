@@ -1,0 +1,6 @@
+[PATTERN] [hooks] queue->worker→stored A:+0.3,0.2 F:CORE →@architecture
+[GOTCHA] timeout => {retry, duplicate} A:-0.5,0.8
+[DECISION] sqlite→postgres|single-file A:+0.5,0.4
+[INSIGHT] narrow $\rightarrow$ reliable
+[TRIPLET] daemon uses FieldStore A:+0.1,0.2 F:CORE
+[ε] do_not_parse→code

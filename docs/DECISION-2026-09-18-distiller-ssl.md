@@ -36,3 +36,18 @@ the replay comparison. Reports include the parser binary and response hashes.
 
 Pending: completed ablation measurements, parser replay coverage, and golden
 and current-truth deltas on a private copy of the frozen learning cut.
+
+## Frozen teacher replay
+
+2026-09-18: 339 outputs replayed with the original and changed production parsers.
+Before: 149 triplets (0.4395/memory), 117/339 memories with relations (34.51%).
+After: 1,358 triplets (4.0059/memory), 299/339 memories with relations (88.20%).
+The original parser aborted on one oversized citation line number; its failed item
+contributes zero returned relations. The new parser had zero failures. This is
+parser coverage, not evidence that inferred edges improve retrieval.
+`p13-data/replay.json` binds both executable hashes and the frozen manifest and
+retains per-memory triples and failures. Golden/current-truth deltas remain pending.
+
+Standalone parser tests cover all arrow spellings, chains, sets, domains, metadata,
+explicit predicates/dates, choice syntax, epsilon exclusions and citation overflow.
+Parity fixture: `chitta/tests/fixtures/distill-arrows.{ssl,json}`.

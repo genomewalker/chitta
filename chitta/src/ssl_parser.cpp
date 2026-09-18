@@ -127,7 +127,8 @@ std::vector<SSLCitation> SSLParser::extract_inline_citations(const std::string& 
         SSLCitation cite;
         cite.file = (*it)[1].str();
         std::string line_str = (*it)[2].str();
-        cite.line = line_str.empty() ? 0 : std::stoi(line_str);
+        try { cite.line = line_str.empty() ? 0 : std::stoi(line_str); }
+        catch (const std::out_of_range&) { cite.line = 0; }
         citations.push_back(std::move(cite));
     }
 
@@ -145,7 +146,8 @@ SSLCitation SSLParser::parse_cite_line(const std::string& line) {
     if (std::regex_match(line, match, cite_line_pattern)) {
         cite.file = match[1].str();
         std::string line_str = match[2].str();
-        cite.line = line_str.empty() ? 0 : std::stoi(line_str);
+        try { cite.line = line_str.empty() ? 0 : std::stoi(line_str); }
+        catch (const std::out_of_range&) { cite.line = 0; }
         cite.context = match[3].str();
 
         // Trim context whitespace
@@ -157,6 +159,42 @@ SSLCitation SSLParser::parse_cite_line(const std::string& line) {
     return cite;
 }
 
+// Normalize the spellings emitted by distillation models before splitting chains.
+static std::string normalize_arrows(std::string text) {
+    static const std::regex latex(R"(\$?\s*\\rightarrow\s*\$?)");
+    text = std::regex_replace(text, latex, "→");
+    for (const std::string arrow : {"->", "=>"}) {
+        size_t at = 0;
+        while ((at = text.find(arrow, at)) != std::string::npos) {
+            text.replace(at, arrow.size(), "→");
+            at += std::string("→").size();
+        }
+    }
+    return text;
+}
+
+static std::string trim_entity(const std::string& text) {
+    const auto first = text.find_first_not_of(" \t\r\n");
+    if (first == std::string::npos) return "";
+    return text.substr(first, text.find_last_not_of(" \t\r\n") - first + 1);
+}
+
+static std::vector<std::string> chain_entities(const std::string& part) {
+    std::string value = trim_entity(part);
+    if (value.empty()) return {};
+    if (value.front() != '{') return {value};
+    if (value.back() != '}') return {};
+    std::vector<std::string> entities;
+    std::istringstream members(value.substr(1, value.size() - 2));
+    std::string member;
+    while (std::getline(members, member, ',')) {
+        member = trim_entity(member);
+        if (member.empty()) return {};
+        entities.push_back(member);
+    }
+    return entities;
+}
+
 SSLParser::Result SSLParser::parse(const std::string& output) {
     Result result;
 
@@ -166,7 +204,7 @@ SSLParser::Result SSLParser::parse(const std::string& output) {
     std::vector<SSLCitation> current_citations;
 
     // Regex for typed markers
-    static const std::regex type_pattern(R"(^\[(SOLUTION|GOTCHA|DECISION|PATTERN|PREFERENCE|FAILURE|AFFECT|CORRECTION|EVENT|OPERATIONAL)\]\s+(.*)$)");
+    static const std::regex type_pattern(R"(^\[(SOLUTION|GOTCHA|DECISION|PATTERN|PREFERENCE|BELIEF|INSIGHT|FAILURE|AFFECT|CORRECTION|EVENT|OPERATIONAL)\]\s+(.*)$)");
     static const std::regex triplet_pattern(R"(^\[TRIPLET\]\s+(\S+)\s+(\S+)\s+(.+)$)");
     static const std::regex cite_line_pattern(R"(^\[CITE\]\s+)");
 
@@ -217,6 +255,55 @@ SSLParser::Result SSLParser::parse(const std::string& output) {
             }
         }
 
+        // Each physical line is a separate chain; verbatim epsilon lines are not facts.
+        std::istringstream chains(current_content);
+        std::string chain;
+        while (std::getline(chains, chain)) {
+            chain = trim_entity(chain);
+            if (chain.rfind("[ε]", 0) == 0) continue;
+            chain = trim_entity(strip_annotations(normalize_arrows(chain)));
+            // A leading [domain] scopes the learning, not the subject entity.
+            if (!chain.empty() && chain.front() == '[') {
+                const auto domain_end = chain.find(']');
+                if (domain_end != std::string::npos)
+                    chain = trim_entity(chain.substr(domain_end + 1));
+            }
+            const bool choice = current_type == "DECISION" && chain.find('|') != std::string::npos;
+            const std::string predicate = choice ? "chosen_over" :
+                current_type == "GOTCHA" ? "causes" : "leads_to";
+            if (choice) {
+                chain = chain.substr(0, chain.find('|'));
+                // The daemon's prompt also uses choice>alternative|reason.
+                if (chain.find("→") == std::string::npos) {
+                    const auto greater = chain.find('>');
+                    if (greater != std::string::npos) chain.replace(greater, 1, "→");
+                }
+            }
+            if (chain.find("→") == std::string::npos) continue;
+            std::vector<std::vector<std::string>> nodes;
+            size_t begin = 0;
+            while (true) {
+                const auto arrow = chain.find("→", begin);
+                nodes.push_back(chain_entities(chain.substr(begin, arrow == std::string::npos ? arrow : arrow - begin)));
+                if (arrow == std::string::npos) break;
+                begin = arrow + std::string("→").size();
+            }
+            if (std::any_of(nodes.begin(), nodes.end(), [](const auto& n) { return n.empty(); })) continue;
+            for (size_t i = 1; i < nodes.size(); ++i) {
+                for (const auto& subject : nodes[i - 1]) {
+                    for (const auto& object : nodes[i]) {
+                        auto [clean_object, date_expr] = extract_date_from_object(object);
+                        if (clean_object.empty()) continue;
+                        SSLTriplet triplet;
+                        triplet.subject = subject;
+                        triplet.predicate = predicate;
+                        triplet.object = clean_object;
+                        triplet.date_annotation = date_expr;
+                        result.triplets.push_back(std::move(triplet));
+                    }
+                }
+            }
+        }
         result.learnings.push_back(std::move(learning));
         current_type.clear();
         current_content.clear();
@@ -240,7 +327,7 @@ SSLParser::Result SSLParser::parse(const std::string& output) {
             current_content = match[2].str();
         }
         // Check for epsilon (verbatim) line
-        else if (line.substr(0, 3) == "[ε]" && !current_type.empty()) {
+        else if (line.rfind("[ε]", 0) == 0 && !current_type.empty()) {
             current_content += "\n" + line;
         }
         // Check for citation line
@@ -257,7 +344,7 @@ SSLParser::Result SSLParser::parse(const std::string& output) {
             SSLTriplet triplet;
             triplet.subject = match[1].str();
             triplet.predicate = match[2].str();
-            std::string raw_object = match[3].str();
+            std::string raw_object = strip_annotations(match[3].str());
 
             // Trim whitespace from object
             while (!raw_object.empty() && std::isspace(raw_object.back())) {
