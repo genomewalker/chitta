@@ -1,6 +1,6 @@
 # Distiller SSL measurement and default
 
-Status: 2026-09-18 — control arm queued; replay transport repaired; full gate failures recorded; thinking remains enabled by default.
+Status: 2026-09-18 — replica replay complete with zero retrieval deltas; control arm queued; full gate unresolved; thinking remains enabled by default.
 
 The p13 harness freezes 100 dev memories (ascending ID) from the p11b pairs,
 the daemon's exact SSL and system prompts, and the earliest 339 stored teacher
@@ -34,8 +34,8 @@ production `ssl_parser.cpp` and `temporal.cpp` with `-include array` (the tempor
 translation unit relies on a transitive header in the daemon build). Keep the pre-change binary for
 the replay comparison. Reports include the parser binary and response hashes.
 
-Pending: completed ablation measurements, parser replay coverage, and golden
-and current-truth deltas on a private copy of the frozen learning cut.
+Pending: completed ablation and control measurements, the 30-item fact review,
+and resolution of full-gate failures. Completed replica results appear below.
 
 ## Frozen teacher replay
 
@@ -46,7 +46,8 @@ The original parser aborted on one oversized citation line number; its failed it
 contributes zero returned relations. The new parser had zero failures. This is
 parser coverage, not evidence that inferred edges improve retrieval.
 `p13-data/replay.json` binds both executable hashes and the frozen manifest and
-retains per-memory triples and failures. Golden/current-truth deltas remain pending.
+retains per-memory triples and failures. Completed golden/current-truth deltas
+are reported below.
 
 Standalone parser tests cover all arrow spellings, chains, sets, domains, metadata,
 explicit predicates/dates, choice syntax, epsilon exclusions and citation overflow.
@@ -150,3 +151,40 @@ chaos pipeline similarly expects a summary string absent from the final JSON
 case lines; a complete per-case report is still needed before claiming its pass.
 These gate-script fixes are outside this stream's write scope. The six distill
 harness tests and quick gate pass; contracts remain unchanged.
+
+## Completed replica replay, 2026-09-18
+
+`p13-data/retrieval-json/report.json` binds the replay and daemon hashes,
+frozen snapshot `da86decb`, and pinned clock `1789423200`. The private replica
+received 149 legacy unique relations followed by 1,208 additional unique relations
+from the changed parser (1,357 unique relations in total). It stopped cleanly.
+
+| Measure | Frozen | Legacy | Densified | Densified minus legacy |
+| --- | ---: | ---: | ---: | ---: |
+| Golden mean nDCG@20 (3 runs) | 0.416126 | 0.416126 | 0.416126 | 0 |
+| Current-truth P@3 | 0.20 | 0.20 | 0.20 | 0 |
+| Answerable hits (40 questions) | 8 | 8 | 8 | 0 |
+| Correct abstentions (10 questions) | 10 | 10 | 10 | 0 |
+| Utility | 18 | 18 | 18 | 0 |
+
+All three golden samples at every stage were identical. The observed coverage
+gain therefore produces no measured retrieval improvement on these panels.
+No live graph or daemon configuration was changed.
+
+## Updated partial ablation, 2026-09-18
+
+Immutable `p13-data/report-1789715922544703165.json` has 30 complete 8192-token
+pairs (60/400 primary responses), no 2048 responses and no control responses yet.
+
+| Measure at 8192 tokens | Thinking on | Thinking off |
+| --- | ---: | ---: |
+| Median latency, seconds | 248.568 | 140.047 |
+| Median generated tokens, including thinking | 3557 | 286 |
+| Parsed relations per memory | 3.267 | 5.433 |
+| Memories with relations | 23/30 (76.67%) | 27/30 (90.00%) |
+
+The relations-per-memory row is a mean, not a median. Counts are 98 versus 163
+relations; relaxed agreement is 0.061303. More relations cannot establish that
+the same facts survive, so this partial report does not change the default.
+Separate thinking-token counts remain unavailable from Ollama. The independent
+control and manual review are still required.
