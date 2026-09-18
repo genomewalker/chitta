@@ -1,6 +1,6 @@
 # Distiller SSL measurement and default
 
-Status: 2026-09-18 — ablation running; thinking remains enabled by default.
+Status: 2026-09-18 — ablation resumed; replica retrieval queued; thinking remains enabled by default.
 
 The p13 harness freezes 100 dev memories (ascending ID) from the p11b pairs,
 the daemon's exact SSL and system prompts, and the earliest 339 stored teacher
@@ -66,3 +66,25 @@ The ablation remains incomplete; no qualified agreement estimate, final latency
 comparison, or separate thinking-token counts are available. Ollama supplies only
 a combined generated-token count; thinking characters are measured separately.
 Default: **thinking enabled**, pending all 100 paired comparisons at 8192 tokens.
+
+## Replica evaluation protocol
+
+`benchmarks/distill/run_replay.sh` starts a fresh private copy using
+`scripts/eval-replica.sh` and stops its own daemon on exit. Run it through
+`on-compute.sh` or in a Slurm allocation after building this worktree. It uses
+`CHITTA_RECALL_NOW=1789423200`, embedding wait 10000 ms and single-threaded BLAS.
+The Python runner validates the socket listener's replica path before any graph
+write. It records three golden nDCG@20 runs and the current-truth panel for each
+of three stages: untouched frozen graph, graph with the legacy parser's unique
+relations, and graph with the new parser's additional unique relations. Legacy
+relations remain present, including any absent from the changed parser output.
+The reported parser delta is densified minus legacy; the frozen stage provides
+an additional control. Each stage is saved independently with the final report
+binding the replay hash, daemon hash, snapshot ID and pinned clock.
+
+The first full gate stalled because an outer compute allocation attempted to
+allocate again through `on-compute.sh`. Its stream-owned allocation was cancelled;
+the replacement runs the entire gate in one allocation with
+`CHITTA_ON_COMPUTE=0` inside it. Neither that gate nor the retrieval job has a
+verified final result yet. Ablation responses resume immutably with two workers;
+incomplete comparisons still cannot change the default.
