@@ -1,6 +1,6 @@
 # Distiller SSL measurement and default
 
-Status: 2026-09-18 — ablation resumed; replica retrieval queued; thinking remains enabled by default.
+Status: 2026-09-18 — control arm queued; replay transport repaired; full gate failures recorded; thinking remains enabled by default.
 
 The p13 harness freezes 100 dev memories (ascending ID) from the p11b pairs,
 the daemon's exact SSL and system prompts, and the earliest 339 stored teacher
@@ -108,3 +108,45 @@ the replacement runs the entire gate in one allocation with
 `CHITTA_ON_COMPUTE=0` inside it. Neither that gate nor the retrieval job has a
 verified final result yet. Ablation responses resume immutably with two workers;
 incomplete comparisons still cannot change the default.
+
+## Self-agreement control and revised decision, 2026-09-18
+
+The lead requested an independent second thinking-on run on all 100 frozen dev
+items, with temperature 0.3 and num_predict 8192. `--control` stores responses in
+`control-responses` and binds them to the original manifest in a separate immutable
+`control-manifest.json`. `queue_control.py` waits for the primary completion
+watcher's lock and completion marker before making requests; both phases use at
+most two workers. Do not start an additional ablation worker while either runs.
+The report includes on/on exact and relaxed agreement, relation count and coverage
+for both comparisons, and control latency, tokens, and type-line counts.
+
+If on/on self-agreement is also low, string agreement cannot establish a sampled
+generator's fact retention. The revised decision requires thinking off to retain
+at least 90% of relations and facts, with type-line totals within 10%, and a
+30-item manual comparison against the input memory. Counts alone cannot measure
+facts. Review the first 30 frozen dev IDs, record supported facts preserved,
+omitted, contradicted, or added, and bind each review to both response hashes.
+No automatic report flips the default; it stays on until that complete report
+and manual review exist. The original four-arm manifest and preliminary string
+agreement criterion remain preserved as the historical protocol.
+
+The first replica attempt stopped during legacy insertion on the literal entity
+`--realm`: CLI argument parsing interpreted it as an option. Replay now sends
+relations as JSON over the already validated private Unix socket. A socket-level
+regression test verifies flag-like entities and propagated RPC errors. The retry
+uses a fresh `p13-replay-json` replica and saves results to `p13-data/retrieval-json`.
+
+The inherited full gate is **FAIL**, despite Rust tests and all 36 C++ tests
+passing: `test_handoff_capsule.sh`, `test_noise_hook_metric.sh`, chaos, and restart
+identity failed their gate checks. The last chaos lines show passing cases and
+the restart log shows passing queries; these excerpts do not prove the complete
+panels passed. No full-gate success or retrieval delta is claimed from them.
+
+Follow-up inspection of the saved restart report found 60/60 identical ordered
+results over three restarts, with no added/removed IDs or score deltas. The full
+gate pipes restart output through `tail -3` before looking for `20/20`, dropping
+the earlier summary. Its restart failure is a reporting false negative. The
+chaos pipeline similarly expects a summary string absent from the final JSON
+case lines; a complete per-case report is still needed before claiming its pass.
+These gate-script fixes are outside this stream's write scope. The six distill
+harness tests and quick gate pass; contracts remain unchanged.

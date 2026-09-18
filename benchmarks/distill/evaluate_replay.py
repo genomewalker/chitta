@@ -11,7 +11,7 @@ import importlib.util
 import json
 import os
 import statistics
-import subprocess
+import socket as unix_socket
 import sys
 from pathlib import Path
 
@@ -36,6 +36,25 @@ def triples(items, arm):
                 raise ValueError("invalid replay relation")
             result.add(tuple(row))
     return result
+
+
+def connect_relation(socket, subject, predicate, obj):
+    # main validates private listener ownership before this JSON-only write.
+    request = {"jsonrpc": "2.0", "id": 1, "method": "tools/call",
+               "params": {"name": "connect", "arguments": {
+                   "subject": subject, "predicate": predicate, "object": obj}}}
+    with unix_socket.socket(unix_socket.AF_UNIX, unix_socket.SOCK_STREAM) as conn:
+        conn.settimeout(60)
+        conn.connect(socket)
+        conn.sendall((json.dumps(request) + "\n").encode())
+        with conn.makefile("rb") as stream:
+            response = json.loads(stream.readline())
+    if response.get("error") or "result" not in response:
+        raise ValueError(f"connect failed: {response}")
+    payload = response["result"]
+    if payload.get("error") or payload.get("isError"):
+        raise ValueError(f"connect failed: {payload}")
+    return payload
 
 
 def main():
@@ -78,28 +97,7 @@ def main():
     panel = truth.load_panel()
     for stage, additions in (("frozen", set()), ("legacy", before), ("densified", after - before)):
         for subject, predicate, obj in sorted(additions):
-            result = subprocess.run(
-                [
-                    os.environ.get("CHITTA_BIN", "chitta"),
-                    "--socket-path",
-                    socket,
-                    "connect",
-                    "--subject",
-                    subject,
-                    "--predicate",
-                    predicate,
-                    "--object",
-                    obj,
-                    "--json",
-                ],
-                capture_output=True,
-                text=True,
-                check=True,
-                timeout=60,
-            )
-            payload = json.loads(result.stdout)
-            if payload.get("error") or payload.get("isError"):
-                raise ValueError(f"connect failed: {payload}")
+            connect_relation(socket, subject, predicate, obj)
         golden, snapshot = noise.golden_runs(3)
         current = truth.evaluate(panel, socket)
         save(args.output / f"{stage}-truth.json", current)

@@ -71,11 +71,12 @@ def run(args, manifest):
     root = args.output
     teacher = json.loads((root / "teacher.json").read_text())
     items = json.loads((root / "dev.json").read_text())
-    (root / "responses").mkdir(exist_ok=True)
+    responses = root / ("control-responses" if args.control else "responses")
+    responses.mkdir(exist_ok=True)
 
     def request(job):
         item, think, limit = job
-        dest = root / "responses" / f'{item["id"]}-{int(think)}-{limit}.json'
+        dest = responses / f'{item["id"]}-{int(think)}-{limit}.json'
         if dest.exists():
             return
         payload = {"model": teacher["model"], "stream": False, "think": think,
@@ -101,13 +102,24 @@ def run(args, manifest):
                         "request_sha256": hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest(),
                         "response": result})
         except (OSError, ValueError, KeyError) as error:
-            save(root / "responses" / f'{dest.stem}-error-{time.time_ns()}.json',
+            save(responses / f'{dest.stem}-error-{time.time_ns()}.json',
                  {"id": item["id"], "error": str(error)})
 
     # Alternate settings within each item and reverse on alternate items.
     jobs = [(item, think, limit) for limit in (8192, 2048)
             for i, item in enumerate(items)
             for think in ((True, False) if i % 2 == 0 else (False, True))]
+    if args.control:
+        control_manifest = root / "control-manifest.json"
+        specification = {"manifest_sha256": sha(root / "manifest.json"),
+                         "count": 100, "think": True, "num_predict": 8192,
+                         "temperature": 0.3, "purpose": "independent thinking-on self-agreement"}
+        if control_manifest.exists():
+            if json.loads(control_manifest.read_text()) != specification:
+                raise ValueError("control manifest changed")
+        else:
+            save(control_manifest, specification)
+        jobs = [(item, True, 8192) for item in items]
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
         list(pool.map(request, jobs))
 
@@ -131,6 +143,14 @@ def agreement(pairs, relaxed):
         matched += len(a & b)
     return {"matched": matched, "on": left, "off": right,
             "f1": 2 * matched / (left + right) if left + right else 0.0}
+
+
+def relation_summary(relations):
+    counts = [len({tuple(t) for t in row}) for row in relations]
+    return {"n": len(counts), "relations": sum(counts),
+            "relations_per_memory": sum(counts) / len(counts) if counts else None,
+            "covered_memories": sum(n > 0 for n in counts),
+            "coverage": sum(n > 0 for n in counts) / len(counts) if counts else None}
 
 
 def analyze(args, manifest):
@@ -164,13 +184,42 @@ def analyze(args, manifest):
                                       and arms[t][i]["ssl_chars"] > 0 for t in arms for i in ids)
         comparison = {"paired_n": len(ids), "valid": valid, "exact": agreement(pairs, False),
                       "relaxed": agreement(pairs, True), "type_count_relative_drift": drift}
+        comparison["relations"] = {name: relation_summary([pair[index] for pair in pairs])
+                                   for index, name in enumerate(("on", "off"))}
+        on_relations = comparison["relations"]["on"]["relations"]
+        on_coverage = comparison["relations"]["on"]["covered_memories"]
+        comparison["off_on_relation_count_ratio"] = (
+            comparison["relations"]["off"]["relations"] / on_relations if on_relations else None)
+        comparison["off_on_coverage_ratio"] = (
+            comparison["relations"]["off"]["covered_memories"] / on_coverage if on_coverage else None)
         comparison["passes"] = valid and comparison["relaxed"]["f1"] >= 0.90 and all(
             d is not None and d <= 0.10 for d in drift.values())
         report["comparisons"][str(limit)] = comparison
-    report["default_think"] = not report["comparisons"]["8192"]["passes"]
+    control = {r["id"]: r for p in (root / "control-responses").glob("*.json")
+               if "-error-" not in p.name for r in [json.loads(p.read_text())]}
+    primary = {r["id"]: r for r in rows if r["think"] and r["num_predict"] == 8192}
+    ids = sorted(primary.keys() & control.keys())
+    pairs = [(parse(args.parser, primary[i]["response"]["message"].get("content", "")),
+              parse(args.parser, control[i]["response"]["message"].get("content", ""))) for i in ids]
+    report["self_agreement"] = {"paired_n": len(ids), "exact": agreement(pairs, False),
+                                "relaxed": agreement(pairs, True),
+                                "valid": len(ids) == 100 and all(
+                                    arm[i]["response"].get("done_reason") == "stop" and arm[i]["ssl_chars"] > 0
+                                    for arm in (primary, control) for i in ids),
+                                "relations": {name: relation_summary([p[index] for p in pairs])
+                                              for index, name in enumerate(("on", "control"))}}
+    control_counts = Counter()
+    for row in control.values():
+        control_counts.update(row["ssl_lines"])
+    report["arms"]["control-True-8192"] = {
+        "n": len(control), "ssl_lines": dict(control_counts),
+        **{f"median_{key}": statistics.median(r[key] for r in control.values()) if control else None
+           for key in ("latency_seconds", "generated_tokens_including_thinking", "thinking_chars", "ssl_chars")}}
+    report["control_response_hashes"] = {p.name: sha(p) for p in sorted((root / "control-responses").glob("*.json"))}
+    report["decision_status"] = "Keep thinking on until the control and 30-item fact review are complete. Relation counts alone do not establish fact retention."
     report["response_hashes"] = {p.name: sha(p) for p in sorted((root / "responses").glob("*.json"))}
     save(root / f"report-{time.time_ns()}.json", report)
-    print(json.dumps({k: v for k, v in report.items() if k != "response_hashes"}))
+    print(json.dumps({k: v for k, v in report.items() if not k.endswith("response_hashes")}))
 
 
 def main():
@@ -182,6 +231,7 @@ def main():
     parser.add_argument("--host", default="http://dandygpun01fl:11434")
     parser.add_argument("--workers", type=int, choices=(1, 2), default=2)
     parser.add_argument("--parser", type=Path)
+    parser.add_argument("--control", action="store_true", help="repeat thinking on at 8192 in a separate immutable arm")
     args = parser.parse_args()
     manifest = freeze(args)
     if args.action == "run":
