@@ -769,3 +769,43 @@ replica copy of the same prepared ingestion corpus, not a certified reopening
 with the tail removed. Validation: three consecutive Rust runs each passed 314 tests (2 ignored);
 quick gate passed; contracts unchanged. The full compute gate in job 22916189
 is still running at this checkpoint; collect it before merging.
+
+
+## Phase 2a WAL-budget checkpoint — revised validation pending (2026-09-19)
+
+A full shutdown checkpoint is rejected. Replica job 22916871 measured an
+explicit family save at 44.4 seconds and a budget-triggered save at 34.5 seconds.
+The 15-second watchdog interrupted shutdown at 15.1 seconds; restart replayed
+805 records. Its log rejected the newest snapshot family and selected an older
+family. Normalize took 21.2 seconds, Turbo 8.1 seconds and event-tape organs
+5.5 seconds. These results do not establish a cache bug in a completed family;
+the next experiment isolates a successful family commit before changing caches.
+The accepted flush-only shutdown baseline remains 1.282–1.307 seconds.
+
+The pending implementation checks CHITTA_CHECKPOINT_WAL_MB (default 16 MiB)
+and CHITTA_WAL_SNAPSHOT_RECORDS (default 20,000) on the Rust maintenance worker.
+It never initiates a budget checkpoint within 60 seconds of the last completed
+family or previous budget attempt. Existing timer checkpoints remain. Monotonic
+WAL accounting survives rotation and includes recovered uncovered debt. A family
+acknowledges only its starting watermark after the manifest commits; writes
+racing the save remain debt. Manifest errors propagate. The existing family
+writer saves normalize, LSH, Turbo, organs and HDC caches. Shutdown flushes and
+syncs the tail, without requesting a new family. No format change is intended.
+
+The revised benchmarks/storage/checkpoint.py uses a 1 MiB byte budget, 160
+observations, a completed maintenance checkpoint, then a state-only strengthen
+write before SIGTERM and restart. Background writes remain enabled. This tests
+cache reuse for a state-only tail, not arbitrary mixed writes. Acceptance checks
+that replay equals the recorded post-cut WAL debt, memory counts match,
+normalize is under one second, LSH/Turbo/organs all report cache hits, field_store
+is under 15 seconds, and flush-only shutdown is under two seconds without the
+watchdog. It preserves each daemon log before restart truncates it. Shutdown
+during an already-running family save remains unverified: close still joins
+that worker, so this experiment cannot establish that latency bound.
+
+Build job 22916872 and the dependent acceptance run use logs under
+/projects/caeg/scratch/kbd606/tmp/p22cpfix-nu0h4nlf. Acceptance runs Rust three
+times, quick/contracts, the replica at /projects/caeg/scratch/kbd606/tmp/cpfix01,
+and the full gate. Results must be collected before this implementation is
+committed or accepted. Last verified Rust head: a495ecf; parent b2628282 includes
+the merged upstream documentation. No new implementation commit exists yet.
