@@ -283,6 +283,53 @@ committed family. Acceptance: replay of this family under 2 s with the same
 A profiled replay of the live mind is scheduled (job 22916105) to confirm the
 same shape on today's records.
 
+## Phase 2b implementation checkpoint (2026-09-19)
+
+Inspection of the July replica changes the proposed coverage-skip assumption:
+all 4,995 segment files have different writer IDs, and both retained manifests
+have empty `segments` arrays. The filename supplies a first sequence number,
+not a last sequence number. Coverage of a segment's first record does not prove
+coverage of its tail. The existing
+`prune_covered_segments_respects_coverage_vector` regression deliberately
+protects a foreign segment with sequence numbers 1 and 2 when coverage is 1.
+Neither a filename-only skip nor filename-only pruning is safe on this corpus.
+The manifest's coverage vector is also not a substitute for the cortical
+snapshot's potentially older replay boundary.
+
+This checkpoint instead bounds WAL decoder reads with a 64 KiB `BufReader`
+in both chained replay and offset replay. It preserves decoding, CRC checks,
+lineage fencing, hash-chain checks, replay ordering, and exact torn-tail repair
+positions. Segment bytes, manifests, and public contracts are unchanged.
+Existing writer-safe pruning is retained. This is a safe incremental change;
+it does **not** implement coverage skipping or automatic post-family pruning.
+
+A future skip path needs trustworthy per-segment end ranges and lineage
+metadata committed with a family, with a validated fallback for legacy
+manifests. In particular, an older full snapshot and the cortical snapshot
+must both cover every skipped operation. Mutable writer tails cannot be
+certified solely from their filenames. The July corpus needs a one-time
+validated metadata upgrade before such certificates can accelerate a later
+open; silently treating its missing ranges as covered would risk data loss.
+
+Validation uses isolated copies made by `scripts/eval-replica.sh` from the
+specified July snapshot. Each trial starts from a fresh copy, so a preceding
+trial's shutdown snapshot cannot change its replay input. “Cold” below means
+the first changed-binary trial and “warm” the second; neither evicts NFS or OS
+caches. Logs and per-kind reports are under
+`/projects/caeg/scratch/kbd606/tmp/p22b-kzF9gn/`.
+
+Checkpoint validation: Rust release tests passed 303/303 (two ignored), the
+quick gate passed, and the contract check reported `contracts unchanged`.
+The first Rust launch failed before executing tests because `libopenblas.so.0`
+was absent from the job's runtime search path; the successful rerun supplied
+the conda library path. The full compute gate and replica timings remain
+pending in compute job 22916116 (`validate.sh` in that log directory): control
+replay, full gate, first buffered replay, second buffered replay, in that
+order. The last observed control phases were snapshot 2,491 ms, payload
+123 ms, embedding 2,775 ms, and LSH cache 521 ms; replay had not finished.
+The 36,000-write durability soak has not been rerun. No under-two-second
+acceptance claim, per-kind equality claim, or phase 2b completion is made.
+
 ## Phase 0 controlled chaos comparison (2026-09-19)
 
 On compute with TMPDIR=/tmp set inside the allocation, the requested
