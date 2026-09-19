@@ -28,7 +28,7 @@ export CXX="${CXX_BIN:-c++}"
 [[ -d "${CHITTA_DEPS_CACHE:-/projects/caeg/scratch/kbd606/tmp/cmake-deps}" ]] && export CHITTA_DEPS_CACHE="${CHITTA_DEPS_CACHE:-/projects/caeg/scratch/kbd606/tmp/cmake-deps}"
 
 step "quick gate"
-bash scripts/gate-quick.sh || fail=1
+CHITTA_SLOW_TESTS=1 bash scripts/gate-quick.sh || fail=1
 
 step "Rust build and tests (release)"
 # Rust tests use TempDir: node-local /tmp, not the NFS scratch on-compute exports as
