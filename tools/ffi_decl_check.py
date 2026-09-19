@@ -10,7 +10,8 @@ import pathlib
 
 root = pathlib.Path(__file__).resolve().parent.parent
 hpp = (root / "chitta/include/chitta/field_store.hpp").read_text()
-ffi = (root / "chitta-field/src/ffi.rs").read_text()
+ffi_paths = [root / "chitta-field/src/ffi.rs", *sorted((root / "chitta-field/src/ffi").glob("*.rs"))]
+ffi = "\n".join(path.read_text() for path in ffi_paths if path.exists())
 
 
 def arity(params: str) -> int:
