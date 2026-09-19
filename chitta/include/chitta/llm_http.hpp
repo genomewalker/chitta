@@ -18,6 +18,8 @@
 #include <cstdlib>
 #include <cstdio>
 #include <unistd.h>
+#include <spawn.h>
+extern char** environ;
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <signal.h>
@@ -91,32 +93,31 @@ inline std::string fork_exec_capture(const std::vector<std::string>& args,
         return "";
     }
 
-    // Build argv before fork: background probes may hold allocator locks.
+    // posix_spawn, never fork(): fork() runs the atfork handlers, and OpenBLAS's
+    // joins its worker threads, which hung the daemon for good on 2026-09-19
+    // (an endpoint probe under the ledger mutex; 23 ledger_ops queued behind
+    // it, the queue processor starved every reader). posix_spawn runs none.
     std::vector<char*> argv;
     for (const auto& a : args) argv.push_back(const_cast<char*>(a.c_str()));
     argv.push_back(nullptr);
-    pid_t pid = fork();
-    if (pid < 0) {
+    posix_spawn_file_actions_t actions;
+    posix_spawn_file_actions_init(&actions);
+    posix_spawn_file_actions_adddup2(&actions, stdout_pipe[1], STDOUT_FILENO);
+    posix_spawn_file_actions_addopen(&actions, STDERR_FILENO, "/dev/null", O_WRONLY, 0);
+    posix_spawn_file_actions_addclose(&actions, stdout_pipe[0]);
+    posix_spawn_file_actions_addclose(&actions, stdout_pipe[1]);
+    if (!stdin_data.empty()) {
+        posix_spawn_file_actions_adddup2(&actions, stdin_pipe[0], STDIN_FILENO);
+        posix_spawn_file_actions_addclose(&actions, stdin_pipe[0]);
+        posix_spawn_file_actions_addclose(&actions, stdin_pipe[1]);
+    }
+    pid_t pid = -1;
+    const int spawn_rc = posix_spawnp(&pid, argv[0], &actions, nullptr, argv.data(), environ);
+    posix_spawn_file_actions_destroy(&actions);
+    if (spawn_rc != 0) {
         close(stdout_pipe[0]); close(stdout_pipe[1]);
         if (stdin_pipe[0] >= 0) { close(stdin_pipe[0]); close(stdin_pipe[1]); }
         return "";
-    }
-
-    if (pid == 0) {
-        close(stdout_pipe[0]);
-        dup2(stdout_pipe[1], STDOUT_FILENO);
-        int devnull = open("/dev/null", O_WRONLY);
-        if (devnull >= 0) { dup2(devnull, STDERR_FILENO); close(devnull); }
-        close(stdout_pipe[1]);
-
-        if (!stdin_data.empty()) {
-            close(stdin_pipe[1]);
-            dup2(stdin_pipe[0], STDIN_FILENO);
-            close(stdin_pipe[0]);
-        }
-
-        execvp(argv[0], argv.data());
-        _exit(1);
     }
 
     close(stdout_pipe[1]);
