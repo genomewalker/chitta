@@ -43,6 +43,7 @@ instructions, not more. Don't leave the lead session blocked on a subagent.
 ## Build & deploy
 
 ```bash
+(cd chitta-field && ./build.sh build --release)   # the C++ build links the .a as is; it never rebuilds the store
 cd chitta && cmake --build build --parallel
 install -m 0755 ../bin/chittad ~/.claude/bin/chittad
 install -m 0755 ../bin/chitta  ~/.claude/bin/chitta
