@@ -604,3 +604,43 @@ acceptance, and the 36,000-write p21 soak on this corrected tree. Artifacts:
 `/projects/caeg/scratch/kbd606/tmp/p22t-74w59g2s`. Results are pending;
 phase 2b is not yet accepted. The shutdown-wait, clean-snapshot/load-path,
 and lazy code-navigation follow-ups remain open.
+
+
+### Phase 2b reserved sequence ranges and foreign archive (2026-09-19)
+
+Job 22916152 passed quick/contracts, Rust 311/311 three times (two ignored),
+full gate (37/37 ctests and 41 hook suites), and the 36,000-write soak with
+30 compactions and no vanished segments. July failed its latency gate:
+legacy replay 48.197 s / 4,995 files opened; after the forced commit,
+replay 36.2 s / 280 files opened / zero certified skips. Both opens retained
+120,590 memories; the legacy apply count was 12,234 (11,727 UpdateState),
+and the committed-family reopen correctly applied zero records.
+
+The failed replica's manifest contained 4,877 ranges. Full and cortical
+coverage vectors were identical. Of the 280 remaining paths, 161 had a
+certificate whose first_seqno was the first actual record (e.g. 157,837,517)
+while the segment name/header reserved sequence 1. The validator correctly
+required the reserved lower bound, so those certificates were rejected.
+The other 119 paths were 117 foreign-lineage files and two empty writer
+tails. This was not lagging cortical coverage or an incorrect stat path.
+
+Inventory now preserves the header's reserved lower bound, accepting a
+monotonic first record at or above it. This conservatively encloses the
+actual record range and preserves filename validation, last-sequence
+coverage, exact size checks and the strict sealed-writer fence. A regression
+fixture reserves sequence 1 and first appends at 100; both inventory paths
+must certify it, and replacing its bytes with invalid data proves a fully
+covered replay does not open it. Existing lock and chaos tests are unchanged.
+
+The first replay moves sealed V3 segments fenced by foreign vector-space
+identity into segments/foreign/, with an audit line per rename and fsync of
+both directories. The open writer and unsealed files remain untouched;
+archive collisions fail rather than overwrite either copy. Legacy V1/V2
+files still decode because they have no lineage stamp. Regression coverage
+checks byte preservation, exclusion from the next replay and collisions.
+No WAL format or RPC contract changed.
+
+Job 22916159 validates this correction: Rust three times, full compute gate,
+July legacy/forced-commit/cold/warm opens and a fresh 36,000-write soak.
+Artifacts: `/projects/caeg/scratch/kbd606/tmp/p22fix-jvt99ial`.
+Results are pending; phase 2b and the later restart-budget items remain open.
