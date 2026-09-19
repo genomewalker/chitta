@@ -475,6 +475,12 @@ int run_cli(const std::string& socket_path, const std::string& tool,
             std::cerr << "[DEBUG] Raw response (" << resp->size() << " bytes): " << resp->substr(0, 200) << "\n";
         }
         auto result = json::parse(*resp);
+        if (result.contains("result") && result["result"].contains("structured") &&
+            result["result"]["structured"].value("loading", false)) {
+            std::cout << result["result"]["structured"].dump() << "\n";
+            return tool == "health_check" || tool == "status" ? 0 : 75;
+        }
+
 
         if (result.contains("error")) {
             std::cerr << "Error: " << result["error"]["message"].get<std::string>() << "\n";
@@ -566,6 +572,19 @@ int run_thin_client(const std::string& socket_path) {
         if (response) {
             std::cout << *response << "\n";
             std::cout.flush();
+            const auto reply = nlohmann::json::parse(*response, nullptr, false);
+            if (reply.is_object() && reply.contains("result") &&
+                reply["result"].contains("structured") &&
+                reply["result"]["structured"].value("loading", false)) {
+                const auto request = nlohmann::json::parse(line, nullptr, false);
+                std::string method;
+                if (request.is_object()) {
+                    method = request.value("method", "");
+                    if (method == "tools/call" && request.contains("params") && request["params"].is_object())
+                        method = request["params"].value("name", "");
+                }
+                return method == "health_check" || method == "status" ? 0 : 75;
+            }
         } else {
             std::cerr << "[chitta] Request failed: " << client.last_error() << "\n";
 
@@ -772,11 +791,25 @@ int main(int argc, char* argv[]) {
 
     // Handle status command (daemon health check)
     if (tool == "status") {
+        using json = nlohmann::json;
         chitta::SocketClient client(socket_path);
         if (!client.connect()) {
             std::cout << "Daemon: not running\n";
             std::cout << "Socket: " << socket_path << " (not found)\n";
             return 1;
+        }
+        auto health = client.request(json{{"jsonrpc", "2.0"}, {"id", 1},
+            {"method", "tools/call"}, {"params", {{"name", "health_check"},
+            {"arguments", json::object()}}}}.dump());
+        if (health) {
+            auto response = json::parse(*health, nullptr, false);
+            if (!response.is_discarded() && response.contains("result")) {
+                auto state = response["result"].value("structured", json::object());
+                if (state.value("loading", false)) {
+                    std::cout << state.dump() << "\n";
+                    return 0;
+                }
+            }
         }
         auto version = client.check_version();
         if (version) {
@@ -1033,7 +1066,12 @@ int main(int argc, char* argv[]) {
 
     // Discover schemas from this daemon; cached help remains available offline.
     if (!tool.empty()) {
-        auto spec = chitta::discover_cli_tool(socket_path, tool);
+        nlohmann::json loading;
+        auto spec = chitta::discover_cli_tool(socket_path, tool, &loading);
+        if (!loading.is_null()) {
+            std::cout << loading["result"]["structured"].dump() << "\n";
+            return tool == "health_check" || tool == "status" ? 0 : 75;
+        }
         if (!spec && LEGACY_HANDLERS.count(tool)) {
             spec = nlohmann::json{{"name", tool}, {"description", "Legacy daemon handler"}};
         }

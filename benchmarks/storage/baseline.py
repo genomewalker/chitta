@@ -107,33 +107,51 @@ def main():
         daemon_log = mind / "replica.log"
         done = threading.Event()
 
-        def watch():
+        def watch(raw):
+            series = observed.setdefault("raw" if raw else "cli", {})
             while not done.is_set():
                 try:
                     process = int((mind / "replica.pid").read_text())
                     fields = Path(f"/proc/{process}/stat").read_text().split(") ", 1)[1].split()
                     born = int(fields[19]) / os.sysconf("SC_CLK_TCK")
-                    if "socket_s" not in observed:
+                    if raw:
                         with socket.socket(socket.AF_UNIX) as client:
-                            client.settimeout(0.1)
+                            client.settimeout(1)
                             client.connect(str(sock))
-                        observed["socket_s"] = time.monotonic() - born
-                    _, health = rpc("health_check", timeout=1)
+                            observed.setdefault("socket_s", time.monotonic() - born)
+                            client.sendall(
+                                json.dumps(
+                                    {
+                                        "jsonrpc": "2.0",
+                                        "id": 1,
+                                        "method": "tools/call",
+                                        "params": {"name": "health_check", "arguments": {}},
+                                    }
+                                ).encode()
+                                + b"\n"
+                            )
+                            with client.makefile("rb") as stream:
+                                response = json.loads(stream.readline())
+                            health = response["result"]
+                            if health.get("isError"):
+                                raise RuntimeError(str(response))
+                    else:
+                        _, health = rpc("health_check", timeout=1)
                     state = health.get("structured", {})
                     if state.get("loading"):
-                        phases = observed.setdefault("loading_phases", [])
+                        phases = series.setdefault("loading_phases", [])
                         if state.get("phase") not in phases:
                             phases.append(state.get("phase"))
                     now = time.monotonic() - born
-                    observed.setdefault("health_s", now)
-                    samples = observed.setdefault("health_samples_s", [])
-                    samples.append(now)
-                    done.wait(0.05)
-                except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
-                    done.wait(0.05)
+                    series.setdefault("health_s", now)
+                    series.setdefault("health_samples_s", []).append(now)
+                except (OSError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError):
+                    series["probe_failures"] = series.get("probe_failures", 0) + 1
+                done.wait(0.05)
 
-        watcher = threading.Thread(target=watch)
-        watcher.start()
+        watchers = [threading.Thread(target=watch, args=(raw,)) for raw in (True, False)]
+        for watcher in watchers:
+            watcher.start()
         try:
             with (out / f"{label}-harness.log").open("w") as log:
                 subprocess.run(
@@ -151,7 +169,8 @@ def main():
             pid = int((mind / "replica.pid").read_text())
         finally:
             done.set()
-            watcher.join()
+            for watcher in watchers:
+                watcher.join()
         with daemon_log.open("rb") as source:
             # eval-replica truncates this file on every start, including restart.
             log = source.read().decode(errors="replace")
@@ -163,19 +182,23 @@ def main():
                 r"replay_apply kind=(\w+) records=(\d+) apply_ns=(\d+)", log
             )
         ]
-        samples = observed.get("health_samples_s", [])
-        if samples:
-            observed["max_health_gap_s"] = max(
-                [samples[0]] + [b - a for a, b in zip(samples, samples[1:])]
-            )
         observed["health"] = rpc("health_check")[1]
         fields = Path(f"/proc/{pid}/stat").read_text().split(") ", 1)[1].split()
         ready_s = time.monotonic() - int(fields[19]) / os.sysconf("SC_CLK_TCK")
         observed["ready_s"] = ready_s
-        observed["max_health_gap_s"] = max(
-            observed.get("max_health_gap_s", 0),
-            ready_s - samples[-1] if samples else ready_s,
-        )
+        for name in ("raw", "cli"):
+            series = observed[name]
+            samples = series.get("health_samples_s", [])
+            series["max_health_gap_s"] = (
+                max(
+                    [samples[0], ready_s - samples[-1]]
+                    + [b - a for a, b in zip(samples, samples[1:])]
+                )
+                if samples
+                else ready_s
+            )
+        # The availability gate uses raw socket probes; CLI remains user-visible evidence.
+        observed["max_health_gap_s"] = observed["raw"]["max_health_gap_s"]
         return observed
 
     def stop(sig=signal.SIGKILL):

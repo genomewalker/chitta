@@ -220,3 +220,30 @@ The checkpoint quick gate passes its other checks but fails the contracts
 check. The additive `thread_sessions` row contract (`repository`, `stream_id`)
 is intentional; the public contract snapshot still needs verification from a
 node that can reach the daemon. This is an explicitly failing checkpoint.
+
+### Phase 1 CLI/probe continuation checkpoint (2026-09-19)
+
+The previous CLI-only health blackout is not a valid measurement of raw socket
+availability: CLI connection preflight waited for full readiness. Startup now
+records independent raw AF_UNIX and CLI series. Raw probes send one health_check
+JSON-RPC line with a one-second timeout; the raw series determines the gate.
+Both series include first-response delay and the final gap to readiness. Restart
+logs are read from offset zero because eval-replica truncates them.
+
+CLI preflight now accepts the warming responder immediately. Loading replies
+print structured JSON and exit zero for health_check/status or 75 for other
+commands, including unknown tools discovered through tools/list. The dedicated
+status path also preserves loading JSON. A private fake-socket regression covers
+eight direct/thin-client combinations and passed 8/8 on compute. The incremental
+C++ build and focused Python lint passed. No WAL or replay changes were made.
+
+Validation remains in flight at the mandatory thread checkpoint. Compute job
+22916095 runs the complete replica benchmark, then regenerates the intentionally
+changed ledger session_list filter contracts against that private replica and
+runs the full gate. Artifacts: `/projects/caeg/scratch/kbd606/tmp/p22p1c-P02Ikf`;
+benchmark: `/projects/caeg/scratch/kbd606/tmp/p22p1c01`. A separate checkpoint
+quick gate was submitted; collect its quick-checkpoint.log. Do not merge until
+raw max_health_gap_s is below one second at every WAL age, capsule_get p95 is
+<=50 ms at 364 rows and <=100 ms at 5,000, and Rust/ctest/contracts gates pass.
+The contract regeneration and final measured values still require a follow-up
+commit; this checkpoint does not claim phase 1 completion.

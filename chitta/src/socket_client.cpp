@@ -100,7 +100,7 @@ void write_cli_cache(const std::string& path, const nlohmann::json& cache) {
 } // namespace
 
 std::optional<nlohmann::json> discover_cli_tool(const std::string& socket_path,
-                                               const std::string& name) {
+                                               const std::string& name, nlohmann::json* loading) {
     using json = nlohmann::json;
     const auto socket = std::filesystem::absolute(socket_path).lexically_normal().string();
     const auto path = get_socket_dir() + "/cli-tools-" + std::to_string(djb2_hash(socket)) + ".json";
@@ -129,6 +129,13 @@ std::optional<nlohmann::json> discover_cli_tool(const std::string& socket_path,
     auto response = client.request(R"({"jsonrpc":"2.0","id":1,"method":"tools/list"})");
     if (!response) return std::nullopt;
     auto reply = json::parse(*response, nullptr, false);
+    if (loading && reply.is_object() && reply.contains("result") &&
+        reply["result"].is_object() && reply["result"].contains("structured") &&
+        reply["result"]["structured"].is_object() &&
+        reply["result"]["structured"].value("loading", false)) {
+        *loading = reply;
+        return std::nullopt;
+    }
     if (!reply.is_object() || !reply.contains("result") || !reply["result"].is_object() ||
         !reply["result"].contains("tools")) return std::nullopt;
     auto tools = reply["result"]["tools"];
@@ -464,29 +471,15 @@ bool SocketClient::connect_only() {
         return false;
     }
 
-    // Retry while daemon is warming up (snapshot load + HNSW backfill can take ~90s).
-    // Without retry, clients connecting during this window wait the full RESPONSE_TIMEOUT_MS.
-    std::optional<DaemonHealth> health;
-    for (int attempt = 0; attempt < 60; ++attempt) {
-        health = check_health();
-        if (!health) {
-            last_error_ = "Daemon did not respond to health check";
-            disconnect();
-            return false;
-        }
-        if (health->status != "warming_up") break;
-        disconnect();
-        std::this_thread::sleep_for(std::chrono::seconds(2));
-        if (!connect()) {
-            last_error_ = "Lost connection to daemon while it was warming up";
-            return false;
-        }
-    }
-    if (!health || health->status == "warming_up") {
-        last_error_ = "Daemon is still loading after 120s — try again shortly";
+    // Loading is a responsive daemon, not a connection failure. Forward the
+    // caller's request immediately so its loading/retry response stays visible.
+    auto health = check_health();
+    if (!health) {
+        last_error_ = "Daemon did not respond to health check";
         disconnect();
         return false;
     }
+    if (health->status == "warming_up") return true;
 
     bool compatible = chitta::version::protocol_compatible(
         health->protocol_major, health->protocol_minor);
