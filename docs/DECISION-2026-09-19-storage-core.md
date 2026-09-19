@@ -582,3 +582,25 @@ Results remain pending; no acceptance claim is made by this correction.
 
 Correction checkpoint: submodule `56386e9`; quick gate PASS; contracts unchanged.
 The three Rust results and full acceptance remain pending in job 22916149.
+
+### Phase 2b deterministic sealing fixture (2026-09-19)
+
+Job 22916149 passed Rust run 1 (311 tests, two ignored), then failed run 2
+(310 passed, one failed, two ignored). The failure at wal_certificate.rs:193
+was an absent inventory entry, not an instance-lock failure. The fixture
+created the closed foreign writer and the active writer within one filesystem
+mtime tick. The p21 sealing fence intentionally requires a foreign segment's
+mtime to be strictly older; equal timestamps must remain uncertified.
+
+The fixture now explicitly sets equal mtimes and checks rejection, then sets
+the closed segment two seconds older and checks eligibility before replay.
+It retains the corrupted-bytes proof that a certified segment is never opened.
+No production sealing rule, instance-lock test, or chaos test was weakened;
+there is no retry or sleep in the fixture.
+
+Quick gate PASS; contracts unchanged. Job 22916152 runs three complete Rust
+suites, the full compute gate, July legacy/forced-commit/cold/warm reopen
+acceptance, and the 36,000-write p21 soak on this corrected tree. Artifacts:
+`/projects/caeg/scratch/kbd606/tmp/p22t-74w59g2s`. Results are pending;
+phase 2b is not yet accepted. The shutdown-wait, clean-snapshot/load-path,
+and lazy code-navigation follow-ups remain open.
