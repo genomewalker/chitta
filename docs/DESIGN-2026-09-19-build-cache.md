@@ -464,8 +464,25 @@ splits supported single-source invocations into cached object compilation and
 ordinary linking. It preserves source paths, flag values and link argument order;
 unknown flags and multiple sources fall back unchanged. Temporary objects remain
 in the private runtime directory. Hook sources and optimization flags are unchanged.
-The next same-node prime/warm measurement is job 22916937, with logs under
-`/projects/caeg/scratch/kbd606/tmp/agent_djZgaH`.
+Job 22916937 completed all 41 suites on dandycmpn22fl with no failures:
+
+| Hook measurement | Seconds | Result |
+|---|---:|---|
+| Previous wrapper, warm | 656 | PASS |
+| Split compilation wrapper, priming pass | 283 | PASS |
+| Split compilation wrapper, warm pass | 147 | PASS |
+
+The warm reduction is 77.6%; the expected <90 s is not achieved. The largest
+remaining suites are eval_replica (39 s), saddle_hook (16 s), saddle_parity
+(13 s), and pretool_hardstop (8 s). These are suite totals, not isolated compile
+times. No further performance floor is asserted without the full-gate results.
+Focused logs and timings are under
+`/projects/caeg/scratch/kbd606/tmp/agent_djZgaH/focused`.
+
+A separate compute regression (job 22916938) passed: a repeated supported
+compile produces a cache hit; source paths and define values are preserved;
+unsupported flags and multiple sources fall back correctly; compiler errors
+propagate. This regression uses a private cache, independent of the hook numbers.
 
 The incoming main submodule adds InstanceLock::drop with explicit LOCK_UN, which
 releases locks even while forked children retain an inherited descriptor. This
@@ -477,3 +494,23 @@ plugin contract records 5.72.0 while the manifest records 5.73.0; the site foote
 checker also rejects the release footer/version/date inconsistencies. These are
 retained failures, not cache fallback or skipped coverage. The contract snapshot
 is outside this stream's write scope and has not been regenerated.
+
+A scratch-filesystem lock experiment reproduced the descriptor mechanism:
+closing the original descriptor while a duplicate remains blocks reopen;
+explicit LOCK_UN before closing permits reopen. The incoming Rust regression
+`instance_lock_drop_unlocks_duplicate_descriptors_and_failed_open` exercises
+that release path. This supports the mechanism, without proving the exact
+historical trigger.
+
+Detached proof job **22916939** is pinned to parent 35b16c86 and submodule
+7ec4554 on dandycmpn22fl. It uses distinct cold/warm checkouts and build outputs,
+one initially empty private compiler cache, and unchanged full-gate coverage.
+After both gates it reruns the previously failing snapshot and ledger tests
+three times each. Results append to
+`/projects/caeg/scratch/kbd606/tmp/agent_djZgaH/results.txt`; full stage logs are
+in cold-logs, warm-logs and isolated-logs beneath that directory. This job is
+pending at this checkpoint; no new full-gate timing or acceptance is claimed.
+
+The nightly sbatch definition passed Slurm's `--test-only` validation. Its
+systemd timer remains a documented, disabled example; validation did not submit
+or enable a nightly job.
