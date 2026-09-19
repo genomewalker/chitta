@@ -850,3 +850,76 @@ are still running; full-gate acceptance is pending, not claimed. Logs are under
 /projects/caeg/scratch/kbd606/tmp/p22lazy-g3a14i4h; collect full.log and
 validate-job.log before merging. Shellcheck was unavailable and skipped by
 the quick gate.
+
+
+### Section-lazy loading prerequisite (2026-09-19)
+
+The preceding pre-listen validation is complete: job 22916878 ended with
+`VALIDATION_COMPLETE` and `full gate: PASS`, including 37/37 C++ tests and the
+hook suites. Its earlier pending-hook note above is superseded.
+
+V23 already maps the immutable full snapshot and decodes independent sections
+on a four-worker pool. The outstanding delay is the publication barrier: every
+section and startup sidecar finishes before `ChittaField::open` returns. Moving
+only `FullSnapshot::load` to a worker would not make recall ready sooner.
+
+This prerequisite gives the section decoder ownership of the mapping, section
+ranges, and completed batch results. Batches can select sections by name without
+redecoding completed sections. Applying results and reporting errors remains in
+file order, including duplicate sections and the `triplets_clean` marker. Tests
+exercise every truncation against the historical streaming reader, deliberately
+schedule the clean marker before preceding sections, and unlink the snapshot
+between batches. The production loader still finishes every batch before
+publication: this commit does **not** claim section-lazy serving or the 3-second
+target, and does not change the file format or RPC contracts.
+
+Runtime integration must preserve these dependencies:
+
+- WAL `ApplyCtx` currently borrows memory, keyword, triplet, symbol, code-file,
+  association and registry state together. A deferred snapshot section cannot
+  be installed over a section already updated by replay. Route each operation
+  once to its owning state, or retain its bounded replay tail until that state
+  is decoded; test mixed memory/code/ledger WAL against eager replay.
+- Recall uses more than payloads and embeddings: acknowledgement scores,
+  refreshed state and utility posteriors influence ranking; association edges
+  support graph expansion. Required sections must be classified from the actual
+  recall path. Optional tools must return explicit loading until their sections
+  and derived indexes are ready.
+- `.pld` contains the only payload content in stripped snapshots. Its existing
+  corruption/missing-sidecar family fallback must precede publication of recall
+  results. Late decode errors also need an explicit recovery policy; publishing
+  a partially validated family must not silently bypass older-family fallback.
+- Checkpointing, maintenance, mutations and shutdown must not serialize default
+  empty sections while deferred sections still own durable data. Preserve the
+  shared-mutex discipline and keep completion joins off the responder thread.
+
+`benchmarks/storage/startup_sections.py` records process age from Linux `/proc`
+start ticks (excluding replica-copy/setup time), first health, first store-ready
+health, first recall completion and memory/recall-ID equality for three pinned
+queries across restart. Raw Unix-socket calls avoid CLI preflight hiding loading.
+The optional `--require-early-ready` flag enforces store-ready <3 seconds and
+first correct recall <5 seconds; baseline runs report those checks independently
+without claiming they pass. It uses only a private copy of the frozen cut.
+Validation logs: `/projects/caeg/scratch/kbd606/tmp/p22sections-ij7w1fbj`
+(job 22916881); results pending. The first attempt (22916880) stopped on a
+probe portability error: this Python build lacks `CLOCK_BOOTTIME`. The probe
+now reads `/proc/uptime`, on the same boot-time clock as `/proc/<pid>/stat`;
+the failed attempt stopped its private replica and produced no accepted result.
+
+The frozen-cut baseline in `p22sections-ij7w1fbj/before2/report.json` measured
+process-to-store-ready **14.610 s**, first recall **15.280 s**, and **134,805**
+memories before and after restart. Snapshot decoding took **2,490 ms**;
+Turbo loading dominated at **8,125 ms** (startup-index phase **8,433 ms**).
+The storage-persistence query returned the same five IDs before and after;
+two further queries returned identical empty lists. The first assertion wrongly
+required every query to be nonempty; the corrected harness requires the primary
+query to be nonempty and compares all three results, including empty results.
+This is a baseline, not an early-readiness acceptance result. The decoder remains
+eager in production; staged publication and deferred Turbo work remain pending.
+
+Decoder prerequisite validation: quick gate **22916883 passed**; job
+**22916884** passed **15/15** focused snapshot tests, the C++ build, contracts
+unchanged, and the corrected replica content comparison. Its `after3/report.json`
+measured store-ready **14.860 s**, first recall **15.530 s**, and **134,805**
+memories, with identical recall IDs. The full gate remains running. These
+numbers do not meet the early-readiness targets; production still loads eagerly.
