@@ -1613,6 +1613,8 @@ For an explicit milestone file, run `python3 chitta-mcp/capsule_cli.py save
 capsule.json --expected-revision N`. The CLI prints only an acknowledged
 record and fails on transport errors or rejected compare-and-set writes.
 
+Build environment (2026-09-19): gate-run hook suites inherit `scripts/build-env.sh`, including single-threaded BLAS and private node-local compiler TMPDIR. Hook scripts are unchanged; durable replica data remains on scratch.
+
 <!-- BEGIN CITATIONS -->
 ## References
 

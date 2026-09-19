@@ -1,8 +1,9 @@
 # Build cache: one environment, isolated outputs
 
-Status as of 2026-09-19: **DRAFT — step 1 only; awaiting lead review.**
-No SIGN-OFF has been supplied. No implementation, installation, service change,
-or nightly scheduling is authorized by this document alone.
+Status as of 2026-09-19: **IMPLEMENTATION IN PROGRESS — lead SIGN-OFF 2026-09-19 09:55.**
+Design ad378f04 accepted with per-node sccache, a 600 s primed-node target,
+separate unavailable/drift contract results, and p22 ownership of baseline.py.
+Nightly scheduling is documented but has not been enabled.
 
 ## Baseline and measurement definitions
 
@@ -50,8 +51,8 @@ Measured node: `dandycmpn22fl.unicph.domain`; GCC 14.3.0, Rust 1.93.0,
 CMake 3.26.5. Every native stage exited zero. The Rust log records compilation
 and a 4m34s release build with initially absent target outputs. Its 274.91 s
 cold time is substantially below the lead's earlier 30–37 minute observation.
-The cause is not established: node, filesystem load and command/environment
-may differ. Do not substitute the earlier estimate for this measurement or
+The lead clarified at sign-off that the earlier 30–37 minute figure was
+FetchContent cloning, not Rust compilation; 274.91 s replaces that estimate. Do not substitute the earlier estimate for this measurement or
 attribute the improvement to an uninstalled compiler cache. Native stages total
 482.77 s, excluding the incremental probes and all additional full-gate work.
 
@@ -140,12 +141,9 @@ only prepares its environment and checkout; it does not eagerly compile.
 Dev-install currently links plugin assets and explicitly leaves binaries alone;
 sourcing the environment must not turn it into an implicit deployment.
 
-`benchmarks/storage/baseline.py` is absent at the measured origin/main revision.
-Do not invent a replacement benchmark. If that caller lands before step 2,
-change only its environment construction: run a controlled Bash subprocess that
-sources build-env and emits the environment (NUL-delimited), then pass that map
-to native subprocesses. Otherwise report this integration as unavailable and
-retain the documented recipe for its owner to adopt.
+`benchmarks/storage/baseline.py` belongs to p22 and is not edited here.
+`scripts/baseline-build-env.sbatch` supplies the common environment to that
+harness; submit it from the harness worktree after p22 lands.
 
 CLAUDE.md's Build & deploy section gets a two-line pointer with a “Status as of”
 stamp. Document direct, gate, stream and baseline invocations in the build docs.
@@ -311,3 +309,105 @@ overhead, unavailable compute contract probe, and missing storage baseline
 integration are explicit review items. The lead must append SIGN-OFF to the
 stream specification before implementation begins. No cold/warm cache result
 or <10 minute guarantee is claimed before the step-3 experiment.
+
+## Implementation and operations (2026-09-19)
+
+`build-env.sh` is source-only until `chitta_log_init` or `chitta_build_init` is
+called. `build.sh --tests` owns the native release recipe. Gate scripts,
+`codex-stream.sh`, `dev-install.sh`, `on-compute.sh` and the Rust wrapper source
+the environment. p22 owns `benchmarks/storage/baseline.py`; it is unchanged.
+Submit `sbatch scripts/baseline-build-env.sbatch <baseline arguments>` from the
+checkout to supply that harness with the same environment.
+
+Installed for this evaluation: sccache 0.18.0 via `cargo install --locked` and
+ccache 4.14 static musl release (SHA256
+`985f575acf84cf6d70e0f4fe86903418df9e7bce11f35faaf8d415e5ff5a9478`).
+The tools are user-local, outside the live plugin. No service was restarted.
+[Rust caching restrictions](https://github.com/mozilla/sccache/blob/v0.18.0/docs/Rust.md)
+mean final links and proc-macro crates still compile. `SCCACHE_BASEDIRS` is
+server-scoped; do not set it separately per worktree sharing the stable socket.
+Targets remain private and compiler flags are unchanged.
+
+Every gate step writes its full diagnostic and exit status under `GATE_TMP`.
+`timings.tsv` records seconds and status; each hook has its own log. Contract
+unavailability exits 3 and is deferred by quick to full's required daemon-node
+check; schema drift exits 1. Remote transport failures retain their diagnostic.
+The actual full-gate result must pass before claiming acceptance.
+
+`scripts/tmp-janitor.sh --cache-maintenance --dry-run` reports cache usage.
+Only the orchestrator should invoke `--apply`. ccache performs its own bounded
+cleanup. Unknown/active remote sccache shards are retained, even after 14 days;
+an 80 GiB aggregate breach is reported for orchestrator action after quiescing
+remote servers. The ordinary janitor excludes cache and compiler-temp roots.
+
+### Nightly scheduling (not enabled)
+
+Run from a daemon node with Slurm access, after merging the implementation.
+The batch job fetches origin/main, creates a fresh detached worktree and runs
+full gates. It retains the worktree, logs, node identity and exit status under
+`/projects/caeg/scratch/kbd606/tmp/nightly-gate/<date>.log`. It primes the node
+chosen by Slurm; warming one node makes no claim about another.
+
+Example user units, to be installed and enabled by the orchestrator only:
+
+```ini
+# ~/.config/systemd/user/chitta-nightly-gate.service
+[Unit]
+Description=Fresh main checkout build and full gate
+[Service]
+Type=oneshot
+WorkingDirectory=/projects/fernandezguerra/apps/repos/cc-soul
+Environment=CHITTA_NIGHTLY_REPO=/projects/fernandezguerra/apps/repos/cc-soul
+ExecStart=/usr/bin/env sbatch --wait --export=ALL scripts/nightly-gate.sbatch
+
+# ~/.config/systemd/user/chitta-nightly-gate.timer
+[Unit]
+Description=Nightly build cache and gate check
+[Timer]
+OnCalendar=*-*-* 02:30:00
+RandomizedDelaySec=15m
+Persistent=true
+[Install]
+WantedBy=timers.target
+```
+
+On that node the orchestrator may run `systemctl --user daemon-reload` followed
+by `systemctl --user enable --now chitta-nightly-gate.timer`. These commands have
+not been executed by this stream. Retained nightly worktrees/logs require the
+orchestrator's retention policy; do not delete a worktree running a gate.
+
+### Additional baseline and proof status
+
+The pre-change overhead runner measures quick checks, release Rust tests and
+each hook suite independently on a compute node, before applying implementation.
+Its stage timings and logs are under
+`/projects/caeg/scratch/kbd606/tmp/p23-cache-impl.h8ERCJ`.
+The first tracing attempt used an overlong Unix socket runtime path and is
+excluded. The corrected runner uses a private short node-local runtime path.
+Fresh cold-cache and fresh warm-cache full-gate proof remains pending; no
+sub-600-second or gate-clean acceptance claim is made yet.
+
+### Continuation diagnosis (2026-09-19)
+
+The failed implementation run on dandycmpn22fl used Rust 1.93.0 and the
+bioinfo conda C++ compiler, with TMPDIR=/tmp (confirmed by the failing Rust
+store path). Its original HOME was not recorded. Logs are retained under
+`/projects/caeg/scratch/kbd606/tmp/p23-cache-impl.h8ERCJ/full-implementation`.
+
+| Failure | Evidence and correction |
+|---|---|
+| Eight chaos fixtures abort before daemon startup | Captured fixture stderr: `Invalid embedding dimension: expected 768, got 1024`. The gate passed 768 to CMake while Rust defaulted to 1024. Export CHITTA_EMBED_DIM=768 to both, preserving the gate dimension. |
+| Shared/long runtime paths | build-env allocates private `/tmp/cb.XXXXXX` per node and reuses it in nested gates; durable test stores and logs remain on shared scratch. |
+| Rust reopen lock race | `field.rs:1984` returned WouldBlock for `/tmp/chitta-chaos-351501-snapshot/.instance.lock`, recorded holder 351501 on dandycmpn22fl. The immediate uncached full rerun passed 303 tests. Three isolated reruns on the same node with Rust 1.93.0 and the original TMPDIR=/tmp all pass. A second set under private TMPDIR=/tmp/cb.hpHOGu also passed 3/3. The full suite then failed in `ffi::tests::test_ledger_session_snapshot_and_wal_suffix` at ffi.rs:2810 with the same self-holder WouldBlock (302 passed, one failed; 27.34 s). Root cause remains unproven and is not attributed to compiler caching. |
+
+Pre-change overhead: 41 sequential hook suites total 620.93 s;
+quick 59.46 s (failed contract/citation checks), corrected release Rust tests
+34.10 s. The initial Rust test timing (5.10 s, exit 127) is invalid.
+No tests, parallelism settings or optimization flags are removed to meet 600 s.
+
+The six isolated passes do not explain or fix the intermittent full-suite lock
+failure. Concurrent child creation temporarily retaining a parent flock is a
+hypothesis from the two process-spawning tests, not an established cause.
+This remains a store-test blocker outside the authorized build.sh-only Rust
+scope. Test errors are no longer retried as cache failures. No gate-clean
+acceptance claim is permitted while this remains unresolved.
