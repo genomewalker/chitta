@@ -528,3 +528,40 @@ Acceptance checkpoint: the final quick gate, Ruff and contract comparison pass
 as chitta-field `0878ca7`. Job 22916128 is still running the full compute gate;
 its July acceptance and final-tree soak are sequenced after a successful gate.
 No phase 2b completion or sub-two-second result is claimed yet.
+
+### Phase 2b legacy inventory correction (2026-09-19)
+
+Job 22916128 passed the full gate and fresh p21 soak, but July acceptance
+failed: the legacy open replayed 12,234 records in 104,497 ms and retained
+120,590 memories; the first certified reopen applied zero records and retained
+120,590 memories, but still spent about 91.1 s in WAL replay. Only three
+segments were pruned. This is a failed performance gate, not completion.
+
+Inspection found 4,736 of the July corpus's 4,995 segments are empty 56-byte
+V3 headers. The previous scanner omitted these from its inventory and replay
+omitted their writers from coverage. Replay now captures validated ranges
+while decoding, including an empty range represented by first_seqno and
+last_seqno = first_seqno - 1, and records zero coverage for empty writers.
+The next family commit reuses those ranges after checking size; full and
+cortical coverage still jointly bound skipping and pruning. Torn, changing,
+foreign-lineage and active-writer segments do not gain a new certificate from
+this scan. This avoids a second full payload scan at commit. Startup logs
+report distinct segment files opened and certified files skipped, and the July
+harness includes those counts in its report. No segment format changes.
+
+The instance lock now has an explicit unlock guard, including failed-open
+paths, and ChittaField releases it after shutdown flush/sync before Drop
+returns. A same-process live holder is diagnosed as a self-holder bug rather
+than treated as stale. Regression tests cover duplicated descriptors surviving
+the guard, failed open followed by immediate acquisition, and certified empty
+writers; the existing partial-snapshot chaos test has no retry added.
+
+Validation job 22916145 stopped at two test compile errors (the new lock wrapper
+and replay argument); both were corrected before resubmission. Job 22916146
+validates three consecutive Rust runs, the full compute gate, July legacy /
+forced-commit / certified cold and warm opens, and a new 36,000-write p21 soak.
+Artifacts: `/projects/caeg/scratch/kbd606/tmp/p22cert-67j5h75x`. Results pending.
+
+Correction checkpoint: quick gate PASS (79 pages checked, zero failures);
+contract check PASS (`contracts unchanged`). Compute acceptance remains pending;
+no phase 2b completion or new replay timing is claimed.

@@ -63,7 +63,10 @@ def main():
         (root / (label + "-daemon.log")).write_text(text)
         phases = {k: int(v) for k, v in re.findall(r"load phase=(\w+) ms=(\d+)", text)}
         counts = {k: int(v) for k, v in re.findall(r"replay_apply kind=(\w+) records=(\d+)", text)}
-        trial = dict(label=label, phases_ms=phases, replay_counts=counts,
+        inventory = re.search(r"WAL replay inventory: files_opened=(\d+) certified_skipped=(\d+)", text)
+        trial = dict(files_opened=int(inventory[1]) if inventory else None,
+                     certified_skipped=int(inventory[2]) if inventory else None,
+                     label=label, phases_ms=phases, replay_counts=counts,
                      total_applied=sum(counts.values()), memory_count=health["memory_count"])
         report["trials"].append(trial)
         print(json.dumps(trial), flush=True)
