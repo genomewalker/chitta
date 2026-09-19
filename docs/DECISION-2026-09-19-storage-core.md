@@ -715,5 +715,57 @@ normalization subphases, memory/code counts, daemon hash and WAL fingerprints.
 Compute job 22916172 prepares and measures the control, then runs Rust tests.
 Artifacts: `/projects/caeg/scratch/kbd606/tmp/p22rp-j893v8ok`; prepared source:
 `/projects/caeg/scratch/kbd606/tmp/rpj893v8/m`; control:
-`/projects/caeg/scratch/kbd606/tmp/rcj893v8`. Results are pending. No claim of
-meeting the replay or normalization targets is made yet.
+`/projects/caeg/scratch/kbd606/tmp/rcj893v8`. Both jobs completed successfully;
+the control measured WAL replay at 30,835 ms and normalization at 112 ms.
+
+
+## Ingestion replay: source-file invalidation profile (2026-09-19)
+
+The prepared frozen replica contains 226,474 decoded WAL records, including
+178,864 AddTriplet and 2,370 InvalidateTripletsBySourceFile records. The full
+loop profile attributes **29.763 s** to source-file invalidation alone. Across
+all kinds, decode costs 0.127 s, verification 0.119 s, application 30.273 s,
+and other reader work 0.214 s. This reproduces a replay bottleneck in the
+cortical application path; it does not reproduce the live restart's exact
+19,000-record workload or its slow normalization. Memory count is 134,805;
+code context reports 104,965 symbols and 10,379 files.
+
+The measured fix replaces the full triplet-vector scan on each source-file
+invalidation with lazy source-file postings. Build once when first used,
+append positions when replay adds facts, discard on compaction, index rebuild,
+or preparation for serialization. Positions preserve legacy duplicate-ID
+behavior and invalidation order; shared source strings avoid additional path
+copies. The index is runtime-only, absent from both WAL and snapshot formats.
+Its allocation is included in the memory census. The cost changes from one
+whole-store scan per invalidation to one initial scan plus matching postings.
+
+The regression test compares against the original scan across interleaved
+add/invalidate operations, reused IDs, repeated and missing paths, timestamp
+zero, cleanup, deduplication, and deserialization. No record reordering or
+weakened CRC/hash verification is involved. Broader base-state-only replay and
+post-readiness derived-index repair remain separate work; normalization was
+already below its target on this corpus.
+
+Acceptance job 22916189 compares a fresh eval-replica copy of the exact same
+prepared source against the control's WAL hashes, per-kind decoded/applied
+counts, memory count, and symbol/file counts, then requires replay below
+3 seconds and normalization below 1 second. Rust runs three times and the
+full compute gate follows. Artifacts:
+`/projects/caeg/scratch/kbd606/tmp/p22ri-6s_6egtl`; candidate:
+`/projects/caeg/scratch/kbd606/tmp/ri_6egtl`.
+
+| Same-WAL measurement | Control | Indexed invalidation |
+| --- | ---: | ---: |
+| WAL replay | 30.835 s | 1.139 s |
+| Normalize | 112 ms | 104 ms |
+| Source-file invalidation apply (2,370 records) | 29.763 s | 85.5 ms |
+| Decoded records | 226,474 | 226,474 |
+| Memories after normalize | 134,805 | 134,805 |
+| Code files / symbols | 10,379 / 104,965 | 10,379 / 104,965 |
+
+The candidate passes both timing targets (27.1x faster replay); source WAL
+hashes and every per-kind decoded/applied count match exactly. This is a fresh
+replica copy of the same prepared ingestion corpus, not a certified reopening
+with the tail removed. Validation: three consecutive Rust runs each passed 314 tests (2 ignored);
+quick gate passed; contracts unchanged. The full compute gate in job 22916189
+is still running at this checkpoint; collect it before merging.
