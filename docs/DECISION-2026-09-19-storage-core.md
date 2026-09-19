@@ -330,6 +330,47 @@ order. The last observed control phases were snapshot 2,491 ms, payload
 The 36,000-write durability soak has not been rerun. No under-two-second
 acceptance claim, per-kind equality claim, or phase 2b completion is made.
 
+### Phase 2b certificate foundation checkpoint (2026-09-19)
+
+The inherited control run has completed: WAL replay 269,424 ms, field-store
+open 293,325 ms, snapshot load 2,491 ms and embedding load 2,775 ms. The health
+response after normalization reported 120,590 memories. It applied
+12,234 records, including 11,727 UpdateState operations. The other kinds were
+AddAssocEdge 296, AddTriplet 35, AnalyticsEvent 13, MsgEvent 11, PutPayload 12,
+RecordRecallBatch 56, SessionEvent 19, TranscriptEvent 41,
+UpdateMemoryContent 12 and UpdateSparseCode 12. This is the measured control
+for the buffered comparison; the earlier 104.8-second observation is a
+different run, not a matched speedup denominator.
+
+New crate-local certificate helpers conservatively scan sealed segments and
+check a recorded range against both per-writer coverage vectors and exact
+file size. Scanning rejects unknown headers, foreign V3 lineage, incomplete
+records, nonmonotone sequences and files changed during the scan. Inventory
+paths must have the canonical segment name, and the pinned writer is excluded.
+These helpers do not yet change replay, manifest commits or pruning. Their
+caller must establish sealing and bind the inventory and both coverage vectors
+to the validated loaded family; legacy scalar cortical coverage is insufficient.
+
+Integration must also preserve replay ordering: the current merge carries
+each writer's effective timestamp through clockless operations across segment
+boundaries. Skipping a covered prefix before an uncovered tail must restore
+that timestamp or conservatively decode that writer. The full-family commit
+currently records only full coverage, while cortical loading independently
+selects a snapshot by scalar sequence. Both loaded snapshots must be explicitly
+bound before any certificate is used. Missing bindings must fall back to decode.
+
+The helper checkpoint passed Rust release tests (306 passed, two ignored),
+the quick gate and the explicit contract check (`contracts unchanged`). Tests
+cover both coverage vectors, pinned writers, malformed inventory paths, foreign
+lineage, torn segments and exact-size invalidation. The initial compile failed
+on the private header-reader visibility; making it crate-local fixed the build.
+Logs: `p22cert2-9nLC3k/rust.log` and `p22quick-e92F6n/gate.log` under scratch.
+The inherited full gate has passed 37/37 C++ tests;
+its hook suites and then buffered cold/warm trials remain in job 22916116.
+The unchanged 36,000-write, 30-minute proof with forced compactions is scheduled
+as job 22916122, artifacts `p22soak-SFHtQq` under project scratch. No certified
+skip speedup, normalized-count equality or phase 2b completion is claimed.
+
 ## Phase 0 controlled chaos comparison (2026-09-19)
 
 On compute with TMPDIR=/tmp set inside the allocation, the requested
