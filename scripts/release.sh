@@ -174,8 +174,13 @@ sedi "s/^version = \"[^\"]*\"/version = \"$NEW_VERSION\"/" \
 
 # Update docs/index.html badge
 echo "Updating docs/index.html badge..."
-sedi "s/Unreleased + v[0-9]*\.[0-9]*\.[0-9]*/v$NEW_VERSION/g; s/Status as of [0-9-]* · /Status as of $(date +%F) · /g" \
-    docs/index.html
+for page in docs/*.html docs/vedanta/index.html; do
+    sedi "s/Unreleased + v[0-9]*\.[0-9]*\.[0-9]*/v$NEW_VERSION/g; s/v$CURRENT_VERSION\b/v$NEW_VERSION/g; s/Status as of [0-9-]* · /Status as of $(date +%F) · /g" "$page"
+done
+
+# The contract snapshot carries plugin.json's version: regenerate it with the bump.
+echo "Regenerating contracts/ for the new version..."
+bash scripts/contract-snapshot.sh write > /dev/null || { echo "contract snapshot failed"; exit 1; }
 
 # Verify updates
 grep -q "\"$NEW_VERSION\"" chitta/include/chitta/version.hpp || { echo "version.hpp update failed"; exit 1; }
@@ -186,7 +191,7 @@ grep -q "v$NEW_VERSION" docs/index.html || { echo "docs/index.html update failed
 
 # Commit version bump
 echo "Committing version bump..."
-git add chitta/include/chitta/version.hpp .claude-plugin/plugin.json codex-plugin/.codex-plugin/plugin.json codex-plugin/skills chitta-mcp/pyproject.toml docs/index.html
+git add contracts docs/*.html docs/vedanta/index.html chitta/include/chitta/version.hpp .claude-plugin/plugin.json codex-plugin/.codex-plugin/plugin.json codex-plugin/skills chitta-mcp/pyproject.toml docs/index.html
 git commit -m "chore: bump version to $NEW_VERSION"
 
 # Create and push tag
