@@ -1059,3 +1059,47 @@ ignored each), quick gate PASS, contracts unchanged. Full gate 22916918 is
 pending; it runs on the rebuilt library after that successful validation. A fresh eager reference
 with the recorded non-learning parameters is still required for final
 acceptance. Existing saved reports cannot serve as that reference.
+
+
+### Keyword reverse publication checkpoint (2026-09-19, Rust and quick verified)
+
+The pending daemon path defers keyword reverse-map construction to the existing
+maintenance thread, before Turbo warmup. Forward postings continue serving BM25
+reads. Preparation holds an upgradable read guard to prevent intervening writes,
+builds an owned reverse map, and publishes it under a short exclusive guard.
+Cancellation is checked while acquiring/upgrading the guard and during preparation;
+the maintenance thread retains ownership so shutdown can join it before releasing
+the store lock. The eager Rust open path continues building the reverse map inline.
+
+Snapshot bodies omit this reverse map. Deleting or replacing a previously loaded
+document before rebuilding it formerly left stale forward postings. The pending
+fix scans postings for that document only when its reverse entry is missing; new
+documents do not take that fallback. This preserves replay and pre-maintenance
+mutation semantics, but a mutation-heavy replay still needs measurement because
+repeated fallback scans can be expensive. Regression tests cover exact BM25 score
+and ID parity with eager reconstruction, cancelled preparation preserving the
+existing index, and same-process reopen after a cancelled startup helper.
+
+Validation initially exposed a compile failure: `ProfiledRwLock` did not expose
+`try_upgradable_read_for`, required by the cancellable maintenance publication.
+Jobs 22916918 and 22916921 failed for that reason; the former still passed all
+37 C++ tests and 41 hook suites. The wrapper now exposes timed acquisition of
+the native upgradable guard and records acquisition latency. This preserves the
+same guard through timed upgrade attempts, avoiding a mutation gap.
+
+Retry 22916924 passed Rust three times: 325 passed, zero failed, two ignored
+each (76.55 s, 76.60 s, 73.80 s). The quick gate passed and contracts are
+unchanged. Final-tree job 22916925 is running the full gate and the
+frozen-replica keyword/Turbo diagnostic.
+Logs are under `/projects/caeg/scratch/kbd606/tmp/p22kw-i8lodn_2`; the corrected
+new diagnostic directory is `/projects/caeg/scratch/kbd606/tmp/kwn249b`.
+The prior build measured 7.29 s ready / 7.98 s first recall with 134,805 memories;
+those are not patch results. Full-gate and timing results remain pending; no
+speedup is claimed.
+
+Production durable-section publication remains unfinished: ordered replay must
+not be overwritten by late snapshot decoding, section-dependent tools need
+readiness barriers, and checkpoint/span flush must wait for durable state.
+Organs, HDC, spans, and symbols still require staging. A fresh eager reference
+with identical non-learning probes is required before the under-3-s readiness
+and under-5-s first-recall acceptance can pass.
