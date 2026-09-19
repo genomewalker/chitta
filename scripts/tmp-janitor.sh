@@ -5,6 +5,10 @@
 # never cleaned (2026-09-17: 65 GB of finished-stream replicas). Streams and gates
 # call this; --dry-run only lists.
 set -uo pipefail
+if [[ "${1:-}" == --cache-maintenance ]]; then
+    shift
+    exec bash "$(dirname "${BASH_SOURCE[0]}")/cache-maintenance.sh" "$@"
+fi
 max_age_h="${CHITTA_TMP_MAX_AGE_H:-24}"
 dry=0; [[ "${1:-}" == --dry-run ]] && dry=1
 freed=0
@@ -14,5 +18,5 @@ while IFS= read -r d; do
     [[ $users -eq 0 ]] || continue
     if (( dry )); then echo "would remove ${size} MB $d"; else rm -rf "$d" && freed=$((freed + size)); fi
 done < <(find /tmp -maxdepth 1 -mindepth 1 -type d -user "$USER" -mmin "+$((max_age_h * 60))" \
-         ! -name 'chitta-*.sock*' ! -name '*.startlock' ! -name 'claude-*' 2>/dev/null)
+         ! -name 'build-cache' ! -name 'chitta-sccache-*' ! -name 'chitta-build.*' ! -name 'chitta-*.sock*' ! -name '*.startlock' ! -name 'claude-*' 2>/dev/null)
 (( dry )) || echo "tmp-janitor: freed ${freed} MB on $(hostname -s); /tmp $(df -h /tmp | awk 'NR==2{print $5}') used"

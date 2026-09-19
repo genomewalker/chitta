@@ -42,6 +42,9 @@ instructions, not more. Don't leave the lead session blocked on a subagent.
 
 ## Build & deploy
 
+Status as of 2026-09-19: source `scripts/build-env.sh`; use `bash scripts/build.sh [--tests]` for native builds.
+Cache policy, gate logs and nightly scheduling: [build cache design](docs/DESIGN-2026-09-19-build-cache.md).
+
 ```bash
 (cd chitta-field && ./build.sh build --release)   # the C++ build links the .a as is; it never rebuilds the store
 cd chitta && cmake --build build --parallel

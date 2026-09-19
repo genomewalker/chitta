@@ -23,6 +23,7 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$REPO/scripts/build-env.sh"
 # Prefer the renamed marketplace dir; fall back to the pre-rename one for
 # installs that haven't re-added the marketplace under its new name yet.
 MKT="$HOME/.claude/plugins/marketplaces/genomewalker-chitta"

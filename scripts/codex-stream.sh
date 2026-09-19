@@ -18,6 +18,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 S="${CHITTA_CODEX_SPECS:-/projects/caeg/scratch/kbd606/tmp/codex-specs}"
 CLI="${CHITTA_BIN:-$HOME/.claude/bin/chitta}"
 source "$ROOT/scripts/stream-lib.sh"
+source "$ROOT/scripts/build-env.sh"
 mkdir -p "$S"
 
 # Exact context is shared by launch and --check; transport failure is explicit.

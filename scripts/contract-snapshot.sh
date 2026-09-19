@@ -12,7 +12,8 @@
 # the hook install manifest, and the Codex plugin manifest.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CHITTA_BIN="${CHITTA_BIN:-$HOME/.claude/bin/chitta}"
+CHITTA_REAL_HOME="${CHITTA_REAL_HOME:-$(getent passwd "$(id -u)" | cut -d: -f6)}"
+CHITTA_BIN="${CHITTA_BIN:-$CHITTA_REAL_HOME/.claude/bin/chitta}"
 PY="$("$ROOT/scripts/python-with-mcp.sh")"
 mode="${1:-check}"
 dir="${2:-$ROOT/contracts}"
@@ -50,21 +51,24 @@ PY
 # The capture talks to the live daemon over its socket. A compute node cannot
 # reach it, so run the same check on the daemon node (named in <mind>/.daemon-node).
 if ! printf '{"jsonrpc":"2.0","id":1,"method":"tools/list"}\n' | timeout 15 "$CHITTA_BIN" 2>/dev/null | grep -q '"tools"'; then
-    node="$(cat "${CHITTA_DB_PATH:-$HOME/.claude/mind}/.daemon-node" 2>/dev/null || true)"
+    node="${CHITTA_DAEMON_NODE:-$(cat "$CHITTA_REAL_HOME/.claude/mind/.daemon-node" 2>/dev/null || true)}"
     if [[ -n "$node" && "$node" != "$(hostname -s)" && -z "${CHITTA_CONTRACT_REMOTE:-}" ]]; then
+        [[ "$node" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]] || { echo 'invalid daemon node' >&2; exit 2; }
         echo "daemon unreachable from $(hostname -s); checking contracts on $node"
-        exec ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new "$node" \
-            "CHITTA_CONTRACT_REMOTE=1 CHITTA_PY=$PY bash $ROOT/scripts/contract-snapshot.sh $mode $dir"
+        printf -v remote 'CHITTA_CONTRACT_REMOTE=1 CHITTA_PY=%q CHITTA_BIN=%q bash %q %q %q' "$PY" "$CHITTA_BIN" "$ROOT/scripts/contract-snapshot.sh" "$mode" "$dir"
+        rc=0
+        ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=yes "$node" "$remote" || rc=$?
+        [[ $rc != 255 ]] || { echo 'contract service unavailable: ssh transport failed' >&2; exit 3; }
+        exit "$rc"
     fi
-    echo "contract $mode needs the live daemon; unreachable from $(hostname -s)" >&2
-    exit 1
+    echo "contract service unavailable: unreachable from $(hostname -s)" >&2
+    exit 3
 fi
 
 case "$mode" in
     write) capture "$dir"; echo "contracts written to $dir ($(wc -l < "$dir/daemon-tool-names.txt") daemon tools, $(wc -l < "$dir/cli-tool-names.txt") CLI tools)";;
     check)
-        tmp="$(mktemp -d "${TMPDIR:-/projects/caeg/scratch/kbd606/tmp}/contracts.XXXXXX")"
-        trap 'rm -rf "$tmp"' EXIT
+        tmp="$(mktemp -d "${GATE_TMP:-${TMPDIR:-/projects/caeg/scratch/kbd606/tmp}}/contracts.XXXXXX")"
         capture "$tmp"
         if diff -ru "$dir" "$tmp" > "$tmp.diff"; then echo "contracts unchanged"; else echo "CONTRACT DRIFT:"; head -80 "$tmp.diff"; exit 1; fi;;
     *) echo "usage: $0 write|check [DIR]" >&2; exit 2;;
