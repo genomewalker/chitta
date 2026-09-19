@@ -980,6 +980,8 @@ public:
     }
 
     /// Number of live memories.
+    bool startup_indexes_ready() const { return handle_ && cf_startup_indexes_ready(handle_); }
+
     size_t memory_count() const {
         return cf_memory_count(handle_);
     }

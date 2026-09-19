@@ -119,6 +119,7 @@ def main():
                     health = rpc("health_check")
                     age = process_age()
                     report.setdefault("first_health_s", age)
+                    report.setdefault("first_health_phase", health.get("phase", "ready"))
                     if health.get("loading"):
                         report["loading_samples"] += 1
                     elif "memory_count" in health:
@@ -156,13 +157,14 @@ def main():
             report["recall_ids_after"] == reference["recall_ids_after"]
             and report["first_recall_ids"] == reference["recall_ids_after"][QUERIES[0]]))
         report["reference_path"] = str(args.reference) if args.reference else None
+        report["early_health_pass"] = report["first_health_s"] < 1 and report["first_health_phase"] == "snapshot"
         report["early_ready_pass"] = report["store_ready_s"] < 3 and report["first_recall_s"] < 5
-        report["pass"] = (report["content_equal"] and report["reference_equal"]
+        report["pass"] = (report["early_health_pass"] and report["content_equal"] and report["reference_equal"]
                           and report["deferred_phases_pass"]
                           and (report["early_ready_pass"] or not args.require_early_ready)
                           and (report["deferred_turbo_pass"] or not args.require_deferred_turbo))
         (out / "report.json").write_text(json.dumps(report, indent=2) + "\n")
-        print(json.dumps({k: report[k] for k in ("store_ready_s", "first_recall_s", "memory_count_after", "content_equal", "reference_equal", "deferred_turbo_pass", "deferred_phases_pass", "early_ready_pass", "pass")}))
+        print(json.dumps({k: report[k] for k in ("first_health_s", "first_health_phase", "early_health_pass", "store_ready_s", "first_recall_s", "memory_count_after", "content_equal", "reference_equal", "deferred_turbo_pass", "deferred_phases_pass", "early_ready_pass", "pass")}))
         if not report["pass"]:
             raise SystemExit(1)
     finally:

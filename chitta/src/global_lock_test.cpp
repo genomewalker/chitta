@@ -40,6 +40,11 @@ int main(int argc, char** argv) {
         ~Cleanup() { std::filesystem::remove_all(root); }
     } cleanup{root};
     chitta::FieldStore store((root / "field").string(), (root / "locks").string());
+    // This test exercises steady-state locking, after staged indexes are ready.
+    const auto ready_deadline = std::chrono::steady_clock::now() + 10s;
+    while (!store.startup_indexes_ready() && std::chrono::steady_clock::now() < ready_deadline)
+        std::this_thread::sleep_for(1ms);
+    assert(store.startup_indexes_ready());
     FieldRpcHandler handler(&store, nullptr);
     auto check = [&](auto work, bool blocks) {
         std::unique_lock held(handler.rpc_mutex());

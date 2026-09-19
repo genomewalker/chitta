@@ -1103,3 +1103,45 @@ readiness barriers, and checkpoint/span flush must wait for durable state.
 Organs, HDC, spans, and symbols still require staging. A fresh eager reference
 with identical non-learning probes is required before the under-3-s readiness
 and under-5-s first-recall acceptance can pass.
+
+
+### Staged secondary construction (2026-09-19, validation pending)
+
+The production FFI open now publishes without building symbol postings, loading
+span/HDC sidecars, or constructing the event-tape organs. Maintenance initializes
+each once and logs its duration. The existing keyword reverse and Turbo work
+also remain after publication. Health and embedding/LSH recall remain available;
+other tool calls return `loading`, phase `secondary_indexes`, and retry-after
+until these secondary stores are initialized. The additive C ABI readiness query
+is `cf_startup_indexes_ready`; tool schemas and the disk format are unchanged.
+
+Initialization owns only its baseline inputs, not the field or instance lock.
+Any direct mutation or snapshot access initializes the same cell first, so a
+late maintenance result cannot overwrite intervening writes. Cancellation can
+drop the store while a detached initializer finishes its private inputs.
+
+`CHITTA_STARTUP_EAGER=1` selects the eager control for same-binary replica
+comparisons; production defaults to staged open. Job 22916930 measured eager
+store-ready / first recall at 14.51 / 15.18 s, and staged at 5.86 / 6.52 s.
+Both had 134,805 memories and identical recall IDs. All requested deferred phases
+were logged. The latency targets remain unmet. The staged pre-ready snapshot
+phase took 2,431 ms, embeddings 665 ms, normalization 92 ms, and PLD 81 ms.
+
+That job passed Rust three times (328 passed, 2 ignored each), quick, and
+contracts, but failed eight of 37 ctests; all 41 hook suites passed. The chaos
+clients received a bare secondary-loading result outside the CLI's retry
+envelope. The pending fix uses the existing structured tool-result envelope.
+The global-lock fixtures now wait for startup indexes before asserting
+steady-state locking; writes during secondary loading remain retryable.
+
+The responder now binds before embedding-model initialization as well as before
+store open, reporting phase `snapshot`. The benchmark separately requires a
+first loading health answer within one second. Detached validation job 22916936
+in `/projects/caeg/scratch/kbd606/tmp/p22detach-eim75ur8` checks the fixed tree
+with Rust three times, the full gate, contracts, and the same eager reference;
+its results are pending. These changes have not yet been committed.
+
+Normalization remains before ready because it prepares LSH; PLD remains there
+because it holds recall text. Full snapshot section decoding remains on the
+publication path. Deferring it must preserve WAL mutations rather than replace
+them with a late snapshot section; this part is unfinished.

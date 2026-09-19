@@ -641,6 +641,12 @@ public:
             if (it == handlers_.end()) {
                 return rpc::make_error(id, -32601, "Unknown tool: " + name);
             }
+            if (!field_store_->startup_indexes_ready() && name != "health_check" && name != "status"
+                    && name != "recall" && name != "recall_lanes") {
+                return make_tool_response(id, {true, "Secondary indexes are loading; retry shortly.",
+                    {{"error", "loading"}, {"loading", true},
+                     {"phase", "secondary_indexes"}, {"retry_after_s", 1}}});
+            }
             auto budget_scope = rpc_budget_.measure(name);
             if (is_read_only_tool(name)) {
                 args = rpc::clamp_read_arguments(name, std::move(args));

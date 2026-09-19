@@ -1869,6 +1869,35 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    // Bind before model initialization and snapshot I/O: neither may delay health.
+    DaemonLock daemon_lock;
+    if (command == "daemon") {
+        if (!cleanup_stale_daemon(mind_path)) {
+            std::cerr << "[daemon] Another daemon is running\n";
+            return 1;
+        }
+        if (!acquire_lock(mind_path, daemon_lock)) {
+            std::cerr << "[daemon] Another daemon is running (lock held)\n";
+            return 1;
+        }
+    }
+    std::unique_ptr<SocketServer> early_server;
+    std::unique_ptr<LoadingResponder> responder;
+    if (command == "daemon") {
+        early_server = std::make_unique<SocketServer>(sock_path);
+        responder = std::make_unique<LoadingResponder>(*early_server);
+        responder->phase("snapshot");
+        if (!responder->start()) {
+            release_lock(daemon_lock);
+            std::cerr << "[daemon] Another daemon is running (socket in use)\n";
+            return 1;
+        }
+        std::cerr << "[socket_server] Listening (warming up) on " << sock_path
+                  << " since_start=" << std::chrono::duration_cast<std::chrono::milliseconds>(
+                         std::chrono::steady_clock::now() - process_started).count() << "ms\n";
+    }
+
+
     // Embeddings priority:
     //   1. CHITTA_EMBED_URL=http://node:port  — dedicated embed GPU (two-job setup)
     //   2. CHITTA_EMBED_GPU_ONLY=1            — auto-discover GPU, skip GGUF
@@ -1957,34 +1986,6 @@ int main(int argc, char* argv[]) {
     // Open chitta-field store — the sole storage backend
     std::string field_path = mind_path + "/chitta-field";
     std::unique_ptr<FieldStore> field_store_ptr;
-
-    // For daemon: clean up stale files then bind socket early so clients get
-    // "warming_up" instead of "connection refused" during the 3+ minute snapshot load.
-    DaemonLock daemon_lock;
-    if (command == "daemon") {
-        if (!cleanup_stale_daemon(mind_path)) {
-            std::cerr << "[daemon] Another daemon is running\n";
-            return 1;
-        }
-        if (!acquire_lock(mind_path, daemon_lock)) {
-            std::cerr << "[daemon] Another daemon is running (lock held)\n";
-            return 1;
-        }
-    }
-    std::unique_ptr<SocketServer> early_server;
-    std::unique_ptr<LoadingResponder> responder;
-    if (command == "daemon") {
-        early_server = std::make_unique<SocketServer>(sock_path);
-        responder = std::make_unique<LoadingResponder>(*early_server);
-        if (!responder->start()) {
-            release_lock(daemon_lock);
-            std::cerr << "[daemon] Another daemon is running (socket in use)\n";
-            return 1;
-        }
-        std::cerr << "[socket_server] Listening (warming up) on " << sock_path
-                  << " since_start=" << std::chrono::duration_cast<std::chrono::milliseconds>(
-                         std::chrono::steady_clock::now() - process_started).count() << "ms\n";
-    }
 
     std::chrono::steady_clock::time_point field_ready;
     std::exception_ptr load_ex;
