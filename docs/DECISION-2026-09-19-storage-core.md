@@ -1,9 +1,10 @@
 # Storage core baseline and runtime design review
 
-Status as of 2026-09-19: **phase 0 in progress; no implementation approval.**
-The governing design is [Runtime and storage core](DESIGN-2026-09-19-runtime-core.md).
-The stream merged origin/main at `f45e5958`; chitta-field is `ec22685`, including
-the WAL-vanish fix. Phases 1–5 wait for the lead’s review sign-off in that design.
+Status as of 2026-09-19: **phase 0 measurements pending; v2 implementation authorised.**
+The governing design is [Runtime and storage core](DESIGN-2026-09-19-runtime-core.md)
+v2, merged from origin/main (`e7ae2aaa`) in `2683c9e0`. The WAL-vanish
+baseline is chitta-field `ec22685`. Complete the baseline before phase 1;
+retain shared_mutex and do not start epoch/RCU work.
 
 ## Baseline protocol
 
@@ -42,7 +43,7 @@ queue-jam workload required by phase 3.
 
 Pending the compute baseline. Do not substitute live incident numbers for
 replica measurements. Artifact parent:
-`/projects/caeg/scratch/kbd606/tmp/p22-storage-phase0-5emZ3u`.
+`/projects/caeg/scratch/kbd606/tmp/p22-phase0-v2-Bjwbtq`.
 
 The reported live incidents motivating this work are separate evidence:
 17 s clean load; 295–350 s field-store open after unclean stops; approximately
@@ -69,105 +70,54 @@ reproduced here.
 The prescribed 240-minute maximum baseline does not qualify the 24-hour
 readiness target. Add a 24-hour-equivalent backlog before phase 2 acceptance.
 
-## Review of the runtime design
+## Review of runtime design v2
 
-The separation of admission, mutation, reads and background jobs addresses
-both observed startup blockers and queue stalls. The following contracts need
-to be explicit before implementation sign-off; these are review findings,
-not changes to the approved design.
+1. **Continuous readiness.** One responder must own the socket from bind through
+   steady state, including set_mind_path. Only health/status are admitted while
+   loading; writes return loading plus retry_after_s. No incoming-write spool
+   is required. Probe throughout startup, including the final readiness gap.
+   Risk: a successful early probe conceals the later code-navigation stall.
+2. **Capsule lookup.** Upgrade thread_sessions repository/stream metadata and
+   filter session_list before paging. capsule_save looks up once. The read-only
+   live counts query returned 364 sessions on 2026-09-19. The replica curve
+   includes that count when the frozen table is smaller, plus 100, 1,000 and
+   5,000 rows. Each point records the actual row count and 30 missing-key
+   capsule_get timings including CLI overhead. Target p95 is <=50 ms at the
+   live count. Risk: an empty/frozen table hides quadratic scans.
+3. **Replay profile.** CHITTA_PROFILE_REPLAY=1 counts and times each applied
+   operation kind, including separately named deferred state applications.
+   Covered records are excluded; decode and final index-build costs remain
+   in the existing load-phase timers. Report counts and total apply_ns, not
+   just a dominant percentage. Risk: instrumentation overhead and synthetic
+   observations do not represent all production operation kinds.
+4. **Writer and durability.** Keep shared_mutex. Acknowledgements must wait
+   for successful fsync; tune adaptive group commit from measured NFS p99,
+   rather than promising a fixed 50 ms interval. Snapshot publication and
+   directory sync precede pruning. Recovery must retain WAL for both valid
+   families. Risk: an acknowledged suffix is absent after family fallback.
+5. **Background work.** compact_wal completion cannot join on the responder.
+   Code navigation loads per root lazily; rebuilds run as jobs. Prune absent
+   roots, store spans rather than bodies, and enforce a logged size budget.
+   The parked 1.5 GB index is separate from the frozen-store measurement.
+   Risk: background workers still starve short RPCs through shared locks.
+6. **Local mirror.** A snapshot-only mirror does not preserve the latest
+   acknowledged local WAL after node loss. Document the recovery boundary
+   and measured mirror lag before offering this mode. Default NFS remains
+   the durability baseline.
 
-1. **Loading writes and replay order.** Bind the socket before snapshot load,
-   with a minimal health/status handler independent of store locks. Before a
-   valid snapshot is available, reads need a typed loading/retry response.
-   During replay, a durable incoming-write spool must use a separate segment
-   and sequence boundary so replay cannot ingest its own concurrent tail.
-   Persist IDs, deduplication keys and ordering before acknowledgement; apply
-   the historical prefix before queued writes. Bound the spool and reject
-   overload explicitly. Do not report full readiness until queued writes and
-   required indexes are visible. Define read-your-writes during loading.
-   Risk: acknowledged writes disappear or are applied twice after restart.
+## Phase 0 controlled chaos comparison (2026-09-19)
 
-2. **Acknowledgement and mirroring.** “fsync every ≤50 ms” alone does not make
-   responses durable: release acknowledgements only after their group’s sync
-   succeeds. Propagate failed fsync/directory sync to admission and callers.
-   Copying only snapshot families from a node-local store cannot preserve
-   acknowledged writes if that node is lost. Either mirror the WAL durably
-   before acknowledgement, or explicitly narrow the guarantee to same-node
-   process crashes and quantify the mirror recovery-point lag. Keep default
-   NFS mode until this is signed off. Risk: silent loss between mirror copies.
+On compute with TMPDIR=/tmp set inside the allocation, the requested
+`chaos_partial_snapshot_preserves_acknowledged_prefix_and_replay` passed
+three of three runs with replay instrumentation and three of three controls
+at chitta-field ec22685 with both modified Rust files stashed. Each run
+executed the named test (one passed, 304 filtered out). The stash was restored.
+The earlier full-suite failure (302 passed, one failed, two ignored) is not
+reproducible in isolation. These six runs do not establish its cause or prove
+it pre-existing; they show no deterministic failure caused by instrumentation.
+It remains recorded for the full gate; no unrelated chaos fix is included.
+Logs: `/projects/caeg/scratch/kbd606/tmp/p22-phase0-relaunch-EfNgwJ/`.
 
-3. **Snapshot cut and checkpoint identity.** Capture an immutable generation
-   and its durable WAL high-water mark under a short writer cut-over; encode
-   and sync outside the writer lane. Publish manifests only after every
-   required family member and directory is durable. The shutdown marker needs
-   format version, family generation/hash, segment identity plus byte offset,
-   sequence number and checksum; an offset alone is ambiguous after rotation.
-   Marker corruption must fall back to validated family plus WAL, not truncate
-   recovery. Retain two valid families and all WAL needed by the fallback.
-   Risk: a newer marker or prune hides acknowledged records from recovery.
-
-4. **Bulk replay semantics.** Parallelize decoding but preserve commit order
-   at application, including deletes, corrections, graph/event mutations and
-   cross-segment dependencies. Bound decoded bytes in flight. Sidecar cache
-   validity must include the family identity, codec/configuration and replay
-   coverage; replaying any index-affecting operation invalidates that view.
-   Benchmark deferred rebuild separately from decode/apply and end-to-end
-   readiness. V23 bincode bodies are not zero-decode mmap views: the laptop
-   decision requires versioned codecs/sidecars for that later capability.
-   Risk: throughput improves while semantic state or the memory budget drifts.
-
-5. **Shutdown and job ownership.** SIGTERM must close admission independently
-   of the request mutex. Signal handlers only set a flag/wake the controller.
-   Cap the admitted mutation backlog, bound fsync/drain errors, and make slow
-   jobs cancellable; never join an uninterruptible job before the durable cut.
-   An optional full snapshot needs a time budget, not just an age/idle check.
-   Do not lower TimeoutStopSec until the congested-queue proof passes. NFS I/O
-   stalls make an unconditional ten-second durability guarantee impossible;
-   specify the tested fault envelope and surface a failed checkpoint.
-   Risk: the new shutdown path waits on the same work it was meant to bypass.
-
-6. **Request classes and reader lifetime.** Classify before dispatch; measuring
-   a handler after it exceeds two seconds does not move its already-running
-   work off the queue. Give every class bounded concurrency and queue capacity,
-   deadlines, saturation counters and a clear retry response. Ledger mutations
-   and store mutations still share durable ordering when they affect the same
-   state. Audit all reachable mutable caches before lock-free reads; publish
-   coherent snapshot/delta generations and bound epoch reclamation memory.
-   Risk: a worker pool moves contention without removing it, or introduces
-   races and unbounded retained generations under slow readers.
-
-7. **Code navigation.** Keep all index open/migration/rebuild work off startup.
-   A per-root binary index should store source fingerprints with spans and
-   validate them before reading symbol text; stale spans must not silently
-   return unrelated bytes. Canonicalize root identity, handle hash collisions,
-   and distinguish missing roots from temporarily unavailable mounts before
-   destructive pruning. Root existence checks and directory scans can stall
-   on NFS, so they also belong in background jobs. Enforce RAM/disk size budgets
-   and coalesce repeated rebuild requests. Risk: a lazy first query becomes a
-   new queue blocker or migrations briefly recreate the 1.5 GB peak.
-
-8. **Proof and attribution.** Retain acknowledgement IDs and verify exact
-   recovered state, including updates/deletes, across crash points before and
-   after fsync and manifest publication. Exercise ESTALE, disk-full and second
-   writer exclusion with the existing chaos harness. Record bytes replayed,
-   derived-index rebuild time, snapshot capture versus publication time,
-   manifest identity, memory peak and per-class queue wait separately from
-   end-to-end RPC latency. Include learn_codebase/rebuild and ledger/capsule
-   traffic in the eventual jam test. Repeat matched trials on the same storage
-   tier before enforcing a 20% regression threshold.
-
-## Handoff boundary
-
-No daemon, Rust storage, hook or unit changes in phase 0. Full implementation
-and documentation of new persistence behavior follow review sign-off, not this
-memo. Pending measurements and gates are explicitly incomplete.
-
-## Phase 0 preparation checkpoint (2026-09-19)
-
-The benchmark driver passes Ruff lint and formatting; the repository quick
-gate passes, including unchanged public contracts. The full gate remains in
-its native C++ build; the benchmark is scheduled after it with these worktree
-binaries. No measured baseline result or performance qualification is claimed
-at this checkpoint. Phase 0 remains incomplete until the replica results and
-full-gate outcome are incorporated here. Runtime implementation is still
-blocked on the lead's design sign-off.
+The harness records continuous health gaps, per-kind apply profiles and the
+capsule row-count curve. Each restart reads only newly appended daemon logs.
+Replica measurements and the current full gate remain pending.

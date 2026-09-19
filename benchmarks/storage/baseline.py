@@ -24,6 +24,7 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--daemon", type=Path, default=ROOT / "bin/chittad")
     parser.add_argument("--cli", type=Path, default=ROOT / "bin/chitta")
+    parser.add_argument("--capsule-rows", type=int, nargs="+", default=[100, 364, 1000, 5000])
     args = parser.parse_args()
     out = args.output.resolve()
     if not out.is_relative_to(SCRATCH) or out.exists():
@@ -40,6 +41,7 @@ def main():
         CHITTA_EVAL_PORT=str(port),
         CHITTAD_BIN=str(args.daemon.resolve()),
         CHITTA_BIN=str(args.cli.resolve()),
+        CHITTA_PROFILE_REPLAY="1",
         CHITTA_RECALL_NOW="1789473600000",
         CHITTA_RECALL_EMBED_WAIT_MS="10000",
         CHITTA_EVAL_START_TIMEOUT="1800",
@@ -102,6 +104,8 @@ def main():
     def start(label, initial=False):
         nonlocal pid
         observed = {}
+        daemon_log = mind / "replica.log"
+        log_offset = daemon_log.stat().st_size if daemon_log.exists() else 0
         done = threading.Event()
 
         def watch():
@@ -116,8 +120,11 @@ def main():
                             client.connect(str(sock))
                         observed["socket_s"] = time.monotonic() - born
                     rpc("health_check", timeout=1)
-                    observed["health_s"] = time.monotonic() - born
-                    return
+                    now = time.monotonic() - born
+                    observed.setdefault("health_s", now)
+                    samples = observed.setdefault("health_samples_s", [])
+                    samples.append(now)
+                    done.wait(0.05)
                 except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
                     done.wait(0.05)
 
@@ -138,14 +145,33 @@ def main():
                     timeout=1900,
                 )
             pid = int((mind / "replica.pid").read_text())
-            watcher.join(2)
         finally:
             done.set()
             watcher.join()
-        log = (mind / "replica.log").read_text()
+        with daemon_log.open("rb") as source:
+            source.seek(log_offset)
+            log = source.read().decode(errors="replace")
         (out / f"{label}-daemon.log").write_text(log)
         observed["phase_ms"] = dict(re.findall(r"load phase=(\w+) ms=(\d+)", log))
+        observed["replay_apply"] = [
+            {"kind": kind, "records": int(records), "apply_ns": int(ns)}
+            for kind, records, ns in re.findall(
+                r"replay_apply kind=(\w+) records=(\d+) apply_ns=(\d+)", log
+            )
+        ]
+        samples = observed.get("health_samples_s", [])
+        if samples:
+            observed["max_health_gap_s"] = max(
+                [samples[0]] + [b - a for a, b in zip(samples, samples[1:])]
+            )
         observed["health"] = rpc("health_check")[1]
+        fields = Path(f"/proc/{pid}/stat").read_text().split(") ", 1)[1].split()
+        ready_s = time.monotonic() - int(fields[19]) / os.sysconf("SC_CLK_TCK")
+        observed["ready_s"] = ready_s
+        observed["max_health_gap_s"] = max(
+            observed.get("max_health_gap_s", 0),
+            ready_s - samples[-1] if samples else ready_s,
+        )
         return observed
 
     def stop(sig=signal.SIGKILL):
@@ -254,6 +280,46 @@ def main():
         }
         (out / "mixed.json").write_text(json.dumps(samples))
         save()
+
+        # Curve uses unrelated sessions: capsule_get must find a fixed missing key.
+        # Always record the actual table count, including rows in the frozen cut.
+        def ledger(op, arguments):
+            return rpc("ledger_op", {"op": op, "args": arguments})
+
+        def row_count():
+            _, result = ledger("counts", {})
+            return result["structured"]["value"]["thread_sessions"]
+
+        report["capsule_curve"] = []
+        initial_rows = row_count()
+        for target in sorted(set([initial_rows] + args.capsule_rows)):
+            for index in range(row_count(), target):
+                ledger(
+                    "session_bind",
+                    {"session_id": f"storage-curve-{index}", "project_dir": str(mind)},
+                )
+            samples = [
+                ledger(
+                    "capsule_get",
+                    {
+                        "repository": "storage-baseline-missing",
+                        "stream_id": "curve",
+                        "project_dir": str(mind),
+                        "code_head": "baseline",
+                    },
+                )[0]
+                for _ in range(30)
+            ]
+            samples.sort()
+            report["capsule_curve"].append(
+                {
+                    "rows": row_count(),
+                    "samples": len(samples),
+                    "p95_ms": samples[math.ceil(len(samples) * 0.95) - 1] * 1000,
+                    "max_ms": max(samples) * 1000,
+                }
+            )
+            save()
         with futures.ThreadPoolExecutor(max_workers=1) as pool:
             compact = pool.submit(rpc, "compact_wal")
             time.sleep(0.1)
