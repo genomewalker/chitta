@@ -23,7 +23,21 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--require-early-ready", action="store_true")
+    parser.add_argument("--require-deferred-turbo", action="store_true")
+    parser.add_argument("--expected-memory-count", type=int, default=134805)
+    parser.add_argument("--reference", type=Path, help="saved eager-path report for recall ID parity")
+    parser.add_argument("--require-deferred-phase", action="append", default=[])
     args = parser.parse_args()
+    if args.require_early_ready:
+        if args.reference is None:
+            parser.error("early-ready acceptance requires an eager --reference report")
+        args.require_deferred_phase = sorted(set(args.require_deferred_phase) | {
+            "turbo", "event_tape_organs", "keyword_reverse", "hdc", "span_store", "symbols"})
+    reference = json.loads(args.reference.read_text()) if args.reference else None
+    if reference is not None and (
+            reference.get("memory_count_after") != args.expected_memory_count
+            or any(not reference.get("recall_ids_after", {}).get(q) for q in QUERIES)):
+        parser.error("reference must contain the expected memory count and nonempty IDs for every query")
     out = args.output.absolute()
     if not out.is_relative_to(SCRATCH) or out.exists():
         parser.error("output must be a new directory under project scratch")
@@ -64,6 +78,19 @@ def main():
             raise RuntimeError("recall did not return results: " + json.dumps(result))
         return sorted(item["id"] for item in result["results"])
 
+    def wait_for_turbo():
+        # Compare the first answer with fully warmed answers, not with another
+        # scalar fallback answer while the startup worker is still running.
+        deadline = time.monotonic() + 180
+        while time.monotonic() < deadline:
+            log = (mind / "replica.log").read_text(errors="replace")
+            turbo_ready = "deferred phase=turbo " in log or "load phase=turbo_startup " in log
+            phases_ready = all(f"deferred phase={name} " in log for name in args.require_deferred_phase)
+            if turbo_ready and phases_ready:
+                return
+            time.sleep(0.05)
+        raise TimeoutError("required deferred startup phases did not finish")
+
     def process_age():
         pid = int((mind / "replica.pid").read_text())
         # comm may contain spaces or parentheses; field 22 follows its last ')'.
@@ -74,6 +101,7 @@ def main():
     process = None
     try:
         replica("start", "initial")
+        wait_for_turbo()
         report["memory_count_before"] = rpc("health_check")["memory_count"]
         report["recall_ids_before"] = {q: recall_ids(q) for q in QUERIES}
         replica("stop", "initial-stop")
@@ -104,19 +132,32 @@ def main():
             process.wait(timeout=1900)
             if process.returncode:
                 raise RuntimeError("replica restart failed")
+        wait_for_turbo()
         report["recall_ids_after"] = {q: recall_ids(q) for q in QUERIES}
         report["content_equal"] = (
-            report["memory_count_before"] == report["memory_count_after"]
+            report["memory_count_before"] == report["memory_count_after"] == args.expected_memory_count
             and bool(report["recall_ids_before"][QUERIES[0]])
             and report["recall_ids_before"] == report["recall_ids_after"]
             and report["first_recall_ids"] == report["recall_ids_before"][QUERIES[0]])
         daemon_log = (mind / "replica.log").read_text(errors="replace")
         (out / "daemon.log").write_text(daemon_log)
+        report["deferred_phases"] = re.findall(r"deferred phase=(\w+) duration_ms=(\d+)", daemon_log)
         report["load_phases"] = re.findall(r"load phase=(\w+) ms=(\d+)", daemon_log)
+        report["deferred_turbo_pass"] = any(name == "turbo" for name, _ in report["deferred_phases"])
+        report["deferred_phases_pass"] = all(
+            any(name == required for name, _ in report["deferred_phases"])
+            for required in args.require_deferred_phase)
+        report["reference_equal"] = (reference is None or (
+            report["recall_ids_after"] == reference["recall_ids_after"]
+            and report["first_recall_ids"] == reference["recall_ids_after"][QUERIES[0]]))
+        report["reference_path"] = str(args.reference) if args.reference else None
         report["early_ready_pass"] = report["store_ready_s"] < 3 and report["first_recall_s"] < 5
-        report["pass"] = report["content_equal"] and (report["early_ready_pass"] or not args.require_early_ready)
+        report["pass"] = (report["content_equal"] and report["reference_equal"]
+                          and report["deferred_phases_pass"]
+                          and (report["early_ready_pass"] or not args.require_early_ready)
+                          and (report["deferred_turbo_pass"] or not args.require_deferred_turbo))
         (out / "report.json").write_text(json.dumps(report, indent=2) + "\n")
-        print(json.dumps({k: report[k] for k in ("store_ready_s", "first_recall_s", "memory_count_after", "content_equal", "early_ready_pass", "pass")}))
+        print(json.dumps({k: report[k] for k in ("store_ready_s", "first_recall_s", "memory_count_after", "content_equal", "reference_equal", "deferred_turbo_pass", "deferred_phases_pass", "early_ready_pass", "pass")}))
         if not report["pass"]:
             raise SystemExit(1)
     finally:

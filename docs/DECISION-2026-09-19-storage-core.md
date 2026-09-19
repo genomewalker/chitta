@@ -921,5 +921,108 @@ Decoder prerequisite validation: quick gate **22916883 passed**; job
 **22916884** passed **15/15** focused snapshot tests, the C++ build, contracts
 unchanged, and the corrected replica content comparison. Its `after3/report.json`
 measured store-ready **14.860 s**, first recall **15.530 s**, and **134,805**
-memories, with identical recall IDs. The full gate remains running. These
+memories, with identical recall IDs. Full gate 22916884 subsequently passed
+(37/37 C++ tests and the hook suites); collector 22916896 completed. These
 numbers do not meet the early-readiness targets; production still loads eagerly.
+
+
+### Staged publication: optional Turbo work (2026-09-19, validation pending)
+
+Production `cf_open` now returns without waiting for Turbo warmup. The existing
+maintenance thread captures a snapshot cache identity and mutation watermark,
+then loads/prepares the index without a field lock. Publication checks the index
+epoch and rejects an older result; writes during preparation remain in the delta
+and are scored by the existing search path. A missing or corrupt cache uses the
+owned-input rebuild path. Rust `ChittaField::open` remains eager for synchronous
+store callers.
+
+Optional startup computation owns neither the field nor its instance lock.
+The maintenance thread can stop while native preparation is still running;
+a late publication only touches that abandoned index slot. This avoids adding
+Turbo preparation to the shutdown join budget. Focused tests exercise racing
+upsert/delete, invalidation, corrupt caches and stopping blocked optional work.
+The replica probe waits for complete warmup for its reference answers, compares
+first-answer IDs against those references, and records deferred-phase durations.
+
+This boundary does **not** yet implement staged durable-section publication.
+All durable snapshot sections and WAL replay remain complete before store-ready,
+so checkpoints cannot serialize an incomplete store. Keyword reverse, HDC,
+spans, symbols and organs remain eager. Deferring those requires ordered replay
+per section, capability-specific loading replies, and a checkpoint barrier until
+all durable sections have been published. Sections used by recall updates must
+be loaded before serving recall or merged without replacing those updates.
+No early-readiness acceptance is claimed until the replica timing and ID gates
+pass. Validation: job 22916901, followed by full gate 22916902, logs under
+`/projects/caeg/scratch/kbd606/tmp/p22stage-10lxrehc`.
+
+Validation checkpoint: job 22916901 passed the focused deferred-cache test (1/1) and the C++ build, then stopped on a SyntaxError in the modified benchmark harness. The syntax is corrected and parse-checked. Retry 22916904 and dependent full gate 22916902 are pending; no new replica timing or early-readiness acceptance is claimed. Logs are under `/projects/caeg/scratch/kbd606/tmp/p22stage-10lxrehc`.
+
+Validation correction (2026-09-19): job 22916904 tested the old Rust archive.
+`cargo test --release` rebuilt test executables but not the static library that
+CMake links. Its 14.17 s store-ready / 14.84 s first-recall result had no deferred
+phase and is not evidence for this change. Job 22916906 explicitly runs
+`cargo build --release` before relinking and measuring. The probe now supports
+`--require-deferred-turbo` so an eager binary cannot pass the deferral gate.
+
+
+Publication checkpoint (2026-09-19): full gate 22916902 passed, including
+37/37 C++ tests. That gate predates the corrected static-library rebuild;
+22916906 remains the validation authority for the linked Turbo deferral, with
+logs in `/projects/caeg/scratch/kbd606/tmp/p22publish-dthr6v_b`. The replica
+probe now requires exactly 134,805 memories, not merely equal before/after
+counts, and prints whether a deferred Turbo phase was observed.
+
+Dependency audit for the next publication step: `recall_semantic_ctx` directly
+uses payloads, states, semantic and artifact indexes, realm membership, ack
+scores, recall provenance, scoring and learners. It also enqueues strengthening,
+co-retrieval pairs and recall windows. Consequently, a minimal snapshot group
+must include these scoring inputs, and maintenance must not drain effects into
+an unpublished section. Keyword reverse postings are used by remove/update,
+not just queries. Spans are separately persisted and `cf_close` flushes them;
+an unloaded span store must never be flushed as empty. The pending snapshot
+reader must consume each section once in file order (including the triplet
+clean marker), replay each section's WAL suffix before publishing it, and keep
+checkpoint/flush operations behind completion. This is an implementation plan,
+not a claim that staged durable-section publication is complete.
+
+
+#### Verified Turbo publication boundary (2026-09-19)
+
+The production `cf_open` now publishes the field before Turbo preparation.
+The synchronous Rust open remains eager. Maintenance captures an owned cache
+load plan under a short read guard; validation and native preparation run
+without that guard. Publication checks the index epoch and mutation watermark,
+and changes accepted during loading remain in the search delta. Shutdown can
+stop maintenance without joining blocked optional work; an abandoned job owns
+neither the field nor its instance lock.
+
+Correctly rebuilt job 22916906 measured the following against the frozen cut:
+
+| Measurement | Eager reference | Deferred Turbo |
+| --- | ---: | ---: |
+| Process start to store ready | 14.86 s | 6.44 s |
+| Process start to first correct recall | 15.53 s | 7.11 s |
+| Memories | 134,805 | 134,805 |
+
+All saved query IDs, including the first recall, match the eager report at
+`p22sections-ij7w1fbj/after3/report.json`. Turbo completes after publication
+(8,619 ms), with its native preparation taking 8,295 ms. Three consecutive
+Rust runs passed 319 tests each (two ignored), including racing cache mutations,
+invalidated cache plans, corrupt-cache fallback and optional-work cancellation.
+Quick gate passes and contracts are unchanged. Full-gate evidence remains in
+`p22publish-dthr6v_b`; the strengthened reference check is job 22916911.
+
+**The staged-publication acceptance is still failing:** 6.44 s exceeds the 3 s
+store-ready target and 7.11 s exceeds the 5 s first-recall target. This is the
+Turbo boundary only. Snapshot decode remains eager (2,173 ms, including triplet
+index rebuilding at 1,452 ms and triplet deserialization at 633 ms). Other eager
+phases include keyword reverse postings (788 ms), HDC (209 ms), event organs
+(174 ms) and symbols (80 ms). These times overlap where workers run concurrently.
+
+The replica harness now accepts a saved eager `--reference` and checks every
+query ID against it. `--require-early-ready` requires that reference plus log
+lines for Turbo, event organs, keyword reverse postings, HDC, spans and symbols;
+missing publication phases cannot pass just because startup becomes faster.
+Remaining durable-section publication requires an explicit readiness barrier,
+ordered WAL application to deferred sections, guarded side-effect draining and
+checkpoint/span-flush protection, as described in the dependency audit above.
