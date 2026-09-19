@@ -16,6 +16,7 @@ cd "$ROOT" || exit 1
 PY="$("$ROOT/scripts/python-with-mcp.sh")"; export PATH="$(dirname "$PY"):$PATH"
 ON="$ROOT/scripts/on-compute.sh"
 replica=0 recall=0
+GATE_TMP="$(mktemp -d "${TMPDIR:-/projects/caeg/scratch/kbd606/tmp}/gate-full.XXXXXX")"
 for a in "$@"; do case "$a" in --replica) replica=1 ;; --recall) replica=1; recall=1 ;; esac; done
 fail=0
 step() { printf '\n== %s\n' "$1"; }
@@ -52,9 +53,11 @@ echo "hook suites passed=$pass failed=[${failed# }]"
 
 if [[ $replica == 1 ]]; then
     step "chaos harness (compute node)"
-    "$ON" -c 16 -m 96G -- "$PY" scripts/chaos-replica.py 2>&1 | tail -3 | tee /dev/stderr | grep -qE '9/9|all .* passed' || { echo "FAIL: chaos"; fail=1; }
+    "$ON" -c 16 -m 96G -- "$PY" scripts/chaos-replica.py > "$GATE_TMP/chaos.log" 2>&1; rc=$?; tail -3 "$GATE_TMP/chaos.log"
+    [[ $rc -eq 0 ]] && echo ok || { echo "FAIL: chaos (exit $rc; $GATE_TMP/chaos.log)"; fail=1; }
     step "restart identity (compute node)"
-    CHITTA_RECALL_EMBED_WAIT_MS=10000 "$ON" -c 16 -m 96G -- "$PY" scripts/restart-identity.py --restarts 3 2>&1 | tail -3 | tee /dev/stderr | grep -qE '20/20' || { echo "FAIL: identity"; fail=1; }
+    CHITTA_RECALL_EMBED_WAIT_MS=10000 "$ON" -c 16 -m 96G -- "$PY" scripts/restart-identity.py --restarts 3 > "$GATE_TMP/identity.log" 2>&1; rc=$?; grep -E '^(restart|control) [0-9]+:' "$GATE_TMP/identity.log"
+    [[ $rc -eq 0 ]] && echo ok || { echo "FAIL: identity (exit $rc; $GATE_TMP/identity.log)"; fail=1; }
 fi
 if [[ $recall == 1 ]]; then
     step "golden and current-truth on the replica (compute node)"
