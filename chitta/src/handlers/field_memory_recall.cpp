@@ -1274,7 +1274,7 @@ ToolResult FieldRpcHandler::RecallPipeline::format() {
     bool explain = params.value("explain", false);
     profile.next("result_metadata");
     json results_json = handler.hits_to_results_json(hits, explain);
-    auto sources = params.value("sources", true) && tag.empty() && !windowed
+    auto sources = handler.code_indexes_ready() && params.value("sources", true) && tag.empty() && !windowed
         ? handler.repository_index_.search(query, realm, std::min<size_t>(3, limit)) : json::array();
     const size_t source_hits = sources.size();
     if (!sources.empty() && tag.empty()) {

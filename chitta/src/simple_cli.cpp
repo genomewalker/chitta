@@ -241,7 +241,17 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
                const SubconsciousConfig& subconscious_config, bool no_autonomous,
                int http_port, const std::string& http_static_dir,
                int rpc_port,
-               DaemonLock& lock) {
+               DaemonLock& lock, std::chrono::steady_clock::time_point field_ready) {
+    auto startup_step = std::chrono::steady_clock::now();
+    auto startup_log = [&](const char* phase) {
+        const auto now = std::chrono::steady_clock::now();
+        std::cerr << "[startup] phase=" << phase << " ms="
+                  << std::chrono::duration_cast<std::chrono::milliseconds>(now - startup_step).count()
+                  << " since_field_ready_ms="
+                  << std::chrono::duration_cast<std::chrono::milliseconds>(now - field_ready).count() << "\n";
+        startup_step = now;
+    };
+    startup_log("post_store");
     // Automatically reap child processes to prevent zombie accumulation
     signal(SIGCHLD, SIG_IGN);
 
@@ -271,8 +281,10 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
     // server already bound and started (early socket in main)
 
     FieldRpcHandler handler(&field_store, yantra);
+    startup_log("handler_construct");
     if (embed_queue) handler.set_embed_queue(embed_queue);
     handler.set_mind_path(mind_path);
+    startup_log("set_mind_path");
     handler.set_distill_model(distill_config.model);
     handler.set_distill_enabled(distill_config.enabled);
 
@@ -421,7 +433,9 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
         });
     }
 
+    startup_log("handler_setup");
     subconscious.start();
+    startup_log("subconscious_start");
 
     int stop_pipe[2];
     if (::pipe(stop_pipe) != 0) throw std::runtime_error("shutdown wake pipe failed");
@@ -464,7 +478,17 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
 
     // Maintenance thread - sync and apply decay periodically
     std::atomic<size_t> cycle_count{0};
+    std::promise<void> serving_started;
+    auto serving_ready = serving_started.get_future();
     std::thread maintenance([&]() {
+        serving_ready.wait();
+        if (daemon_running) {
+            try {
+                handler.open_code_indexes();
+            } catch (const std::exception& e) {
+                std::cerr << "[startup] code_indexes failed: " << e.what() << "\n";
+            }
+        }
         auto interval_secs = std::chrono::seconds(interval);
         uint64_t cycle_sequence = 0;
         uint64_t foreign_sequence = 0;
@@ -1093,6 +1117,8 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
             }, [&server](int fd, std::string reply) { server.queue_response(fd, std::move(reply)); });
     };
     responder.serve([&] {
+    startup_log("listening");
+    serving_started.set_value();
     server.set_disconnect_callback([&sadhana_manager](int fd) {
         if (sadhana_manager) sadhana_manager->stream_unsubscribe(fd);
     });
@@ -1960,6 +1986,7 @@ int main(int argc, char* argv[]) {
                          std::chrono::steady_clock::now() - process_started).count() << "ms\n";
     }
 
+    std::chrono::steady_clock::time_point field_ready;
     std::exception_ptr load_ex;
     std::thread loader([&]() {
         try {
@@ -1976,6 +2003,7 @@ int main(int argc, char* argv[]) {
             });
             const auto store_started = std::chrono::steady_clock::now();
             field_store_ptr = std::make_unique<FieldStore>(field_path, field_path);
+            field_ready = std::chrono::steady_clock::now();
             std::cerr << "[daemon] load phase=field_store ms="
                       << std::chrono::duration_cast<std::chrono::milliseconds>(
                              std::chrono::steady_clock::now() - store_started).count()
@@ -2014,7 +2042,7 @@ int main(int argc, char* argv[]) {
 
     int result = 0;
     if (command == "daemon") {
-        result = cmd_daemon(field_store, yantra_raw, &embed_queue, interval, *early_server, *responder, sock_path, mind_path, pid_file, distill_config, enrich_config, subconscious_config, no_autonomous, http_port, http_static_dir, rpc_port, daemon_lock);
+        result = cmd_daemon(field_store, yantra_raw, &embed_queue, interval, *early_server, *responder, sock_path, mind_path, pid_file, distill_config, enrich_config, subconscious_config, no_autonomous, http_port, http_static_dir, rpc_port, daemon_lock, field_ready);
     } else if (command == "stats") {
         result = cmd_stats(field_store, yantra_raw);
     } else if (command == "metrics") {

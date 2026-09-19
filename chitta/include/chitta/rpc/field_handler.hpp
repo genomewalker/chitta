@@ -177,9 +177,27 @@ public:
     // honor the .disable_consolidation marker at the same path the hooks check.
     void set_mind_path(const std::string& p) {
         mind_path_ = p;
-        repository_index_.open(p + "/repository-roots.json", field_store_->list_code_files(""));
-        code_navigation_.open(p + "/code-navigation.json");
+        code_indexes_ready_.store(false, std::memory_order_release);
     }
+    bool code_indexes_ready() const {
+        return code_indexes_ready_.load(std::memory_order_acquire);
+    }
+    static ToolResult code_indexes_loading() {
+        return {true, "Code indexes are loading; retry shortly.",
+                {{"error", "loading"}, {"loading", true}, {"phase", "code_indexes"}, {"retry_after_s", 1}}};
+    }
+    // Maintenance owns initialization; publish only once both indexes are usable.
+    void open_code_indexes() {
+        const auto& p = mind_path_;
+        auto started = std::chrono::steady_clock::now();
+        repository_index_.open(p + "/repository-roots.json", field_store_->list_code_files(""));
+        std::cerr << "[startup] phase=repository_index_open ms=" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count() << "\n";
+        started = std::chrono::steady_clock::now();
+        code_navigation_.open(p + "/code-navigation.json");
+        std::cerr << "[startup] phase=code_navigation_open ms=" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count() << "\n";
+        code_indexes_ready_.store(true, std::memory_order_release);
+    }
+    std::atomic<bool> code_indexes_ready_{true};
     RepositoryIndex repository_index_;
     CodeNavigation code_navigation_;
     const std::string& mind_path() const { return mind_path_; }
