@@ -34,11 +34,15 @@ separately for the later end-to-end acceptance run.
 
 | Step | Fresh outputs, no compiler cache (s) | Same-worktree incremental (s) | Fresh outputs, warm compiler cache (s) |
 | --- | ---: | ---: | ---: |
-| CMake configure, FetchContent sources cached | 29.07 | not measured | step 3 |
-| Rust release build | 274.91 | 2.10 | step 3 |
-| C++ release build | 152.94 | 2.02 | step 3 |
-| ctest (37/37 passed) | 25.85 | not measured | step 3 |
-| Complete gate-full (FAIL: contract service unavailable) | not measured as a cold aggregate | 793.62 | step 3 |
+| CMake configure, FetchContent sources cached | 29.07 | not measured | 27 |
+| Rust release build | 274.91 | 2.10 | 276 |
+| C++ release build | 152.94 | 2.02 | 171 |
+| ctest (37/37 passed) | 25.85 | not measured | 19 |
+| Complete gate-full | not measured as a cold aggregate | 793.62 (FAIL: contract service unavailable) | 1177 (PASS) |
+
+The last column is the final fresh-worktree proof at f7224e79, with merged main
+fixes and 325 passing Rust tests; the first two columns retain the original
+design baseline. See the final proof below. The 600 s target was not met.
 
 The lead's earlier observations (not re-labelled as measurements here) are:
 configure 2247 s before the FetchContent fix and 14 s after; Rust release
@@ -508,9 +512,76 @@ one initially empty private compiler cache, and unchanged full-gate coverage.
 After both gates it reruns the previously failing snapshot and ledger tests
 three times each. Results append to
 `/projects/caeg/scratch/kbd606/tmp/agent_djZgaH/results.txt`; full stage logs are
-in cold-logs, warm-logs and isolated-logs beneath that directory. This job is
-pending at this checkpoint; no new full-gate timing or acceptance is claimed.
+in cold-logs, warm-logs and isolated-logs beneath that directory. It completed:
+cold 1182 s, warm 1163 s, both failing the release contract/site checks. All six
+isolated Rust reruns passed. The final proof below supersedes these verdicts.
 
 The nightly sbatch definition passed Slurm's `--test-only` validation. Its
 systemd timer remains a documented, disabled example; validation did not submit
 or enable a nightly job.
+
+
+### Final detached proof (2026-09-20)
+
+Merged origin/main 234b4019 at **f7224e79**, retaining the submodule build
+recipe at **7ec4554**. The merged login-node quick gate passed and the contract
+check printed `contracts unchanged`. No contract was regenerated locally and
+no test coverage or optimization flags were removed.
+
+Slurm job **22916944** ran both full gates on **dandycmpn22fl**, from distinct
+detached checkouts of f7224e79, with separate target/build directories and one
+initially empty private compiler cache. Cargo registry/toolchain and FetchContent
+sources were already primed. Queue delay was **23 s**; allocated runtime was
+**2432 s**, including checkout/setup and six isolated Rust reruns. Gate timings
+exclude queue delay and checkout setup. Logs and the reproducible proof script
+are retained under `/projects/caeg/scratch/kbd606/tmp/agent_1u3bja4k`.
+
+| Full-gate stage | Cold compiler cache (s) | Warm cache, fresh worktree (s) |
+|---|---:|---:|
+| Quick gate | 65 | 53 |
+| Rust release build | 276 | 276 |
+| Rust release tests, including compilation | 311 | 319 |
+| CMake configure | 32 | 27 |
+| C++ release build | 180 | 171 |
+| CTest | 21 | 19 |
+| Native subtotal, including wrapper overhead | 821 | 814 |
+| All 41 hook suites | 296 | 294 |
+| Daemon contract check | 15 | 13 |
+| Scratch janitor dry run | 0 | 0 |
+| Other gate overhead and integer timing rounding | 8 | 3 |
+| **Complete gate-full** | **1205 — PASS** | **1177 — PASS** |
+
+Both runs passed 325 Rust tests (the existing two ignored tests remain ignored),
+37/37 CTests, and all 41 hook suites. No cached-stage fallback occurred.
+`subprocess_load_test` passed in **4.23 s / 5.66 s**. The snapshot reopen and
+ledger replay tests each passed three additional isolated reruns (six total).
+The incoming explicit lock-release fix and descriptor regression explain a
+reproducible failure mechanism; they do not retrospectively prove the exact
+historical trigger of the self-holder lock error.
+
+**Performance verdict: correctness gates pass; the 600 s target is not met.**
+The measured warm total is 1177 s (19m37s), 577 s above target. Its observed
+breakdown is native 814 s, hooks 294 s, quick 53 s, contracts 13 s, and 3 s
+other overhead. This is an observed floor for this recipe/run, not a claim that
+further optimization is impossible. The cold-to-warm saving is 28 s (2.3%).
+
+Rust counters increased from 0 hits / 190 misses after cold to 137 hits /
+243 misses after warm: the warm phase added **137 hits and 53 misses**, plus
+75 non-cacheable calls. Cumulative non-cacheable reasons include 130 crate-type
+calls. Cache reuse does not remove the dominant root/test compilation and
+linking costs under the retained release flags.
+
+C++ counters after hooks were 15 hits / 207 misses cold and 124 hits /
+320 misses warm; the warm phase added **109 hits and 113 misses**. The hook-only
+delta was **13 hits / 8 misses in each checkout**. The earlier same-checkout
+hook result (**656 s before, 283 s priming, 147 s warm**, job 22916937) must not
+be substituted for fresh-worktree hooks: the final cross-checkout warm result is
+**294 s**, and the <90 s hook expectation was not met. Source paths remain intact
+for `__FILE__`-based fixtures; no path rewriting was added to improve hit counts.
+
+At completion the private compiler cache used 749 MiB, the warm Cargo target
+787 MiB, and the warm CMake build 125 MiB. Artifacts are retained for review;
+none are committed. The existing nightly sbatch definition and disabled systemd
+timer example above remain the scheduling deliverable. Slurm test-only validation
+passed again after the merge; it did not submit a nightly job. This resumed proof
+did not install binaries, deploy, enable the timer, or modify the live mind.
