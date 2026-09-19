@@ -88,14 +88,16 @@ def main():
             "params": {"name": method, "arguments": arguments or {}},
         }
         result = subprocess.run(
-            [str(args.cli), "--socket-path", str(sock)],
-            input=json.dumps(request) + chr(10),
+            [str(args.cli), "--socket-path", str(sock)] + (["status"] if method == "status" else []),
+            input="" if method == "status" else json.dumps(request) + chr(10),
             env=env,
             text=True,
             capture_output=True,
             timeout=timeout,
             check=True,
         )
+        if method == "status":
+            return time.monotonic() - begin, {"text": result.stdout.strip()}
         response = json.loads(result.stdout)
         if "error" in response or response.get("result", {}).get("isError"):
             raise RuntimeError(str(response)[:1000])
@@ -304,6 +306,10 @@ def main():
             "p95_s": times[math.ceil(len(times) * 0.95) - 1],
             "max_s": max(times),
             "errors": sum(s["error"] is not None for s in samples),
+            "error_kinds": {
+                error: sum(s["error"] == error for s in samples)
+                for error in sorted({s["error"] for s in samples if s["error"] is not None})
+            },
         }
         (out / "mixed.json").write_text(json.dumps(samples))
         save()

@@ -10,6 +10,6 @@ namespace chitta {
 // schemas remain available when the daemon is offline (notably for --help).
 std::optional<nlohmann::json> discover_cli_tool(const std::string& socket_path,
                                                const std::string& name,
-                                               nlohmann::json* loading = nullptr);
+                                               nlohmann::json* loading = nullptr, int timeout_ms = 300000);
 
 } // namespace chitta

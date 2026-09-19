@@ -100,7 +100,7 @@ void write_cli_cache(const std::string& path, const nlohmann::json& cache) {
 } // namespace
 
 std::optional<nlohmann::json> discover_cli_tool(const std::string& socket_path,
-                                               const std::string& name, nlohmann::json* loading) {
+                                               const std::string& name, nlohmann::json* loading, int timeout_ms) {
     using json = nlohmann::json;
     const auto socket = std::filesystem::absolute(socket_path).lexically_normal().string();
     const auto path = get_socket_dir() + "/cli-tools-" + std::to_string(djb2_hash(socket)) + ".json";
@@ -126,7 +126,7 @@ std::optional<nlohmann::json> discover_cli_tool(const std::string& socket_path,
 
     SocketClient client(socket);
     if (!client.connect()) return std::nullopt;
-    auto response = client.request(R"({"jsonrpc":"2.0","id":1,"method":"tools/list"})");
+    auto response = client.request(R"({"jsonrpc":"2.0","id":1,"method":"tools/list"})", timeout_ms);
     if (!response) return std::nullopt;
     auto reply = json::parse(*response, nullptr, false);
     if (loading && reply.is_object() && reply.contains("result") &&
@@ -327,8 +327,9 @@ bool SocketClient::wait_for_socket_gone(int timeout_ms) {
 }
 
 
-std::optional<std::string> SocketClient::request_internal(const std::string& json_rpc) {
+std::optional<std::string> SocketClient::request_internal(const std::string& json_rpc, int timeout_ms) {
     using json = nlohmann::json;
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout_ms);
 
     if (fd_ < 0) {
         last_error_ = "Not connected";
@@ -396,7 +397,8 @@ std::optional<std::string> SocketClient::request_internal(const std::string& jso
             continue;
         }
 
-        int ret = poll(&pfd, 1, RESPONSE_TIMEOUT_MS);
+        auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - std::chrono::steady_clock::now()).count();
+        int ret = poll(&pfd, 1, static_cast<int>(std::max<int64_t>(0, remaining)));
 
         if (ret < 0) {
             if (errno == EINTR) continue;
@@ -424,9 +426,9 @@ std::optional<std::string> SocketClient::request_internal(const std::string& jso
     }
 }
 
-std::optional<std::string> SocketClient::request(const std::string& json_rpc) {
+std::optional<std::string> SocketClient::request(const std::string& json_rpc, int timeout_ms) {
     // Try the request
-    auto result = request_internal(json_rpc);
+    auto result = request_internal(json_rpc, timeout_ms);
     if (result) {
         return result;
     }
@@ -454,7 +456,7 @@ std::optional<std::string> SocketClient::request(const std::string& json_rpc) {
     std::cerr << "[socket_client] Reconnected, retrying request\n";
 
     // Retry the request once
-    return request_internal(json_rpc);
+    return request_internal(json_rpc, timeout_ms);
 }
 
 bool SocketClient::connect_only() {

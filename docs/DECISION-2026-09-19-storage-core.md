@@ -113,6 +113,62 @@ CodeNavigation::open → Impl::rebuild before the socket opened. That parked
 file is not part of this frozen-family benchmark; do not claim its cost was
 reproduced here.
 
+
+### Phase 1 measured result (2026-09-19)
+
+Compute job 22916095, report `/projects/caeg/scratch/kbd606/tmp/p22p1c01/report.json`,
+measured the same frozen replica after the responder and session-index changes.
+Raw AF_UNIX probes are the availability gate; the CLI preflight previously hid
+loading replies. Socket ownership now continues from bind through steady state.
+
+| Trial | Maximum raw health gap |
+|---|---:|
+| Initial clean start | 0.490 s |
+| WAL 0 minutes | 0.379 s |
+| WAL 10 minutes | 0.396 s |
+| WAL 60 minutes | 0.383 s |
+| WAL 240 minutes | 0.354 s |
+
+All gaps are below one second, versus the phase 0 clean-start 17.6 s blackout.
+
+| Session rows | capsule_get p95 (30 samples) |
+|---|---:|
+| 123 | 11.55 ms |
+| 364 | 11.02 ms |
+| 1,000 | 11.19 ms |
+| 5,000 | 11.01 ms |
+
+The 364-row target (50 ms) and 5,000-row target (100 ms) pass; phase 0 measured
+24 ms at 364 rows, 49 ms at 1,000, and 895 ms at 5,000.
+
+Mixed load: 16 clients, 320 requests; p50 0.131 s, p95 1.666 s, maximum 4.154 s.
+There were 80 errors, all `status` requests with JSON-RPC code -32601,
+`Unknown tool: status`. The harness incorrectly called a CLI-only command via
+`tools/call`. These are not loading refusals or storage errors. The harness now
+invokes CLI `status` and records error-kind counts. The saved latency numbers
+include those errors and do not establish an error-free mixed-load gate.
+
+The validation job failed six of 37 ctests: daemon isolation and five chaos
+fixtures sent commands while loading and received immediate CLI exit 75. The
+client now retries loading replies with a minimum 250 ms delay until its
+`--timeout`/`CHITTA_CLI_TIMEOUT` budget (seconds; default 300 s). Health/status
+still return loading immediately with exit zero; other commands print the last
+loading reply and exit 75 only when their budget expires. A fake-socket test
+covers both direct and thin clients receiving loading twice then becoming ready.
+Checkpoint validation: build, CLI loading 10/10, Ruff, quick gate and contract
+check pass (`contracts unchanged` after regeneration). Rust tests pass in the
+compute full gate, but CTest passes 34/37: `daemon_isolation_test` still reports
+"queued ledger_op was not applied"; `chaos_lock_test` fails its lock invariant;
+`chaos_disk_test` reports the CLI terminated with SIGABRT. These require diagnosis
+before phase 1 is complete. Full-gate hook checks were still running at checkpoint.
+Logs: `/projects/caeg/scratch/kbd606/tmp/p22finish-53r8d6z0`; detailed CTest
+failures: `chitta/build/Testing/Temporary/LastTest.log`.
+
+The expected public contract change is additive ledger `session_list` filtering
+by `repository` and `stream_id`, with upgraded thread_sessions rows. The generic
+`ledger_op` args schema may leave the captured tool schemas byte-identical;
+regeneration and verification are still required. WAL format and replay are unchanged.
+
 ## Targets retained from the design
 
 | Metric | Required result |

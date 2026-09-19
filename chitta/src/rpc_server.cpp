@@ -36,6 +36,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <chrono>
+#include <cmath>
 #include <nlohmann/json.hpp>
 
 // TOON (Token-Oriented Object Notation) encoder
@@ -356,6 +357,42 @@ void print_usage(const char* prog) {
 enum class OutputFormat { Text, Json, Toon, TextOnly };
 
 // CLI mode: invoke tool directly
+// One loading budget covers schema discovery and the actual CLI request.
+using CliClock = std::chrono::steady_clock;
+static auto cli_timeout = std::chrono::milliseconds(chitta::SocketClient::RESPONSE_TIMEOUT_MS);
+static auto cli_deadline = CliClock::now() + cli_timeout;
+
+static bool wait_for_loading(const nlohmann::json& reply, bool immediate = false) {
+    const auto result = reply.value("result", nlohmann::json::object());
+    const auto state = result.value("structured", nlohmann::json::object());
+    if (immediate || !state.value("loading", false)) return false;
+    const auto now = CliClock::now();
+    if (now >= cli_deadline) return false;
+    const double seconds = std::max(0.25, state.value("retry_after_s", 1.0));
+    const auto delay = std::chrono::duration_cast<CliClock::duration>(std::chrono::duration<double>(seconds));
+    std::this_thread::sleep_until(std::min(cli_deadline, now + delay));
+    return CliClock::now() < cli_deadline;
+}
+
+static std::optional<std::string> cli_request(chitta::SocketClient& client, const std::string& request) {
+    const auto parsed = nlohmann::json::parse(request, nullptr, false);
+    std::string name;
+    if (parsed.is_object()) {
+        name = parsed.value("method", "");
+        if (name == "tools/call") name = parsed.value("params", nlohmann::json::object()).value("name", "");
+    }
+    std::optional<std::string> response;
+    do {
+        auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(cli_deadline - CliClock::now()).count();
+        auto next = client.request(request, static_cast<int>(std::max<int64_t>(1, remaining)));
+        if (!next) return response ? response : next;
+        response = std::move(next);
+        const auto reply = nlohmann::json::parse(*response, nullptr, false);
+        if (!reply.is_object() || !wait_for_loading(reply, name == "health_check" || name == "status")) break;
+    } while (true);
+    return response;
+}
+
 int run_cli(const std::string& socket_path, const std::string& tool,
             int argc, char* argv[], int arg_start, OutputFormat output_format,
             const nlohmann::json& spec) {
@@ -377,6 +414,7 @@ int run_cli(const std::string& socket_path, const std::string& tool,
     for (int i = arg_start; i < argc; ++i) {
         std::string arg = argv[i];
 
+        if (arg == "--timeout" && i + 1 < argc) { ++i; continue; }
         if (arg == "--json" || arg == "--toon" || arg == "--text-only") continue;
         if (arg == "--socket-path" && i + 1 < argc) { ++i; continue; }
         if (arg.rfind("--", 0) == 0) {
@@ -463,7 +501,7 @@ int run_cli(const std::string& socket_path, const std::string& tool,
         {"id", 1}
     };
 
-    auto resp = client.request(tool_req.dump());
+    auto resp = cli_request(client, tool_req.dump());
     if (!resp) {
         std::cerr << "Error: Tool call failed: " << client.last_error() << "\n";
         return 1;
@@ -566,9 +604,10 @@ int run_thin_client(const std::string& socket_path) {
     // Forward requests
     std::string line;
     while (std::getline(std::cin, line)) {
+        cli_deadline = CliClock::now() + cli_timeout;
         if (line.empty()) continue;
 
-        auto response = client.request(line);
+        auto response = cli_request(client, line);
         if (response) {
             std::cout << *response << "\n";
             std::cout.flush();
@@ -597,7 +636,7 @@ int run_thin_client(const std::string& socket_path) {
             std::cerr << "[chitta] Reconnected to daemon\n";
 
             // Retry the request
-            response = client.request(line);
+            response = cli_request(client, line);
             if (response) {
                 std::cout << *response << "\n";
                 std::cout.flush();
@@ -664,6 +703,20 @@ static std::string detect_realm() {
 }
 
 int main(int argc, char* argv[]) {
+    const char* timeout = std::getenv("CHITTA_CLI_TIMEOUT");
+    for (int i = 1; i + 1 < argc; ++i) {
+        if (std::strcmp(argv[i], "--timeout") == 0) timeout = argv[++i];
+    }
+    if (timeout) {
+        char* end = nullptr;
+        double seconds = std::strtod(timeout, &end);
+        if (end == timeout || *end || !std::isfinite(seconds) || seconds <= 0 || seconds > 86400) {
+            std::cerr << "CHITTA_CLI_TIMEOUT must be seconds in (0, 86400]\n";
+            return 2;
+        }
+        cli_timeout = std::chrono::milliseconds(static_cast<int64_t>(seconds * 1000));
+        cli_deadline = CliClock::now() + cli_timeout;
+    }
     if (argc > 1 && std::string(argv[1]) == "endpoints") {
         bool probe = false, json_output = false, local = false;
         std::string teacher_model;
@@ -686,7 +739,7 @@ int main(int argc, char* argv[]) {
             if (client.connect_only()) {
                 nlohmann::json request = {{"jsonrpc", "2.0"}, {"method", "tools/call"}, {"id", 1},
                     {"params", {{"name", "endpoint_list"}, {"arguments", {{"probe", probe}}}}}};
-                auto response = client.request(request.dump());
+                auto response = cli_request(client, request.dump());
                 if (response) {
                     auto result = nlohmann::json::parse(*response, nullptr, false);
                     if (result.contains("result") && result["result"].contains("structured")) report = result["result"]["structured"];
@@ -721,6 +774,8 @@ int main(int argc, char* argv[]) {
             return 0;
         } else if (std::strcmp(argv[i], "--socket-path") == 0 && i + 1 < argc) {
             socket_path = argv[++i];
+        } else if (std::strcmp(argv[i], "--timeout") == 0 && i + 1 < argc) {
+            ++i;
         } else if (std::strcmp(argv[i], "--json") == 0) {
             output_format = OutputFormat::Json;
         } else if (std::strcmp(argv[i], "--toon") == 0) {
@@ -798,7 +853,7 @@ int main(int argc, char* argv[]) {
             std::cout << "Socket: " << socket_path << " (not found)\n";
             return 1;
         }
-        auto health = client.request(json{{"jsonrpc", "2.0"}, {"id", 1},
+        auto health = cli_request(client, json{{"jsonrpc", "2.0"}, {"id", 1},
             {"method", "tools/call"}, {"params", {{"name", "health_check"},
             {"arguments", json::object()}}}}.dump());
         if (health) {
@@ -958,6 +1013,7 @@ int main(int argc, char* argv[]) {
         // Read JSON-RPC from stdin, forward to daemon, write response to stdout
         std::string line;
         while (std::getline(std::cin, line)) {
+        cli_deadline = CliClock::now() + cli_timeout;
             if (line.empty()) continue;
 
             try {
@@ -990,7 +1046,7 @@ int main(int argc, char* argv[]) {
                     daemon_req["method"] = "tools/list";
                     daemon_req["params"] = nlohmann::json::object();
 
-                    auto result_str = client.request(daemon_req.dump());
+                    auto result_str = cli_request(client, daemon_req.dump());
                     if (result_str) {
                         auto daemon_resp = nlohmann::json::parse(*result_str);
                         auto tools = daemon_resp.value("result", nlohmann::json::object()).value("tools", nlohmann::json::array());
@@ -1029,7 +1085,7 @@ int main(int argc, char* argv[]) {
                     daemon_req["params"]["name"] = tool_name;
                     daemon_req["params"]["arguments"] = arguments;
 
-                    auto result_str = client.request(daemon_req.dump());
+                    auto result_str = cli_request(client, daemon_req.dump());
                     if (result_str) {
                         auto daemon_resp = nlohmann::json::parse(*result_str);
                         auto result = daemon_resp.value("result", nlohmann::json::object());
@@ -1067,7 +1123,15 @@ int main(int argc, char* argv[]) {
     // Discover schemas from this daemon; cached help remains available offline.
     if (!tool.empty()) {
         nlohmann::json loading;
-        auto spec = chitta::discover_cli_tool(socket_path, tool, &loading);
+        auto discover = [&] {
+            auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(cli_deadline - CliClock::now()).count();
+            return chitta::discover_cli_tool(socket_path, tool, &loading, static_cast<int>(std::max<int64_t>(1, remaining)));
+        };
+        auto spec = discover();
+        while (!loading.is_null() && wait_for_loading(loading, tool == "health_check" || tool == "status")) {
+            loading = nullptr;
+            spec = discover();
+        }
         if (!loading.is_null()) {
             std::cout << loading["result"]["structured"].dump() << "\n";
             return tool == "health_check" || tool == "status" ? 0 : 75;
