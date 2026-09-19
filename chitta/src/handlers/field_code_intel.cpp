@@ -6,11 +6,13 @@
 namespace chitta {
 
 ToolResult FieldRpcHandler::tool_code_query(const json& params) {
+    if (!code_indexes_ready()) return code_indexes_loading();
     auto result = code_navigation_.query(params);
     if (result.contains("error")) return ToolResult::error(result["error"]);
     return ToolResult::ok(result.value("text", ""), result);
 }
 ToolResult FieldRpcHandler::tool_code_path(const json& params) {
+    if (!code_indexes_ready()) return code_indexes_loading();
     auto result = code_navigation_.path(params);
     if (result.contains("error")) return ToolResult::error(result["error"]);
     return ToolResult::ok(result.value("text", ""), result);
@@ -159,6 +161,7 @@ ToolResult FieldRpcHandler::tool_extract_symbols(const json& params) {
 }
 
 ToolResult FieldRpcHandler::tool_learn_codebase(const json& params) {
+    if (!code_indexes_ready()) return code_indexes_loading();
     const auto index_start = std::chrono::steady_clock::now();
     if (subconscious_) subconscious_->notify_query();
 
@@ -592,6 +595,7 @@ ToolResult FieldRpcHandler::tool_symbol_callees(const json& params) {
 }
 
 ToolResult FieldRpcHandler::tool_read_symbol(const json& params) {
+    if (!code_indexes_ready()) return code_indexes_loading();
     if (params.contains("path") || params.contains("line")) {
         auto result = code_navigation_.read(params);
         if (!result.is_null()) {
@@ -750,6 +754,7 @@ ToolResult FieldRpcHandler::tool_search_symbols(const json& params) {
 }
 
 ToolResult FieldRpcHandler::tool_code_context(const json& params) {
+    if (!code_indexes_ready()) return code_indexes_loading();
     if (!params.value("path", "").empty()) {
         auto navigation = code_navigation_.query(params);
         if (navigation.value("indexed", false)) {
@@ -952,6 +957,7 @@ ToolResult FieldRpcHandler::tool_smart_context(const json& params) {
 }
 
 ToolResult FieldRpcHandler::tool_codebase_overview(const json& params) {
+    if (!code_indexes_ready()) return code_indexes_loading();
     auto navigation = code_navigation_.overview(params);
     if (navigation.value("indexed", false)) return ToolResult::ok(navigation.value("text", ""), navigation);
     std::string project = params.value("project", "");
@@ -1002,6 +1008,7 @@ ToolResult FieldRpcHandler::tool_codebase_overview(const json& params) {
 }
 
 ToolResult FieldRpcHandler::tool_clear_codebase(const json& params) {
+    if (!code_indexes_ready()) return code_indexes_loading();
     std::string project = params.value("project", "");
     if (project.empty()) return ToolResult::error("Project name is required");
 

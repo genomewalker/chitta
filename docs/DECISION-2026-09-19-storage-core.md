@@ -809,3 +809,44 @@ times, quick/contracts, the replica at /projects/caeg/scratch/kbd606/tmp/cpfix01
 and the full gate. Results must be collected before this implementation is
 committed or accepted. Last verified Rust head: a495ecf; parent b2628282 includes
 the merged upstream documentation. No new implementation commit exists yet.
+
+
+## Phase 2a pre-listen index loading (2026-09-19)
+
+The accepted checkpoint implementation is parent fad7672e / field c7a0116
+(the preceding validation-pending note predates that acceptance). This step
+measures each operation between FieldStore construction and normal RPC dispatch,
+including constructor, set_mind_path, handler setup and Subconscious startup.
+The socket retains its existing single responder owner throughout.
+
+Repository and code-navigation sidecars now open on the maintenance thread after
+the normal responder starts serving. Atomic publication gates all code-index
+read and mutation handlers until both opens finish. Those handlers return
+`error=loading`, `phase=code_indexes`, and `retry_after_s=1`. Recall serves its
+memory results and omits optional repository suggestions during index loading.
+No Rust store format or tool schema changes. Background loading still incurs
+the existing parse/rebuild cost and can delay a maintenance-thread shutdown
+join; this change does not establish a shutdown bound during index loading.
+
+`benchmarks/storage/startup_indexes.py` uses eval-replica with the frozen cut
+and a fixed 69,242,781-byte synthetic sidecar (4,096 symbols), since the frozen
+store copy contains no code-navigation sidecar. No live index is read. Control
+job 22916876 measured 2,730 ms from field ready to normal dispatch: repository
+open 464 ms, code-navigation open 2,017 ms, handler construction 184 ms.
+Memory count stayed 134,805. The original control assertion rejected a swap of
+the top two recall results; all five returned IDs were identical. The harness
+now compares nonempty sorted IDs, while preserving full-response equality as
+a separate diagnostic. Deferred replica acceptance in job 22916878 passed: field-ready to serving
+229 ms (down from 2,730 ms); set_mind_path 0 ms; repository/code open
+487/2,029 ms after serving. The raw client observed 69 loading responses before
+a successful code query returned symbols. Memory count remained 134,805; all
+five recall IDs matched before, during and after loading. Recall during loading
+took 665 ms versus 653 ms before restart (warm post-load recall 50 ms). Maximum
+probe duration, including the one recall sample, was 668 ms. This fixture proves
+the scheduling change; it does not reproduce the live index's 19-second cost.
+Job 22916878 passed the quick gate, Rust tests, all 37 C++ tests, and
+contract verification (unchanged). At this thread checkpoint its hook suites
+are still running; full-gate acceptance is pending, not claimed. Logs are under
+/projects/caeg/scratch/kbd606/tmp/p22lazy-g3a14i4h; collect full.log and
+validate-job.log before merging. Shellcheck was unavailable and skipped by
+the quick gate.
