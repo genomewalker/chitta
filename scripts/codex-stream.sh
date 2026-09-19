@@ -72,7 +72,7 @@ context="$S/$name.context.md"
         timeout 25 "$CLI" recall --query "stream=$name handoff $title" --realm chitta --tag handoff --limit 3 --sources false 2>/dev/null | cut -c1-600 || true
     }
     printf '\n## Code map for this task (code_query on the worktree)\n\n'
-    timeout 30 "$CLI" code_query --question "$title" --path "$W" --limit 12 2>/dev/null | head -n 60 || echo "(code_query unavailable; index the worktree with chitta learn_codebase --path $W)"
+    timeout 30 "$CLI" code_query --question "$title" --path "$ROOT" --limit 12 2>/dev/null | head -n 60 || echo "(code_query unavailable; index the worktree with chitta learn_codebase --path $W)"
     printf '\n## Task\n\n'
     cat "$task"
 } > "$context"
