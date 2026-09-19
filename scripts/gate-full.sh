@@ -24,6 +24,8 @@ export LIBRARY_PATH="/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/
 export LD_LIBRARY_PATH="/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/lib:${LD_LIBRARY_PATH:-}"
 CXX_BIN="${CXX:-$(ls /maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/bin/*-g++ 2>/dev/null | head -1)}"
 export CXX="${CXX_BIN:-c++}"
+# Reuse cloned FetchContent sources (scripts/cmake-deps-cache.sh) so a fresh worktree configures in a minute.
+[[ -d "${CHITTA_DEPS_CACHE:-/projects/caeg/scratch/kbd606/tmp/cmake-deps}" ]] && export CHITTA_DEPS_CACHE="${CHITTA_DEPS_CACHE:-/projects/caeg/scratch/kbd606/tmp/cmake-deps}"
 
 step "quick gate"
 bash scripts/gate-quick.sh || fail=1

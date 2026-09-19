@@ -24,6 +24,25 @@ message(STATUS "chitta embed dim: ${CHITTA_EMBED_DIM}")
 
 include(FetchContent)
 
+# A fresh worktree spent 37 minutes in configure cloning the 32 repositories
+# below from a compute node (2026-09-19). CHITTA_DEPS_CACHE names a directory
+# of pre-populated <name>-src trees (scripts/cmake-deps-cache.sh fills it from
+# any configured build); every dependency found there is used as its source
+# and never cloned. Also read from the environment so gates need no flag.
+set(CHITTA_DEPS_CACHE "$ENV{CHITTA_DEPS_CACHE}" CACHE PATH
+    "Directory of <name>-src FetchContent sources reused instead of cloning")
+if(CHITTA_DEPS_CACHE)
+    file(GLOB _chitta_cached_sources LIST_DIRECTORIES true "${CHITTA_DEPS_CACHE}/*-src")
+    foreach(_dir IN LISTS _chitta_cached_sources)
+        get_filename_component(_name "${_dir}" NAME)
+        string(REGEX REPLACE "-src$" "" _name "${_name}")
+        string(TOUPPER "${_name}" _upper)
+        set(FETCHCONTENT_SOURCE_DIR_${_upper} "${_dir}")
+    endforeach()
+    list(LENGTH _chitta_cached_sources _chitta_cached_count)
+    message(STATUS "FetchContent sources from ${CHITTA_DEPS_CACHE}: ${_chitta_cached_count}")
+endif()
+
 # CRoaring - compressed bitmaps for tag indices (100M+ scale)
 FetchContent_Declare(
     roaring

@@ -65,6 +65,11 @@ bash scripts/dev-install.sh
   default since 2026-09-17: chitta economises context, it never refuses work.
 - `install`, never `cp`: `cp` over a running binary gives ETXTBSY. `install` is an
   atomic rename.
+- **Fresh build dir: set `CHITTA_DEPS_CACHE`** (default in the gates:
+  `/projects/caeg/scratch/kbd606/tmp/cmake-deps`). Configure otherwise clones
+  32 FetchContent repositories (roaring, tree-sitter, 30 grammars): 37 min from
+  a compute node on 2026-09-19. `scripts/cmake-deps-cache.sh` fills the cache
+  from any configured build; with it a worktree configures in about a minute.
 - `chitta_hintd` exists only in a `CHITTA_WITH_LLAMA_CPP=ON` build.
 - **Never `pkill` the `--http` MCP process.** Codex connects to it on port 9481;
   SIGTERM reads as a clean exit, so `Restart=on-failure` won't revive it — that
