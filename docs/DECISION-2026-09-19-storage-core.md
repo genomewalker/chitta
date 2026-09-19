@@ -1,6 +1,6 @@
 # Storage core baseline and runtime design review
 
-Status as of 2026-09-19: **live since 15:23Z: phases 1, 2b, replay per-record fix (64470dbc, store a495ecf) and 1.3 s shutdown (27c6556a); next: checkpoints, triplet clean marker, lazy code index, deferred index repair, section-lazy snapshot.**
+Status as of 2026-09-19: **live since 16:29Z (main fad7672e, store c7a0116): first answer 8.4 s, healthy 47.9 s on a 13 MB WAL; replay 0.4 s, all sidecar caches hit; remaining: pre-listen 21 s, snapshot decode 8.5 s, other load phases about 9 s.**
 The governing design is [Runtime and storage core](DESIGN-2026-09-19-runtime-core.md)
 v2, merged from origin/main (`e7ae2aaa`) in `2683c9e0`. The WAL-vanish
 baseline is chitta-field `ec22685`. Complete the baseline before phase 1;
