@@ -174,8 +174,17 @@ sedi "s/^version = \"[^\"]*\"/version = \"$NEW_VERSION\"/" \
 
 # Update docs/index.html badge
 echo "Updating docs/index.html badge..."
-sedi "s/Unreleased + v[0-9]*\.[0-9]*\.[0-9]*/v$NEW_VERSION/g; s/Status as of [0-9-]* · /Status as of $(date +%F) · /g" \
-    docs/index.html
+# Site: the shared chrome comes from scripts/site_common.py (STATUS_DATE, version from
+# CHANGELOG.md); stamp today's date, re-sync every page, then align in-page stamps.
+sedi "s/^STATUS_DATE = '[0-9-]*'/STATUS_DATE = '$(date +%F)'/" scripts/site_common.py
+python3 scripts/sync-site-chrome.py > /dev/null || { echo "site chrome sync failed"; exit 1; }
+for page in docs/*.html docs/vedanta/index.html; do
+    sedi -E "s/Status as of 20[0-9]{2}-[0-9]{2}-[0-9]{2}/Status as of $(date +%F)/g" "$page"
+done
+
+# The contract snapshot carries plugin.json's version: regenerate it with the bump.
+echo "Regenerating contracts/ for the new version..."
+bash scripts/contract-snapshot.sh write > /dev/null || { echo "contract snapshot failed"; exit 1; }
 
 # Verify updates
 grep -q "\"$NEW_VERSION\"" chitta/include/chitta/version.hpp || { echo "version.hpp update failed"; exit 1; }
@@ -186,7 +195,7 @@ grep -q "v$NEW_VERSION" docs/index.html || { echo "docs/index.html update failed
 
 # Commit version bump
 echo "Committing version bump..."
-git add chitta/include/chitta/version.hpp .claude-plugin/plugin.json codex-plugin/.codex-plugin/plugin.json codex-plugin/skills chitta-mcp/pyproject.toml docs/index.html
+git add contracts docs/*.html docs/vedanta/index.html scripts/site_common.py chitta/include/chitta/version.hpp .claude-plugin/plugin.json codex-plugin/.codex-plugin/plugin.json codex-plugin/skills chitta-mcp/pyproject.toml docs/index.html
 git commit -m "chore: bump version to $NEW_VERSION"
 
 # Create and push tag
