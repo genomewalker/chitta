@@ -1,6 +1,6 @@
 # Storage core baseline and runtime design review
 
-Status as of 2026-09-19: **phase 1 merged (afda805e) and live since 09:18Z; phase 2b authorised.**
+Status as of 2026-09-19: **phase 2b accepted and merged (6585592f, store 07897d8): July reopen 49.7 s to 6 ms; deploy pending; phase 2a authorised.**
 The governing design is [Runtime and storage core](DESIGN-2026-09-19-runtime-core.md)
 v2, merged from origin/main (`e7ae2aaa`) in `2683c9e0`. The WAL-vanish
 baseline is chitta-field `ec22685`. Complete the baseline before phase 1;
