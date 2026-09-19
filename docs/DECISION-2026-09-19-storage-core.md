@@ -1009,8 +1009,11 @@ All saved query IDs, including the first recall, match the eager report at
 (8,619 ms), with its native preparation taking 8,295 ms. Three consecutive
 Rust runs passed 319 tests each (two ignored), including racing cache mutations,
 invalidated cache plans, corrupt-cache fallback and optional-work cancellation.
-Quick gate passes and contracts are unchanged. Full-gate evidence remains in
-`p22publish-dthr6v_b`; the strengthened reference check is job 22916911.
+Quick gate passes and contracts are unchanged. Job 22916906 completed its full
+gate: 37/37 C++ tests and 41 hook suites passed (`p22publish-dthr6v_b`).
+The separate strengthened reference check, job 22916911, failed: two saved
+queries had empty result sets. Matching those sets does not demonstrate
+positive recall coverage.
 
 **The staged-publication acceptance is still failing:** 6.44 s exceeds the 3 s
 store-ready target and 7.11 s exceeds the 5 s first-recall target. This is the
@@ -1026,3 +1029,33 @@ missing publication phases cannot pass just because startup becomes faster.
 Remaining durable-section publication requires an explicit readiness barrier,
 ordered WAL application to deferred sections, guarded side-effect draining and
 checkpoint/span-flush protection, as described in the dependency audit above.
+
+
+### Consume-once section publication checkpoint (2026-09-19)
+
+The mapped decoder now publishes a selected group only once. All bodies in a
+selected group must decode successfully before any member is applied; duplicate
+sections retain file order. A later decode/finish cannot overwrite a section
+already changed by replay. The triplet body and clean marker form one group
+because they modify the same destination. State sanitization runs when states
+publish, not again after replay. Three regression tests exercise replay-update
+preservation, duplicate triplet ordering, and corrupt-group atomicity. This is
+the decoder prerequisite; production still waits for the remaining durable
+sections. It does not meet the early-readiness acceptance by itself.
+
+The benchmark now sends `no_learn=true` and records its recall parameters, so
+its own queries do not train the store between measurements. Saved references
+must match those parameters and query names. Diagnostic job 22916916 returned
+five stable IDs before/after restart for each of `storage persistence`,
+`WAL replay`, and `snapshot checkpoint`; those are the required positive probes.
+`session handoff` and `memory recall` remain parity probes for empty results.
+The diagnostic (seven queries total) exited 1 under the deliberately strict
+all-positive check: three queries were empty. Its measured 7.29 s ready /
+7.98 s first recall and 134,805 memories describe the existing Turbo build,
+not a new publication speedup. Logs: `p22once-t4r7jlp5/probes`.
+
+Validation job 22916915 passed: Rust 322/322 three consecutive runs (two
+ignored each), quick gate PASS, contracts unchanged. Full gate 22916918 is
+pending; it runs on the rebuilt library after that successful validation. A fresh eager reference
+with the recorded non-learning parameters is still required for final
+acceptance. Existing saved reports cannot serve as that reference.

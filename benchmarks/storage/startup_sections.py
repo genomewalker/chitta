@@ -16,7 +16,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRATCH = Path("/projects/caeg/scratch/kbd606/tmp")
-QUERIES = ("storage persistence", "session handoff", "memory recall")
+POSITIVE_QUERIES = ("storage persistence", "WAL replay", "snapshot checkpoint")
+QUERIES = POSITIVE_QUERIES + ("session handoff", "memory recall")
+RECALL_PARAMETERS = {"limit": 5, "sources": False, "no_learn": True}
 
 
 def main():
@@ -36,8 +38,10 @@ def main():
     reference = json.loads(args.reference.read_text()) if args.reference else None
     if reference is not None and (
             reference.get("memory_count_after") != args.expected_memory_count
-            or any(not reference.get("recall_ids_after", {}).get(q) for q in QUERIES)):
-        parser.error("reference must contain the expected memory count and nonempty IDs for every query")
+            or reference.get("recall_parameters") != RECALL_PARAMETERS
+            or set(reference.get("recall_ids_after", {})) != set(QUERIES)
+            or any(not reference["recall_ids_after"][q] for q in POSITIVE_QUERIES)):
+        parser.error("reference must use identical recall parameters and queries, with expected memory count and nonempty positive probes")
     out = args.output.absolute()
     if not out.is_relative_to(SCRATCH) or out.exists():
         parser.error("output must be a new directory under project scratch")
@@ -53,7 +57,8 @@ def main():
                CHITTA_RECALL_EMBED_WAIT_MS="10000", CHITTA_PROFILE_SNAPSHOT="1",
                OPENBLAS_NUM_THREADS="1", OMP_NUM_THREADS="1", MKL_NUM_THREADS="1",
                RAYON_NUM_THREADS="1")
-    report = {"mind": str(mind), "host": socket.gethostname(), "loading_samples": 0}
+    report = {"mind": str(mind), "host": socket.gethostname(), "loading_samples": 0,
+              "recall_parameters": RECALL_PARAMETERS}
 
     def rpc(name, arguments=None):
         address = next((mind / "run/chitta").glob("*.sock"))
@@ -73,7 +78,7 @@ def main():
                            stdout=log, stderr=subprocess.STDOUT, timeout=1900, check=True)
 
     def recall_ids(query):
-        result = rpc("recall", {"query": query, "limit": 5, "sources": False})
+        result = rpc("recall", {"query": query, **RECALL_PARAMETERS})
         if "results" not in result:
             raise RuntimeError("recall did not return results: " + json.dumps(result))
         return sorted(item["id"] for item in result["results"])
@@ -136,7 +141,7 @@ def main():
         report["recall_ids_after"] = {q: recall_ids(q) for q in QUERIES}
         report["content_equal"] = (
             report["memory_count_before"] == report["memory_count_after"] == args.expected_memory_count
-            and bool(report["recall_ids_before"][QUERIES[0]])
+            and all(report["recall_ids_before"][q] for q in POSITIVE_QUERIES)
             and report["recall_ids_before"] == report["recall_ids_after"]
             and report["first_recall_ids"] == report["recall_ids_before"][QUERIES[0]])
         daemon_log = (mind / "replica.log").read_text(errors="replace")
