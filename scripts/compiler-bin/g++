@@ -2,7 +2,40 @@
 # CXX must be a single executable for shell and Python hook fixtures.
 set -eu
 compiler="${CHITTA_CXX_COMPILER:-/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/bin/x86_64-conda-linux-gnu-g++}"
-if [[ "${CHITTA_CACHE:-1}" == 1 && -n "${CCACHE_DIR:-}" ]] && command -v ccache >/dev/null; then
+if [[ "${CHITTA_CACHE:-1}" != 1 || -z "${CCACHE_DIR:-}" ]] || ! command -v ccache >/dev/null; then
+    exec "$compiler" "$@"
+fi
+# ccache does not cache compile-and-link calls. Split only the simple,
+# single-source form used by fixtures; unfamiliar options use the compiler.
+args=("$@")
+compile=() link=() source= output= supported=1
+for ((i=0; i<${#args[@]}; i++)); do
+    arg="${args[i]}"
+    case "$arg" in
+        -c|-E|-S) exec ccache "$compiler" "$@" ;;
+        -o)
+            i=$((i+1))
+            if ((i>=${#args[@]})); then supported=0; break; fi
+            output="${args[i]}"; link+=(-o "$output") ;;
+        *.cpp|*.cc|*.cxx)
+            [[ -z "$source" ]] || supported=0
+            source="$arg"; compile+=("$arg"); link+=("__CHITTA_OBJECT__") ;;
+        -I|-D|-U|-L|-l|-isystem|-iquote)
+            i=$((i+1))
+            if ((i>=${#args[@]})); then supported=0; break; fi
+            compile+=("$arg" "${args[i]}"); link+=("$arg" "${args[i]}") ;;
+        -std=*|-O[0123gs]|-O|-g|-g[0123]|-pthread|-I?*|-D?*|-U?*|-L?*|-l?*)
+            compile+=("$arg"); link+=("$arg") ;;
+        *) supported=0 ;;
+    esac
+done
+if [[ "$supported" != 1 || -z "$source" || -z "$output" ]]; then
     exec ccache "$compiler" "$@"
 fi
-exec "$compiler" "$@"
+object=$(mktemp "${TMPDIR:-/tmp}/ccobj.XXXXXX.o")
+# The private runtime directory owns temporary objects and its cleanup.
+ccache "$compiler" "${compile[@]}" -c -o "$object"
+for ((i=0; i<${#link[@]}; i++)); do
+    [[ "${link[i]}" != __CHITTA_OBJECT__ ]] || link[i]="$object"
+done
+"$compiler" "${link[@]}"

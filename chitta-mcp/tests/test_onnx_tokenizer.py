@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import builtins
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -12,6 +13,10 @@ from unittest import mock
 from recall_gateway import RERANK_MAX_LEN, OnnxReranker
 
 
+@unittest.skipUnless(
+    os.environ.get("CHITTA_SLOW_TESTS") == "1",
+    "imports transformers (about 10 s); gate-full sets CHITTA_SLOW_TESTS=1",
+)
 class NativeTokenizerTests(unittest.TestCase):
     def test_exported_pairs_match_transformers_without_framework_imports(self):
         try:

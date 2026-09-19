@@ -448,3 +448,32 @@ available as g++ on PATH. CMake uses the real compiler plus its existing launche
 to avoid applying ccache twice. Full gate initializes caches before spawning
 native and hook stages, and prints counters before and after hooks. No hook test
 sources, optimization flags, or test parallelism are changed.
+
+
+### Resume after main v5.73.0 (2026-09-19)
+
+The saved 5c32c4be fresh-output warm gate passed in 1536 s on dandycmpn22fl:
+quick 64, Rust release 272, Rust tests including compilation 301, configure 32,
+C++ 160, CTest 24. The focused hook run still took 656 s warm. Logs are retained
+under `/projects/caeg/scratch/kbd606/tmp/agent_vqexmuuq`.
+This is a passing gate, but it fails the 600 s performance target.
+
+The initial executable wrapper was insufficient: fixture invocations combine
+compilation and linking, which ccache classifies as a link call. The wrapper now
+splits supported single-source invocations into cached object compilation and
+ordinary linking. It preserves source paths, flag values and link argument order;
+unknown flags and multiple sources fall back unchanged. Temporary objects remain
+in the private runtime directory. Hook sources and optimization flags are unchanged.
+The next same-node prime/warm measurement is job 22916937, with logs under
+`/projects/caeg/scratch/kbd606/tmp/agent_djZgaH`.
+
+The incoming main submodule adds InstanceLock::drop with explicit LOCK_UN, which
+releases locks even while forked children retain an inherited descriptor. This
+addresses a plausible cause of the previously observed self-holder reopen race;
+a passing rerun alone is not proof that the historical failure had that cause.
+
+Merging origin/main 47970ed7 exposes existing release-check failures: the tracked
+plugin contract records 5.72.0 while the manifest records 5.73.0; the site footer
+checker also rejects the release footer/version/date inconsistencies. These are
+retained failures, not cache fallback or skipped coverage. The contract snapshot
+is outside this stream's write scope and has not been regenerated.

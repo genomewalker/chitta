@@ -15,7 +15,7 @@ fail=0
 run() { chitta_stage "$@" || fail=1; }
 printf 'full gate node=%s logs=%s\n' "$(hostname -s)" "$GATE_TMP"
 # Keep nested timings and diagnostics distinct.
-run quick env GATE_TMP="$GATE_TMP/quick" bash scripts/gate-quick.sh
+run quick env CHITTA_SLOW_TESTS=1 GATE_TMP="$GATE_TMP/quick" bash scripts/gate-quick.sh
 run native bash scripts/build.sh --tests
 # Surface native step verdicts and cache counters in the outer gate log too.
 grep -E '^(PASS:|FAIL:|cache statistics:|Cache hits|Cache misses|Cache location|[[:space:]]+Hits:|[[:space:]]+Misses:)' "$GATE_TMP/native.log" || true

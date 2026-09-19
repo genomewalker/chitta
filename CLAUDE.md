@@ -46,6 +46,7 @@ Status as of 2026-09-19: source `scripts/build-env.sh`; use `bash scripts/build.
 Cache policy, gate logs and nightly scheduling: [build cache design](docs/DESIGN-2026-09-19-build-cache.md).
 
 ```bash
+(cd chitta-field && ./build.sh build --release)   # the C++ build links the .a as is; it never rebuilds the store
 cd chitta && cmake --build build --parallel
 install -m 0755 ../bin/chittad ~/.claude/bin/chittad
 install -m 0755 ../bin/chitta  ~/.claude/bin/chitta
