@@ -1,6 +1,7 @@
 #pragma once
 #include <chitta/hook_compact_policy.hpp>
 #include <chitta/hook_saddle_policy.hpp>
+#include <chitta/prompt_fusion.hpp>
 
 namespace chitta::hook_policy {
 inline std::string one_line(std::string value) {
@@ -499,17 +500,17 @@ inline json prompt_finish(const json& a, json p, const json& admitted, const Inv
         if (since >= store_interval * 2 && hints.find("DISCIPLINE") != std::string::npos)
             add("[DISCIPLINE] " + std::to_string(since) +
                 " turns without storing — call remember/learn/milestone NOW");
-        auto tags = [](const std::string& text) {
-            std::vector<std::string> rows;
+        // Keyed hits carry the record inline; fuzzy hits must clear the
+        // correction lane's OWN relevance, not the hybrid lane's (an unrelated
+        // 87% decision used to open the gate for 47% corrections).
+        std::string correction;
+        if (corrk.rfind("CORRECTION FIRED", 0) == 0) {
             const std::regex re(R"(\[correction\][^|\n]+)");
-            for (auto i = std::sregex_iterator(text.begin(), text.end(), re);
-                 i != std::sregex_iterator() && rows.size() < 3; ++i)
-                rows.push_back(i->str());
-            return prompt_policy::prefix(joined(rows, " ") + (rows.empty() ? "" : " "), 400);
-        };
-        auto correction = corrk.rfind("CORRECTION FIRED", 0) == 0 ? tags(corrk) : "";
-        if (correction.empty() && !corr.empty() && number(retrieval, "c2_pct") >= 81)
-            correction = tags(corr);
+            std::smatch match;
+            if (std::regex_search(corrk, match, re)) correction = prompt_policy::prefix(match[0].str() + " ", 400);
+        }
+        if (correction.empty() && !corr.empty() && std::atoi(prompt_policy::c2_from_text(corr).c_str()) >= 81)
+            correction = prompt_policy::correction_rows(corr);
         if (!correction.empty()) add("CORRECTION: " + correction);
         if (!cache.empty() && count > 0 && !output.empty()) {
             std::vector<std::string> facts;
