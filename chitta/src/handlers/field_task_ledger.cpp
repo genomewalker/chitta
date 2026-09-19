@@ -87,7 +87,10 @@ ToolResult FieldRpcHandler::tool_ledger_op(const json& params) {
         // Stream ownership uses the ledger's atomic, WAL-backed lease transaction.
         // Names are prefixed so ordinary conversational threads cannot collide.
         if (op == "stream_claim" || op == "stream_release" || op == "stream_list") {
-            const auto name = args.value("stream", "");
+            auto name = args.value("stream", "");
+            // Release callers may already hold the ledger thread ID.
+            if (op == "stream_release" && name.rfind("stream:", 0) == 0)
+                name.erase(0, 7);
             if (op != "stream_list" && name.empty())
                 return ToolResult::error("stream is required");
             const auto tid = "stream:" + name;
@@ -109,8 +112,9 @@ ToolResult FieldRpcHandler::tool_ledger_op(const json& params) {
             const auto sid = args.at("session_id").get<std::string>();
             if (sid.empty()) return ToolResult::error("session_id is required");
             if (op == "stream_release") {
-                const auto released = run("lease_release", {{"thread_id", tid}, {"session_id", sid}});
-                if (released == true)
+                const bool released = run("lease_release", {
+                    {"thread_id", tid}, {"session_id", sid}}).get<bool>();
+                if (released)
                     invoke("session_heartbeat", {{"session_id", sid}, {"metadata", {{"stream_claim", nullptr}}}});
                 return ok({{"released", released}});
             }

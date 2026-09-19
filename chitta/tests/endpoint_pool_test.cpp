@@ -10,7 +10,7 @@ struct Server {
     int fd;
     std::string url;
     std::atomic<bool> stop{false}, down{false}, malformed{false}, tags_only{false};
-    std::atomic<int> delay_ms{0}, probes{0}, generates{0}, waiting{0};
+    std::atomic<int> delay_ms{0}, probes{0}, generates{0}, waiting{0}, metrics_count{0};
     std::vector<std::string> models;
     std::thread worker;
     explicit Server(std::vector<std::string> names) : models(std::move(names)) {
@@ -36,6 +36,7 @@ struct Server {
                 bool generate = text.find("/api/generate") != std::string::npos;
                 bool metrics = text.find("/metrics") != std::string::npos;
                 bool chat = text.find("/v1/chat/completions") != std::string::npos;
+                if (metrics) ++metrics_count;
                 if (generate || metrics) std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms.load()));
                 bool ok = !down && !(tags_only && text.find("/v1/models") != std::string::npos);
                 nlohmann::json data = nlohmann::json::array();
@@ -43,7 +44,7 @@ struct Server {
                 std::string body = nlohmann::json{{tags || ps ? "models" : "data", data}}.dump();
                 if (generate) { ++generates; body = R"({"done":true,"response":"x","eval_count":1})"; }
                 if (chat) body = R"({"choices":[{"message":{"content":"ok"}}],"usage":{"completion_tokens":2}})";
-                if (metrics) body = "vllm:num_requests_running{model=\"shared\"} 0\nvllm:num_requests_waiting{model=\"shared\"} " + std::to_string(waiting.load()) + "\nvllm:gpu_cache_usage_perc 0.2\n";
+                if (metrics) body = "unrelated_metric{label=\"text with spaces\"} 1\n# HELP ignored\nvllm:num_requests_running{model=\"shared\"} 0\nvllm:num_requests_waiting{model=\"shared\"} " + std::to_string(waiting.load()) + "\nvllm:gpu_cache_usage_perc 0.2\n";
                 if (malformed) body = "invalid JSON";
                 std::string response = std::string("HTTP/1.1 ") + (ok ? "200 OK" : "503 Unavailable") +
                     "\r\nContent-Type: application/json\r\nContent-Length: " + std::to_string(body.size()) +
@@ -146,6 +147,53 @@ int main() {
     report = refresh(); assert(row(report, rtx.url)["state"] == "busy");
     rtx.waiting = 0; report = refresh(); assert(row(report, rtx.url)["state"] == "busy");
     report = refresh(); assert(row(report, rtx.url)["state"] == "idle");
+    // Saturated vLLM must only use metrics, and all endpoints share a parallel deadline.
+    int generations = rtx.generates;
+    std::ofstream(dir / "slurm.json") << nlohmann::json{{"url",slurm.url}, {"kind","vllm"}, {"label","slurm"}};
+    refresh();
+    setenv("CHITTA_ROUTER_PROBE_TIMEOUT_MS", "250", 1);
+    rtx.delay_ms = 1200; slurm.delay_ms = 1200;
+    int metrics_before = rtx.metrics_count;
+    auto stalled = std::async(std::launch::async, refresh);
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while (rtx.metrics_count == metrics_before && std::chrono::steady_clock::now() < deadline)
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    assert(rtx.metrics_count > metrics_before);
+    auto inventory_start = std::chrono::steady_clock::now();
+    chitta::endpoint_list();
+    auto inventory_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - inventory_start).count();
+    assert(inventory_ms < 100); // The probe cannot own the inventory mutex.
+    report = stalled.get();
+    for (int i = 0; i < 4; ++i) {
+        auto probe_start = std::chrono::steady_clock::now();
+        report = refresh();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - probe_start).count();
+        assert(elapsed < 450); // Sequential probing would take at least 500 ms.
+        assert(row(report, rtx.url)["state"] == "busy");
+        assert(row(report, slurm.url)["state"] == "busy");
+        std::cout << "stalled pair probe_ms=" << elapsed << " inventory_ms=" << inventory_ms << "\n";
+    }
+    assert(rtx.generates == generations);
+    rtx.delay_ms = 0; slurm.delay_ms = 0;
+    std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+    setenv("CHITTA_ROUTER_PROBE_TIMEOUT_MS", "3000", 1);
+    refresh(); refresh();
+    // Discovery can execute only this private stub, and only on exact opt-in.
+    auto stub = dir / "chitta-gpu", marker = dir / "started";
+    std::ofstream(stub) << "#!/bin/sh\nprintf started > '" << marker.string() << "'\n";
+    std::filesystem::permissions(stub, std::filesystem::perms::owner_all);
+    std::string path = dir.string() + ":" + std::getenv("PATH");
+    setenv("PATH", path.c_str(), 1);
+    unsetenv("CHITTA_GPU_AUTOSTART");
+    chitta::discover_gpu_endpoint("teacher", "absent", nullptr, true);
+    assert(!std::filesystem::exists(marker));
+    setenv("CHITTA_GPU_AUTOSTART", "true", 1);
+    chitta::discover_gpu_endpoint("teacher", "absent", nullptr, true);
+    assert(!std::filesystem::exists(marker));
+    setenv("CHITTA_GPU_AUTOSTART", "1", 1);
+    chitta::discover_gpu_endpoint("teacher", "absent", nullptr, true);
+    assert(std::filesystem::exists(marker));
+    unsetenv("CHITTA_GPU_AUTOSTART");
     rtx.malformed = true; refresh(); refresh(); report = refresh();
     assert(row(report, rtx.url)["state"] == "down");
     std::cout << "endpoint_pool_test PASS: model/role, capacity/priority, background reroute, batch resume, cap, budget, hysteresis, failure, tags, metrics\n";

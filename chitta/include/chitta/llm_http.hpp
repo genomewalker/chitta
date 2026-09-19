@@ -79,7 +79,9 @@ inline std::string sanitize_utf8(const std::string& input) {
 // Fork/exec a command, capture stdout, return output (with timeout)
 inline std::string fork_exec_capture(const std::vector<std::string>& args,
                                       int timeout_secs = 5,
-                                      const std::string& stdin_data = "") {
+                                      const std::string& stdin_data = "",
+                                      int timeout_ms = 0, bool* timed_out = nullptr) {
+    if (timed_out) *timed_out = false;
     int stdout_pipe[2];
     if (pipe(stdout_pipe) < 0) return "";
 
@@ -141,7 +143,9 @@ inline std::string fork_exec_capture(const std::vector<std::string>& args,
     bool finished = false;
     while (!finished) {
         auto elapsed = std::chrono::steady_clock::now() - start;
-        if (std::chrono::duration_cast<std::chrono::seconds>(elapsed).count() >= timeout_secs) {
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count() >=
+            (timeout_ms > 0 ? timeout_ms : int64_t(timeout_secs) * 1000)) {
+            if (timed_out) *timed_out = true;
             kill(pid, SIGKILL);
             waitpid(pid, nullptr, 0);
             close(stdout_pipe[0]);
@@ -149,14 +153,21 @@ inline std::string fork_exec_capture(const std::vector<std::string>& args,
         }
         int status;
         int result = waitpid(pid, &status, WNOHANG);
-        if (result != 0) finished = true;
+        if (result != 0) {
+            finished = true;
+            if (result > 0 && timed_out && WIFEXITED(status) && WEXITSTATUS(status) == 28)
+                *timed_out = true; // curl's deadline expired.
+        }
 
         ssize_t n;
-        while ((n = read(stdout_pipe[0], buf.data(), buf.size())) > 0)
+        while ((n = read(stdout_pipe[0], buf.data(), buf.size())) > 0) {
             output.append(buf.data(), n);
+            if (std::chrono::steady_clock::now() - start >= std::chrono::milliseconds(
+                    timeout_ms > 0 ? timeout_ms : int64_t(timeout_secs) * 1000)) break;
+        }
 
         if (!finished)
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            std::this_thread::sleep_for(std::chrono::milliseconds(timeout_ms > 0 ? 5 : 50));
     }
     ssize_t n;
     while ((n = read(stdout_pipe[0], buf.data(), buf.size())) > 0)
@@ -256,11 +267,33 @@ inline std::vector<LlmEndpoint> declared_endpoints() {
     return out;
 }
 
-inline void probe_endpoint_models(LlmEndpoint& ep) {
+inline int router_probe_timeout_ms() {
+    try { if (const char* v = std::getenv("CHITTA_ROUTER_PROBE_TIMEOUT_MS")) return std::max(1, std::stoi(v)); }
+    catch (...) {}
+    return 3000;
+}
+
+// One deadline covers model discovery and load sampling, including fallbacks.
+struct RouterProbe {
+    std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::now() +
+        std::chrono::milliseconds(router_probe_timeout_ms());
+    bool timed_out = false;
+    std::string fetch(const std::string& url, std::vector<std::string> extra = {}) {
+        auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
+            deadline - std::chrono::steady_clock::now()).count();
+        if (remaining <= 0 || timed_out) { timed_out = true; return ""; }
+        std::vector<std::string> args{"curl", "-fsS", "--max-time", std::to_string(remaining / 1000.0)};
+        args.insert(args.end(), extra.begin(), extra.end()); args.push_back(url);
+        return fork_exec_capture(args, 0, "", static_cast<int>(remaining), &timed_out);
+    }
+};
+
+inline void probe_endpoint_models(LlmEndpoint& ep, RouterProbe& probe) {
+    auto previous = ep;
     ep.reachable = false; ep.models.clear();
     const auto start = std::chrono::steady_clock::now();
     auto fetch = [&](const std::string& path, const std::string& array, const std::string& key) {
-        auto raw = fork_exec_capture({"curl", "-fsS", "--max-time", "3", ep.url + path}, 5);
+        auto raw = probe.fetch(ep.url + path);
         try {
             auto j = nlohmann::json::parse(raw);
             if (!j.contains(array) || !j[array].is_array()) return false;
@@ -272,7 +305,12 @@ inline void probe_endpoint_models(LlmEndpoint& ep) {
     };
     ep.reachable = fetch("/v1/models", "data", "id");
     if (!ep.reachable && ep.kind == "ollama") ep.reachable = fetch("/api/tags", "models", "name");
+    if (probe.timed_out) { ep.reachable = previous.reachable; ep.models = std::move(previous.models); }
     ep.latency_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
+}
+
+inline void probe_endpoint_models(LlmEndpoint& ep) {
+    RouterProbe probe; probe_endpoint_models(ep, probe);
 }
 
 inline bool probe_endpoint(const std::string& url) {
@@ -304,15 +342,15 @@ inline std::string router_label_key(const std::string& prefix, const std::string
     return key;
 }
 struct EndpointLoad {
-    bool ok = false;
+    bool ok = false, timed_out = false;
     double latency = 0, running = 0, waiting = 0, gpu = 0;
     std::string mode;
 };
-inline EndpointLoad probe_endpoint_load(const LlmEndpoint& ep) {
+inline EndpointLoad probe_endpoint_load(const LlmEndpoint& ep, RouterProbe& probe) {
     EndpointLoad out;
     auto start = std::chrono::steady_clock::now();
     auto fetch = [&](const std::string& path) {
-        return fork_exec_capture({"curl", "-fsS", "--max-time", "3", ep.url + path}, 4);
+        return probe.fetch(ep.url + path);
     };
     try {
         if (ep.kind == "vllm") {
@@ -322,6 +360,8 @@ inline EndpointLoad probe_endpoint_load(const LlmEndpoint& ep) {
                 if (line.empty() || line[0] == '#') continue;
                 auto split = line.find_first_of("{ ");
                 auto name = line.substr(0, split);
+                if (name != "vllm:num_requests_running" && name != "vllm:num_requests_waiting" &&
+                    name != "vllm:gpu_cache_usage_perc" && name != "vllm:kv_cache_usage_perc") continue;
                 auto end = line.find('}');
                 auto value = std::stod(line.substr(end == std::string::npos ? split : end + 1));
                 if (name == "vllm:num_requests_running") { out.running += value; seen = true; }
@@ -341,9 +381,8 @@ inline EndpointLoad probe_endpoint_load(const LlmEndpoint& ep) {
             if (!model.empty()) {
                 nlohmann::json request = {{"model", model}, {"prompt", "Hi"}, {"stream", false},
                     {"think", false}, {"options", {{"num_predict", 1}, {"temperature", 0}}}};
-                start = std::chrono::steady_clock::now();
-                auto raw = fork_exec_capture({"curl", "-fsS", "--max-time", "3", "-H", "Content-Type: application/json",
-                    "-d", request.dump(), ep.url + "/api/generate"}, 4);
+                auto raw = probe.fetch(ep.url + "/api/generate", {"-H", "Content-Type: application/json",
+                    "-d", request.dump()});
                 auto response = nlohmann::json::parse(raw);
                 out.ok = response.value("done", false) && !response.contains("error");
             } else out.ok = true;
@@ -353,8 +392,13 @@ inline EndpointLoad probe_endpoint_load(const LlmEndpoint& ep) {
             out.ok = response.contains("data"); out.mode = "models";
         }
     } catch (...) {}
+    out.timed_out = probe.timed_out;
     out.latency = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
     return out;
+}
+
+inline EndpointLoad probe_endpoint_load(const LlmEndpoint& ep) {
+    RouterProbe probe; return probe_endpoint_load(ep, probe);
 }
 
 class EndpointRouter {
@@ -400,10 +444,12 @@ class EndpointRouter {
             for (auto ep : endpoints) {
                 auto prior = old.find(ep.url);
                 bool models_due = forced || prior == old.end() || prior->second.failed > 0 || started - prior->second.models_at >= std::chrono::seconds(endpoint_ttl_s());
-                if (!models_due) { ep.models = prior->second.ep.models; ep.reachable = prior->second.ep.reachable; ep.latency_ms = prior->second.ep.latency_ms; }
+                if (prior != old.end()) { ep.models = prior->second.ep.models; ep.reachable = prior->second.ep.reachable; ep.latency_ms = prior->second.ep.latency_ms; }
                 probes.push_back(std::async(std::launch::async, [ep, models_due]() mutable {
-                    if (models_due) probe_endpoint_models(ep);
-                    return std::make_pair(ep, probe_endpoint_load(ep));
+                    RouterProbe probe;
+                    if (models_due) probe_endpoint_models(ep, probe);
+                    auto load = probe_endpoint_load(ep, probe);
+                    return std::make_pair(ep, load);
                 }));
             }
             std::vector<std::pair<LlmEndpoint, EndpointLoad>> results;
@@ -418,7 +464,9 @@ class EndpointRouter {
                 s.ep = ep;
                 if (models_due) s.models_at = started;
                 if (fresh) s.tokens = budget(s);
-                if (!load.ok || !ep.reachable) {
+                if (load.timed_out) {
+                    s.failed = 0; s.good = 0; s.busy = true;
+                } else if (!load.ok || !ep.reachable) {
                     ++s.failed; s.good = 0;
                     if (s.failed >= 3) s.ep.reachable = false;
                     // A timed-out generate is also a saturation signal immediately.
@@ -429,7 +477,8 @@ class EndpointRouter {
                         s.baseline = std::max(1.0, load.latency); s.ewma = load.latency;
                     }
                     s.ewma = .3 * load.latency + .7 * s.ewma;
-                    bool busy = load.waiting > 0 || load.latency > 3 * s.baseline;
+                    bool busy = load.waiting > 0 || load.gpu >= .95 ||
+                        (ep.kind != "vllm" && load.latency > 3 * s.baseline);
                     if (busy) { s.busy = true; s.good = 0; }
                     else {
                         if (++s.good >= 2) s.busy = false;
@@ -450,7 +499,8 @@ class EndpointRouter {
     void ready(std::unique_lock<std::mutex>& lock, bool force) {
         if (force || !generation_) {
             auto target = generation_ + (force && probing_ ? 2 : 1); refresh_ = true; changed_.notify_all();
-            changed_.wait(lock, [&] { return stop_ || generation_ >= target; });
+            changed_.wait_for(lock, std::chrono::milliseconds(int64_t(router_probe_timeout_ms()) + 100),
+                [&] { return stop_ || generation_ >= target; });
         }
     }
     State* select(const std::string& role, const std::string& model, bool batch, const std::string& pinned = "") {
@@ -566,8 +616,14 @@ inline std::string discover_gpu_endpoint(const std::string& role, const std::str
         auto report = endpoint_router().report(false, ""); bool exists = false;
         for (const auto& ep : report["endpoints"]) for (const auto& m : ep["models"]) if (m == required) exists = true;
         if (!exists) {
-            fork_exec_capture({"chitta-gpu", "start", required}, 120);
-            choice = endpoint_router().choose(role, required, true);
+            const char* setting = std::getenv("CHITTA_GPU_AUTOSTART");
+            const bool autostart = setting && std::string(setting) == "1";
+            const std::string decision = "[router] GPU autostart " + std::string(autostart ? "enabled: " : "disabled: ") + required;
+            if (log_fn) log_fn(decision); else std::clog << decision << '\n';
+            if (autostart) {
+                fork_exec_capture({"chitta-gpu", "start", required}, 120);
+                choice = endpoint_router().choose(role, required, true);
+            }
         }
     }
     if (log_fn) log_fn("[debug][router] discover " + role + " -> " + (choice.empty() ? "unavailable" : choice));
