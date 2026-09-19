@@ -95,7 +95,7 @@ public:
     bool request_shutdown();
 
     // Send JSON-RPC request, wait for response
-    std::optional<std::string> request(const std::string& json_rpc);
+    std::optional<std::string> request(const std::string& json_rpc, int timeout_ms = RESPONSE_TIMEOUT_MS);
 
     // Error message from last failed operation
     const std::string& last_error() const { return last_error_; }
@@ -113,7 +113,7 @@ private:
     std::string read_buffer_;  // bytes read past the last \n, kept for next request
 
     // Internal request without auto-reconnect (used by request())
-    std::optional<std::string> request_internal(const std::string& json_rpc);
+    std::optional<std::string> request_internal(const std::string& json_rpc, int timeout_ms = RESPONSE_TIMEOUT_MS);
 };
 
 } // namespace chitta

@@ -142,8 +142,11 @@ ToolResult FieldRpcHandler::tool_ledger_op(const json& params) {
             (op == "session_bind" && args.value("metadata", json::object()).contains("handoff"));
         std::unique_lock<std::recursive_mutex> capsule_lock(hook_ledger::capsule_mutex, std::defer_lock);
         if (capsule_write || op == "capsule_get" || op == "capsule_manifest" || op == "hook_handoff_context") capsule_lock.lock();
-        auto capsule_rows = [&]() {
-            json rows = json::array(), page_args = {{"limit", 100}};
+        auto capsule_rows = [&](const json& key, bool manifest = false) {
+            json rows = json::array(), page_args = {{"limit", 100},
+                {"repository", hook_ledger::canonical_repository(hook_ledger::str(key, "repository"))}};
+            if (!manifest && !hook_ledger::str(key, "stream_id").empty())
+                page_args["stream_id"] = key.at("stream_id");
             do {
                 const auto page = run("session_list", page_args);
                 for (const auto& row : page.at("rows")) rows.push_back(row);
@@ -152,7 +155,7 @@ ToolResult FieldRpcHandler::tool_ledger_op(const json& params) {
             return rows;
         };
         auto latest_capsule = [&](const json& key) {
-            return hook_ledger::latest_by_key(capsule_rows(), key);
+            return hook_ledger::latest_by_key(capsule_rows(key), key);
         };
         if (op == "capsule_get" || op == "capsule_manifest") {
             auto key = args;
@@ -160,7 +163,7 @@ ToolResult FieldRpcHandler::tool_ledger_op(const json& params) {
             if (!key.contains("repository")) key["repository"] = facts.at("repository");
             if (!key.contains("stream_id")) key["stream_id"] = facts.at("stream_id");
             if (hook_ledger::str(key, "repository").empty()) return ToolResult::error("repository required");
-            const auto rows = capsule_rows();
+            const auto rows = capsule_rows(key, true);
             if (op == "capsule_manifest") return ok(hook_ledger::capsule_manifest(rows, key.at("repository")));
             if (hook_ledger::str(key, "stream_id").empty() && hook_ledger::str(key, "session_id").empty())
                 return ToolResult::error("stream_id or session_id required");
@@ -250,8 +253,8 @@ ToolResult FieldRpcHandler::tool_ledger_op(const json& params) {
         if (op == "hook_pre_compact") return ok(hook_policy::precompact(args, invoke));
         if (op == "hook_compact_restore") return ok(hook_policy::compact_restore(args, invoke));
         if (op == "hook_handoff_context") {
-            const auto rows = capsule_rows();
             auto key = hook_ledger::git_identity(args.value("project_dir", ""));
+            const auto rows = capsule_rows(key, true);
             if (args.contains("stream_id")) key["stream_id"] = args.at("stream_id");
             if (args.contains("session_id")) key["session_id"] = args.at("session_id");
             auto cap = hook_ledger::latest_by_key(rows, key);

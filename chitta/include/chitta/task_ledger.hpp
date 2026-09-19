@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 #include <fnmatch.h>
+#include <filesystem>
 
 namespace chitta {
 // Owns synchronization independently of RPC dispatch and queue/background callers.
@@ -78,10 +79,28 @@ private:
     std::mutex transaction_mutex_;
     std::map<std::string, Table> tables{
         {"threads", {"thread_id", {"realm", "status"}}},
-        {"thread_sessions", {"session_id", {"thread_id", "project_dir", "status"}}},
+        {"thread_sessions", {"session_id", {"thread_id", "project_dir", "status", "repository", "stream_id"}}},
         {"thread_leases", {"thread_id", {"session_id"}}},
         {"inbox", {"item_id", {"delivery_state", "target_realm"}}},
         {"artifacts", {"artifact_id", {"task_id", "thread_id"}}}};
+    static std::string repository_key(std::string path) {
+        if (path.rfind("/maps/projects/", 0) == 0) path.erase(0, 5);
+        return std::filesystem::path(path).lexically_normal().string();
+    }
+    // Columns are derived from capsule metadata for both legacy replay and writes.
+    // Old journal rows remain readable; no WAL format or Rust replay change.
+    static json upgrade_row(const std::string& table, json row) {
+        if (table != "thread_sessions" || !row.is_object()) return row;
+        auto metadata = json::parse(row.value("metadata_json", "{}"), nullptr, false);
+        auto cap = metadata.is_object() ? metadata.value("handoff", json::object()) : json::object();
+        row["repository"] = "";
+        row["stream_id"] = "";
+        if (cap.is_object() && cap.value("version", 0) == 2) {
+            row["repository"] = repository_key(cap.value("repository", ""));
+            row["stream_id"] = cap.value("stream_id", "");
+        }
+        return row;
+    }
     void validate_row(const std::string& table, const std::string& id, const json& row) const {
         if (row.is_null()) return;
         static const std::map<std::string, std::set<std::string>> keys = {
@@ -90,7 +109,7 @@ private:
               "last_active_at", "sealed_at", "parent_thread_id", "metadata_json"}},
             {"thread_sessions",
              {"session_id", "thread_id", "client", "project_dir", "transcript_path", "status",
-              "started_at", "last_active_at", "ended_at", "metadata_json"}},
+              "started_at", "last_active_at", "ended_at", "metadata_json", "repository", "stream_id"}},
             {"thread_leases",
              {"thread_id", "session_id", "generation", "acquired_at", "last_heartbeat_at",
               "expires_at"}},
@@ -150,7 +169,8 @@ private:
     uint64_t revision = 0;
     void replay_locked(const json& batch) {
         for (const auto& c : batch.at("changes"))
-            tables.at(c.at("table").get<std::string>()).put(c.at("id"), c.at("row"));
+            tables.at(c.at("table").get<std::string>()).put(c.at("id"),
+                upgrade_row(c.at("table"), c.at("row")));
         revision = std::max(revision, batch.at("revision").get<uint64_t>());
     }
 public:
@@ -167,7 +187,7 @@ public:
         const double ts = now();
         json changes    = json::array();
         auto change     = [&](const std::string& table, const std::string& id, const json& row) {
-            changes.push_back({{"table", table}, {"id", id}, {"row", row}});
+            changes.push_back({{"table", table}, {"id", id}, {"row", upgrade_row(table, row)}});
         };
         auto finish = [&](json result) {
             if (!changes.empty()) {
@@ -434,6 +454,8 @@ public:
             if (a.contains(field) && !a[field].is_null() &&
                 !(op == "artifact_list" && a[field] == ""))
                 filters[field] = a[field];
+        if (op == "session_list" && filters.contains("repository"))
+            filters["repository"] = repository_key(filters["repository"]);
         if (op == "inbox_list") {
             filters.erase("target_realm");
             filters["delivery_state"] = a.value("state", "pending");

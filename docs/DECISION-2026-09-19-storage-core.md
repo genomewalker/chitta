@@ -113,6 +113,87 @@ CodeNavigation::open → Impl::rebuild before the socket opened. That parked
 file is not part of this frozen-family benchmark; do not claim its cost was
 reproduced here.
 
+
+### Phase 1 measured result (2026-09-19)
+
+Compute job 22916095, report `/projects/caeg/scratch/kbd606/tmp/p22p1c01/report.json`,
+measured the same frozen replica after the responder and session-index changes.
+Raw AF_UNIX probes are the availability gate; the CLI preflight previously hid
+loading replies. Socket ownership now continues from bind through steady state.
+
+| Trial | Maximum raw health gap |
+|---|---:|
+| Initial clean start | 0.490 s |
+| WAL 0 minutes | 0.379 s |
+| WAL 10 minutes | 0.396 s |
+| WAL 60 minutes | 0.383 s |
+| WAL 240 minutes | 0.354 s |
+
+All gaps are below one second, versus the phase 0 clean-start 17.6 s blackout.
+
+| Session rows | capsule_get p95 (30 samples) |
+|---|---:|
+| 123 | 11.55 ms |
+| 364 | 11.02 ms |
+| 1,000 | 11.19 ms |
+| 5,000 | 11.01 ms |
+
+The 364-row target (50 ms) and 5,000-row target (100 ms) pass; phase 0 measured
+24 ms at 364 rows, 49 ms at 1,000, and 895 ms at 5,000.
+
+Mixed load: 16 clients, 320 requests; p50 0.131 s, p95 1.666 s, maximum 4.154 s.
+There were 80 errors, all `status` requests with JSON-RPC code -32601,
+`Unknown tool: status`. The harness incorrectly called a CLI-only command via
+`tools/call`. These are not loading refusals or storage errors. The harness now
+invokes CLI `status` and records error-kind counts. The saved latency numbers
+include those errors and do not establish an error-free mixed-load gate.
+
+The validation job failed six of 37 ctests: daemon isolation and five chaos
+fixtures sent commands while loading and received immediate CLI exit 75. The
+client now retries loading replies with a minimum 250 ms delay until its
+`--timeout`/`CHITTA_CLI_TIMEOUT` budget (seconds; default 300 s). Health/status
+still return loading immediately with exit zero; other commands print the last
+loading reply and exit 75 only when their budget expires. A fake-socket test
+covers both direct and thin clients receiving loading twice then becoming ready.
+Final-fix checkpoint: build, CLI loading 11/11, Ruff, quick gate and contract
+check pass (`contracts unchanged` after regeneration). All 37 CTests now pass,
+including daemon isolation, chaos lock and chaos disk. Isolation also passes
+with an invalid inherited CHITTA_SOCKET_PATH. The compute full gate has passed
+its Rust and CTest stages; its hook suites are still running at this checkpoint.
+The three failure causes and fixes are documented below. Final validation logs:
+`/projects/caeg/scratch/kbd606/tmp/p22fix-dBboCj`; the runner writes its terminal
+result to `validation.log`, and the full gate writes its result to `full.log`.
+
+The expected public contract change is additive ledger `session_list` filtering
+by `repository` and `stream_id`, with upgraded thread_sessions rows. The generic
+`ledger_op` args schema may leave the captured tool schemas byte-identical;
+regeneration and verification are still required. WAL format and replay are unchanged.
+
+### Contract changes and final failure diagnosis (2026-09-19)
+
+Loading health is availability, not readiness: callers requiring an open store
+must wait until `loading` is false. The chaos harness now observes that distinction
+before checking the recovered lock inode. It does not weaken the lock invariant.
+Writes during load remain refused with `error: loading` and `retry_after_s`;
+the CLI retries within its deadline. No test was changed to accept a lost write.
+
+The three remaining failures had distinct causes:
+
+- `chaos_lock_test` checked the inode as soon as loading health answered, before
+  the daemon opened the store. The harness now waits for ready health.
+- `chaos_disk_test` exposed a CLI bug: the loading retry helper called JSON
+  `value()` on the null `structured` member of a compaction error. Object guards
+  preserve the error reply; the CLI fixture covers this null error payload.
+- `daemon_isolation_test` inherited the validation replica's `CHITTA_SOCKET_PATH`,
+  sending RPCs to that replica while writing the queue in its own temporary mind.
+  It passes in isolation; the fixture now clears the inherited socket override.
+  Validation explicitly supplies an invalid inherited socket to prove isolation.
+
+These fixes leave WAL format, replay and the additive `session_list` repository /
+stream filters unchanged. The public schema snapshot is regenerated for those
+filters. Validation artifacts are under
+`/projects/caeg/scratch/kbd606/tmp/p22fix-dBboCj`.
+
 ## Targets retained from the design
 
 | Metric | Required result |
@@ -206,5 +287,72 @@ It remains recorded for the full gate; no unrelated chaos fix is included.
 Logs: `/projects/caeg/scratch/kbd606/tmp/p22-phase0-relaunch-EfNgwJ/`.
 
 The harness records continuous health gaps, per-kind apply profiles and the
-capsule row-count curve. Each restart reads only newly appended daemon logs.
-Replica measurements and the current full gate remain pending.
+capsule row-count curve. Restart trials now read their truncated daemon log from offset zero.
+The completed replica measurements appear above.
+
+## Phase 1 implementation (2026-09-19)
+
+The socket responder owns bind, loading replies, steady dispatch and close on
+one thread. Initialization, including set_mind_path, stays on the caller. Health
+and status report loading with field_store/initializing phases; replay counts
+and ETA are null when unavailable. Other requests return an error=loading with
+retry_after_s=1 and isError=true. No incoming writes are acknowledged or queued.
+
+Session rows gain repository and stream_id columns, derived from capsule
+metadata during legacy journal replay and each mutation. This is an intentional
+additive row-contract change; the shared row-shape fixture is regenerated.
+Repository aliases normalize identically to capsule keys. Filtered indexes
+limit capsule lookups to their repository and stream; manifests retain the
+repository-wide view. A dedicated bounded worker handles compaction, avoiding
+a join on the responder. Rust replay and the WAL format are unchanged.
+
+The benchmark reads each truncated restart log from offset zero and records
+loading phases alongside health samples. Phase 1 measurements and validation
+are recorded above.
+
+### Historical phase 1 checkpoint — before raw socket probing
+
+The first rebuilt-daemon run (`p22p1b01`) still measures a health gap of
+18.585 s on initial load, 8.872 s at zero WAL age, and 8.832 s at ten minutes.
+No loading health samples were observed through the CLI probe. Socket connection
+logs show clients arriving during load; investigate the CLI preflight/schema
+fetch and response framing before assuming the responder is working. The
+sub-second availability gate fails. Remaining ages and capsule timings are
+still running; no successful phase 1 performance claim is made.
+
+The first full gate passed 36/37 C++ tests; its sole failure was the old
+thread_sessions fixture. That fixture is now updated, and the full gate rerun
+is in flight. Public contract checking was blocked by an unreachable live
+daemon on the invocation node. Logs: `p22p1-bik5XT` under project scratch.
+
+The checkpoint quick gate passes its other checks but fails the contracts
+check. The additive `thread_sessions` row contract (`repository`, `stream_id`)
+is intentional; the public contract snapshot still needs verification from a
+node that can reach the daemon. This is an explicitly failing checkpoint.
+
+### Phase 1 CLI/probe continuation checkpoint (2026-09-19)
+
+The previous CLI-only health blackout is not a valid measurement of raw socket
+availability: CLI connection preflight waited for full readiness. Startup now
+records independent raw AF_UNIX and CLI series. Raw probes send one health_check
+JSON-RPC line with a one-second timeout; the raw series determines the gate.
+Both series include first-response delay and the final gap to readiness. Restart
+logs are read from offset zero because eval-replica truncates them.
+
+CLI preflight now accepts the warming responder immediately. Loading replies
+print structured JSON and exit zero for health_check/status or 75 for other
+commands, including unknown tools discovered through tools/list. The dedicated
+status path also preserves loading JSON. A private fake-socket regression covers
+eight direct/thin-client combinations and passed 8/8 on compute. The incremental
+C++ build and focused Python lint passed. No WAL or replay changes were made.
+
+Validation remains in flight at the mandatory thread checkpoint. Compute job
+22916095 runs the complete replica benchmark, then regenerates the intentionally
+changed ledger session_list filter contracts against that private replica and
+runs the full gate. Artifacts: `/projects/caeg/scratch/kbd606/tmp/p22p1c-P02Ikf`;
+benchmark: `/projects/caeg/scratch/kbd606/tmp/p22p1c01`. A separate checkpoint
+quick gate was submitted; collect its quick-checkpoint.log. Do not merge until
+raw max_health_gap_s is below one second at every WAL age, capsule_get p95 is
+<=50 ms at 364 rows and <=100 ms at 5,000, and Rust/ctest/contracts gates pass.
+The contract regeneration and final measured values still require a follow-up
+commit; this checkpoint does not claim phase 1 completion.

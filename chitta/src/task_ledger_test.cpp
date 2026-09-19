@@ -81,6 +81,31 @@ int main() {
     for (const auto* op : {"counts", "lease_list", "session_list"}) {
         assert(concurrent.run(op, json::object(), append) == replayed.run(op, json::object(), append));
     }
+    // Replay pre-column rows, including canonical /maps aliases, then update
+    // metadata and prove stale index entries disappear. Exercise filtered cursors.
+    chitta::TaskLedger upgraded;
+    json legacy = {{"session_id", "legacy"}, {"thread_id", nullptr}, {"client", ""},
+        {"project_dir", ""}, {"transcript_path", ""}, {"status", "active"},
+        {"started_at", 1.0}, {"last_active_at", 1.0}, {"ended_at", nullptr},
+        {"metadata_json", json({{"handoff", {{"version", 2},
+            {"repository", "/maps/projects/test/.git/"}, {"stream_id", "one"}}}}).dump()}};
+    upgraded.replay({{"revision", 1}, {"changes", json::array({
+        {{"table", "thread_sessions"}, {"id", "legacy"}, {"row", legacy}}})}});
+    auto filtered = [&](json args) { return upgraded.run("session_list", args, persist); };
+    assert(filtered({{"repository", "/projects/test/.git/"}, {"stream_id", "one"}})["rows"].size() == 1);
+    assert(filtered({{"repository", "/maps/projects/test/.git/"}})["rows"].size() == 1);
+    assert(filtered({{"stream_id", "missing"}})["rows"].empty());
+    upgraded.run("session_bind", {{"session_id", "legacy"}, {"metadata", {{"handoff", {
+        {"version", 2}, {"repository", "/projects/test/.git/"}, {"stream_id", "two"}}}}}}, persist);
+    assert(filtered({{"stream_id", "one"}})["rows"].empty());
+    for (int i = 0; i < 3; ++i)
+        upgraded.run("session_bind", {{"session_id", "page" + std::to_string(i)},
+            {"metadata", {{"handoff", {{"version", 2}, {"repository", "/projects/test/.git/"},
+                {"stream_id", "two"}}}}}}, persist);
+    auto page = filtered({{"stream_id", "two"}, {"limit", 2}});
+    auto rest = filtered({{"stream_id", "two"}, {"limit", 2}, {"after", page.at("after")}});
+    assert(page["rows"].size() == 2 && rest["rows"].size() == 2 && rest["after"].is_null());
+    assert(page["rows"][0]["session_id"] != rest["rows"][0]["session_id"]);
     std::cout << "ledger: atomic publish, invalid import rejection, idempotence, indexes, lease "
                  "batch replay passed\n";
 }
