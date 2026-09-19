@@ -1,179 +1,192 @@
 # Runtime and storage core: design
 
-Status as of 2026-09-19: **design under review, not implemented.** Owner: lead
-session; implementation stream `p22-storage-core` follows this document after
-an architecture review. Supersedes the ad-hoc mitigations of 2026-09-18/19
-(parked endpoint files, parked `code-navigation.json`, guarded GPU scripts,
-manual restarts), which stay in place only until the phases below ship.
+Status as of 2026-09-19 (v2): **reviewed; phase 0 running, phases 1+ authorised
+on this version.** v1 was reviewed by an Opus architecture pass on 2026-09-19;
+its corrections are folded in below and marked (rev). Owner: lead session;
+implementation stream `p22-storage-core`. Supersedes the ad-hoc mitigations of
+2026-09-18/19 (parked endpoint files, parked `code-navigation.json`, guarded GPU
+scripts, manual restarts), which stay only until the phases below ship.
 
 ## Why
 
 The daemon is the core of chitta and it is neither fast nor solid under load.
-Measured on the live store (140k memories, Isilon NFS home) on 2026-09-18/19:
+Measured on the live store (140k memories, Isilon NFS home) on 2026-09-18/19,
+with the causes as verified in code by the review:
 
-| symptom | measurement | cause |
+| symptom | measurement | cause (verified) |
 |---|---|---|
-| startup | 17 s after a clean stop; 295–350 s otherwise | WAL replayed record by record through the hot insert path (34 MB in 255–315 s); no shutdown snapshot when the stop timed out |
-| startup, second cause | 14+ min in `CodeNavigation::open → Impl::rebuild()` on the main thread | `code-navigation.json`, one 1.5 GB JSON with 20 worktree roots and inline symbol bodies, parsed and rebuilt before the socket opens |
-| request latency | `ledger_op` waits of 2–5 min, `session_heartbeat` 780 s, `prompt_context` 4.8 h accumulated | one serialized queue; `learn_codebase` full rebuilds, endpoint probes and capsule paging run inline under the store lock |
-| write failures | `Stale file handle (os error 116)` until restart, three times in two days | the writer's open WAL segment was unlinked on NFS (fixed in `feat/wal-vanish`, merged 2026-09-19) |
-| shutdown | `TimeoutStopSec=300` hit, snapshot abandoned | shutdown waits for the jammed queue before it can snapshot |
-| hooks | `[chitta] daemon unavailable` for the whole load window | health answers only after all post-load work |
+| startup | 17 s after a stop that happened to follow a consolidation snapshot; 295–350 s otherwise | WAL replay decodes **every segment from 0** into one vector, sorts globally, then applies (`chitta-field/src/field/opening.rs:585-600`, `log.rs:441,490-493`); coverage filtering happens after decode. (rev) There is **no shutdown snapshot at all**: `Drop for ChittaField` only flushes and syncs the WAL (`field.rs:477-483`); the only snapshot site is the sleep-consolidation timer (`chitta/src/subconscious.cpp:692-693`). |
+| startup, second cause | 14+ min before any request is answered | (rev) `cmd_daemon` runs `handler.set_mind_path()` **between** the warming responder loop (`simple_cli.cpp:1939-1961`) and the request loop (`:1066`); it synchronously opens the repository index and `CodeNavigation::open → Impl::rebuild()` over every root (`field_handler.hpp:180-181`, `code_navigation.cpp:326-340`). The socket is bound but **unpolled**: clients wait in the listen backlog until their own timeout. The 1.5 GB JSON with 20 worktree roots made this window 14 min; the hole exists at any size. |
+| request latency | `ledger_op` waits of 2–5 min; `session_heartbeat` 780 s; `prompt_context` 4.8 h accumulated | (rev) **Not** lock contention behind `learn_codebase` (it is lock-free by design, `field_handler.hpp:553-564`). It is an O(N²) scan: `capsule_rows()` pages `session_list` 100 rows at a time over all sessions (`field_task_ledger.cpp:141-149`), each page doing an unfiltered `select` plus a `partial_sort` over every row (`task_ledger.hpp:485`), all under the global `hook_ledger::capsule_mutex` (`field_task_ledger.cpp:139`), and `capsule_save` does it twice (`:159`, `:186`). |
+| I/O thread stalls | every RPC blocked during a second compaction | `compact_wal_thread.join()` runs inline in the request loop (`simple_cli.cpp:1233`). |
+| router stalls | `endpoint_list` 12+ min, RPC queue behind it | `EndpointRouter::choose → ready()` waits on `changed_` with no deadline (`llm_http.hpp:450-455`); a probe against a saturated server never returns. |
+| write failures | `Stale file handle (os error 116)` until restart, three times in two days | the writer's open WAL segment was unlinked on NFS; **fixed** in `feat/wal-vanish` (merged 2026-09-19). |
+| shutdown | `TimeoutStopSec=300` hit; long tail | shutdown arms `alarm(15)` + `_Exit(0)` (`simple_cli.cpp:1318-1324`), cancels it at `:1339`, then `~FieldStore` runs unbounded; `cf_close` joins `chitta-maint`, which may be inside an uncancellable Turbo rebuild (`ffi.rs:150-170`). |
+| hooks | `[chitta] daemon unavailable` for the whole load window | consequence of the startup hole above; `fast_health_check_json` exists lock-free (`simple_cli.cpp:1131-1144`) but nothing serves it during `set_mind_path`. |
 
-Every one of these is architectural. Fixing them one symptom at a time produced
-the last two days.
+What already exists and is kept (rev): `rpc_mutex_` is a `std::shared_mutex`
+with a shared/exclusive split (`field_handler.hpp:272,285`) and the outermost-lock
+invariant across the FFI (`:255-260`); the lock profiler (`:596`); `ThreadPool(8,16,256)`,
+`write_pool(2,2)`, `waiting_writes` admission, `inflight_learn_codebase`, the
+`compact_wal_thread` (`simple_cli.cpp:253-260,1051-1063,1221-1239`) and the queue
+processor's fast/slow lanes (`queue_processor.hpp:51-52,90`); a WAL-only sync timer
+(`ffi.rs:141-157`) with `sync_wal` off the C++ lock (`field.rs:494-498`); HNSW
+insertion already inhibited during replay (`field.rs:627`, cleared at
+`field/opening.rs:751`); `replay_from_offset` (`log.rs:698`); `daemon_client.py:303`
+already retries on `warming_up`. The design changes holders and mechanisms, not
+these primitives.
 
 ## Principles
 
-1. **The socket opens first.** A client never sees "unavailable" because the
-   daemon is loading; it sees a loading status with an ETA, reads served from
-   the last snapshot, and writes accepted durably.
-2. **Nothing unbounded runs on the request path.** Every request has a class
-   and a budget; work that cannot finish inside the budget becomes a job.
-3. **Derived state is disposable and lazy.** Indexes are rebuilt from the
-   log or from the source repository on demand, in the background, per unit
-   (per repository root, per snapshot family), never as one blob at startup.
-4. **Durability is a policy, not a side effect.** One writer, append-only
-   segments, group commit, explicit fsync points, size-bounded WAL, and a
-   documented loss bound (nothing acknowledged is lost after a crash).
-5. **Measured, not asserted.** Targets are numbers, benchmarks run on the
-   frozen replica in the gate, and regressions fail the merge.
+1. **The socket is owned by one responder from bind to steady state.** Health and
+   status are answered continuously while loading; a client never lands in an
+   unpolled backlog.
+2. **Nothing unbounded runs on the request path or on the socket-owning thread.**
+   Every request has a class and a budget; longer work is a job; no `join()` or
+   blocking call on the I/O thread.
+3. **Derived state is disposable and lazy.** Indexes are rebuilt per unit (per
+   repository root, per snapshot family) in background jobs, never at startup.
+4. **Durability is a policy with a stated bound.** Single writer, append-only
+   segments, acknowledgement only after the op's fsync completes, size-bounded
+   WAL, a shutdown checkpoint that is bounded and covered by the watchdog.
+5. **Measured, not asserted.** Targets are numbers, benchmarks run on the frozen
+   replica in the gate, regressions fail the merge, and any exclusive lock hold
+   over 5 s in the benchmark fails it.
+
+## Decisions (rev, taken on the review's recommendation)
+
+- **(a) Writes during load are refused, not queued**: `{"error":"loading","retry_after_s":<eta>}`;
+  the MCP client retries. Queueing would need a second durable log merged into
+  `log.replay`'s timestamp+instance+seqno order (`log.rs:490`); not worth it once
+  the load window is ~20 s.
+- **(b) During replay the daemon serves `health_check` and `status` only.** Reads
+  from a snapshot view would need a second immutable read path in Rust and an
+  epoch handoff (replay mutates the same structures through one `ApplyCtx`,
+  `field.rs:628-671`); that is a later phase if ever, and not what buys the win.
+- **(c) Keep `shared_mutex`; fix the holders.** No epoch/RCU across the FFI. The
+  gate is a hard bound on exclusive holds (≤ 5 s) from the existing profiler.
+- **(d) NFS stays the default.** `CHITTA_STORE_LOCAL_DIR` ships as opt-in for the
+  benchmark replica; the loss-bound wording is decided before it is offered for
+  live use.
+- **(e) fsync policy**: acknowledgement returns after the op's fsync; the existing
+  WAL sync timer stays with an adaptive interval; p99 measured on the replica.
+  No fixed "50 ms" assertion.
+- **(f) Router**: the invariant is `choose` returns within 3 s (stale or empty
+  allowed); the branch name is not the contract.
 
 ## Targets
 
 | metric | target | today |
 |---|---|---|
-| time to socket open | ≤ 2 s after exec | 17 s to 15 min |
-| time to full readiness, ≤ 1 h of WAL | ≤ 20 s | 17 s to 350 s |
-| time to full readiness, 24 h of WAL | ≤ 60 s | unbounded |
-| WAL replay throughput | ≥ 10 MB/s | ~0.1 MB/s |
-| shutdown, queue jammed | ≤ 10 s, no data loss | 300 s timeout, snapshot lost |
-| request p95 under 16 concurrent clients (mixed) | ≤ 500 ms; no request > 5 s | minutes |
-| write acknowledgement | durable (fsync group ≤ 50 ms) | durable |
-| loss on `kill -9` | nothing acknowledged | nothing acknowledged (after wal-vanish) |
-| code index open | O(1) at startup; per-root load ≤ 200 ms | 14 min, all roots |
+| health/status answered from t=0, continuously | ≤ 2 s after exec, never gaps | up to 15 min unanswered |
+| full readiness, ≤ 1 h of WAL | ≤ 20 s | 17 s to 350 s |
+| full readiness, 24 h of WAL | ≤ 60 s | unbounded |
+| WAL replay | skip segments the manifest already covers; ≥ 10 MB/s on the rest (target held until the phase-0 apply profile confirms it) | decode everything, ~0.1 MB/s |
+| shutdown, queue jammed | ≤ 10 s, checkpoint written, nothing acknowledged lost | 300 s timeout |
+| `capsule_get` p95 at current session count | ≤ 50 ms | seconds to minutes |
+| request p95, 16 mixed clients | ≤ 500 ms; no exclusive hold > 5 s | minutes |
+| code index open at startup | O(1); per-root load ≤ 200 ms | 14 min, all roots |
 
 ## Architecture
 
-### 1. Process model
+### 1. Startup (phase 1)
 
 ```
-socket (async, non-blocking)        opens at t≈0
-   │
-   ├─ admission: classify request → {read, mutate, ledger, slow, job}
-   │     per-class concurrency limits and budgets; overload → 429 + retry-after
-   │
-   ├─ read pool (N threads): recall, search, status, code queries
-   │     reads the immutable snapshot view + the in-memory delta; never blocks on writers
-   ├─ mutate lane (1 thread): store mutations in commit order; WAL append + group fsync
-   ├─ ledger lane (1 thread): task ledger, sessions, leases, capsules
-   ├─ slow pool (M threads, bounded): anything with budget > 2 s and no lock
-   └─ job manager: background jobs with progress and cancellation
-         learn_codebase, index rebuilds, snapshots, compaction, endpoint probes,
-         maintenance; visible in `status`; never inline in a request
+t=0     bind; ONE responder thread owns the fd until steady state:
+        health_check/status → {loading:true, phase, replayed, total, eta_s}; writes → loading + retry_after_s
+t≈1s    open the snapshot family (mmap, sidecars) on a loader thread
+        set_mind_path work (repository index, code navigation) moves OFF this path (phase 3)
+t≈?     replay (phase 2b); status phase="replay"
+done    hand the fd to the request loop atomically; status loading:false; maintenance starts
 ```
 
-- The current single `rpc_mutex_` becomes a reader–writer split: reads take a
-  snapshot view (epoch-based, lock-free readers), the mutate lane is the only
-  writer. Long-held locks are a bug and the lock profiler already in place
-  (`[pool]` lines) becomes a gate: any wait above 5 s in the benchmark fails.
-- Capsule and session operations page by cursor with an index on
-  `(repository, stream_id)`; no operation walks every session.
-- Endpoint probes are jobs with a hard timeout (3 s) writing into the router's
-  state; the router never blocks a request on a probe (this is `feat/router-fixes`,
-  folded in unchanged).
+Acceptance: no gap in health responses across the whole load in the benchmark;
+no `open`/`load`/`join` on the socket-owning thread (review-enforced).
 
-### 2. Startup
+### 2. Ledger (phase 1)
 
-```
-t=0    open socket; status = {loading: true, phase: "snapshot"}
-t≈1s   map the latest snapshot family (mmap, sidecars .lsh/.turbo/.organs)
-       reads served from it; writes appended to a fresh WAL segment (durable),
-       and applied after replay in order
-t≈?    bulk replay of WAL since the family:
-         decode segments in parallel → batches → apply to the delta with
-         derived indexes deferred → one index build at the end
-       status = {loading: true, phase: "replay", replayed, total, eta_s}
-done   status = {loading: false}; queued writes applied; maintenance thread starts
-```
+- Server-side filtering: `session_list` accepts `repository`/`stream_id` filters and
+  a cursor; capsule operations never enumerate all sessions. `capsule_save` looks up
+  once. Migration: `thread_sessions` is indexed on `{thread_id, project_dir, status}`
+  only (`task_ledger.hpp:81`) and the capsule key lives in `metadata_json`; adding
+  `repository`/`stream_id` columns needs a row upgrade on load, since `validate_row`
+  rejects rows with a different key count (`:103`).
+- Gate: `capsule_get` p95 ≤ 50 ms at the live session count; a row-count curve from
+  phase 0 decides the index shape.
 
-- Derived indexes for the snapshot family are immutable sidecars produced when
-  the family is written; startup never rebuilds them unless missing.
-- The code index is not opened at startup at all (see 4).
+### 3. Shutdown and snapshots (phase 2a)
 
-### 3. Storage
+- A **bounded shutdown checkpoint**: stop admission, drain the mutate path (bounded),
+  fsync and cut the WAL, write `{family, wal_offset}`; run it **before** the watchdog
+  is armed, cover it with the watchdog plus margin, and add a cancellation flag
+  checked inside the maintenance loop so `cf_close` never waits on an uncancellable
+  rebuild. `TimeoutStopSec` drops to 60 s only after a measured checkpoint p99.
+- Size-triggered snapshots on the maintenance thread: WAL bytes ≥ 16 MB or records
+  ≥ 20k or the existing timer; two families kept.
 
-- **WAL**: append-only segments, single writer, `O_APPEND`, group commit with
-  an fsync every ≤ 50 ms or N records; directory fsync after create, rename
-  and unlink; the writer's open segment is never a deletion candidate
-  (`feat/wal-vanish`). Every unlink is logged with its reason.
-- **Snapshot trigger**: WAL bytes since the last family ≥ 16 MB, or records
-  ≥ 20k, or the timer, whichever first. Snapshots run on the job manager with
-  a short cut-over; two families kept.
-- **Shutdown**: stop admission, drain the mutate lane (bounded), fsync and
-  cut the WAL, write a checkpoint marker `{family, wal_offset}`. Full family
-  only if the last one is older than 15 min and the machine is idle;
-  otherwise the next start's bulk replay handles it. `TimeoutStopSec` becomes
-  60 s.
-- **Replay**: columnar decode of segments in parallel; batched application;
-  indexes (LSH, Turbo, organs, graph adjacency, quantized index) built once
-  at the end from the applied rows; ≥ 10 MB/s on the replica.
-- **Placement**: `CHITTA_STORE_LOCAL_DIR` runs the live segments and sidecars
-  on node-local or scratch storage with the NFS mind as the durable mirror
-  (families copied after commit, verified by hash). Default stays NFS with the
-  discipline above; the option exists because NFS metadata latency dominates
-  snapshot and replay time today.
+### 4. Replay (phase 2b)
 
-### 4. Code navigation index
+- Do not decode what the family already covers: use the manifest's per-writer
+  `covered` vector plus segment seqno ranges to skip whole segments; use
+  `replay_from_offset` for the boundary segment.
+- A k-way merge over per-segment iterators replaces the global sort; derived
+  indexes are built once at the end (HNSW inhibition already exists).
+- Phase 0 delivers a per-op-kind apply profile first; the 10 MB/s target stands
+  or is revised on that evidence.
 
-- One compact binary file per repository root:
-  `<mind>/code-index/<sha256(root)[:16]>.idx`, containing file hashes, symbol
-  spans (file, byte range, kind, name), and edges. **No symbol bodies**; bodies
-  are read from the file on demand.
-- Loaded lazily on the first query for that root; evicted when idle; roots
-  whose directory no longer exists are pruned at open. A size budget per root
-  with a log line when exceeded.
-- Rebuilds and refreshes are jobs with progress; a query on a stale root
-  returns the stale index and schedules the refresh. Git hooks in linked
-  worktrees do nothing (already shipped in 763edbd6); the main checkout's
-  hook enqueues a job.
+### 5. Code navigation index (phase 3)
 
-### 5. Observability
+- One compact binary file per repository root under `<mind>/code-index/`,
+  containing file hashes, symbol spans, edges, **and the BM25 postings and
+  lengths** (bodies are dropped, so `terms` must be stored; IDF becomes per-root
+  and the ranking change is accepted). Edge resolution already refuses to cross
+  roots (`code_navigation.cpp:192,202,210,220`), so partitioning loses nothing.
+- Lazy load on first query, eviction when idle, pruning of roots whose directory
+  is gone, a size budget with a log line. `update()` rebuilds and rewrites only
+  the touched root (today every call rebuilds and saves everything,
+  `code_navigation.cpp:101-109,422,431,439`). Refreshes are jobs with progress.
 
-- `status` returns: loading state and phase, queue depth per class, active
-  jobs with progress, last snapshot age, WAL bytes since snapshot, lock wait
-  p95 per class, endpoint router state.
-- Phase timers stay in the log; the lock profiler stays on; a `[slow]` line
-  for any request over its budget with the class and the handler.
+### 6. Request classes and the job manager (phase 4)
 
-### 6. Verification
+- Consolidate, do not add: this phase names which of the existing mechanisms
+  (`ThreadPool`, `write_pool`, `waiting_writes`, `inflight_learn_codebase`,
+  `compact_wal_thread`, the queue processor lanes) each class replaces.
+  Classes: read, mutate, ledger, slow, job. Budgets per class; overload returns a
+  typed retry. `compact_wal` becomes a job; nothing joins on the I/O thread.
+- Router: `choose` bounded to 3 s; probes are jobs with a hard timeout.
 
-- Benchmark (`benchmarks/storage/`) on a replica of the frozen cut: startup
-  with 0/10/60/240 min of synthetic WAL; shutdown under a jammed queue;
-  mixed load of 16 clients with p50/p95; replay MB/s; snapshot time; code
-  index open per root. Numbers in the decision doc before and after; the
-  full gate fails if startup or p95 regress by more than 20 %.
-- Chaos: `kill -9` during write, snapshot and replay; ESTALE injection;
-  disk-full during snapshot; a second daemon attempting to open the store.
-  Acceptance: nothing acknowledged is lost, the next start meets the targets.
+### 7. Durability discipline and proof (phase 5)
 
-## Phases and gates
+- Directory fsync after create/rename/unlink; single writer `O_APPEND`; unlink
+  logging (already in `feat/wal-vanish`). Loss bound documented: nothing
+  acknowledged is lost on `kill -9`.
+- `CHITTA_STORE_LOCAL_DIR` for the benchmark replica only.
+- Chaos in the gate: `kill -9` during write, checkpoint and replay; ESTALE
+  injection; disk-full during snapshot; a second daemon opening the store.
+
+### 8. Observability (every phase)
+
+- `status`: loading state and phase, per-class queue depth, jobs with progress,
+  last family age, WAL bytes since family, exclusive-hold p95, router state.
+- `[slow]` log line for any request over its budget, with class and handler.
+
+## Phases and gates (rev)
 
 | phase | delivers | exit gate |
 |---|---|---|
-| 0 | baseline benchmark + this design reviewed | review sign-off; numbers recorded |
-| 1 | socket-first startup, loading status, reads from the snapshot, durable write queueing | socket ≤ 2 s; hooks never see "unavailable" |
-| 2 | bulk replay with deferred index build; size-triggered snapshots; fast shutdown; unit timeout 60 s | readiness ≤ 20 s with 1 h WAL; shutdown ≤ 10 s |
-| 3 | request classes, read pool, mutate and ledger lanes, job manager, capsule/session cursors | p95 ≤ 500 ms, no wait > 5 s under 16 clients |
-| 4 | per-root binary code index, lazy, no bodies | index open O(1); per-root ≤ 200 ms |
-| 5 | NFS discipline, local store dir with mirror, chaos suite in the gate | chaos green; loss bound documented |
+| 0 | baseline benchmark on the replica; per-op-kind apply profile; `capsule_get` row-count curve; review notes | numbers recorded in the decision doc |
+| 1 | continuous warming responder; `loading` + `retry_after_s`; ledger server-side filtering with the row upgrade; no join on the I/O thread | no health gap in the benchmark; `capsule_get` p95 ≤ 50 ms |
+| 2a | bounded shutdown checkpoint under the watchdog; maintenance cancellation; size-triggered snapshots | shutdown ≤ 10 s with a jammed queue; checkpoint p99 measured; then `TimeoutStopSec=60` |
+| 2b | replay skip-by-coverage; k-way merge; deferred index build | readiness ≤ 20 s with 1 h WAL, ≤ 60 s with 24 h |
+| 3 | per-root binary code index with stored postings, lazy, pruned, per-root updates | index open O(1); per-root ≤ 200 ms; `learn_codebase` touches one root |
+| 4 | request classes and job manager consolidating the existing lanes; router bound | p95 ≤ 500 ms, no exclusive hold > 5 s under 16 clients |
+| 5 | durability discipline, local dir opt-in for the replica, chaos in the gate | chaos green; loss bound documented |
 
 Each phase is one verified merge with its benchmark numbers in
-`docs/DECISION-2026-09-19-storage-core.md`; nothing merges on a symptom fix
-alone.
+`docs/DECISION-2026-09-19-storage-core.md`; nothing merges on a symptom fix alone.
 
 ## Out of scope here
 
-Billion-scale tiering, dataset registry, graph export (deferred by decision on
-2026-09-18); the student distiller backend (`feat/student-productise`); the
-decision layer (`feat/decision-layer`). They build on this core once it holds.
+Billion-scale tiering, dataset registry, graph export (deferred 2026-09-18); the
+student distiller backend (`feat/student-productise`); the decision layer
+(`feat/decision-layer`). They build on this core once it holds.
