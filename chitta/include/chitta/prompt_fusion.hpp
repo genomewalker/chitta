@@ -15,6 +15,23 @@ inline std::string c2_from_text(const std::string& text) {
     if (matches(text, "(^|\\n)(No (memories|messages|results) found|Found 0 results)")) return "0";
     return "";
 }
+// The correction text a prompt may carry: rows of the correction lane whose own
+// body starts with [correction], at most three, capped at 400 bytes. A row that
+// merely quotes a correction inside its body (an incident report, a handoff) is
+// not a correction and must not resurrect the quote on every unrelated prompt.
+inline std::string correction_rows(const std::string& text) {
+    static const std::regex row(
+        R"(^#[0-9]+ \[[0-9]+%\] \[[a-z]+\] (?:\(on: [^)]*\) )?(\[correction\][^|]+))");
+    std::vector<std::string> rows;
+    std::istringstream lines(text);
+    std::smatch match;
+    for (std::string line; std::getline(lines, line) && rows.size() < 3;)
+        if (std::regex_search(line, match, row)) rows.push_back(match[1]);
+    if (rows.empty()) return "";
+    std::string joined;
+    for (const auto& r : rows) joined += r + " ";
+    return prefix(joined, 400);
+}
 inline std::string lane_rows(const std::string& text, const std::string& lane,
                              bool keyword = false) {
     std::string result;

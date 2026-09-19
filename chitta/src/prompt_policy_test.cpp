@@ -14,6 +14,12 @@ int main(int argc, char** argv) {
     assert(chitta::prompt_policy::hash("") == "d41d8cd98f00b204");
     assert(chitta::prompt_policy::hash("abc") == "900150983cd24fb0");
     assert(chitta::prompt_policy::prefix("α→beta", 3) == "α→b");
+    assert(chitta::prompt_policy::correction_rows(
+        "#1 [47%] [signal] (on: 2026-09-16) [incident] WAL vanished; quoted '[correction] never pkill' inside\n"
+        "#2 [52%] [signal] (on: 2026-09-19) [correction] stop rookie mistakes | rest\n"
+        "#3 [48%] [wisdom] [correction] no date header\n") ==
+        "[correction] stop rookie mistakes  [correction] no date header ");
+    assert(chitta::prompt_policy::correction_rows("#1 [90%] [signal] [handoff] mentions [correction] in body\n").empty());
     json state = {{"query", "apricot orchard"}, {"query_tokens", "apricot\norchard"},
         {"distinct_tokens", "apricot\norchard"}, {"session_id", "fixture"}, {"c2_pct", "81"},
         {"memories", "#1 [90%] [wisdom] apricot semantic\n"
