@@ -364,7 +364,9 @@ static auto cli_deadline = CliClock::now() + cli_timeout;
 
 static bool wait_for_loading(const nlohmann::json& reply, bool immediate = false) {
     const auto result = reply.value("result", nlohmann::json::object());
+    if (!result.is_object()) return false;
     const auto state = result.value("structured", nlohmann::json::object());
+    if (!state.is_object()) return false;
     if (immediate || !state.value("loading", false)) return false;
     const auto now = CliClock::now();
     if (now >= cli_deadline) return false;
@@ -514,6 +516,7 @@ int run_cli(const std::string& socket_path, const std::string& tool,
         }
         auto result = json::parse(*resp);
         if (result.contains("result") && result["result"].contains("structured") &&
+            result["result"]["structured"].is_object() &&
             result["result"]["structured"].value("loading", false)) {
             std::cout << result["result"]["structured"].dump() << "\n";
             return tool == "health_check" || tool == "status" ? 0 : 75;
@@ -614,6 +617,7 @@ int run_thin_client(const std::string& socket_path) {
             const auto reply = nlohmann::json::parse(*response, nullptr, false);
             if (reply.is_object() && reply.contains("result") &&
                 reply["result"].contains("structured") &&
+                reply["result"]["structured"].is_object() &&
                 reply["result"]["structured"].value("loading", false)) {
                 const auto request = nlohmann::json::parse(line, nullptr, false);
                 std::string method;

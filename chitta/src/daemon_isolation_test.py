@@ -39,7 +39,8 @@ def main():
     root.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ)
     for key in ("CHITTA_QUEUE", "CHITTA_QUEUE_PATH", "CHITTA_NO_QUEUE",
-                "MIND_PATH", "CHITTA_EMBED_URL", "CHITTA_EMBED_GPU_ONLY"):
+                "MIND_PATH", "CHITTA_EMBED_URL", "CHITTA_EMBED_GPU_ONLY",
+                "CHITTA_SOCKET_PATH"):
         env.pop(key, None)
     mind = root / "mind"
     mind.mkdir(exist_ok=True)

@@ -155,19 +155,44 @@ client now retries loading replies with a minimum 250 ms delay until its
 still return loading immediately with exit zero; other commands print the last
 loading reply and exit 75 only when their budget expires. A fake-socket test
 covers both direct and thin clients receiving loading twice then becoming ready.
-Checkpoint validation: build, CLI loading 10/10, Ruff, quick gate and contract
-check pass (`contracts unchanged` after regeneration). Rust tests pass in the
-compute full gate, but CTest passes 34/37: `daemon_isolation_test` still reports
-"queued ledger_op was not applied"; `chaos_lock_test` fails its lock invariant;
-`chaos_disk_test` reports the CLI terminated with SIGABRT. These require diagnosis
-before phase 1 is complete. Full-gate hook checks were still running at checkpoint.
-Logs: `/projects/caeg/scratch/kbd606/tmp/p22finish-53r8d6z0`; detailed CTest
-failures: `chitta/build/Testing/Temporary/LastTest.log`.
+Final-fix checkpoint: build, CLI loading 11/11, Ruff, quick gate and contract
+check pass (`contracts unchanged` after regeneration). All 37 CTests now pass,
+including daemon isolation, chaos lock and chaos disk. Isolation also passes
+with an invalid inherited CHITTA_SOCKET_PATH. The compute full gate has passed
+its Rust and CTest stages; its hook suites are still running at this checkpoint.
+The three failure causes and fixes are documented below. Final validation logs:
+`/projects/caeg/scratch/kbd606/tmp/p22fix-dBboCj`; the runner writes its terminal
+result to `validation.log`, and the full gate writes its result to `full.log`.
 
 The expected public contract change is additive ledger `session_list` filtering
 by `repository` and `stream_id`, with upgraded thread_sessions rows. The generic
 `ledger_op` args schema may leave the captured tool schemas byte-identical;
 regeneration and verification are still required. WAL format and replay are unchanged.
+
+### Contract changes and final failure diagnosis (2026-09-19)
+
+Loading health is availability, not readiness: callers requiring an open store
+must wait until `loading` is false. The chaos harness now observes that distinction
+before checking the recovered lock inode. It does not weaken the lock invariant.
+Writes during load remain refused with `error: loading` and `retry_after_s`;
+the CLI retries within its deadline. No test was changed to accept a lost write.
+
+The three remaining failures had distinct causes:
+
+- `chaos_lock_test` checked the inode as soon as loading health answered, before
+  the daemon opened the store. The harness now waits for ready health.
+- `chaos_disk_test` exposed a CLI bug: the loading retry helper called JSON
+  `value()` on the null `structured` member of a compaction error. Object guards
+  preserve the error reply; the CLI fixture covers this null error payload.
+- `daemon_isolation_test` inherited the validation replica's `CHITTA_SOCKET_PATH`,
+  sending RPCs to that replica while writing the queue in its own temporary mind.
+  It passes in isolation; the fixture now clears the inherited socket override.
+  Validation explicitly supplies an invalid inherited socket to prove isolation.
+
+These fixes leave WAL format, replay and the additive `session_list` repository /
+stream filters unchanged. The public schema snapshot is regenerated for those
+filters. Validation artifacts are under
+`/projects/caeg/scratch/kbd606/tmp/p22fix-dBboCj`.
 
 ## Targets retained from the design
 
@@ -234,8 +259,8 @@ It remains recorded for the full gate; no unrelated chaos fix is included.
 Logs: `/projects/caeg/scratch/kbd606/tmp/p22-phase0-relaunch-EfNgwJ/`.
 
 The harness records continuous health gaps, per-kind apply profiles and the
-capsule row-count curve. Each restart reads only newly appended daemon logs.
-Replica measurements and the current full gate remain pending.
+capsule row-count curve. Restart trials now read their truncated daemon log from offset zero.
+The completed replica measurements appear above.
 
 ## Phase 1 implementation (2026-09-19)
 
@@ -254,10 +279,10 @@ repository-wide view. A dedicated bounded worker handles compaction, avoiding
 a join on the responder. Rust replay and the WAL format are unchanged.
 
 The benchmark reads each truncated restart log from offset zero and records
-loading phases alongside health samples. Phase 1 validation and replica
-measurements are pending; this section must be completed before merge.
+loading phases alongside health samples. Phase 1 measurements and validation
+are recorded above.
 
-### Phase 1 checkpoint — not merge-ready
+### Historical phase 1 checkpoint — before raw socket probing
 
 The first rebuilt-daemon run (`p22p1b01`) still measures a health gap of
 18.585 s on initial load, 8.872 s at zero WAL age, and 8.832 s at ten minutes.

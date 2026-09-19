@@ -55,6 +55,8 @@ def main():
                                     result = {"tools": [{"name": "retry_fixture", "description": "fixture", "inputSchema": {"type": "object", "properties": {}}}]}
                                 elif request["method"] == "initialize":
                                     result = {"serverInfo": {"version": "5.72.0"}, "protocolVersion": "2024-11-05"}
+                                elif name == "error_fixture":
+                                    result = {"structured": None, "isError": True, "content": [{"type": "text", "text": "compaction failed"}]}
                                 else:
                                     result = {"structured": {"ready": True}}
                             response = {"jsonrpc": "2.0", "id": request["id"], "result": result}
@@ -110,10 +112,14 @@ def main():
                     state = reply["result"]["structured"] if thin else reply
                     assert state == {"ready": True}, reply
                     assert loading_count == 2 and time.monotonic() - begin >= 0.5
+                request["params"]["name"] = "error_fixture"
+                result = subprocess.run([sys.argv[1], "--socket-path", str(sock)], input=json.dumps(request) + "\n", capture_output=True, text=True, env=env, timeout=2)
+                assert result.returncode == 0, result
+                assert json.loads(result.stdout)["result"]["isError"], result
             finally:
                 stopped.set()
                 worker.join()
-    print("CLI loading: 10/10 health, deadline, and loading-twice-then-ready cases passed")
+    print("CLI loading: 11/11 health, deadline, loading-twice-then-ready, and null error payload cases passed")
 
 
 if __name__ == "__main__":

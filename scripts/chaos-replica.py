@@ -237,8 +237,8 @@ class Harness:
             if self.process and self.process.poll() is not None:
                 raise AssertionError((self.root / "restart.log").read_text()[-1800:])
             try:
-                self.rpc("health_check", timeout=1)
-                return True
+                state = self.rpc("health_check", timeout=1)
+                return not state.get("loading", False)
             except (subprocess.SubprocessError, ValueError, AssertionError):
                 return False
 
