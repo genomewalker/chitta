@@ -1,6 +1,6 @@
 # Storage core baseline and runtime design review
 
-Status as of 2026-09-19: **phase 0 measurements pending; v2 implementation authorised.**
+Status as of 2026-09-19: **phase 0 measured (below); phase 1 authorised.**
 The governing design is [Runtime and storage core](DESIGN-2026-09-19-runtime-core.md)
 v2, merged from origin/main (`e7ae2aaa`) in `2683c9e0`. The WAL-vanish
 baseline is chitta-field `ec22685`. Complete the baseline before phase 1;
@@ -41,13 +41,72 @@ queue-jam workload required by phase 3.
 
 ## Measurements
 
-Pending the compute baseline. Do not substitute live incident numbers for
-replica measurements. Artifact parent:
-`/projects/caeg/scratch/kbd606/tmp/p22-phase0-v2-Bjwbtq`.
+Phase 0 baseline, 2026-09-19, job 22915371 on dandycmpn21fl, frozen cut
+`learning-cut-20260915-frozen` (134,805 memories), worktree `f6f395ff`
+(chitta-field `c5e0ff0`). Report: `/projects/caeg/scratch/kbd606/tmp/p22b0/report.json`.
+
+Initial start (snapshot family da86decb, empty WAL):
+
+| Metric | Value |
+|---|---|
+| socket accepting | 0.54 s |
+| first successful health_check | 18.1 s |
+| field_store open (all phases) | 15.4 s |
+| of which snapshot decode | 2.8 s |
+| of which turbo (+startup) | 8.4 s (8.7 s) |
+| of which emb / keyword_reverse / embed_kernel | 1.3 s / 0.9 s / 0.6 s |
+| of which wal_replay | 0.03 s |
+
+The 17.6 s between socket and health is the blackout the design's phase 1
+removes: the socket is bound before `set_mind_path()` and not polled until it
+returns.
+
+Restart after synthetic writes (1 write/s of small records, 20 writes/s
+sustained during the fill; same snapshot family throughout):
+
+| WAL age | records | socket | first health = max gap |
+|---|---|---|---|
+| 0 min | 0 | 0.34 s | 8.0 s |
+| 10 min | 600 | 0.35 s | 7.9 s |
+| 60 min | 3,600 | 0.38 s | 10.1 s |
+| 240 min | 14,400 | 0.30 s | 14.6 s |
+
+Live daemon the same morning, for scale (chittad.log, restarts at 03:32Z and
+04:19Z): snapshot 8.9 s / 7.5 s, WAL replay 224 s / 95 s, socket-to-serving
+5.9 min / 2.3 min. The synthetic records are one to two orders smaller than
+live WAL records (embeddings, transcripts), so this baseline does not
+reproduce the live replay cost. Phase 2b's step 0 must replay a copy of the
+live WAL family, not synthetic writes.
+
+capsule_get p95 (30 samples per point, CLI overhead included; live ledger
+count today is 364 sessions):
+
+| rows | p95 | max |
+|---|---|---|
+| 123 | 14.8 ms | 15.0 ms |
+| 364 | 24.0 ms | 24.5 ms |
+| 1,000 | 49.5 ms | 49.8 ms |
+| 5,000 | 894.6 ms | 1,287 ms |
+
+Superlinear from 1,000 rows, consistent with the O(N²) `capsule_rows()` scan
+named in the design; phase 1's server-side filtering is gated on ≤ 50 ms at
+the live count and must hold the 5,000-row point under 100 ms.
+
+Mixed traffic, 16 clients, 320 requests: p50 0.15 s, p95 2.91 s, max 5.72 s,
+80 requests errored (the harness does not record the error kind; fix before
+phase 4 uses this number). Clean shutdown 15.1 s with compaction pending;
+forced snapshot 35.0 s.
+
+Harness gaps found in this run, to fix in phase 2b step 0 (they do not block
+phase 1): the restart trials captured empty daemon logs because the harness
+reads `replica.log` from the pre-restart offset and eval-replica truncates it
+on restart, so per-phase timings and the replay apply profile of the restarts
+are lost; the apply profile printed nothing on the initial start (replay of
+an empty WAL); mixed-traffic errors need a kind breakdown.
 
 The reported live incidents motivating this work are separate evidence:
 17 s clean load; 295–350 s field-store open after unclean stops; approximately
-34 MB WAL taking 255–315 s; queue waits of minutes. The lead’s 05:40 finding
+34 MB WAL taking 255–315 s; queue waits of minutes. The lead's 05:40 finding
 identified a second independent startup blocker: a 1.5 GB code-navigation JSON
 covering 20 roots, with inline symbol bodies, and over 14 minutes in
 CodeNavigation::open → Impl::rebuild before the socket opened. That parked
