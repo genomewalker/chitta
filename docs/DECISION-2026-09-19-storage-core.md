@@ -685,5 +685,35 @@ join logs and normal-stop markers. Artifacts for job 22916169:
 `/projects/caeg/scratch/kbd606/tmp/p22sd-tyxcphtc`; control reports:
 `/projects/caeg/scratch/kbd606/tmp/sdbtqvku14r`; revised reports:
 `/projects/caeg/scratch/kbd606/tmp/sdabziyy14l`. Quick gate, Rust tests and
-37/37 ctests passed. The full gate is still running at this checkpoint;
-collect job 22916169 before accepting this step.
+37/37 ctests passed. Job 22916169 completed successfully: full gate PASS,
+including the hook suites; contracts unchanged. The shutdown-wait step is
+validated on this replica.
+
+
+## Replay-loop profiling checkpoint (2026-09-19)
+
+The live-shaped replay regression is not yet reproduced or fixed in this
+checkpoint. Instrumentation gated by `CHITTA_PROFILE_REPLAY=1` now reports
+`decode_ns`, `verify_ns`, `apply_ns`, and `other_ns` per decoded operation kind.
+Reader totals include covered records; `replay_apply` still counts only
+operations actually applied. Sorting, segment metadata operations and profiler
+overhead are outside the per-record totals and must be compared against the
+whole `wal_replay` phase before attributing the regression.
+
+With `CHITTA_PROFILE_SNAPSHOT=1`, normalization reports cache loading, vector
+normalization, signatures, binary codes, ANN repair and trim/cache saving
+separately. These changes do not alter replay or normalization behavior.
+
+`benchmarks/storage/replay_profile.py --prepare --output PATH` starts a frozen
+replica through `eval-replica.sh`, ingests this repository using `learn_codebase`,
+and stops only its own scratch daemon with SIGKILL after the existing periodic
+fsync interval. This is a workload generator, not a durability proof. Run again
+with `--source PATH/m --output CONTROL` to replay a copy of that stopped store.
+Reuse that source for the optimized comparison. Reports include per-kind timing,
+normalization subphases, memory/code counts, daemon hash and WAL fingerprints.
+
+Compute job 22916172 prepares and measures the control, then runs Rust tests.
+Artifacts: `/projects/caeg/scratch/kbd606/tmp/p22rp-j893v8ok`; prepared source:
+`/projects/caeg/scratch/kbd606/tmp/rpj893v8/m`; control:
+`/projects/caeg/scratch/kbd606/tmp/rcj893v8`. Results are pending. No claim of
+meeting the replay or normalization targets is made yet.
