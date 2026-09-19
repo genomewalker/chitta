@@ -6,7 +6,7 @@ stream_context() {
     timeout 25 "$CLI" recall --query "$title" --realm chitta --tag decision --limit 4 --sources false 2>/dev/null | cut -c1-600 || true
     timeout 25 "$CLI" recall --query "stream=$name handoff $title" --realm chitta --tag handoff --limit 3 --sources false 2>/dev/null | cut -c1-600 || true
     printf '\n## Code map\n\n'
-    timeout 30 "$CLI" code_query --question "$title" --path "$W" --limit 12 2>/dev/null | head -n 60 || true
+    timeout 30 "$CLI" code_query --question "$title" --path "$ROOT" --limit 12 2>/dev/null | head -n 60 || true
     printf '\n## Task\n\n'
     cat "$task"
 }

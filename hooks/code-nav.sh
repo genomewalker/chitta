@@ -35,7 +35,8 @@ else
 fi
 reply=$(timeout --kill-after=0.05 "$deadline" "$bin" "$tool" "${args[@]}" --json 2>/dev/null </dev/null)
 rc=$?
-if [[ "$mode" == session && "${CHITTA_CODE_NAV_REFRESH:-1}" != 0 ]]; then
+if [[ "$mode" == session && "${CHITTA_CODE_NAV_REFRESH:-1}" != 0 && ( "${CHITTA_CODE_NAV_ALL_WORKTREES:-0}" == 1 || "$(git -C "$root" rev-parse --git-common-dir 2>/dev/null)" == "$(git -C "$root" rev-parse --git-dir 2>/dev/null)" ) ]]; then
+    # Background refresh only for a main checkout; linked worktrees share its index.
     # A full uncapped collection repairs missing coverage; unchanged files are
     # skipped by learn_codebase. flock drops duplicate background refreshes.
     ( flock -n 9 || exit 0; timeout --foreground 60 "$bin" learn_codebase --path "$root" >/dev/null 2>&1 </dev/null ) 9>"$state/.code_nav_refresh_$repo_key" >/dev/null 2>&1 &
