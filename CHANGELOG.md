@@ -1,17 +1,5 @@
 # Changelog
 
-- Bound parallel endpoint probes with `CHITTA_ROUTER_PROBE_TIMEOUT_MS` (3000 ms), keep timed-out endpoints busy, and use vLLM metrics without generation or latency-based saturation. Require `CHITTA_GPU_AUTOSTART=1` before discovery submits a GPU job. Accept ledger thread IDs in stream release, verify ownership, and check supervisor release results on all exits including setup failure and hangup.
-- Protect the open WAL descriptor during compaction, prune only fully scanned committed coverage, and sync directory mutations. Log unlink reasons. Recover NFS ESTALE through a fresh inode backed by accepted active-segment bytes, preserving replay without restarting the daemon.
-
-- Route LLM roles by exact model availability, with background Ollama/vLLM load probes, interactive latency routing, batch backoff, admission caps, token budgets, and hysteresis. Prefer always-on endpoints on capacity ties; retain cached model checks and failure fallback. Add JSON declarations, `chitta endpoints [--probe]`, RPC `endpoint_list`, role-model environment settings, and an RTX tunnel/relay declaration for orchestrator publication.
-
-- Parse typed SSL arrow chains and sets into relations, normalize ASCII/Unicode/LaTeX arrows, strip entity annotations, and tolerate oversized citations. Add `CHITTA_DISTILL_THINK` and `distill_status.think`; thinking stays enabled pending the frozen quality gate.
-
-- Add `ledger_op capsule_save` for bounded v2 continuation checkpoints, canonical repository keys and compare-and-set revisions; queued Stop writes retain their existing envelope and reject stale revisions.
-- PreToolUse hard stop: once the transcript's last assistant usage (input + cache read + cache creation) exceeds `CHITTA_CONTEXT_HARD_STOP` (opt-in, default off; the one-day 200000 default blocked ordinary sessions on 1M-window models: chitta economises context, it does not refuse work), every tool call is denied except the handoff allowlist (`mcp__chitta__checkpoint`, `mcp__chitta__remember`, `chitta remember|checkpoint|ledger_op`); denial clears once a compaction or fresh session brings the last usage back under the limit. Stop hook budget advisory: once per session, one `[budget]` line when mean context per turn exceeds `CHITTA_CONTEXT_BUDGET` (default 150000).
-
-- Token ledger deduplicates provider requests across transcripts, uses event timestamps for reporting windows, includes cache-write costs, and reports per-model usage plus last-request and lifetime-mean context. Codex usage-event fallback IDs are counted explicitly.
-
 All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 [docs/RENAME.md](docs/RENAME.md)) are documented here.
 
@@ -19,6 +7,42 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 > released without changelog entries (~419 commits). The sections below were
 > reconstructed from `git log` between tags; patch releases are grouped under
 > their minor version (`## [5.x.y]`) with per-release dates on one line.
+
+## [5.73.0] - 2026-09-19
+
+- Storage core, restart path (design docs/DESIGN-2026-09-19-runtime-core.md,
+  numbers in docs/DECISION-2026-09-19-storage-core.md): a responder thread owns
+  the socket from bind and answers `loading` with `retry_after_s` during load,
+  the CLI retries loading answers until its own deadline; ledger session lookups
+  are indexed (capsule_get p95 24 ms to 11 ms at 364 rows, 895 ms to 11 ms at
+  5,000); certified WAL skipping from manifest segment ranges plus post-commit
+  pruning and foreign-lineage archiving (July family reopen 49.7 s to 6 ms);
+  triplet invalidation no longer runs per replayed record (226k-record replay
+  30.8 s to 1.1 s); shutdown workers wake on the stop signal (SIGTERM to exit
+  15 s to 1.3 s); WAL-budget checkpoints on the maintenance thread write every
+  sidecar (store load after a checkpoint 40.7 s to 6.9 s); the code index opens
+  after listening; the store publishes before the keyword index and Turbo warm
+  up. Live restart: 128-298 s to healthy with a silent socket, now first answer
+  7.9 s and healthy 27.5 s.
+- Daemon: child processes start with posix_spawn instead of fork (fork ran
+  OpenBLAS's atfork handler under the ledger mutex and wedged the daemon).
+- Prompt hook: fuzzy corrections are gated on the correction lane's own score
+  and only rows that are corrections are shown (a quoted correction inside an
+  incident memory no longer appears on every prompt).
+- Build and gates: FetchContent sources reused from `CHITTA_DEPS_CACHE`
+  (fresh-worktree configure 37 min to 14 s); gate-full judges chaos and identity
+  by exit status, no longer truncates its own redirected log, reconfigures a
+  half-configured build dir, and runs the slow tokenizer parity test only with
+  `CHITTA_SLOW_TESTS=1`; test_eval_replica's stub is allowed under /tmp.
+- Router: endpoint probes bounded, stream_release fixed (feat/endpoint-pool
+  follow-ups).
+- Bound parallel endpoint probes with `CHITTA_ROUTER_PROBE_TIMEOUT_MS` (3000 ms), keep timed-out endpoints busy, and use vLLM metrics without generation or latency-based saturation. Require `CHITTA_GPU_AUTOSTART=1` before discovery submits a GPU job. Accept ledger thread IDs in stream release, verify ownership, and check supervisor release results on all exits including setup failure and hangup.
+- Protect the open WAL descriptor during compaction, prune only fully scanned committed coverage, and sync directory mutations. Log unlink reasons. Recover NFS ESTALE through a fresh inode backed by accepted active-segment bytes, preserving replay without restarting the daemon.
+- Route LLM roles by exact model availability, with background Ollama/vLLM load probes, interactive latency routing, batch backoff, admission caps, token budgets, and hysteresis. Prefer always-on endpoints on capacity ties; retain cached model checks and failure fallback. Add JSON declarations, `chitta endpoints [--probe]`, RPC `endpoint_list`, role-model environment settings, and an RTX tunnel/relay declaration for orchestrator publication.
+- Parse typed SSL arrow chains and sets into relations, normalize ASCII/Unicode/LaTeX arrows, strip entity annotations, and tolerate oversized citations. Add `CHITTA_DISTILL_THINK` and `distill_status.think`; thinking stays enabled pending the frozen quality gate.
+- Add `ledger_op capsule_save` for bounded v2 continuation checkpoints, canonical repository keys and compare-and-set revisions; queued Stop writes retain their existing envelope and reject stale revisions.
+- PreToolUse hard stop: once the transcript's last assistant usage (input + cache read + cache creation) exceeds `CHITTA_CONTEXT_HARD_STOP` (opt-in, default off; the one-day 200000 default blocked ordinary sessions on 1M-window models: chitta economises context, it does not refuse work), every tool call is denied except the handoff allowlist (`mcp__chitta__checkpoint`, `mcp__chitta__remember`, `chitta remember|checkpoint|ledger_op`); denial clears once a compaction or fresh session brings the last usage back under the limit. Stop hook budget advisory: once per session, one `[budget]` line when mean context per turn exceeds `CHITTA_CONTEXT_BUDGET` (default 150000).
+- Token ledger deduplicates provider requests across transcripts, uses event timestamps for reporting windows, includes cache-write costs, and reports per-model usage plus last-request and lifetime-mean context. Codex usage-event fallback IDs are counted explicitly.
 
 - Cap eligible Bash output at source through PreToolUse `updatedInput` and local
   `chitta output_cap`; preserve pipefail status and skip sqz, multiline,
