@@ -643,4 +643,47 @@ No WAL format or RPC contract changed.
 Job 22916159 validates this correction: Rust three times, full compute gate,
 July legacy/forced-commit/cold/warm opens and a fresh 36,000-write soak.
 Artifacts: `/projects/caeg/scratch/kbd606/tmp/p22fix-jvt99ial`.
-Results are pending; phase 2b and the later restart-budget items remain open.
+Accepted 2026-09-19: legacy replay took 49.735 s, opened 4,995 files and
+applied 12,234 records (11,727 UpdateState). After one forced commit,
+4,877 certified files were pruned and foreign files were archived. Certified
+cold/warm replay took 6/7 ms, opened only 2/3 tail files and applied zero
+records; all three opens retained 120,590 memories. Rust passed 311/311
+three consecutive times, the full gate passed (37 ctests and 41 hook
+suites), and the durability soak retained 36,000/36,000 writes through
+30 compactions. Phase 2b is complete; later restart-budget items remain open.
+
+## Phase 2a: interruptible shutdown waits (2026-09-19)
+
+The daemon's maintenance, backfill, distillation, hint-enrichment and ledger
+loops now wait on a stop condition. The signal handler writes a nonblocking
+self-pipe; a notifier thread wakes the condition variable without invoking
+C++ synchronization or logging from signal context. Shutdown RPCs and the
+existing maintenance restart path use the same wakeup. Every background
+worker join and queue/pool drain now logs its duration. The pipe remains
+open until process exit to avoid a signal writing into a reused descriptor.
+
+Frozen-cut replicas on compute, identical delays after readiness:
+
+| Delay after ready | Before SIGTERM to exit | After SIGTERM to exit | Normal stop before / after |
+| --- | --- | --- | --- |
+| 0 s, first start | 1.327 s | 1.286 s | yes / yes |
+| 65 s, background loops active | 15.070 s | 1.307 s | no / yes |
+| 0 s, next restart | 2.239 s | 1.282 s | yes / yes |
+
+All twelve logged joins/drains were below 1 ms in each revised trial. The
+measured process-exit maximum is 1.307 s, below the 2 s target. The control
+65-second trial had no normal-stop marker; its duration matches the existing
+15-second watchdog window, but its log contains no watchdog message.
+These trials isolate sleeping background loops: they do not establish a
+bound for an active external LLM call, heavy handler or slow NFS operation.
+The existing watchdog remains; this step does not add a shutdown checkpoint
+or alter persistence or RPC contracts.
+
+Reproduce on compute with `python3 benchmarks/storage/shutdown.py --output PATH`,
+where PATH is a new, short directory under project scratch. Reports include the daemon binary hash, individual
+join logs and normal-stop markers. Artifacts for job 22916169:
+`/projects/caeg/scratch/kbd606/tmp/p22sd-tyxcphtc`; control reports:
+`/projects/caeg/scratch/kbd606/tmp/sdbtqvku14r`; revised reports:
+`/projects/caeg/scratch/kbd606/tmp/sdabziyy14l`. Quick gate, Rust tests and
+37/37 ctests passed. The full gate is still running at this checkpoint;
+collect job 22916169 before accepting this step.

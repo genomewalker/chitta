@@ -169,14 +169,34 @@ static DaemonStderr daemon_stderr;
 static_assert(std::atomic<bool>::is_always_lock_free, "atomic<bool> must be lock-free for signal handler");
 std::atomic<bool> daemon_running{true};
 std::atomic<bool> verbose_mode{false};
+std::mutex stop_mutex;
+std::condition_variable stop_cv;
+// Retained until process exit: a concurrent signal can never write a reused fd.
+static volatile std::sig_atomic_t stop_write_fd = -1;
+
+void request_daemon_stop() {
+    const int saved_errno = errno;
+    daemon_running.store(false);
+    if (stop_write_fd >= 0) {
+        const char byte = 1;
+        while (::write(stop_write_fd, &byte, 1) < 0 && errno == EINTR) {}
+    }
+    errno = saved_errno;
+}
+
+template <class Rep, class Period>
+bool wait_for_stop(std::chrono::duration<Rep, Period> duration) {
+    std::unique_lock<std::mutex> lock(stop_mutex);
+    return stop_cv.wait_for(lock, duration, [] { return !daemon_running.load(); });
+}
 
 // Distillation configuration
 // Config structs, path resolution, daemon lifecycle, distillation:
 // → daemon_config.hpp, daemon_lifecycle.hpp, distillation.hpp
 
 void daemon_signal_handler(int sig) {
-    std::cerr << "[daemon] Signal " << sig << " received, shutting down\n";
-    daemon_running = false;
+    (void)sig;
+    request_daemon_stop();
 }
 
 static const auto process_started = std::chrono::steady_clock::now();
@@ -403,6 +423,22 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
 
     subconscious.start();
 
+    int stop_pipe[2];
+    if (::pipe(stop_pipe) != 0) throw std::runtime_error("shutdown wake pipe failed");
+    if (::fcntl(stop_pipe[1], F_SETFL, O_NONBLOCK) < 0 ||
+        ::fcntl(stop_pipe[0], F_SETFD, FD_CLOEXEC) < 0 ||
+        ::fcntl(stop_pipe[1], F_SETFD, FD_CLOEXEC) < 0)
+        throw std::runtime_error("shutdown wake pipe flags failed");
+    stop_write_fd = stop_pipe[1];
+    // Only write(2) runs in the signal handler. This ordinary thread takes the
+    // mutex before notifying, so a stop cannot race with a waiter parking.
+    std::thread stop_notifier([read_fd = stop_pipe[0]] {
+        char byte;
+        while (::read(read_fd, &byte, 1) < 0 && errno == EINTR) {}
+        { std::lock_guard<std::mutex> lock(stop_mutex); daemon_running = false; }
+        stop_cv.notify_all();
+        std::cerr << "[daemon] Stop requested, waking background workers\n";
+    });
     std::signal(SIGTERM, daemon_signal_handler);
     std::signal(SIGINT, daemon_signal_handler);
     std::signal(SIGPIPE, SIG_IGN);
@@ -464,7 +500,7 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
 #endif
 
         while (daemon_running) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            if (wait_for_stop(std::chrono::milliseconds(100))) break;
 
             auto now_time = std::chrono::steady_clock::now();
 
@@ -584,7 +620,7 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
                         if (compatible) {
                             std::cerr << "[maint] Binary updated, restarting daemon...\n";
                             { auto _lk = handler.acquire_lock(); field_store.flush(); }
-                            daemon_running = false;
+                            request_daemon_stop();
                             ::execlp("systemctl", "systemctl", "--user", "restart", "chittad", nullptr);
                             // Fallback when systemd is not managing us. execv's
                             // argv must be a NULL-terminated vector, not NULL —
@@ -654,11 +690,8 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
 
     // Condvar used by the backfill thread to wake immediately when a write stores a
     // pending memory instead of sleeping the full 30s poll interval.
-    std::mutex embed_cv_mutex;
-    std::condition_variable embed_cv;
-
-    handler.set_write_notify_callback([&embed_cv]() {
-        embed_cv.notify_one();
+    handler.set_write_notify_callback([]() {
+        stop_cv.notify_all();
     });
 
     // Backfill thread — re-embeds memories stored while yantra was unavailable.
@@ -674,8 +707,7 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
         // document ("search_document: search_document: …"), while queries get a single
         // "search_query: " — that asymmetry collapses query↔document cosine at recall.
         // Initial delay: let WAL replay and HNSW load finish before hammering ONNX.
-        for (int i = 0; i < 150 && daemon_running; ++i)
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        if (wait_for_stop(std::chrono::seconds(30))) return;
 
         // Throttle for the runtime delta-sidecar persist below: the delta HNSW is
         // written at most once per minute (init to now-60s so the first drain persists).
@@ -734,7 +766,7 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
                             //   upgrade: force a batch every N deferrals.
                             for (int _g = 0; _g < 100 && daemon_running
                                              && subconscious.recall_pressured(); ++_g)
-                                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                                if (wait_for_stop(std::chrono::milliseconds(50))) break;
                             { auto _lk = handler.acquire_lock();
                               field_store.backfill_stage(bids, bembs, EMBED_DIM); }
                             field_store.backfill_plan();   // OFF the rpc_mutex — recall unblocked
@@ -771,8 +803,8 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
             // Wait up to 5s for a write-notify or until shutdown.
             // fire_write_notify() wakes us immediately when a new pending memory arrives.
             {
-                std::unique_lock<std::mutex> lk(embed_cv_mutex);
-                embed_cv.wait_for(lk, maintenance_jitter.delay(
+                std::unique_lock<std::mutex> lk(stop_mutex);
+                stop_cv.wait_for(lk, maintenance_jitter.delay(
                                        std::chrono::seconds(5), "backfill_poll", poll_sequence++),
                                   [&] { return !daemon_running.load(); });
             }
@@ -791,13 +823,12 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
             interval_mins, "distillation", distill_sequence++);
 
         // Initial delay to let things settle — interruptible on shutdown
-        for (int _i = 0; _i < 30 && daemon_running; ++_i)
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+        if (wait_for_stop(std::chrono::seconds(30))) return;
 
         std::optional<std::chrono::steady_clock::time_point> busy_skip_started;
 
         while (daemon_running) {
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+            if (wait_for_stop(std::chrono::seconds(1))) break;
 
             auto now_time = std::chrono::steady_clock::now();
             if (now_time - last_distill >= next_distill_delay) {
@@ -920,14 +951,13 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
         static constexpr int  LIMIT         = 50;   // memories per run
         static constexpr int  INITIAL_DELAY = 60;   // let daemon settle
 
-        for (int i = 0; i < INITIAL_DELAY && daemon_running; ++i)
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+        if (wait_for_stop(std::chrono::seconds(INITIAL_DELAY))) return;
 
         size_t last_count = field_store.memory_count();
         auto   last_run   = std::chrono::steady_clock::now() - std::chrono::seconds(COOLDOWN_SECS);
 
         while (daemon_running) {
-            std::this_thread::sleep_for(std::chrono::seconds(30));
+            if (wait_for_stop(std::chrono::seconds(30))) break;
             if (!daemon_running) break;
 
             size_t cur_count = field_store.memory_count();
@@ -986,7 +1016,7 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
                 while (daemon_running) {
                     try { ledger.flush(); }
                     catch (const std::exception& e) { std::cerr << "[runtime-ledger] " << e.what() << "\n"; }
-                    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                    if (wait_for_stop(std::chrono::milliseconds(50))) break;
                 }
                 ledger.flush(true);
             } catch (const std::exception& e) {
@@ -1094,7 +1124,7 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
             if (req.data == "shutdown") {
                 server.respond(req.client_fd, R"({"status":"shutting_down"})");
                 { auto _lk = handler.acquire_lock(); field_store.flush(); }
-                daemon_running = false;
+                request_daemon_stop();
                 continue;
             }
 
@@ -1324,23 +1354,37 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
     // state for the next daemon. Detaching threads is unsafe — captures-by-ref
     // outlive main()'s stack frame, risking UAF under heavy concurrency.
     std::signal(SIGALRM, [](int) {
-        std::cerr << "[daemon] Shutdown timeout — forcing exit\n";
+        static constexpr char message[] = "[daemon] Shutdown timeout — forcing exit\n";
+        const auto ignored = ::write(STDERR_FILENO, message, sizeof(message) - 1);
+        (void)ignored;
         std::_Exit(0);
     });
     alarm(15);
 
-    maintenance.join();
-    if (backfill_thread.joinable()) backfill_thread.join();
-    if (distillation.joinable()) distillation.join();
-    if (enrichment.joinable()) enrichment.join();
-    if (hint_enrichment.joinable()) hint_enrichment.join();
-    queue_proc.stop();
-    write_pool.reset();
-    if (runtime_ledger_thread.joinable()) runtime_ledger_thread.join();
-    subconscious.stop();
+    request_daemon_stop();
+    const auto shutdown_step = [](const char* name, auto action) {
+        const auto begin = std::chrono::steady_clock::now();
+        action();
+        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - begin).count();
+        std::cerr << "[shutdown] " << name << " duration_ms=" << ms << "\n";
+    };
+    const auto join = [&](const char* name, std::thread& thread) {
+        shutdown_step(name, [&] { if (thread.joinable()) thread.join(); });
+    };
+    join("stop_notifier", stop_notifier);
+    join("maintenance", maintenance);
+    join("backfill", backfill_thread);
+    join("distillation", distillation);
+    join("enrichment", enrichment);
+    join("hint_enrichment", hint_enrichment);
+    shutdown_step("queue", [&] { queue_proc.stop(); });
+    shutdown_step("write_pool", [&] { write_pool.reset(); });
+    join("runtime_ledger", runtime_ledger_thread);
+    shutdown_step("subconscious", [&] { subconscious.stop(); });
     // Drain requests while queue counters, callbacks and managers still exist.
-    compact_wal_pool.reset();
-    pool_owner.reset();
+    shutdown_step("compact_wal_pool", [&] { compact_wal_pool.reset(); });
+    shutdown_step("request_pool", [&] { pool_owner.reset(); });
 
     alarm(0);  // Cancel watchdog — all threads finished normally
 
