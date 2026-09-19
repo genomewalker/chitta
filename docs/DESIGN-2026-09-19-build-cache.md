@@ -411,3 +411,40 @@ hypothesis from the two process-spawning tests, not an established cause.
 This remains a store-test blocker outside the authorized build.sh-only Rust
 scope. Test errors are no longer retried as cache failures. No gate-clean
 acceptance claim is permitted while this remains unresolved.
+
+### Saved fresh-worktree proof (job 22916137)
+
+Both worktrees used parent 1dc664c3 and submodule 96bccb4 on dandycmpn22fl,
+Rust 1.93.0, conda GCC 14.3.0, private runtime directories from build-env,
+and a shared private compiler cache. Queue time was not captured. Results and
+full stage logs: `/projects/caeg/scratch/kbd606/tmp/agent_7WR1yO/proof`.
+
+| Stage | Cold compiler cache (s) | Warm compiler cache, fresh outputs (s) |
+|---|---:|---:|
+| Quick | 61 | 55 |
+| Rust release | 252 | 246 |
+| Rust tests, including compilation | 264 | 262 |
+| Configure | 35 | 29 |
+| C++ | 164 | 10 |
+| CTest | 23 | 23 |
+| 41 hook suites | 622 | 630 |
+| Full gate, both FAIL | 1441 | 1273 |
+
+Both Rust suites passed. Both CTest runs passed 36/37, failing only
+code_navigation_test at line 97: CCACHE_BASEDIR made __FILE__ relative, breaking
+its source-relative fixture lookup. The corrected environment leaves BASEDIR
+empty to preserve compiler semantics. Cross-worktree hit rates must be measured
+again; correctness takes priority over path normalization.
+
+Subprocess_load_test passed in 7.32 s cold and 6.70 s warm. The earlier 300 s
+failure occurred alongside the proven 768/1024 Rust/C++ dimension mismatch and
+shared TMPDIR; it did not recur after the committed dimension/runtime correction.
+These runs do not isolate which environment change cured the timeout. The Rust
+self-holder lock race remains unexplained despite six isolated passes and these
+two full-suite passes; it is not considered fixed by caching.
+
+The hook CXX wrapper now invokes the real compiler through ccache and is also
+available as g++ on PATH. CMake uses the real compiler plus its existing launcher
+to avoid applying ccache twice. Full gate initializes caches before spawning
+native and hook stages, and prints counters before and after hooks. No hook test
+sources, optimization flags, or test parallelism are changed.

@@ -7,7 +7,7 @@ cd "$ROOT" || exit 1
 if [[ "${CHITTA_ON_COMPUTE:-1}" == 1 && -z "${SLURM_JOB_ID:-}" ]] && command -v srun >/dev/null; then
     exec bash "$ROOT/scripts/on-compute.sh" -c 16 -- bash "$0" "$@"
 fi
-chitta_log_init || exit 1
+chitta_build_init || exit 1
 export CHITTA_ON_COMPUTE=0
 replica=0 recall=0
 for a in "$@"; do case "$a" in --replica) replica=1 ;; --recall) replica=1; recall=1 ;; *) echo "unknown option: $a"; exit 2 ;; esac; done
@@ -19,11 +19,13 @@ run quick env GATE_TMP="$GATE_TMP/quick" bash scripts/gate-quick.sh
 run native bash scripts/build.sh --tests
 # Surface native step verdicts and cache counters in the outer gate log too.
 grep -E '^(PASS:|FAIL:|cache statistics:|Cache hits|Cache misses|Cache location|[[:space:]]+Hits:|[[:space:]]+Misses:)' "$GATE_TMP/native.log" || true
+chitta_cache_stats hooks-before
 pass=0
 for t in hooks/tests/test_*.sh; do
     if chitta_stage "$(basename "$t" .sh)" timeout 300 bash "$t"; then pass=$((pass+1)); else fail=1; fi
 done
 echo "hook suites passed=$pass"
+chitta_cache_stats hooks-after
 # An unavailable quick probe is never counted as end-to-end coverage.
 run daemon-contracts bash scripts/contract-snapshot.sh check
 if [[ $replica == 1 ]]; then

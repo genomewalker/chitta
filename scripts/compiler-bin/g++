@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# CXX must be a single executable for shell and Python hook fixtures.
+set -eu
+compiler="${CHITTA_CXX_COMPILER:-/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo/bin/x86_64-conda-linux-gnu-g++}"
+if [[ "${CHITTA_CACHE:-1}" == 1 && -n "${CCACHE_DIR:-}" ]] && command -v ccache >/dev/null; then
+    exec ccache "$compiler" "$@"
+fi
+exec "$compiler" "$@"

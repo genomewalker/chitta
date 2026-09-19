@@ -20,6 +20,10 @@ if [[ -x "$_chitta_conda/bin/x86_64-conda-linux-gnu-g++" ]]; then
 else
     export CXX="${CXX:-c++}" CC="${CC:-cc}"
 fi
+# Keep CMake on the real compiler; shell fixtures invoke the cache wrapper.
+export CHITTA_CXX_COMPILER="${CHITTA_CXX_COMPILER:-$CXX}"
+export CXX="$CHITTA_BUILD_ROOT/scripts/compiler-bin/g++"
+_chitta_prepend PATH "$CHITTA_BUILD_ROOT/scripts/compiler-bin"
 export CARGO_HOME="${CARGO_HOME:-$CHITTA_REAL_HOME/.cargo}" RUSTUP_HOME="${RUSTUP_HOME:-$CHITTA_REAL_HOME/.rustup}"
 export CHITTA_PY="${CHITTA_PY:-$("$CHITTA_BUILD_ROOT/scripts/python-with-mcp.sh")}"
 export PYO3_PYTHON="${PYO3_PYTHON:-$CHITTA_PY}"
@@ -51,7 +55,9 @@ chitta_build_init() {
     chitta_log_init || return
     export CCACHE_DIR="${CCACHE_DIR:-$CHITTA_BUILD_CACHE/ccache}" CCACHE_MAXSIZE="${CCACHE_MAXSIZE:-10G}"
     export CCACHE_TEMPDIR="$TMPDIR" CCACHE_COMPILERCHECK=content CCACHE_NOINODECACHE=true
-    export CCACHE_BASEDIR="$CHITTA_BUILD_ROOT"
+    # BASEDIR rewrites __FILE__ and breaks source-relative fixture lookup.
+    # Preserve paths; ccache can still reuse preprocessed results across trees.
+    export CCACHE_BASEDIR=""
     if [[ "${CHITTA_CACHE:-1}" == 1 ]] && command -v ccache >/dev/null && mkdir -p "$CCACHE_DIR" && [[ -w "$CCACHE_DIR" ]]; then
         export CMAKE_C_COMPILER_LAUNCHER="${CMAKE_C_COMPILER_LAUNCHER-$(command -v ccache)}"
         export CMAKE_CXX_COMPILER_LAUNCHER="${CMAKE_CXX_COMPILER_LAUNCHER-$(command -v ccache)}"
