@@ -454,3 +454,37 @@ raw max_health_gap_s is below one second at every WAL age, capsule_get p95 is
 <=50 ms at 364 rows and <=100 ms at 5,000, and Rust/ctest/contracts gates pass.
 The contract regeneration and final measured values still require a follow-up
 commit; this checkpoint does not claim phase 1 completion.
+
+
+### Phase 2b integration checkpoint (2026-09-19)
+
+The July control took 269,424 ms in WAL replay and 293,325 ms in field-store
+open. The first 64 KiB buffered trial took 99,493 ms and 123,288 ms respectively.
+Both applied 12,234 operations, including 11,727 UpdateState operations; every
+reported per-kind count matched. These sequential trials are not a controlled
+cache-state comparison. Artifacts are in `p22b-kzF9gn` under project scratch.
+The inherited full gate passed before this certificate integration.
+
+Each new full family now binds its segment inventory, vector-space lineage,
+full coverage and cortical coverage to an accompanying cortical snapshot.
+Legacy manifests deserialize with empty certificates and retain full scanning.
+Replay enables certificates only for the full family actually loaded and its
+successfully decoded cortical snapshot. It skips a writer only if every segment
+of that writer is certified and size-matched: an uncertified tail retains prefix
+decoding to preserve timestamp carry-forward and hash-chain context. This is a
+conservative limitation of this checkpoint, not a claim of tail-decode speedup.
+
+Every successful full-family commit now invokes certified pruning, with both
+coverage vectors, size and lineage validation, the existing sealed-file guard,
+and audited directory-synced deletion. The pinned writer remains excluded.
+The segment format is unchanged; the manifest gains optional family metadata.
+The July forced-commit/reopen acceptance and a soak against this integration
+remain required before phase 2b can be declared complete.
+
+Checkpoint gates: quick PASS; contracts unchanged; Rust validation pending.
+The initial attempts failed on Python configuration and an older conda Cargo;
+the pinned run uses modern Cargo, conda Python/BLAS, and TMPDIR=/tmp on compute.
+Its log is `p22integrate-3ZxynF/rust-pinned.log`. The final cortical fsync edit
+may postdate compilation: rerun Rust tests on the committed tree before merge.
+The inherited p21 soak reached 22,800 acknowledgements at 1,140 seconds; it
+validates the pre-integration binary and does not replace a fresh soak.
