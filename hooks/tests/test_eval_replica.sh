@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Unit tests for manifest-family selection, complete copying, and grader plumbing.
 set -u
+# The stub replica lives under mktemp -d; the /tmp guard is for real replicas.
+export CHITTA_ALLOW_TMP_REPLICA=1
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 REPLICA="$ROOT/scripts/eval-replica.sh"
