@@ -488,3 +488,43 @@ Its log is `p22integrate-3ZxynF/rust-pinned.log`. The final cortical fsync edit
 may postdate compilation: rerun Rust tests on the committed tree before merge.
 The inherited p21 soak reached 22,800 acknowledgements at 1,140 seconds; it
 validates the pre-integration binary and does not replace a fresh soak.
+
+### Phase 2b acceptance preparation (2026-09-19)
+
+The second buffered July trial completed: WAL replay 101,174 ms, field-store
+open 125,081 ms, 12,234 applied records including 11,727 UpdateState, and
+120,590 memories. Together with the preceding 99,493 ms buffered trial and
+269,424 ms control, this demonstrates the buffered-reader improvement on
+these sequential runs; filesystem caches were not forcibly evicted.
+
+Job 22916126 failed Rust validation for two unrelated fixture assumptions:
+`sync_foreign_split_tests` hard-coded 768-dimensional vectors while the
+default Rust build expects 1,024. The fixture now uses `crate::ops::EMBED_DIM`.
+Its pinned run passed 306 tests and failed those two; two tests were ignored.
+Earlier attempts also failed due to PyPy configuration and an old Cargo that
+cannot read lockfile version 4. Final validation pins modern Cargo, conda
+CPython/BLAS, and the daemon's 768-dimensional build identity.
+
+`benchmarks/storage/certified_reopen.py` makes the July acceptance sequence
+repeatable: copy through eval-replica, assert the legacy per-kind replay counts
+and normalized memory count, force `compact_wal`, preserve the pruning audit,
+then SIGKILL only its owned replica and reopen twice from the committed family.
+The first legacy open must still apply 12,234 records; certified reopens must
+apply zero operations already captured by that family, retain 120,590 memories,
+and spend less than 2,000 ms in WAL replay. Cold/warm labels identify successive
+process opens, not controlled eviction of client or NFS server caches.
+
+Final-code full gate, July acceptance and a fresh p21 soak are submitted as
+job 22916128, artifacts `p22final-8_i5xzr6` under project scratch. Results are
+pending; the inherited soak validates the pre-integration binary only.
+
+The inherited pre-integration soak (job 22916122) completed successfully:
+36,000/36,000 acknowledged unique writes at 20.0/s, 30 forced compactions,
+memory count 134,805 → 170,805, zero count regressions, vanished-segment lines,
+or ESTALE lines. This is control evidence; the final-tree soak remains required.
+
+Acceptance checkpoint: the final quick gate, Ruff and contract comparison pass
+(`contracts unchanged`). The dimension-portable peer-sync fixture is committed
+as chitta-field `0878ca7`. Job 22916128 is still running the full compute gate;
+its July acceptance and final-tree soak are sequenced after a successful gate.
+No phase 2b completion or sub-two-second result is claimed yet.
