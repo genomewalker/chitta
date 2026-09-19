@@ -565,3 +565,20 @@ Artifacts: `/projects/caeg/scratch/kbd606/tmp/p22cert-67j5h75x`. Results pending
 Correction checkpoint: quick gate PASS (79 pages checked, zero failures);
 contract check PASS (`contracts unchanged`). Compute acceptance remains pending;
 no phase 2b completion or new replay timing is claimed.
+
+### Phase 2b acceptance correction (2026-09-19, job 22916146)
+
+The first Rust run failed only `second_open_of_the_same_store_is_refused`:
+310 passed, one failed, two ignored. The lock correctly rejected the second
+open, but the new same-PID diagnostic omitted the established phrase
+`another chitta-field instance`. Restore that phrase while retaining
+`instance lock self-holder bug`; neither the test nor lock behavior changes.
+This was a diagnostic compatibility regression, not a reproduced lock leak.
+
+Job 22916149 reruns three consecutive Rust suites, the full compute gate,
+July legacy/forced-commit/certified opens, and the 36,000-write p21 soak.
+Artifacts: `/projects/caeg/scratch/kbd606/tmp/p22retry-vpgupjaq`.
+Results remain pending; no acceptance claim is made by this correction.
+
+Correction checkpoint: submodule `56386e9`; quick gate PASS; contracts unchanged.
+The three Rust results and full acceptance remain pending in job 22916149.
