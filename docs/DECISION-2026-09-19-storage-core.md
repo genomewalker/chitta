@@ -1,6 +1,6 @@
 # Storage core baseline and runtime design review
 
-Status as of 2026-09-19: **live since 16:55Z (main 1173c93d, store c7a0116): ready 22.7 s from process start (was 40.3 s), healthy 39.9 s from the restart command; store open 20.8 s (snapshot decode 9.8 s), listening 1.8 s after store-ready; next: section-lazy snapshot.**
+Status as of 2026-09-19: **live since 20:27Z (main 2288e158, store 1013dc1): first answer 7.9 s after the restart command, ready 19.7 s from process start, healthy 27.5 s; keyword index and Turbo deferred; next: bind before snapshot decode (7.6 s pre-answer gap), defer hdc/symbols/spans/organs (about 8 s live), section-lazy decode.**
 The governing design is [Runtime and storage core](DESIGN-2026-09-19-runtime-core.md)
 v2, merged from origin/main (`e7ae2aaa`) in `2683c9e0`. The WAL-vanish
 baseline is chitta-field `ec22685`. Complete the baseline before phase 1;
