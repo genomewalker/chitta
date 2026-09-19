@@ -180,3 +180,43 @@ Logs: `/projects/caeg/scratch/kbd606/tmp/p22-phase0-relaunch-EfNgwJ/`.
 The harness records continuous health gaps, per-kind apply profiles and the
 capsule row-count curve. Each restart reads only newly appended daemon logs.
 Replica measurements and the current full gate remain pending.
+
+## Phase 1 implementation (2026-09-19)
+
+The socket responder owns bind, loading replies, steady dispatch and close on
+one thread. Initialization, including set_mind_path, stays on the caller. Health
+and status report loading with field_store/initializing phases; replay counts
+and ETA are null when unavailable. Other requests return an error=loading with
+retry_after_s=1 and isError=true. No incoming writes are acknowledged or queued.
+
+Session rows gain repository and stream_id columns, derived from capsule
+metadata during legacy journal replay and each mutation. This is an intentional
+additive row-contract change; the shared row-shape fixture is regenerated.
+Repository aliases normalize identically to capsule keys. Filtered indexes
+limit capsule lookups to their repository and stream; manifests retain the
+repository-wide view. A dedicated bounded worker handles compaction, avoiding
+a join on the responder. Rust replay and the WAL format are unchanged.
+
+The benchmark reads each truncated restart log from offset zero and records
+loading phases alongside health samples. Phase 1 validation and replica
+measurements are pending; this section must be completed before merge.
+
+### Phase 1 checkpoint — not merge-ready
+
+The first rebuilt-daemon run (`p22p1b01`) still measures a health gap of
+18.585 s on initial load, 8.872 s at zero WAL age, and 8.832 s at ten minutes.
+No loading health samples were observed through the CLI probe. Socket connection
+logs show clients arriving during load; investigate the CLI preflight/schema
+fetch and response framing before assuming the responder is working. The
+sub-second availability gate fails. Remaining ages and capsule timings are
+still running; no successful phase 1 performance claim is made.
+
+The first full gate passed 36/37 C++ tests; its sole failure was the old
+thread_sessions fixture. That fixture is now updated, and the full gate rerun
+is in flight. Public contract checking was blocked by an unreachable live
+daemon on the invocation node. Logs: `p22p1-bik5XT` under project scratch.
+
+The checkpoint quick gate passes its other checks but fails the contracts
+check. The additive `thread_sessions` row contract (`repository`, `stream_id`)
+is intentional; the public contract snapshot still needs verification from a
+node that can reach the daemon. This is an explicitly failing checkpoint.

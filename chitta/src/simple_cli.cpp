@@ -20,6 +20,7 @@
 #include <chitta/rpc/thread_pool.hpp>
 #include <chitta/rpc/protocol.hpp>
 #include <chitta/socket_server.hpp>
+#include <chitta/loading_responder.hpp>
 #include <chitta/socket_client.hpp>
 #include <chitta/native_distiller.hpp>
 #include <chitta/daemon_config.hpp>
@@ -214,7 +215,7 @@ static unsigned long long spawn_format_id_probe(const char* binary) {
 
 int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* embed_queue,
                int interval,
-               SocketServer& server, const std::string& socket_path, const std::string& mind_path,
+               SocketServer& server, LoadingResponder& responder, const std::string& socket_path, const std::string& mind_path,
                const std::string& pid_file,
                const DistillConfig& distill_config, EnrichConfig& enrich_config,
                const SubconsciousConfig& subconscious_config, bool no_autonomous,
@@ -423,7 +424,7 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
     // compact_wal runs on its own dedicated thread; declared here so the maintenance
     // lambda can check it and pause sync_foreign while compaction is in progress.
     std::atomic<bool> compact_wal_inflight{false};
-    std::thread compact_wal_thread;
+    auto compact_wal_pool = std::make_unique<ThreadPool>(1, 1, 1);
 
     // Maintenance thread - sync and apply decay periodically
     std::atomic<size_t> cycle_count{0};
@@ -1039,9 +1040,7 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
     handler.set_queue_stats(&queue_count, &queue_fail_count, failed_queue_path);
     handler.set_queue_live(&queue_distill_count, &queue_proc.batch_remaining(), queue_path);
 
-    server.set_disconnect_callback([&sadhana_manager](int fd) {
-        if (sadhana_manager) sadhana_manager->stream_unsubscribe(fd);
-    });
+
     std::cerr << "[daemon] Sadhana manager initialized\n";
     std::cerr << "[daemon] chitta-field active: " << field_store.memory_count()
               << " memories, " << field_store.symbol_count() << " symbols\n";
@@ -1063,6 +1062,10 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
                 return handler.handle(json::parse(data)).dump(-1, ' ', false, json::error_handler_t::replace);
             }, [&server](int fd, std::string reply) { server.queue_response(fd, std::move(reply)); });
     };
+    responder.serve([&] {
+    server.set_disconnect_callback([&sadhana_manager](int fd) {
+        if (sadhana_manager) sadhana_manager->stream_unsubscribe(fd);
+    });
     while (daemon_running) {
         // Poll admission rather than blocking the I/O thread. The extra waiting
         // room is capped too; beyond both caps callers receive overload.
@@ -1230,14 +1233,18 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
                     server.respond(req.client_fd, resp.dump(-1, ' ', false, json::error_handler_t::replace));
                     continue;
                 }
-                if (compact_wal_thread.joinable()) compact_wal_thread.join();
-                compact_wal_thread = std::thread([&handler, &server, &compact_wal_inflight,
-                             fd = req.client_fd, data = req.data]() {
-                    auto request = json::parse(data);
-                    auto response = handler.handle(request);
+                const auto submitted = compact_wal_pool->submit(req.client_fd, "compact_wal",
+                    [&handler, data = req.data]() {
+                        return handler.handle(json::parse(data)).dump(-1, ' ', false, json::error_handler_t::replace);
+                    }, [&server, &compact_wal_inflight](int fd, std::string response) {
+                        server.queue_response(fd, std::move(response));
+                        compact_wal_inflight.store(false);
+                    });
+                if (!submitted) {
                     compact_wal_inflight.store(false);
-                    server.queue_response(fd, response.dump(-1, ' ', false, json::error_handler_t::replace));
-                });
+                    server.respond(req.client_fd, rpc::make_error(parsed.value("id", json()),
+                        rpc::error::INTERNAL_ERROR, "compaction worker overloaded").dump());
+                }
                 continue;
             }
 
@@ -1300,9 +1307,8 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
         }
     }
 
-    // Stop socket first — removes file immediately, prevents new connections
-    // while threads finish their current work.
-    server.stop();
+    server.set_disconnect_callback({});
+    }); // responder closes the socket before the main thread drains workers
     if (viz_server) viz_server->stop();
     if (rpc_http_svr) { rpc_http_svr->stop(); if (rpc_http_thread.joinable()) rpc_http_thread.join(); }
 
@@ -1333,7 +1339,7 @@ int cmd_daemon(FieldStore& field_store, VakYantra* yantra, chitta::EmbedQueue* e
     if (runtime_ledger_thread.joinable()) runtime_ledger_thread.join();
     subconscious.stop();
     // Drain requests while queue counters, callbacks and managers still exist.
-    if (compact_wal_thread.joinable()) compact_wal_thread.join();
+    compact_wal_pool.reset();
     pool_owner.reset();
 
     alarm(0);  // Cancel watchdog — all threads finished normally
@@ -1896,9 +1902,11 @@ int main(int argc, char* argv[]) {
         }
     }
     std::unique_ptr<SocketServer> early_server;
+    std::unique_ptr<LoadingResponder> responder;
     if (command == "daemon") {
         early_server = std::make_unique<SocketServer>(sock_path);
-        if (!early_server->start()) {
+        responder = std::make_unique<LoadingResponder>(*early_server);
+        if (!responder->start()) {
             release_lock(daemon_lock);
             std::cerr << "[daemon] Another daemon is running (socket in use)\n";
             return 1;
@@ -1908,7 +1916,6 @@ int main(int argc, char* argv[]) {
                          std::chrono::steady_clock::now() - process_started).count() << "ms\n";
     }
 
-    std::atomic<bool> load_done{false};
     std::exception_ptr load_ex;
     std::thread loader([&]() {
         try {
@@ -1934,30 +1941,7 @@ int main(int argc, char* argv[]) {
         } catch (...) {
             load_ex = std::current_exception();
         }
-        load_done.store(true, std::memory_order_release);
     });
-    while (!load_done.load(std::memory_order_acquire)) {
-        if (early_server) {
-            auto reqs = early_server->poll(100);
-            for (auto& r : reqs) {
-                // Echo the request id so the client gets a matched response immediately
-                // (id=null caused RESPONSE_TIMEOUT_MS=5min wait because client drops unmatched frames).
-                json warming = {
-                    {"jsonrpc", "2.0"},
-                    {"id",      nullptr},
-                    {"result",  {{"text", "daemon loading, please retry"},
-                                 {"structured", {{"status", "warming_up"}}}}}
-                };
-                try {
-                    auto rj = json::parse(r.data, nullptr, false);
-                    if (!rj.is_discarded()) warming["id"] = rj.value("id", json(nullptr));
-                } catch (...) {}
-                early_server->respond(r.client_fd, warming.dump());
-            }
-        } else {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
-    }
     loader.join();
     if (load_ex) {
         try { std::rethrow_exception(load_ex); }
@@ -1967,6 +1951,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    if (responder) responder->phase("initializing");
     FieldStore& field_store = *field_store_ptr;
     // One-shot bridge-lane index bootstrap for corpora written before write-time
     // atom derivation existed. Gated: CHITTA_ARTIFACT_BACKFILL=1. Persists on the
@@ -1985,7 +1970,7 @@ int main(int argc, char* argv[]) {
 
     int result = 0;
     if (command == "daemon") {
-        result = cmd_daemon(field_store, yantra_raw, &embed_queue, interval, *early_server, sock_path, mind_path, pid_file, distill_config, enrich_config, subconscious_config, no_autonomous, http_port, http_static_dir, rpc_port, daemon_lock);
+        result = cmd_daemon(field_store, yantra_raw, &embed_queue, interval, *early_server, *responder, sock_path, mind_path, pid_file, distill_config, enrich_config, subconscious_config, no_autonomous, http_port, http_static_dir, rpc_port, daemon_lock);
     } else if (command == "stats") {
         result = cmd_stats(field_store, yantra_raw);
     } else if (command == "metrics") {

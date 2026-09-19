@@ -105,7 +105,6 @@ def main():
         nonlocal pid
         observed = {}
         daemon_log = mind / "replica.log"
-        log_offset = daemon_log.stat().st_size if daemon_log.exists() else 0
         done = threading.Event()
 
         def watch():
@@ -119,7 +118,12 @@ def main():
                             client.settimeout(0.1)
                             client.connect(str(sock))
                         observed["socket_s"] = time.monotonic() - born
-                    rpc("health_check", timeout=1)
+                    _, health = rpc("health_check", timeout=1)
+                    state = health.get("structured", {})
+                    if state.get("loading"):
+                        phases = observed.setdefault("loading_phases", [])
+                        if state.get("phase") not in phases:
+                            phases.append(state.get("phase"))
                     now = time.monotonic() - born
                     observed.setdefault("health_s", now)
                     samples = observed.setdefault("health_samples_s", [])
@@ -149,7 +153,7 @@ def main():
             done.set()
             watcher.join()
         with daemon_log.open("rb") as source:
-            source.seek(log_offset)
+            # eval-replica truncates this file on every start, including restart.
             log = source.read().decode(errors="replace")
         (out / f"{label}-daemon.log").write_text(log)
         observed["phase_ms"] = dict(re.findall(r"load phase=(\w+) ms=(\d+)", log))
