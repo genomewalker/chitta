@@ -1,6 +1,6 @@
 # Storage core baseline and runtime design review
 
-Status as of 2026-09-19: **phase 0 measured (below); phase 1 authorised.**
+Status as of 2026-09-19: **phase 1 merged (afda805e) and live since 09:18Z; phase 2b authorised.**
 The governing design is [Runtime and storage core](DESIGN-2026-09-19-runtime-core.md)
 v2, merged from origin/main (`e7ae2aaa`) in `2683c9e0`. The WAL-vanish
 baseline is chitta-field `ec22685`. Complete the baseline before phase 1;
@@ -244,6 +244,16 @@ readiness target. Add a 24-hour-equivalent backlog before phase 2 acceptance.
    acknowledged local WAL after node loss. Document the recovery boundary
    and measured mirror lag before offering this mode. Default NFS remains
    the durability baseline.
+
+## Phase 1 live (2026-09-19 09:18Z)
+
+Measured from `systemctl --user restart chittad` on the live mind after the
+afda805e deploy: first `loading` answer with `retry_after_s: 1` at 17.8 s
+(about 15 s of it is the previous daemon's clean shutdown, phase 2a's
+target), first `Status: ok` at 127.8 s (snapshot 10.4 s, WAL replay 59.4 s,
+field_store 97.3 s). Before phase 1 the socket was bound and silent for that
+whole window. The CLI retries loading answers until its own deadline, so
+hooks and scripts see the old blocking behaviour with an honest reason.
 
 ## Phase 2b step 0: replay profile on a real family (2026-09-19)
 
