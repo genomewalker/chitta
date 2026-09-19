@@ -1,6 +1,6 @@
 # Storage core baseline and runtime design review
 
-Status as of 2026-09-19: **phase 2b accepted and merged (6585592f, store 07897d8): July reopen 49.7 s to 6 ms; deploy pending; phase 2a authorised.**
+Status as of 2026-09-19: **live since 15:23Z: phases 1, 2b, replay per-record fix (64470dbc, store a495ecf) and 1.3 s shutdown (27c6556a); next: checkpoints, triplet clean marker, lazy code index, deferred index repair, section-lazy snapshot.**
 The governing design is [Runtime and storage core](DESIGN-2026-09-19-runtime-core.md)
 v2, merged from origin/main (`e7ae2aaa`) in `2683c9e0`. The WAL-vanish
 baseline is chitta-field `ec22685`. Complete the baseline before phase 1;
