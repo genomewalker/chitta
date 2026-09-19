@@ -164,6 +164,34 @@ readiness target. Add a 24-hour-equivalent backlog before phase 2 acceptance.
    and measured mirror lag before offering this mode. Default NFS remains
    the durability baseline.
 
+## Phase 2b step 0: replay profile on a real family (2026-09-19)
+
+July NFS snapshot `Index-Snapshot-Current-1783764427` (family 558a2f48,
+4,995 segment files, 5.3 GB copied), replayed twice on a compute node with
+`CHITTA_PROFILE_REPLAY=1` (jobs 22916102 and 22916107, store c5e0ff0):
+
+| Item | Value |
+|---|---|
+| wal_replay phase | 102.8 s / 104.8 s |
+| records applied | 12,234 |
+| apply time, all kinds summed | 38 ms |
+| of which UpdateState (11,727 records) | 7.5 ms |
+| of which PutPayload / UpdateMemoryContent / UpdateSparseCode (12 each) | 11.3 / 8.9 / 9.4 ms |
+| segments rejected by the lineage fence | 117, spanning 46 s of log time |
+
+Applying records is 0.04% of replay. The other 99.96% is opening, validating
+and decoding segment files that the snapshot already covers, at roughly
+20 ms per file on NFS before any record is looked at. Replay cost therefore
+scales with the number of files in `segments/`, not with the records to
+apply. Phase 2b's target is set by this: skip every segment the manifest's
+coverage already commits without opening it, decode only the tail after
+coverage, and keep `segments/` small by pruning covered files after each
+committed family. Acceptance: replay of this family under 2 s with the same
+12,234 records applied and the same post-replay memory count.
+
+A profiled replay of the live mind is scheduled (job 22916105) to confirm the
+same shape on today's records.
+
 ## Phase 0 controlled chaos comparison (2026-09-19)
 
 On compute with TMPDIR=/tmp set inside the allocation, the requested
