@@ -174,7 +174,7 @@ sedi "s/^version = \"[^\"]*\"/version = \"$NEW_VERSION\"/" \
 
 # Update docs/index.html badge
 echo "Updating docs/index.html badge..."
-sedi "s/New in v[0-9]*\.[0-9]*\.[0-9]*/New in v$NEW_VERSION/" \
+sedi "s/Unreleased + v[0-9]*\.[0-9]*\.[0-9]*/v$NEW_VERSION/g; s/Status as of [0-9-]* · /Status as of $(date +%F) · /g" \
     docs/index.html
 
 # Verify updates
@@ -182,7 +182,7 @@ grep -q "\"$NEW_VERSION\"" chitta/include/chitta/version.hpp || { echo "version.
 grep -q "\"$NEW_VERSION\"" .claude-plugin/plugin.json || { echo "plugin.json update failed"; exit 1; }
 grep -q "\"$NEW_VERSION\"" codex-plugin/.codex-plugin/plugin.json || { echo "codex plugin.json update failed"; exit 1; }
 grep -q "\"$NEW_VERSION\"" chitta-mcp/pyproject.toml || { echo "pyproject.toml update failed"; exit 1; }
-grep -q "New in v$NEW_VERSION" docs/index.html || { echo "docs/index.html update failed"; exit 1; }
+grep -q "v$NEW_VERSION" docs/index.html || { echo "docs/index.html update failed"; exit 1; }
 
 # Commit version bump
 echo "Committing version bump..."
