@@ -59,7 +59,8 @@ probe() {
         | timeout 10 "$CHITTA" --socket-path "$SOCKET" 2>/dev/null \
         | grep -v '^\[chitta' || true
 }
-field() { jq -r ".result.structured.$1 // empty" 2>/dev/null; }
+# `// empty` would drop a false boolean; only null and a missing key read as absent.
+field() { jq -r "if (.result.structured.$1 | . == null) then empty else (.result.structured.$1 | tostring) end" 2>/dev/null; }
 
 # ── 1. Do not interrupt a save ────────────────────────────────────────────────
 if [[ -S "$SOCKET" ]]; then
