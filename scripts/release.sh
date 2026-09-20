@@ -178,8 +178,10 @@ echo "Updating docs/index.html badge..."
 # CHANGELOG.md); stamp today's date, re-sync every page, then align in-page stamps.
 sedi "s/^STATUS_DATE = '[0-9-]*'/STATUS_DATE = '$(date +%F)'/" scripts/site_common.py
 python3 scripts/sync-site-chrome.py > /dev/null || { echo "site chrome sync failed"; exit 1; }
+# footer() in site_common.py writes "Unreleased + v<n>" for the between-releases
+# state; at release time the page shows the released version only.
 for page in docs/*.html docs/vedanta/index.html; do
-    sedi -E "s/Status as of 20[0-9]{2}-[0-9]{2}-[0-9]{2}/Status as of $(date +%F)/g" "$page"
+    sedi -E "s/Status as of 20[0-9]{2}-[0-9]{2}-[0-9]{2}/Status as of $(date +%F)/g; s/Unreleased \+ v$NEW_VERSION/v$NEW_VERSION/g" "$page"
 done
 
 # The contract snapshot carries plugin.json's version: regenerate it with the bump.
