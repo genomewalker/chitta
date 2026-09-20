@@ -982,6 +982,10 @@ public:
     /// Number of live memories.
     bool startup_indexes_ready() const { return handle_ && cf_startup_indexes_ready(handle_); }
 
+    /// Whether the triplet graph can be queried without blocking on the
+    /// deferred index rebuild.
+    bool triplets_ready() const { return handle_ && cf_triplets_ready(handle_); }
+
     size_t memory_count() const {
         return cf_memory_count(handle_);
     }
