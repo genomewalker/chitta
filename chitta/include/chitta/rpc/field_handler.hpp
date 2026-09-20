@@ -366,6 +366,10 @@ public:
             {"pool_pending",     pool_pending},
             {"rpc_over_budget",  rpc_budget_.over_budget_count()},
             {"embed_cache", query_embed_cache_.stats()},
+            // The default health_check answers here, not in tool_health_check;
+            // restart-chittad.sh reads these two to wait out a save.
+            {"snapshot_in_flight",      field_store_->snapshot_in_flight()},
+            {"last_snapshot_commit_ms", field_store_->last_snapshot_commit_ms()},
         };
         std::string text = "Status: ok\nchitta-field daemon healthy\n  memories : ~"
                            + std::to_string(mem) + "\n";
