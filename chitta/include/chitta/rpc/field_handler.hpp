@@ -186,6 +186,13 @@ public:
         return {true, "Code indexes are loading; retry shortly.",
                 {{"error", "loading"}, {"loading", true}, {"phase", "code_indexes"}, {"retry_after_s", 1}}};
     }
+    // The triplet graph's derived indexes rebuild on the maintenance thread, so
+    // graph-only tools answer this instead of blocking the caller on the build.
+    // Semantic and keyword recall never touch the graph and are unaffected.
+    static ToolResult triplets_loading() {
+        return {true, "Triplet graph is loading; retry shortly.",
+                {{"error", "loading"}, {"loading", true}, {"phase", "triplets"}, {"retry_after_s", 1}}};
+    }
     // Maintenance owns initialization; publish only once both indexes are usable.
     void open_code_indexes() {
         const auto& p = mind_path_;

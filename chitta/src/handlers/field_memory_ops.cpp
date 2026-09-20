@@ -772,6 +772,7 @@ ToolResult FieldRpcHandler::tool_query_triplets_temporal(const json& params) {
 }
 
 ToolResult FieldRpcHandler::tool_triplet_query_as_of(const json& params) {
+    if (!field_store_->triplets_ready()) return triplets_loading();
     std::string subject = params.value("subject", "");
     if (subject.empty()) return ToolResult::error("subject is required");
     int64_t world_ms = params.value("world_ms", int64_t(0));

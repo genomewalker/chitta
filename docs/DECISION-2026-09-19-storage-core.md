@@ -1,6 +1,6 @@
 # Storage core baseline and runtime design review
 
-Status as of 2026-09-20: **live since 2026-09-19 22:13Z (main 9b002e1f, store c5eec70): socket answering 14 ms after start, ready 12.7 s from process start, healthy 19.7 s from the restart command. Replica floor with the current snapshot format: store-ready 5.5-6.0 s, first recall 6.2-6.7 s; a mapped startup cache (job 22916949) passed its gates without improving it and was not committed. Next phase: zero-copy mapped memory and embedding sections (format change), designed before coded.**
+Status as of 2026-09-20: **live since 2026-09-19 22:13Z (main 9b002e1f, store c5eec70): socket answering 14 ms after start, ready 12.7 s from process start, healthy 19.7 s from the restart command. Replica floor with the current snapshot format: store-ready 5.5-6.0 s, first recall 6.2-6.7 s; a mapped startup cache (job 22916949) passed its gates without improving it and was not committed. Phase 1a (triplet index rebuild deferred off the open path) is measured and gated but not merged; see the 2026-09-20 section. Next phase: zero-copy mapped memory and embedding sections (format change), designed before coded.**
 The governing design is [Runtime and storage core](DESIGN-2026-09-19-runtime-core.md)
 v2, merged from origin/main (`e7ae2aaa`) in `2683c9e0`. The WAL-vanish
 baseline is chitta-field `ec22685`. Complete the baseline before phase 1;
@@ -1145,3 +1145,66 @@ Normalization remains before ready because it prepares LSH; PLD remains there
 because it holds recall text. Full snapshot section decoding remains on the
 publication path. Deferring it must preserve WAL mutations rather than replace
 them with a late snapshot section; this part is unfinished.
+
+## Phase 1a: triplet rebuild deferred (2026-09-20)
+
+A serving open now decodes the triplet section without rebuilding its derived
+indexes, and hands the rebuild to the maintenance thread. WAL replay does not
+drag the job back onto the open path: while the indexes are owed, every replay
+mutation that would consult an index is recorded in order and drained after the
+rebuild, so a tail carrying triplet writes costs the open nothing. Buffered
+adds still advance `next_id`, because `TripletIdAllocator` is seeded from it in
+the window between replay and the drain.
+
+Measured on dandycomp01fl, 2026-09-20 05:57-08:07Z, by
+`/projects/caeg/scratch/kbd606/tmp/p25/measure-open.sbatch` over
+`scripts/eval-replica.sh`, on the frozen 2026-09-15 cut (134,805 memories).
+The two wall clocks are RPC probes polled at 100 ms from the launcher's start,
+so they carry CLI and launch overhead that the in-process `load phase` timers
+do not: `recall` is on the exempt list in `field_handler.hpp` and answers as
+soon as the store publishes, `realm_list` is not and answers only once
+`cf_startup_indexes_ready` flips. The eager control is the same binary with
+`CHITTA_DEFER_TRIPLETS=0`, not an older build, and `CHITTA_STARTUP_EAGER` was
+not used: it defers nothing at all and is therefore not a triplet-only control.
+Every run starts from a pristine copy of the frozen family. Three runs per
+cell; the range across the three is given.
+
+| cell | store open (`field_store`) | ready | first correct recall | broad gate open |
+|---|---|---|---|---|
+| eager control, empty tail | 7.23-7.56 s | 7.70-8.01 s | 8.89-9.03 s | 9.94-10.09 s |
+| deferred, empty tail | 5.64-5.79 s | 6.09-6.29 s | 7.19-8.44 s | 9.27-9.52 s |
+| eager control, triplet tail | 6.25-6.38 s | 6.66-6.74 s | 7.66-7.77 s | 8.72-8.82 s |
+| deferred, triplet tail | 4.51-4.57 s | 4.91-5.02 s | 6.12-6.16 s | 9.18-9.22 s |
+
+**Only the same-tail pairs are valid comparisons.** The empty-tail and
+tail-carrying cells run against different store states (the tail cells append
+300 `AddTriplet` records and are killed with SIGKILL so a shutdown snapshot
+cannot fold the tail away), so an empty-tail number must never be read against
+a tail-carrying one. Within a tail state, deferral removes about 1.7 s from both
+store open and ready (median 6.27 s to 4.54 s, and 6.71 s to 4.97 s).
+
+Broad gate open is a `realm_list` probe, which is not on the exempt list in
+`field_handler.hpp` and therefore waits on `cf_startup_indexes_ready`. It is
+the only cell where deferral can lose: with a triplet tail it opens about 0.45 s
+later than the eager control (median 8.74 s to 9.22 s), because the
+2.46-3.04 s rebuild now sits after
+ready rather than inside it. First recall, which does not wait on that gate, is
+1.5 s earlier. Deferred phase durations logged in the same runs: triplets
+2,460-3,038 ms with a tail, 1,556-1,607 ms without; triplet replication
+226-351 ms.
+
+The gate-open column was measured before `cf_startup_indexes_ready` was
+extended to cover `triplet_replication_pending`. That term adds the
+triplet-replication duration above, 0.23-0.35 s, to every gate-open figure
+here; it has not been re-measured.
+
+Replication counts are the one piece of state the deferral leaves stale. A
+deferring open skips `replication::rebuild`, which walks the graph for every
+state, and the maintenance thread redoes it immediately after the rebuild.
+Until it finishes, roughly 0.25 s after the triplet rebuild, every state still
+carries the replication count from the snapshot, and recall scoring uses that
+count. The exact and hybrid recall lanes answer `loading` while the graph is
+building, but the semantic and keyword lanes are served normally and do read
+the stale count, so the recall gates do not cover this window.
+`cf_startup_indexes_ready` now stays closed until the counts are current, which
+covers every tool routed through it but not those two lanes.

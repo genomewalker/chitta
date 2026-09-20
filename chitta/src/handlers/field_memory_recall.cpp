@@ -1957,6 +1957,7 @@ ToolResult FieldRpcHandler::tool_recall_session(const json& params) {
 }
 
 ToolResult FieldRpcHandler::tool_recall_spreading(const json& params) {
+    if (!field_store_->triplets_ready()) return triplets_loading();
     if (!params.contains("query"))
         return ToolResult::error("query required");
     std::string query = params.value("query", "");
