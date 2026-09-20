@@ -84,14 +84,12 @@ if [[ ${1:-} == --supervise ]]; then
     cd "$W"
     exec 3<&0
     if [[ $1 == codex ]]; then
-        # Resolve codex to an absolute path. Leaving it to PATH let launcher
-        # children run the standalone package (~/.codex/packages/standalone,
-        # cli_version 0.151.0), which the API rejects for gpt-6-astra, while
-        # interactive shells ran the patched local release (0.0.0) and worked
-        # (2026-09-20). CHITTA_CODEX_BIN overrides; the default is the patched
-        # install the repo standardises on.
-        codex_bin=${CHITTA_CODEX_BIN:-$HOME/.local/bin/codex}
-        [[ -x $codex_bin ]] || { echo "codex binary not executable: $codex_bin" >&2; return 1; }
+        # build-env prepends Conda, whose npm Codex can differ from our patched
+        # release. Freeze the real executable path and log it for diagnosis.
+        codex_bin=${CHITTA_CODEX_BIN:-$HOME/.local/codex-local/current/bin/codex}
+        codex_bin=$(realpath -e "$codex_bin") || exit 1
+        [[ -x $codex_bin && ! -d $codex_bin ]] || { echo "codex binary not executable: $codex_bin" >&2; exit 1; }
+        printf 'Codex worker executable: %s (%s)\n' "$codex_bin" "$("$codex_bin" --version)"
         shift
         setsid "$codex_bin" "$@" "$(cat <&3)" </dev/null &
     else

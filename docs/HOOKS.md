@@ -1,5 +1,12 @@
 # chitta Hooks System
 
+Codex streams execute the resolved release at
+`~/.local/codex-local/current/bin/codex`, independent of build-environment PATH
+changes. `CHITTA_CODEX_BIN` can explicitly select a different executable for
+tests or another installation. The supervisor logs the resolved path and
+version before starting the worker; an invalid selection fails without falling
+back to a different Codex.
+
 Codex's `codex-pretool-wrapper.sh` adapts PreToolUse responses to the Codex
 wire contract: rewrites without a decision receive `permissionDecision: allow`,
 legacy `block` decisions become `deny`, and denials discard any `updatedInput`.

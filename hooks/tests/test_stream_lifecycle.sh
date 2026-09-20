@@ -14,7 +14,7 @@ else
     payload=$(cat)
     op=$(jq -r .params.arguments.op <<< "$payload")
     echo "$op" >> "$S/calls"
-    echo '{"result":{"isError":false,"structured":{"value":{"claimed":true}}}}'
+    echo '{"result":{"isError":false,"structured":{"value":{"claimed":true,"released":true}}}}'
 fi
 STUB
 cat > "$tmp/bin/claude" <<'STUB'
@@ -25,13 +25,17 @@ cat >/dev/null
 if [[ ${TEST_MODE:-} == signal ]]; then sleep 60; exit; fi
 printf '[handoff] stream=%s gates=pass\n' "$name" > "$S/$name.handoff"
 STUB
-cat > "$tmp/bin/codex" <<'STUB'
+cat > "$tmp/patched-codex" <<'STUB'
 #!/usr/bin/env bash
+if [[ ${1:-} == --version ]]; then echo patched-fixture; exit; fi
 [[ -z $(cat) ]] || exit 42
+[[ ${!#} == prompt ]] || exit 43
 printf '%s\n' "$$" > "$S/actual"
 printf '[handoff] stream=%s gates=pass\n' "$name" > "$S/$name.handoff"
 STUB
-chmod +x "$CLI" "$tmp/bin/claude" "$tmp/bin/codex"
+printf '#!/bin/bash\nexit 99\n' > "$tmp/bin/codex"
+chmod +x "$CLI" "$tmp/bin/claude" "$tmp/bin/codex" "$tmp/patched-codex"
+export CHITTA_CODEX_BIN="$tmp/patched-codex"
 export name=fixture holder=holder lead=lead claim_args='{}'
 for client in claude codex; do
     printf 'prompt' | bash "$ROOT/scripts/stream-lib.sh" --supervise "$client"
