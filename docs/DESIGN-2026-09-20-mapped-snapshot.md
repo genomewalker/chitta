@@ -1,8 +1,8 @@
 # Mapped snapshot: serving without decoding
 
-Status as of 2026-09-20: **design, authored by the lead (Fable); implementation
-by Opus 5 on `feat/mapped-snapshot`. No code until the phase 0 numbers in
-section 7 are recorded.** Continues
+Status as of 2026-09-20: **revised after phase 0 (section 7a). The mapping gate
+passed; the premise about which sections dominate was wrong and section 2 is
+corrected. Implementation by Opus 5 on `feat/mapped-snapshot`.** Continues
 [Runtime and storage core](DESIGN-2026-09-19-runtime-core.md) and
 [the storage decision log](DECISION-2026-09-19-storage-core.md), whose phases
 1, 2a and 2b are live in v5.73.0.
@@ -66,8 +66,10 @@ Serving needs exactly:
 4. **LSH signatures** — the existing sidecar, already small (4 MB) and already
    cache-hit on load.
 
-Everything else (Turbo, organs, hdc, triplets, symbols, spans, keyword index,
-HNSW graph) is already deferred or rebuilt after publication.
+Everything else (Turbo, organs, hdc, symbols, spans, keyword index, HNSW
+graph) is already deferred or rebuilt after publication. **The triplet store is
+not** — see section 3a; taking it off the open path is step 1 of the work
+order.
 
 ## 3. Measured constraint: NFS page behaviour
 
@@ -90,6 +92,65 @@ pay 0.16 s. So the design maps for serving *and* immediately streams the
 mapping on the maintenance thread (`madvise(MADV_WILLNEED)` plus a sequential
 touch), which warms the whole family in about 2 s while requests are already
 being answered.
+
+## 3a. Phase 0 result, measured 2026-09-20
+
+Frozen replica, third start (warm sidecars). Sections decode in a four-thread
+pool, so the wall clock is the longest chain, not the sum.
+
+| Section | decode_ms | Share of the 836 MB body |
+|---|---|---|
+| parallel_sections (wall clock) | 2,778 | |
+| triplet_store + its index rebuild | 830 + 1,899 | 332 MB (39.7%) |
+| keyword_idx | 344 | |
+| symbol_idx | 289 | |
+| payloads + states | 184 + 168 | 82 MB (9.8%) |
+| everything else | ≤ 129 each | |
+
+The §5 arrays, written from that family (134,804 rows, dim 768; 499 MB total:
+state 8.6 MB, arena 77 MB, embeddings 414 MB):
+
+| Metric | Median | Range |
+|---|---|---|
+| map + validate, cold | 9.8 ms | 7.6–13.4 |
+| map + validate, warm | 0.30 ms | 0.24–0.79 |
+| 1,000 random lookups, cold | 496 ms | 486–529 |
+| 1,000 random lookups, warm | 0.77 ms | 0.71–1.20 |
+| full CRC verify | 464 ms | 439–530 |
+| embedding scan, 395 MB, cold | 376 ms | 1,050 MB/s |
+| embedding scan, warm | 173 ms | 2,282 MB/s |
+
+`MADV_WILLNEED` plus sequential touch over the 1.80 GB frozen family: 1.74 s
+at 1,034 MB/s, so about 2.3 s for the live 2.4 GB family.
+
+**Gate: passed.** Worst map+validate 13.4 ms against a 1 s bar; worst warm
+1,000-lookup 1.20 ms against a 5 ms bar. Mapping is not the risk.
+
+**The premise was wrong, and the design changes because of it.** Payloads and
+states are 9.8% of the body and 352 ms of concurrent decode. The dominant term
+is the triplet store: 332 MB decoded in 830 ms, chaining straight into
+`rebuild_indexes()` at `chitta-field/src/snapshot.rs:1437`, together 2,729 ms of
+the 2,778 ms critical path. Section 2 listed triplets as already deferred; they
+are not. The `load phase=triplets ms=0` line belongs to a later step.
+
+So mapping alone takes store-ready from about 6.0 s to about 5.2 s. **Triplet
+decode and index rebuild must leave the open path**, and that is now the first
+implementation step, ahead of the format work:
+
+- The serving lanes that need the triplet store are the spreading-activation
+  and triplet-query paths (`store/recall.rs:1604,1652,2506`), not semantic or
+  keyword recall. They answer `loading` until the store is ready, exactly as
+  `code_query` does today.
+- Decode and rebuild move to the maintenance thread after publication, with a
+  `deferred phase=triplets duration_ms=` log line like the other deferred
+  phases.
+- Keyword and symbol indexes (344 ms and 289 ms) follow the same rule if they
+  are still on the critical path once triplets are off it.
+
+Corrections to the rest of this document: the acceptance memory count is
+134,804 for this family, not 134,805 (the `.emb` sidecar carries 134,807 rows,
+which the parity check must tolerate); the embedding phase (723 ms) and `pld`
+(104 ms) disappear when those arrays are mapped.
 
 ## 4. Startup sequence after this change
 
@@ -178,10 +239,11 @@ On the frozen replica, with content parity against the eager path:
 | Metric | Today | Target |
 |---|---|---|
 | first health answer | 0.05 s | unchanged |
-| store-ready | 5.5–6.0 s | < 1.0 s |
+| store-ready, triplets deferred only | 5.5–6.0 s | < 3.0 s |
+| store-ready, deferred + mapped | 5.5–6.0 s | < 1.0 s |
 | first correct recall | 6.2–6.7 s | < 2.0 s |
 | recall ids vs eager path | identical | identical |
-| memory count | 134,805 | 134,805 |
+| memory count | 134,804 | 134,804 |
 
 Live target: healthy under 10 s from the restart command. Plus: Rust suite
 three times, `ctest`, hook suites and contracts green on a detached checkout;
@@ -191,7 +253,11 @@ safe.
 
 ## 9. Work order
 
-1. Phase 0 measurements (§7), recorded, no store changes.
+1. Phase 0 measurements (§7): done, recorded in §3a.
+1a. Triplet decode and `rebuild_indexes` move off the open path to the
+   maintenance thread, with loading answers for the spreading-activation and
+   triplet-query lanes. This is the largest single win and needs no format
+   change; measure store-ready before and after.
 2. V24 writer behind `CHITTA_SNAPSHOT_V24=1`, default off; V24 reader; both
    families written on commit. Gates green with the flag off and on.
 3. Mapped serving path: `peek_memory` and the recall scorers read through the
