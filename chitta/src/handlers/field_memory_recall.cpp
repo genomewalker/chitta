@@ -2763,6 +2763,11 @@ ToolResult FieldRpcHandler::tool_routed_recall(const json& params) {
 
     std::string raw = field_store_->routed_recall_json(req.dump());
     auto parsed = json::parse(raw, nullptr, false);
+    // The store answers the exact and hybrid lanes with a loading payload while
+    // the triplet rebuild is deferred. Nesting that under structured.result
+    // would hand the caller an ok result with no hits: the CLI retries on
+    // structured.loading at the top level only (socket_client.cpp).
+    if (parsed.is_object() && parsed.value("loading", false)) return triplets_loading();
     std::ostringstream ss;
     if (parsed.is_object()) {
         std::string dispatch = parsed.value("dispatch", "unknown");
