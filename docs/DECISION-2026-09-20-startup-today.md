@@ -94,3 +94,62 @@ Two follow-ups, both in the save path, which this pass does not own:
    manifest-committed or stale family wins, those differ and the organs read
    points at another family's file. That is the likeliest cause of the 07:19
    restart miss, and it is one line in `field/opening.rs`.
+
+## Turbo first, and a search that waits for it (2026-09-20, later)
+
+Status as of 2026-09-20: **canonical for the deferred Turbo load.**
+
+A stack capture at 09:02Z showed three recall threads inside
+`SemanticIndex::search`, on no lock. The flat scan's raw turbovec arm found
+`turbo` still `None` and fell through to the scalar loop over `all_ids()`:
+141,613 vectors, 14 s under load with three concurrent callers. The Turbo load
+was the last deferred job, after the three gate lanes and the keyword reverse
+index, so `ready` marked the start of that window: it published at 09:02:39
+against a ready at 09:02:28, and recalls issued at ready ended at 09:02:47.
+
+1. **Turbo is its own lane, scheduled first.** It is in no gate and shares no
+   state with the other lanes. The keyword reverse index stays on the
+   maintenance thread, because it owns the stop receiver the lanes cannot share
+   and nothing waits on it.
+2. **Search waits rather than scans.** A `TurboPending` signal is armed at open
+   when the load is deferred and cleared the moment the index publishes. The raw
+   arm parks on it for at most `CHITTA_TURBO_WAIT_MS` (default 5000) and then
+   proceeds with whatever is published, logging
+   `[hnsw] search waited_ms=N for turbo published=...`. The signal clears from a
+   guard's `Drop`, so a cancelled or failed startup releases waiters instead of
+   making them serve out the budget.
+
+Two lock facts this rests on. The caller's `semantic_idx` read guard is held
+across the wait exactly as it was held across the scan, and for less time;
+nothing on the publication path needs that lock, and `prune_turbo_changes`,
+which does, runs after the signal clears. And the wait must not sit behind a
+`match` scrutinee: that keeps the `turbo` read guard alive for the whole arm,
+and the recursive read inside the wait then queues behind the publisher's
+pending write. The first version did exactly that and deadlocked under the new
+test.
+
+### Measured, frozen 2026-09-15 cut, dandycomp01fl, mean of 3
+
+| metric | before | after |
+|---|---|---|
+| Turbo published, after `ready` | 16.3 s | 4.0 s |
+| Broad tool gate open, from process start | 13.87 s | 14.30 s |
+| Deferred gate phases, critical path | 7,198 ms | 7,838 ms |
+| `triplets` phase | 1,936 ms | 3,499 ms |
+| First non-loading recall | 6.80 s | 7.21 s |
+| Three concurrent recalls at `ready`, slowest | 0.16 s | 0.15 s |
+
+Turbo publishes about twelve seconds earlier. It costs about 0.4 s on the gate:
+the Turbo build saturates its own rayon pool, which slows the triplet lane from
+1.9 s to 3.5 s, though the organs lane still sets the critical path.
+
+**The replica cannot measure the recall side.** Three concurrent recalls fired
+at `ready` take about 0.15 s in both cells, and the wait never fires. A trace
+at the top of `SemanticIndex::search` showed the `chitta recall` tool never
+reaches it on this replica, with no realm, with a realm, and with learning off;
+the live 09:02Z stack capture shows three request threads inside it, so the
+live request shape differs from the CLI's. What is verified here is the
+mechanism, by unit test (a search parks until publication and then matches the
+Turbo path; a search gives up at its bound and still answers), and the twelve
+seconds earlier publication. The end-to-end recall win is unmeasured on the
+replica and has to be read from the live daemon after deploy.
