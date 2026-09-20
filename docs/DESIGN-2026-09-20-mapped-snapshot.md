@@ -200,10 +200,10 @@ safe.
 4. Replica acceptance (§8), then default the flag on, then deploy.
 5. Only after that: f16 embeddings as a separate measured change.
 
-## References
+## Where to read the code
 
-- [Runtime and storage core](DESIGN-2026-09-19-runtime-core.md)
-- [Storage core decisions and numbers](DECISION-2026-09-19-storage-core.md)
-- `chitta-field/src/snapshot.rs` — V23 container and `FullSnapshot`
-- `chitta-field/src/store.rs` — `peek_memory`, the read path this maps
-- `chitta-field/src/store/recall.rs` — `recall_semantic`, the scan this maps
+`chitta-field/src/snapshot.rs` holds the V23 container and `FullSnapshot`.
+`chitta-field/src/store.rs` holds `peek_memory`, the read path this design
+maps, and `chitta-field/src/store/recall.rs` holds `recall_semantic`, the scan
+it maps. The two prior documents are the runtime core design and the storage
+core decision log, both dated 2026-09-19 in this directory.
