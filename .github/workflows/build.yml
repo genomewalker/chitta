@@ -20,7 +20,7 @@ jobs:
 
       - name: Install build tools
         run: |
-          dnf install -y wget perl-IPC-Cmd cmake ninja-build python3.11 python3.11-devel python3.11-pip openblas-devel jq util-linux
+          dnf install -y wget perl-IPC-Cmd cmake ninja-build python3.11 python3.11-devel python3.11-pip openblas-devel openssl-devel jq util-linux
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable

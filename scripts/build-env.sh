@@ -6,7 +6,7 @@ export CHITTA_REAL_HOME
 _chitta_prepend() {
     local key="$1" entry="$2" value="${!1:-}"
     [[ -d "$entry" ]] || return 0
-    case ":$value:" in *":$entry:"*) ;; *) printf -v "$key" '%s' "$entry${value:+:$value}"; export "$key" ;; esac
+    case ":$value:" in *":$entry:"*) ;; *) printf -v "$key" '%s' "$entry${value:+:$value}"; export "${key?}" ;; esac
 }
 _chitta_conda=/maps/projects/fernandezguerra/apps/opt/conda/envs/bioinfo
 _chitta_prepend PATH "$_chitta_conda/bin"

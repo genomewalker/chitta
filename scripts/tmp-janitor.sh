@@ -14,7 +14,10 @@ dry=0; [[ "${1:-}" == --dry-run ]] && dry=1
 freed=0
 while IFS= read -r d; do
     size=$(du -sm "$d" 2>/dev/null | cut -f1); [[ ${size:-0} -ge 100 ]] || continue
-    users=$(ls -l /proc/[0-9]*/cwd 2>/dev/null | grep -c " $d")
+    users=0
+    for cwd in /proc/[0-9]*/cwd; do
+        [[ "$(readlink "$cwd" 2>/dev/null)" == "$d"* ]] && users=$((users + 1))
+    done
     [[ $users -eq 0 ]] || continue
     if (( dry )); then echo "would remove ${size} MB $d"; else rm -rf "$d" && freed=$((freed + size)); fi
 done < <(find /tmp -maxdepth 1 -mindepth 1 -type d -user "$USER" -mmin "+$((max_age_h * 60))" \

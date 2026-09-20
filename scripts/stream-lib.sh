@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2154  # name, task, branch, title, context, holder and W are set by the sourcing launcher
 # Shared worker lifecycle, sourced by both launchers.
 stream_context() {
     cat "$ROOT/codex-plugin/stream-contract.md"
