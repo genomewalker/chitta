@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # Full gate: all native and hook checks, one compute allocation, retained logs.
 set -uo pipefail
+# A login-node locale that a compute node lacks makes every bash print a
+# setlocale warning on stderr, which the byte-exact hook tests then fail on
+# (dandycmpn05fl, 2026-09-20). Gates run under C.
+export LC_ALL=C LANG=C
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT/scripts/build-env.sh"
 cd "$ROOT" || exit 1

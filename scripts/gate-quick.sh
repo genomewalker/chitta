@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # Login-node gate. Every check retains its exit status and complete diagnostic.
 set -uo pipefail
+# A login-node locale that a compute node lacks makes every bash print a
+# setlocale warning on stderr, which the byte-exact hook tests then fail on
+# (dandycmpn05fl, 2026-09-20). Gates run under C.
+export LC_ALL=C LANG=C
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT/scripts/build-env.sh"
 chitta_log_init || exit 1
