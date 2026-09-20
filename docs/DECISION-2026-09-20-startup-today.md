@@ -53,3 +53,44 @@ cells: `{before, after} x {empty tail, live-shaped tail}`, three runs each. The
 tail is 300 `connect` plus 50 `remember`, killed with SIGKILL so the WAL keeps
 it. Numbers are in `/projects/caeg/scratch/kbd606/tmp/st25/measure.log`, with a
 per-run daemon log next to it.
+
+## Measured, frozen 2026-09-15 cut, dandycomp01fl, min/mean/max of 3
+
+| cell | first correct recall (s) | broad gate open (s) |
+|---|---|---|
+| before, empty tail | 7.13 / 7.16 / 7.20 | 9.19 / 9.21 / 9.25 |
+| after, empty tail  | 6.87 / 6.88 / 6.89 | 7.93 / 8.28 / 8.96 |
+| before, live tail  | 6.06 / 6.40 / 7.08 | 8.12 / 8.14 / 8.16 |
+| after, live tail   | 5.67 / 5.74 / 5.78 | 6.81 / 7.47 / 7.86 |
+
+Every cell returned the same 909-character recall answer, so the change is
+answer-neutral. The gate's phase budget went from a 2,435 ms sequential sum to
+a 1,958-2,310 ms critical path, which is the triplet lane; `field_store` fell
+from 5,488 ms to 5,114 ms, the `.sup` parse leaving the open path.
+
+## Correction to the premise, and what is still open
+
+**WAL replay never appends to the event tape.** A tail of 300 `connect` plus 50
+`remember`, killed with SIGKILL, left the tape byte-identical to the snapshot's:
+the pre-change binary reported `cache hit=true` on that tail, and the new one
+reports `tail_events=0`. The tape is snapshot-only state, so decision 2 is
+correct and answer-neutral but cannot yet pay off on the open path.
+
+The live `hit=false` lines are **the save path**, not restarts. In
+`chittad.log` on 2026-09-20 the three restarts logged `event_tape_organs`
+6,769 ms `hit=false` (07:19), 326 ms `hit=true` (08:13) and 300 ms `hit=true`
+(08:22); every other `hit=false` line sits next to a `[checkpoint]` line.
+`store/maintenance.rs` calls `load_or_rebuild_organs` with the **new** family's
+path, which never exists yet, so every checkpoint rebuilds the organs from
+scratch on the maintenance thread — about once every 8-11 minutes.
+
+Two follow-ups, both in the save path, which this pass does not own:
+
+1. Pass the previously committed family's `.organs` to the save-path call so a
+   checkpoint resumes from its cut instead of rebuilding. Decision 2 already
+   provides the mechanism.
+2. `rebuild_event_organs` derives the organs path from `best_full_path`, while
+   the `.sup` sidecar uses the candidate that actually loaded. When a
+   manifest-committed or stale family wins, those differ and the organs read
+   points at another family's file. That is the likeliest cause of the 07:19
+   restart miss, and it is one line in `field/opening.rs`.
