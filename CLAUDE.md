@@ -124,9 +124,12 @@ bash scripts/dev-install.sh
   abandons that family (`manifest family … failed validation` on the next
   start), so the daemon falls back to the previous family and replays the
   WAL since then (2026-09-16: 2 h of WAL → 32 s replay + 41 s normalize,
-  105 s to ready). Before `systemctl --user restart chittad`, check that
-  `chittad.log` shows no `Turbo rebuild start` / `LSH cache` / `event tape
-  organs` lines in the last minute, or wait for the family to commit.
+  105 s to ready; 2026-09-20: 66 min of WAL, 41 s of it in normalize alone,
+  51 s to ready). Restart with `bash scripts/restart-chittad.sh`, which waits
+  on the store's own `snapshot_in_flight` flag and then prints the shutdown,
+  ready, first-answer and healthy clocks. Reading the log tail cannot replace
+  it: the save can begin between the grep and the restart, which is what
+  happened on 2026-09-20.
 - Startup on the live store is ~9.5 s when the derived-state sidecars hit
   (`.lsh`, `.turbo`, `.organs` next to the snapshot family; since 2026-09-16,
   parallel snapshot decode included) and ~20 s on the first start after a

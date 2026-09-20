@@ -1,6 +1,6 @@
 # Storage core baseline and runtime design review
 
-Status as of 2026-09-20: **live since 2026-09-19 22:13Z (main 9b002e1f, store c5eec70): socket answering 14 ms after start, ready 12.7 s from process start, healthy 19.7 s from the restart command. Replica floor with the current snapshot format: store-ready 5.5-6.0 s, first recall 6.2-6.7 s; a mapped startup cache (job 22916949) passed its gates without improving it and was not committed. Phase 1a (triplet index rebuild deferred off the open path) is measured and gated but not merged; see the 2026-09-20 section. Next phase: zero-copy mapped memory and embedding sections (format change), designed before coded.**
+Status as of 2026-09-20: **live since 2026-09-19 22:13Z (main 9b002e1f, store c5eec70): socket answering 14 ms after start, ready 12.7 s from process start, healthy 19.7 s from the restart command. Replica floor with the current snapshot format: store-ready 5.5-6.0 s, first recall 6.2-6.7 s; a mapped startup cache (job 22916949) passed its gates without improving it and was not committed. Phase 1a (triplet index rebuild deferred off the open path) is merged and live. Restart with `scripts/restart-chittad.sh`, never a bare `systemctl --user restart chittad`. Next phase: zero-copy mapped memory and embedding sections (format change), designed before coded.**
 The governing design is [Runtime and storage core](DESIGN-2026-09-19-runtime-core.md)
 v2, merged from origin/main (`e7ae2aaa`) in `2683c9e0`. The WAL-vanish
 baseline is chitta-field `ec22685`. Complete the baseline before phase 1;
@@ -1208,3 +1208,57 @@ building, but the semantic and keyword lanes are served normally and do read
 the stale count, so the recall gates do not cover this window.
 `cf_startup_indexes_ready` now stays closed until the counts are current, which
 covers every tool routed through it but not those two lanes.
+
+## Restart guard and the 41 s normalize (2026-09-20)
+
+Two defects the step 1a deploy exposed, both on the restart path.
+
+**Restarting during a save.** SIGTERM inside `save_full_snapshot_certified`
+abandons the family being written. The store now raises `snapshot_in_flight`
+for the whole save, sections through prune, and lowers it from an RAII guard so
+no `?` exit can leave it raised. It is published through `cf_snapshot_in_flight`
+and `health_check`, alongside `last_snapshot_commit_ms`, both O(1) atomic loads
+on the fast path. `scripts/restart-chittad.sh` waits on that flag, bounded,
+before `systemctl --user restart chittad`, then prints the shutdown durations,
+`ready ms`, the first loading answer, the first recall answer and the healthy
+clock. It ignores answers carrying the outgoing daemon's pid, since the old
+process keeps serving the same socket path until it exits. Reading the log tail
+cannot replace this: the save can begin between the grep and the restart, which
+is what happened at 07:18Z.
+
+**The 41 s normalize.** `load phase=normalize ms=41017` had no breakdown under
+it because all six sub-timers in `normalize_with_cache` were gated on
+`CHITTA_PROFILE_SNAPSHOT`, which the daemon does not set. They are now
+unconditional, six lines per start, and `normalize_ann` logs the branch it
+takes with the counts behind it.
+
+The branch is `rebuild_ann`, taken when `mem_coarse` does not cover every
+loaded embedding, which is what a fallback to an older family produces. It was
+the only silent, fully serial pass on the open path: one dot product against
+each of 256 centroids per embedding, 768 wide, then the LSH signatures, then
+the postings. Three occurrences in the log, each after a `failed validation`
+fallback, agree to within 1.3%: 41,080 ms on 2026-09-16, 40,563 ms on
+2026-09-19, 41,017 ms on 2026-09-20. That constancy is itself the evidence that
+this is fixed O(N) work, not node contention, which would vary.
+
+Measured by `measure_rebuild_ann_cost` at the incident corpus size, 141,476
+embeddings, on a 16-core node under load 91 (so these are conservative):
+
+| pass | serial | parallel |
+|---|---|---|
+| coarse assignment | 17,148 ms | |
+| LSH assignment | 3,132 ms | |
+| both assignment passes | 20,280 ms | |
+| whole of `rebuild_ann` | | 1,657 ms |
+
+The fix is local: both assignment passes now run on `refresh_pool`, which the
+rest of `normalize_with_cache` already used, and sort by id before building the
+postings so the result is reproducible rather than HashMap-ordered.
+`rebuild_ann_matches_the_assignments_it_indexes` recomputes both inverses from
+the assign functions and demands exact equality.
+
+The measured serial figure is a lower bound on the old `rebuild_ann`: it covers
+the two assignment passes, not the posting construction. It therefore accounts
+for at least half of the observed 41 s directly. The remaining sub-phases are
+now individually timed, so the next occurrence attributes the rest exactly
+rather than by inference.

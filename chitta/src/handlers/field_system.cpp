@@ -142,6 +142,11 @@ ToolResult FieldRpcHandler::tool_health_check(const json& params) {
             {"memory_count",     raw_count},
             {"pending_count",    pending},
             {"rpc_over_budget", rpc_budget_.over_budget_count()},
+            // Both O(1) atomic loads. scripts/restart-chittad.sh polls the fast
+            // path for these: restarting during a save abandons the family
+            // being written and costs a full WAL replay on the next start.
+            {"snapshot_in_flight",      field_store_->snapshot_in_flight()},
+            {"last_snapshot_commit_ms", field_store_->last_snapshot_commit_ms()},
         };
         return ToolResult::ok(ss.str(), out);
     }
@@ -167,6 +172,8 @@ ToolResult FieldRpcHandler::tool_health_check(const json& params) {
         {"memory_count",     mem_count},
         {"symbol_count",     sym_count},
         {"rpc_over_budget",  rpc_budget_.over_budget_count()},
+        {"snapshot_in_flight",      field_store_->snapshot_in_flight()},
+        {"last_snapshot_commit_ms", field_store_->last_snapshot_commit_ms()},
     };
 
     // New FFI diagnostic; recall response schemas stay unchanged.
