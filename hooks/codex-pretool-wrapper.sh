@@ -14,5 +14,26 @@ export CC_SOUL_SUBAGENT_BASH_RECALL="$CHITTA_SUBAGENT_BASH_RECALL"
 export CHITTA_DEEP_SEARCH="${CHITTA_DEEP_SEARCH:-${CC_SOUL_DEEP_SEARCH:-0}}"
 export CC_SOUL_DEEP_SEARCH="$CHITTA_DEEP_SEARCH"
 
-exec "${SCRIPT_DIR}/pre-tool-hook.sh" "$MATCHER"
-
+rc=0
+output=$("${SCRIPT_DIR}/pre-tool-hook.sh" "$MATCHER") || rc=$?
+# Adapt older daemon responses at the Codex boundary, including before a
+# rebuilt daemon is deployed. Never turn an explicit denial into an approval.
+if normalized=$(jq -c '
+    if (.hookSpecificOutput | type) == "object" then
+        .hookSpecificOutput |= (
+            if .permissionDecision == "block" then
+                .permissionDecision = "deny"
+                | .permissionDecisionReason //= .additionalContext
+            else . end
+            | if .permissionDecision == "deny" then del(.updatedInput)
+              elif has("updatedInput") and .permissionDecision == null then
+                  .permissionDecision = "allow"
+              else . end
+        )
+    else . end
+' <<< "$output" 2>/dev/null); then
+    printf '%s' "$normalized"
+else
+    printf '%s' "$output"
+fi
+exit "$rc"

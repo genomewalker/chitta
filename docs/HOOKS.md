@@ -1,5 +1,11 @@
 # chitta Hooks System
 
+Codex's `codex-pretool-wrapper.sh` adapts PreToolUse responses to the Codex
+wire contract: rewrites without a decision receive `permissionDecision: allow`,
+legacy `block` decisions become `deny`, and denials discard any `updatedInput`.
+Explicit decisions and the underlying hook exit status are preserved. This
+frontend adaptation also works with an already-running daemon.
+
 Repository knowledge is indexed by `learn_codebase`. Markdown chunks follow
 headings; code chunks follow symbols, with a file-scope fallback for shell and
 configuration. Recall recognizes repository questions (paths, environment
