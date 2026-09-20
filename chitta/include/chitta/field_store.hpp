@@ -986,6 +986,15 @@ public:
     /// deferred index rebuild.
     bool triplets_ready() const { return handle_ && cf_triplets_ready(handle_); }
 
+    /// True while a full snapshot save is between its first section write and
+    /// its prune. Restarting then abandons the family being written.
+    bool snapshot_in_flight() const { return handle_ && cf_snapshot_in_flight(handle_); }
+
+    /// Wall clock of this process's last manifest commit, 0 if it made none.
+    int64_t last_snapshot_commit_ms() const {
+        return handle_ ? cf_last_snapshot_commit_ms(handle_) : 0;
+    }
+
     size_t memory_count() const {
         return cf_memory_count(handle_);
     }
