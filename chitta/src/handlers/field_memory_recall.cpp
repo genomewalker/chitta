@@ -830,6 +830,12 @@ void FieldRpcHandler::RecallPipeline::filter_candidates() {
 
     // Hard-filter by tag: keep only memories that have (id, "tagged", tag) triplet
     if (!tag.empty()) {
+        // The tag index is the triplet store, which rebuilds off the open path.
+        // Reading it through query_object blocks until that rebuild is done
+        // (12 s live, 2026-09-20), and every recall_lanes call carries a tagged
+        // correction lane, so the whole recall waited. Answer empty instead:
+        // a hard tag filter with no readable index selects nothing.
+        if (!handler.field_store_->triplets_ready()) { hits.clear(); return; }
         std::string triplets_json = handler.field_store_->query_object(tag);
         std::unordered_set<uint64_t> tagged_ids;
         try {
