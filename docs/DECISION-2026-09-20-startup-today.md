@@ -127,3 +127,29 @@ which does, runs after the signal clears. And the wait must not sit behind a
 and the recursive read inside the wait then queues behind the publisher's
 pending write. The first version did exactly that and deadlocked under the new
 test.
+
+### Measured, frozen 2026-09-15 cut, dandycomp01fl, mean of 3
+
+| metric | before | after |
+|---|---|---|
+| Turbo published, after `ready` | 16.3 s | 4.0 s |
+| Broad tool gate open, from process start | 13.87 s | 14.30 s |
+| Deferred gate phases, critical path | 7,198 ms | 7,838 ms |
+| `triplets` phase | 1,936 ms | 3,499 ms |
+| First non-loading recall | 6.80 s | 7.21 s |
+| Three concurrent recalls at `ready`, slowest | 0.16 s | 0.15 s |
+
+Turbo publishes about twelve seconds earlier. It costs about 0.4 s on the gate:
+the Turbo build saturates its own rayon pool, which slows the triplet lane from
+1.9 s to 3.5 s, though the organs lane still sets the critical path.
+
+**The replica cannot measure the recall side.** Three concurrent recalls fired
+at `ready` take about 0.15 s in both cells, and the wait never fires. A trace
+at the top of `SemanticIndex::search` showed the `chitta recall` tool never
+reaches it on this replica, with no realm, with a realm, and with learning off;
+the live 09:02Z stack capture shows three request threads inside it, so the
+live request shape differs from the CLI's. What is verified here is the
+mechanism, by unit test (a search parks until publication and then matches the
+Turbo path; a search gives up at its bound and still answers), and the twelve
+seconds earlier publication. The end-to-end recall win is unmeasured on the
+replica and has to be read from the live daemon after deploy.
