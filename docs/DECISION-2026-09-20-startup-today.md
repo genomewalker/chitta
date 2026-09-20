@@ -94,3 +94,36 @@ Two follow-ups, both in the save path, which this pass does not own:
    manifest-committed or stale family wins, those differ and the organs read
    points at another family's file. That is the likeliest cause of the 07:19
    restart miss, and it is one line in `field/opening.rs`.
+
+## Turbo first, and a search that waits for it (2026-09-20, later)
+
+Status as of 2026-09-20: **canonical for the deferred Turbo load.**
+
+A stack capture at 09:02Z showed three recall threads inside
+`SemanticIndex::search`, on no lock. The flat scan's raw turbovec arm found
+`turbo` still `None` and fell through to the scalar loop over `all_ids()`:
+141,613 vectors, 14 s under load with three concurrent callers. The Turbo load
+was the last deferred job, after the three gate lanes and the keyword reverse
+index, so `ready` marked the start of that window: it published at 09:02:39
+against a ready at 09:02:28, and recalls issued at ready ended at 09:02:47.
+
+1. **Turbo is its own lane, scheduled first.** It is in no gate and shares no
+   state with the other lanes. The keyword reverse index stays on the
+   maintenance thread, because it owns the stop receiver the lanes cannot share
+   and nothing waits on it.
+2. **Search waits rather than scans.** A `TurboPending` signal is armed at open
+   when the load is deferred and cleared the moment the index publishes. The raw
+   arm parks on it for at most `CHITTA_TURBO_WAIT_MS` (default 5000) and then
+   proceeds with whatever is published, logging
+   `[hnsw] search waited_ms=N for turbo published=...`. The signal clears from a
+   guard's `Drop`, so a cancelled or failed startup releases waiters instead of
+   making them serve out the budget.
+
+Two lock facts this rests on. The caller's `semantic_idx` read guard is held
+across the wait exactly as it was held across the scan, and for less time;
+nothing on the publication path needs that lock, and `prune_turbo_changes`,
+which does, runs after the signal clears. And the wait must not sit behind a
+`match` scrutinee: that keeps the `turbo` read guard alive for the whole arm,
+and the recursive read inside the wait then queues behind the publisher's
+pending write. The first version did exactly that and deadlocked under the new
+test.
