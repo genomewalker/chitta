@@ -22,7 +22,16 @@ ToolResult FieldRpcHandler::tool_ledger_op(const json& params) {
     // Keep multi-operation stream lifecycle updates ordered, including recursive
     // session registration/heartbeat calls. The underlying ledger also locks WAL writes.
     static std::recursive_mutex stream_mutex;
-    std::lock_guard<std::recursive_mutex> guard(stream_mutex);
+    // hook_session_start and hook_pre_compact fan out through std::async
+    // (hook_session_policy.hpp:95, hook_compact_policy.hpp:343) and those
+    // threads re-enter tool_ledger_op. A recursive mutex is owned per thread,
+    // so holding it here while joining them is a self-deadlock: live wedges on
+    // 2026-09-20 at 07:28Z and 06:09Z, 15 ledger_ops queued behind 3 policy
+    // sub-calls, the watchdog logging "ledger_op stuck" with nothing to do.
+    // Their nested ops take this lock themselves; the dispatchers must not.
+    const auto op_name = params.value("op", "");
+    std::unique_lock<std::recursive_mutex> guard(stream_mutex, std::defer_lock);
+    if (op_name != "hook_session_start" && op_name != "hook_pre_compact") guard.lock();
     try {
         const auto started = std::chrono::steady_clock::now();
         auto op   = params.at("op").get<std::string>();

@@ -152,6 +152,18 @@ def main():
 
         try:
             start()
+            # hook_session_start fans out through std::async threads that re-enter
+            # ledger_op. Holding tool_ledger_op's stream_mutex across that dispatch
+            # self-deadlocked the live daemon twice on 2026-09-20; a wedge shows here
+            # as daemon_call's 10 s timeout. ledger_profile proves the launches ran.
+            began = time.monotonic()
+            session_start = raw(
+                "ledger_op",
+                op="hook_session_start",
+                args={"input": {"session_id": "deadlock-check", "source": "startup"}, "realm": "test", "now": 0},
+            )
+            assert time.monotonic() - began < 8, session_start
+            assert "ledger_profile" in json.dumps(session_start), session_start
             if migration_source:
                 command = [
                     sys.executable,
