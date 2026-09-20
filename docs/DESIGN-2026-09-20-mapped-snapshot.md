@@ -266,10 +266,13 @@ safe.
 ## 9. Work order
 
 1. Phase 0 measurements (§7): done, recorded in §3a.
-1a. Triplet decode and `rebuild_indexes` move off the open path to the
-   maintenance thread, with loading answers for the spreading-activation and
-   triplet-query lanes. This is the largest single win and needs no format
-   change; measure store-ready before and after.
+1a. `rebuild_indexes` moves off the open path to the maintenance thread, with
+   loading answers for the spreading-activation and triplet-query lanes.
+   Done 2026-09-20 (store eb600b8, parent 716fa802): store open with a triplet
+   tail 6.25-6.38 s → 4.51-4.57 s, ready 6.66-6.74 s → 4.91-5.02 s. The
+   triplet entries still decode on the open path, 686-755 ms on the frozen
+   replica; that decode is removed by the V24 mapped section in step 3, not
+   here.
 2. V24 writer behind `CHITTA_SNAPSHOT_V24=1`, default off; V24 reader; V23 and
    V24 twins written on every commit with identical coverage (§6). Gates green
    with the flag off and on.
