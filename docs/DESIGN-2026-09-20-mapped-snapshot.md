@@ -159,13 +159,17 @@ bind socket, answer loading                      0.01 s   (already live)
 open family, read header + section table         ~0.01 s
 validate: magic, version, section checksums sampled
 map state table, content arena, embedding matrix, LSH
-publish store; health and recall answer          target < 1 s
+WAL tail replay (certified skip, already live)   0.5 s
+publish store; health and recall answer          target < 1.5 s
   → maintenance thread: MADV_WILLNEED sweep      ~2 s, concurrent
   → maintenance thread: full checksum verify     concurrent
   → maintenance thread: HNSW load, Turbo, organs, hdc, symbols, spans,
     keyword index, triplets (already deferred today)
-WAL tail replay (certified skip, already live)   0.5 s
 ready
+
+Replay precedes publication: a reader must never see the mapped snapshot
+without the acknowledged writes after it, and the family's coverage must be
+consistent before anything is served (review finding, 2026-09-20).
 ```
 
 Recall between publication and HNSW load uses the LSH path, which is how the
@@ -205,10 +209,18 @@ measured change, not part of this one.
 
 ## 6. Compatibility and rollback
 
-- A V24 commit writes V24 **and** keeps the previous V23 family on disk;
-  `prune_old_snapshots` keeps two families, so an older daemon always has a
-  readable family for two save cycles. The rollback floor stays chitta-field
-  v2.1.0 as documented in CLAUDE.md; this adds a second floor line for V24.
+- Every commit writes a V23 family **and** a V24 family as twins with the
+  same seqno and the same WAL coverage. Keeping only the *previous* V23 family
+  is not lossless: `prune_certified_wal` certifies against the newest family
+  (`chitta-field/src/store/maintenance.rs:1431-1463`), so segments between an
+  older family's coverage and the newest would be deleted, and a rollback to
+  the older family would lose acknowledged writes (review finding,
+  2026-09-20). With twins, the previous binary opens the V23 twin of the same
+  commit and needs no WAL that pruning could have removed. The V23 twin keeps
+  `next_id` inside its bincode body, so the allocator high-water mark survives
+  rollback. `prune_old_snapshots` keeps two commits, so two twin pairs. The
+  rollback floor stays chitta-field v2.1.0; this adds a second floor line for
+  V24, removed only when the twin writing is retired.
 - A daemon that finds only V24 and cannot map it (older binary) fails with the
   existing "manifest family failed validation" path and falls back to the
   previous family, which is the current behaviour for a bad family.
@@ -258,8 +270,9 @@ safe.
    maintenance thread, with loading answers for the spreading-activation and
    triplet-query lanes. This is the largest single win and needs no format
    change; measure store-ready before and after.
-2. V24 writer behind `CHITTA_SNAPSHOT_V24=1`, default off; V24 reader; both
-   families written on commit. Gates green with the flag off and on.
+2. V24 writer behind `CHITTA_SNAPSHOT_V24=1`, default off; V24 reader; V23 and
+   V24 twins written on every commit with identical coverage (§6). Gates green
+   with the flag off and on.
 3. Mapped serving path: `peek_memory` and the recall scorers read through the
    mapping; publication happens after mapping; `MADV_WILLNEED` sweep on the
    maintenance thread.

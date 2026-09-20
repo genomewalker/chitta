@@ -8,6 +8,22 @@ All notable changes to chitta (formerly cc-soul; renamed 2026-09-02, see
 > reconstructed from `git log` between tags; patch releases are grouped under
 > their minor version (`## [5.x.y]`) with per-release dates on one line.
 
+## [5.73.1] - 2026-09-20
+
+- CI: the release build never ran since 2026-09-17. The manylinux container
+  installed everything but `openssl-devel`, so CMake could not find OpenSSL;
+  with that fixed the build reached its tests and failed again because
+  `chitta-field/.cargo/config.toml` pins `CHITTA_EMBED_DIM=768` for every cargo
+  build while `chitta/CMakeLists.txt` defaulted to 1024 and CI passes no flag,
+  so the linked daemon rejected its own vectors. CMake now takes the dimension
+  from the store's cargo config when no flag or environment variable is given.
+  Local gates hid both: they pass 768 explicitly and skipped shellcheck.
+- Shell lint: `scripts/build-env.sh` exported an unquoted variable name,
+  `scripts/stream-lib.sh` referenced launcher-set variables without declaring
+  them, and `scripts/tmp-janitor.sh` counted `/proc` entries with `ls | grep`.
+- Release: the version bump now stamps the footer and status date on every site
+  page and regenerates `contracts/`, which the 5.73.0 release left behind.
+
 ## [5.73.0] - 2026-09-19
 
 - Storage core, restart path (design docs/DESIGN-2026-09-19-runtime-core.md,

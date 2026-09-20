@@ -1,7 +1,7 @@
 {
   "name": "chitta",
   "description": "Persistent memory and code indexing for Claude Code and Codex through a local daemon, 344 documented tool entries, and session hooks. OpenCode is an optional review backend through chitta-bridge.",
-  "version": "5.73.0",
+  "version": "5.73.1",
   "author": {
     "name": "Antonio Fernandez-Guerra",
     "url": "https://github.com/genomewalker"

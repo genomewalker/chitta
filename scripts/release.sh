@@ -178,6 +178,9 @@ echo "Updating docs/index.html badge..."
 # CHANGELOG.md); stamp today's date, re-sync every page, then align in-page stamps.
 sedi "s/^STATUS_DATE = '[0-9-]*'/STATUS_DATE = '$(date +%F)'/" scripts/site_common.py
 python3 scripts/sync-site-chrome.py > /dev/null || { echo "site chrome sync failed"; exit 1; }
+# site_common.footer() is the authority and reads the version from CHANGELOG.md,
+# so re-syncing the chrome after the bump is all the site needs. Do not rewrite
+# that footer text here: check-site.py compares pages against footer() verbatim.
 for page in docs/*.html docs/vedanta/index.html; do
     sedi -E "s/Status as of 20[0-9]{2}-[0-9]{2}-[0-9]{2}/Status as of $(date +%F)/g" "$page"
 done

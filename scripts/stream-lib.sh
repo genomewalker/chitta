@@ -84,7 +84,14 @@ if [[ ${1:-} == --supervise ]]; then
     cd "$W"
     exec 3<&0
     if [[ $1 == codex ]]; then
-        setsid "$@" "$(cat <&3)" </dev/null &
+        # build-env prepends Conda, whose npm Codex can differ from our patched
+        # release. Freeze the real executable path and log it for diagnosis.
+        codex_bin=${CHITTA_CODEX_BIN:-$HOME/.local/codex-local/current/bin/codex}
+        codex_bin=$(realpath -e "$codex_bin") || exit 1
+        [[ -x $codex_bin && ! -d $codex_bin ]] || { echo "codex binary not executable: $codex_bin" >&2; exit 1; }
+        printf 'Codex worker executable: %s (%s)\n' "$codex_bin" "$("$codex_bin" --version)"
+        shift
+        setsid "$codex_bin" "$@" "$(cat <&3)" </dev/null &
     else
         setsid "$@" <&3 &
     fi
