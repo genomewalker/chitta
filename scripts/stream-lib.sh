@@ -84,7 +84,16 @@ if [[ ${1:-} == --supervise ]]; then
     cd "$W"
     exec 3<&0
     if [[ $1 == codex ]]; then
-        setsid "$@" "$(cat <&3)" </dev/null &
+        # Resolve codex to an absolute path. Leaving it to PATH let launcher
+        # children run the standalone package (~/.codex/packages/standalone,
+        # cli_version 0.151.0), which the API rejects for gpt-6-astra, while
+        # interactive shells ran the patched local release (0.0.0) and worked
+        # (2026-09-20). CHITTA_CODEX_BIN overrides; the default is the patched
+        # install the repo standardises on.
+        local codex_bin=${CHITTA_CODEX_BIN:-$HOME/.local/bin/codex}
+        [[ -x $codex_bin ]] || { echo "codex binary not executable: $codex_bin" >&2; return 1; }
+        shift
+        setsid "$codex_bin" "$@" "$(cat <&3)" </dev/null &
     else
         setsid "$@" <&3 &
     fi
