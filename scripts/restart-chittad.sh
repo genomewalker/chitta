@@ -19,12 +19,15 @@ source "$ROOT/hooks/lib.sh"
 WAIT_S=600
 PROBE_S=300
 MODE="wait"
+DRY_RUN=0
 usage() {
     cat >&2 <<'USAGE'
 usage: restart-chittad.sh [--wait SECONDS] [--refuse]
   --wait SECONDS  bound the wait for an in-flight save (default 600)
   --refuse        exit 3 instead of waiting when a save is in flight
   --probe SECONDS bound the post-restart probing (default 300)
+  --dry-run       skip systemctl; run the probe loop against the daemon
+                  that is already up and print every field it parses
 USAGE
 }
 while [[ $# -gt 0 ]]; do
@@ -32,6 +35,7 @@ while [[ $# -gt 0 ]]; do
         --wait)   WAIT_S="${2:-}"; shift 2 || true ;;
         --probe)  PROBE_S="${2:-}"; shift 2 || true ;;
         --refuse) MODE="refuse"; shift ;;
+        --dry-run) DRY_RUN=1; shift ;;
         -h|--help) usage; exit 0 ;;
         *) printf 'unknown argument: %s\n' "$1" >&2; usage; exit 2 ;;
     esac
@@ -87,17 +91,28 @@ fi
 
 # ── 2. Restart, clocking the answers from one start instant ───────────────
 # The outgoing daemon keeps answering on the same socket path until it exits, so
-# every clock below ignores answers carrying the old pid. Without that, healthy
-# is stamped from the process being replaced.
-old_pid="$(printf '%s' "${health:-}" | field pid)"
+# an answer is attributed to it only on positive evidence: both pids present and
+# equal. A warming daemon answers `loading` with no pid at all, and treating a
+# missing pid as "still the old one" discards exactly the answers these clocks
+# exist to catch.
+if (( DRY_RUN )); then old_pid=""; else old_pid="$(printf '%s' "${health:-}" | field pid)"; fi
 log_before=0
 [[ -f "$LOG" ]] && log_before="$(wc -l < "$LOG")"
 start=$(date +%s.%N)
-systemctl --user restart chittad &
-restart_pid=$!
+restart_pid=""
+if (( DRY_RUN )); then
+    printf 'dry run: no systemctl; probing the daemon that is already up\n'
+else
+    systemctl --user restart chittad &
+    restart_pid=$!
+fi
 
 since() { awk -v a="$start" -v b="$(date +%s.%N)" 'BEGIN{printf "%.2f", b-a}'; }
-elapsed() { awk -v a="$start" -v b="$(date +%s.%N)" 'BEGIN{print (b-a)>=p}' p="$PROBE_S"; }
+# `p=...` after the program text is an operand assignment, which awk applies
+# only while reading input. A BEGIN-only program reads none, so p stayed unset,
+# (b-a)>=0 was always true and the probe loop broke on its first pass -- which
+# is why 2026-09-20 08:12Z reported none/TIMEOUT against a healthy start.
+elapsed() { awk -v a="$start" -v b="$(date +%s.%N)" -v p="$PROBE_S" 'BEGIN{print (b-a)>=p}'; }
 first_loading=""
 first_health=""
 first_recall=""
@@ -105,16 +120,33 @@ while :; do
     if [[ -S "$SOCKET" ]]; then
         answer="$(probe health_check '{}')"
         pid="$(printf '%s' "$answer" | field pid)"
-        if [[ -n "$answer" && "$pid" != "$old_pid" ]]; then
-            status="$(printf '%s' "$answer" | field status)"
-            [[ -z "$first_loading" && "$status" != "ok" ]] && first_loading="$(since)"
-            [[ -z "$first_health"  && "$status" == "ok" ]] && first_health="$(since)"
+        status="$(printf '%s' "$answer" | field status)"
+        loading="$(printf '%s' "$answer" | field loading)"
+        outgoing=0
+        [[ -n "$old_pid" && -n "$pid" && "$pid" == "$old_pid" ]] && outgoing=1
+        if (( DRY_RUN )); then
+            printf '  probe t=%ss pid=%s old_pid=%s status=%s loading=%s outgoing=%s in_flight=%s commit_ms=%s\n' \
+                "$(since)" "${pid:-none}" "${old_pid:-none}" "${status:-none}" \
+                "${loading:-none}" "$outgoing" \
+                "$(printf '%s' "$answer" | field snapshot_in_flight | grep . || echo absent)" \
+                "$(printf '%s' "$answer" | field last_snapshot_commit_ms | grep . || echo absent)"
+        fi
+        if [[ -n "$answer" ]] && (( ! outgoing )); then
+            # A warming answer is either `loading` or any status that is not ok.
+            if [[ -z "$first_loading" && ( "$loading" == "true" || ( -n "$status" && "$status" != "ok" ) ) ]]; then
+                first_loading="$(since)"
+            fi
+            [[ -z "$first_health" && "$status" == "ok" ]] && first_health="$(since)"
             if [[ -z "$first_recall" ]]; then
-                hits="$(probe recall '{"query":"chitta storage core","limit":3}')"
-                if [[ -n "$hits" ]] && ! printf '%s' "$hits" | grep -qi '"loading"'; then
-                    [[ "$(printf '%s' "$hits" | jq -r '.result.structured.hits | length' 2>/dev/null)" -gt 0 ]] \
-                        && first_recall="$(since)"
+                # recall answers under `results`, not `hits`: the old key made
+                # this test null and first_recall could never be stamped.
+                reply="$(probe recall '{"query":"chitta storage core","limit":3}')"
+                n="$(printf '%s' "$reply" | jq -r '.result.structured.results | length' 2>/dev/null)"
+                rl="$(printf '%s' "$reply" | field loading)"
+                if (( DRY_RUN )); then
+                    printf '  recall t=%ss results=%s loading=%s\n' "$(since)" "${n:-none}" "${rl:-none}"
                 fi
+                [[ "$rl" != "true" && "${n:-0}" =~ ^[0-9]+$ && "${n:-0}" -gt 0 ]] && first_recall="$(since)"
             fi
         fi
     fi
@@ -123,10 +155,11 @@ while :; do
     [[ "$(elapsed)" == 1 ]] && break
     sleep 0.2
 done
-wait "$restart_pid"; rc=$?
+rc=0
+[[ -n "$restart_pid" ]] && { wait "$restart_pid"; rc=$?; }
 
 # ── 3. Report ─────────────────────────────────────────────────────────────────
-printf 'systemctl rc %s\n' "$rc"
+if (( DRY_RUN )); then printf 'systemctl skipped (dry run)\n'; else printf 'systemctl rc %s\n' "$rc"; fi
 printf 'first_loading_answer_s %s\n' "${first_loading:-none}"
 printf 'first_recall_answer_s %s\n'  "${first_recall:-TIMEOUT}"
 printf 'healthy_s %s\n'              "${first_health:-TIMEOUT}"
